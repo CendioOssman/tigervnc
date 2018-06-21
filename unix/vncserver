@@ -136,8 +136,10 @@ if ($fontPath eq "") {
 
 # Check command line options
 
+# mmendez-anahuac:
+# Adding -i option to vncserver. Below we need to push back this option in order to be used by Xvnc 
 &ParseOptions("-geometry",1,"-depth",1,"-pixelformat",1,"-name",1,"-kill",1,
-	      "-help",0,"-h",0,"--help",0,"-fp",1,"-list",0,"-fg",0,"-autokill",0,"-noxstartup",0,"-xstartup",1);
+	      "-help",0,"-h",0,"--help",0,"-fp",1,"-list",0,"-fg",0,"-autokill",0,"-noxstartup",0,"-xstartup",1,"-i",1);
 
 &Usage() if ($opt{'-help'} || $opt{'-h'} || $opt{'--help'});
 
@@ -169,6 +171,17 @@ if ($opt{'-fp'}) {
     $fontPath = $opt{'-fp'};
     $fpArgSpecified = 1;
 }
+if ($opt{'-i'}) { #mmendez-anahuac: $address : is the listen IP address
+    $address = $opt{'-i'};
+    #Push back de -i option and value for Xvnc
+    push(@ARGV,"-i");
+    push(@ARGV,$address);
+}
+
+if (!$address){ #mmendez-anahuac: default address to listen
+  $address="0.0.0.0";
+}
+
 
 &CheckGeometryAndDepth();
 
@@ -183,8 +196,8 @@ if (!(-e $vncUserDir)) {
 if ((@ARGV > 0) && ($ARGV[0] =~ /^:(\d+)$/)) {
     $displayNumber = $1;
     shift(@ARGV);
-    if (!&CheckDisplayNumber($displayNumber)) {
-	die "A VNC server is already running as :$displayNumber\n";
+    if (!&CheckDisplayNumber($displayNumber,$address)) { #mmendez-anahuac: Now we check the address too
+	die "A VNC server is already running as :$displayNumber in address $address\n"; 
     }
 } elsif ((@ARGV > 0) && ($ARGV[0] !~ /^-/) && ($ARGV[0] !~ /^\+/)) {
     &Usage();
@@ -216,6 +229,7 @@ $default_opts{rfbauth} = "$vncUserDir/passwd";
 $default_opts{rfbport} = $vncPort;
 $default_opts{fp} = $fontPath if ($fontPath);
 $default_opts{pn} = "";
+#$default_opts{i} = "0.0.0.0"; #mmendez-anahuac: interface address 
 
 # Load user-overrideable system defaults
 LoadConfig($vncSystemConfigDefaultsFile);
@@ -528,25 +542,54 @@ sub GetDisplayNumber
 
 sub CheckDisplayNumber
 {
-    local ($n) = @_;
+    local ($n,$address) = @_; #mmendez-anahuac: Now we get two arguments to check
 
     socket(S, $AF_INET, $SOCK_STREAM, 0) || die "$prog: socket failed: $!\n";
     eval 'setsockopt(S, &SOL_SOCKET, &SO_REUSEADDR, pack("l", 1))';
-    if (!bind(S, pack('S n x12', $AF_INET, 6000 + $n))) {
-	close(S);
-	return 0;
+
+     if (!bind(S,pack_sockaddr_in(6000 + $n, inet_aton($address)))){ #Check Xserver port in address
+        print "There is already something on port 6000+$n and address $address\n";
+        close(S);
+        return 0;
     }
+
     close(S);
 
     socket(S, $AF_INET, $SOCK_STREAM, 0) || die "$prog: socket failed: $!\n";
     eval 'setsockopt(S, &SOL_SOCKET, &SO_REUSEADDR, pack("l", 1))';
-    if (!bind(S, pack('S n x12', $AF_INET, 5900 + $n))) {
-	close(S);
-	return 0;
+    
+    if (!bind(S,pack_sockaddr_in(5900 + $n, inet_aton($address)))){ #Check VNC port in address
+        print "There is already something on port 5000+$n and address $address\n";
+        close(S);
+        return 0;
     }
+
     close(S);
 
-    if (-e "/tmp/.X$n-lock") {
+    #mmendez-anahuac:
+    #These next three ifs are OK as long as we use polyinstantiation on /tmp for each user:
+    # ( e.g.: https://www.ibm.com/developerworks/library/l-polyinstantiation/index.html )
+    # and as long as we start the Xvnc server not listening in local unix ports and
+    # Xerver not listening in TCP ports (6000+n)
+    # ( e.g.: ./vncserver :1 -i 10.1.0.1 -nolisten tcp -nolisten local )
+    # ( by the way, is necessary to document these working options in Xvnc.man )
+    #
+    # Otherwise, if we want to use the same ports/displays but in different address interface,
+    # we'll have to change lock and socket file names here and in Xvnc.
+    #
+    # Found affected files :
+    # 
+    # xserver/hw/vnc/xvnc.c:338:    sprintf(file, "/tmp/.X%d-lock", num);
+    # xserver/hw/vnc/xvnc.c:341:    sprintf(file, "/tmp/.X11-unix/X%d", num);
+    #
+    # ... as well as the listening address:
+    #
+    # xserver/hw/vnc/RFBGlue.cc:198:int vncIsTCPPortUsed(int port)
+    # xserver/hw/vnc/RFBGlue.h:50:int vncIsTCPPortUsed(int port);
+    # xserver/hw/vnc/xvnc.c:336:    if (vncIsTCPPortUsed(6000+num))
+
+    
+    if (-e "/tmp/.X$n-lock") { 
 	warn "\nWarning: $host:$n is taken because of /tmp/.X$n-lock\n";
 	warn "Remove this file if there is no X server $host:$n\n";
 	return 0;
