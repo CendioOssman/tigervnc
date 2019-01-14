@@ -23,7 +23,7 @@ BuildRequires:  libdrm-devel, libXt-devel, pixman-devel libXfont-devel
 BuildRequires:  libxkbfile-devel, openssl-devel, libpciaccess-devel
 BuildRequires:  mesa-libGL-devel, libXinerama-devel, ImageMagick
 BuildRequires:  freetype-devel, libXdmcp-devel, libXfont2-devel
-BuildRequires:  fltk-devel
+BuildRequires:  libXrandr-devel, fltk-devel
 BuildRequires:  libjpeg-turbo-devel, gnutls-devel, pam-devel
 BuildRequires:  systemd, cmake
 
