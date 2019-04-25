@@ -26,6 +26,10 @@
 
 #include <FL/Fl_Widget.H>
 
+#if ! (defined(WIN32) || defined(__APPLE__))
+#include "GestureHandler.h"
+#endif // LINUX
+
 class Fl_Menu_Button;
 class Fl_RGB_Image;
 
@@ -96,6 +100,11 @@ private:
 
   static void handleOptions(void *data);
 
+#if ! (defined(WIN32) || defined(__APPLE__))
+  static void touchTimeout(void *data);
+  static void processEventQueue(void *data);
+#endif // LINUX
+
 private:
   CConn* cc;
 
@@ -126,6 +135,10 @@ private:
 
   Fl_RGB_Image *cursor;
   rfb::Point cursorHotspot;
+
+#if ! (defined(WIN32) || defined(__APPLE__))
+  static GestureHandler* gh;
+#endif // LINUX
 };
 
 #endif
