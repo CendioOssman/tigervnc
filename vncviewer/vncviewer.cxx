@@ -68,6 +68,7 @@
 #include "CConn.h"
 #include "ServerDialog.h"
 #include "UserDialog.h"
+#include "touch.h"
 #include "vncviewer.h"
 #include "fltk_layout.h"
 
@@ -534,6 +535,7 @@ int main(int argc, char** argv)
   signal(SIGTERM, CleanupSignalHandler);
 
   init_fltk();
+  enable_touch();
 
   Configuration::enableViewerParams();
 
