@@ -27,12 +27,15 @@
 
 static rfb::LogWriter vlog("GestureHandler");
 
-GestureHandler::GestureHandler() : state(GH_INITSTATE), tracked(), eventQueue() {
+GestureHandler::GestureHandler() :
+  state(GH_INITSTATE), timeoutTimer(this) {
 }
 
-int GestureHandler::registerEvent(void *ev) {
-#if !defined(WIN32) && !defined(__APPLE__)
-  XIDeviceEvent *devev = (XIDeviceEvent*)ev;
+GestureHandler::~GestureHandler()
+{
+}
+
+void GestureHandler::registerEvent(const XIDeviceEvent *devev) {
 
   switch (devev->evtype) {
     case XI_TouchBegin:
@@ -52,7 +55,7 @@ int GestureHandler::registerEvent(void *ev) {
     case XI_TouchEnd:
       vlog.info("GestureHandler::registerEvent() got XI_TouchEnd");
       if (idxTracked(devev) < 0)
-        return 0;
+        return;
 
       sttTouchEnd();
 
@@ -61,8 +64,9 @@ int GestureHandler::registerEvent(void *ev) {
       resetState();
       break;
   }
-#endif
-  return tracked.size();
+
+  if (tracked.size() == 1)
+    timeoutTimer.start(GH_STTDELAY);
 }
 
 int GestureHandler::sttTouchUpdate() {
@@ -149,7 +153,8 @@ int GestureHandler::pushEvent(GHEventType t) {
   }
 
   ghev.type = t;
-  eventQueue.push_back(ghev);
+
+  handleGestureEvent(ghev);
 
   return 1;
 }
@@ -222,7 +227,7 @@ int GestureHandler::sttTimeout() {
       this->state = GH_NOGESTURE;
   }
 
-  vlog.info("State is %i, size = %li", this->state, tracked.size());
+  vlog.info("State is %i, size = %li", this->state, (long)tracked.size());
 
   if (hasState())
 #if (GH_DTLPMODE == 1)
@@ -295,7 +300,7 @@ bool GestureHandler::hasState() {
   return state && !(state & (state - 1));
 }
 
-int GestureHandler::idxTracked(XIDeviceEvent *ev) {
+int GestureHandler::idxTracked(const XIDeviceEvent *ev) {
   for (size_t i = 0; i < tracked.size(); i++) {
     if (tracked[i].id == ev->detail)
       return (int)i;
@@ -304,7 +309,7 @@ int GestureHandler::idxTracked(XIDeviceEvent *ev) {
   return -1;
 }
 
-int GestureHandler::trackTouch(XIDeviceEvent *ev) {
+int GestureHandler::trackTouch(const XIDeviceEvent *ev) {
   GHTouch ght;
 
   // FIXME: Perhaps implement some sanity checks here,
@@ -342,14 +347,6 @@ int GestureHandler::trackTouch(XIDeviceEvent *ev) {
   return tracked.size();
 }
 
-std::vector<GHEvent> GestureHandler::getEventQueue() {
-  return eventQueue;
-}
-
-void GestureHandler::clearEventQueue() {
-  eventQueue.clear();
-}
-
 size_t GestureHandler::avgTrackedTouches(double *x, double *y, GHEventType t) {
   size_t size = tracked.size();
   double _x = 0, _y = 0;
@@ -377,7 +374,14 @@ size_t GestureHandler::avgTrackedTouches(double *x, double *y, GHEventType t) {
   return size;
 }
 
-int GestureHandler::updateTouch(XIDeviceEvent *ev) {
+bool GestureHandler::handleTimeout(rfb::Timer* t)
+{
+  if (t == &timeoutTimer)
+    sttTimeout();
+  return false;
+}
+
+int GestureHandler::updateTouch(const XIDeviceEvent *ev) {
   int idx = idxTracked(ev);
 
   // If this is an update for a touch we're not tracking, ignore it

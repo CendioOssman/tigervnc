@@ -31,19 +31,62 @@
 
 #include <rfb/LogWriter.h>
 
+#if !defined(WIN32) && !defined(__APPLE__)
+#include "GestureHandler.h"
+#endif // !defined(WIN32) && !defined(__APPLE__)
+
 #include "touch.h"
 
 static rfb::LogWriter vlog("Touch");
 
 #if !defined(WIN32) && !defined(__APPLE__)
 static int xi_major;
-
-static bool tracking_touch;
-static int touch_id;
 #endif
 
 #if !defined(WIN32) && !defined(__APPLE__)
-static void copyXEventFields(XEvent* dst, const XIDeviceEvent* src)
+
+class FLTKGestureHandler: public GestureHandler
+{
+public:
+  void processEvent(const XIDeviceEvent* devev);
+
+protected:
+  void copyXEventFields(XEvent* dst, const XIDeviceEvent* src);
+  void setTouchEventState(XEvent* dst);
+  void fakeMotionEvent(const XIDeviceEvent* origEvent);
+  void fakeButtonEvent(bool press, int button,
+                       const XIDeviceEvent* origEvent);
+
+  virtual void handleGestureEvent(const GHEvent& event);
+
+private:
+  int touchButtonMask;
+};
+
+static class FLTKGestureHandler gh;
+
+void FLTKGestureHandler::processEvent(const XIDeviceEvent* devev)
+{
+  switch (devev->evtype) {
+  case XI_Motion:
+    fakeMotionEvent(devev);
+    break;
+  case XI_ButtonPress:
+    fakeButtonEvent(true, devev->detail, devev);
+    break;
+  case XI_ButtonRelease:
+    fakeButtonEvent(false, devev->detail, devev);
+    break;
+  case XI_TouchBegin:
+  case XI_TouchUpdate:
+  case XI_TouchEnd:
+    registerEvent(devev);
+    break;
+  }
+}
+
+void FLTKGestureHandler::copyXEventFields(XEvent* dst,
+                                          const XIDeviceEvent* src)
 {
   // XButtonEvent and XMotionEvent are almost identical, so we
   // don't have to care which it is for these fields
@@ -60,12 +103,15 @@ static void copyXEventFields(XEvent* dst, const XIDeviceEvent* src)
   dst->xbutton.state = src->mods.effective;
   dst->xbutton.state |= ((src->buttons.mask[0] >> 1) & 0x1f) << 8;
   dst->xbutton.same_screen = True; // FIXME
-
-  if (tracking_touch)
-    dst->xbutton.state |= Button1 << 8;
 }
 
-static void fakeMotionEvent(const XIDeviceEvent* origEvent)
+void FLTKGestureHandler::setTouchEventState(XEvent* dst)
+{
+  if (tracking_touch)
+    dst->xbutton.state |= touchButtonMask << 8;
+}
+
+void FLTKGestureHandler::fakeMotionEvent(const XIDeviceEvent* origEvent)
 {
   XEvent fakeEvent;
 
@@ -74,12 +120,13 @@ static void fakeMotionEvent(const XIDeviceEvent* origEvent)
   fakeEvent.type = MotionNotify;
   fakeEvent.xmotion.is_hint = False;
   copyXEventFields(&fakeEvent, origEvent);
+  setTouchEventState(&fakeEvent);
 
   fl_handle(fakeEvent);
 }
 
-static void fakeButtonEvent(bool press, int button,
-                            const XIDeviceEvent* origEvent)
+void FLTKGestureHandler::fakeButtonEvent(bool press, int button,
+                                         const XIDeviceEvent* origEvent)
 {
   XEvent fakeEvent;
 
@@ -88,8 +135,67 @@ static void fakeButtonEvent(bool press, int button,
   fakeEvent.type = press ? ButtonPress : ButtonRelease;
   fakeEvent.xbutton.button = button;
   copyXEventFields(&fakeEvent, origEvent);
+  setTouchEventState(&fakeEvent);
 
   fl_handle(fakeEvent);
+}
+
+void FLTKGestureHandler::handleGestureEvent(const GHEvent& ev)
+{
+  // FIXME: Can we get away with clobbering buttonMask like this
+  // in the case of touch gestures, rather than bitshifting?
+  switch (ev.type) {
+  case GH_GestureBegin:
+    vlog.info("GH_GestureBegin (%i)", ev.detail);
+    switch (ev.detail) {
+    case GH_LEFTBTN:
+    case GH_MIDDLEBTN:
+    case GH_RIGHTBTN:
+      fakeMotionEvent(ev);
+      fakeButtonEvent(true, ev.detail, ev);
+      break;
+
+/*    case GH_ZOOM:
+      self->handleKeyPress(0x1d, XK_Control_L);
+      break;*/
+    }
+    break;
+
+  case GH_GestureUpdate:
+    vlog.info("GH_GestureUpdate (%i)", ev.detail);
+    switch (gh->getState()) {
+    case GH_LEFTBTN:
+    case GH_MIDDLEBTN:
+    case GH_RIGHTBTN:
+      fakeMotionEvent(ev);
+      break;
+/*
+    case GH_VSCROLL:
+    case GH_ZOOM:
+      if (ev.detail > 0)
+        self->handlePointerEvent(rfb::Point(ev.event_x, ev.event_y), 8);
+      else if (ev.detail < 0)
+        self->handlePointerEvent(rfb::Point(ev.event_x, ev.event_y), 16);
+      break;*/
+    }
+    break;
+
+  case GH_GestureEnd:
+    vlog.info("GH_GestureEnd (%i)", ev.detail);
+    switch (ev.detail) {
+    case GH_LEFTBTN:
+    case GH_MIDDLEBTN:
+    case GH_RIGHTBTN:
+      fakeMotionEvent(ev);
+      fakeButtonEvent(false, ev.detail, ev);
+      break;
+/*
+    case GH_ZOOM:
+      self->handleKeyRelease(0x1d);
+      break;*/
+    }
+    break;
+  }
 }
 
 static int handleXinputEvent(void *event, void *data)
@@ -132,37 +238,7 @@ static int handleXinputEvent(void *event, void *data)
       // delivery of Core events by enabling the X Input ones. Make
       // FLTK happy by faking Core events based on the X Input ones.
 
-      switch (xevent->xgeneric.evtype) {
-      case XI_Motion:
-        fakeMotionEvent(devev);
-        break;
-      case XI_ButtonPress:
-        fakeButtonEvent(true, devev->detail, devev);
-        break;
-      case XI_ButtonRelease:
-        fakeButtonEvent(false, devev->detail, devev);
-        break;
-      case XI_TouchBegin:
-        if (tracking_touch)
-          break;
-        fakeMotionEvent(devev);
-        tracking_touch = true;
-        touch_id = devev->detail;
-        fakeButtonEvent(true, Button1, devev);
-        break;
-      case XI_TouchUpdate:
-        if (!tracking_touch || devev->detail != touch_id)
-          break;
-        fakeMotionEvent(devev);
-        break;
-      case XI_TouchEnd:
-        if (!tracking_touch || devev->detail != touch_id)
-          break;
-        fakeMotionEvent(devev);
-        tracking_touch = false;
-        fakeButtonEvent(false, Button1, devev);
-        break;
-      }
+      gh.processEvent(devev);
 
       XFreeEventData(fl_display, &xevent->xcookie);
 

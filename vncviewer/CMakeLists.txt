@@ -58,7 +58,7 @@ elseif(APPLE)
   target_link_libraries(vncviewer "-framework Carbon")
   target_link_libraries(vncviewer "-framework IOKit")
 else()
-	target_link_libraries(vncviewer ${X11_Xi_LIB})
+  target_link_libraries(vncviewer ${X11_Xi_LIB})
 endif()
 
 install(TARGETS vncviewer DESTINATION ${BIN_DIR})

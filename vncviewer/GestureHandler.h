@@ -24,6 +24,8 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/XInput2.h>
 
+#include <rfb/Timer.h>
+
 // Internal state bitmasks
 #define GH_NOGESTURE   0
 #define GH_LEFTBTN     1
@@ -91,32 +93,35 @@ struct GHTouch {
   double last_y;
 };
 
-class GestureHandler {
+class GestureHandler : public rfb::Timer::Callback {
   public:
     GestureHandler();
-    ~GestureHandler();
+    virtual ~GestureHandler();
 
-   int registerEvent(void *ev);
+   void registerEvent(const XIDeviceEvent *ev);
    unsigned char getState();
    bool hasState();
-
-   std::vector<GHEvent> getEventQueue();
-   void clearEventQueue();
 
    void resetState();
 
    int sttTimeout();
    int pushEvent(GHEventType t);
 
+  protected:
+    virtual void handleGestureEvent(const GHEvent& event) = 0;
+
   private:
     unsigned char state;
 
     std::vector<GHTouch> tracked;
-    std::vector<GHEvent> eventQueue;
 
-    int updateTouch(XIDeviceEvent *ev);
-    int trackTouch(XIDeviceEvent *ev);
-    int idxTracked(XIDeviceEvent *ev);
+    rfb::Timer timeoutTimer;
+
+    virtual bool handleTimeout(rfb::Timer* t);
+
+    int updateTouch(const XIDeviceEvent *ev);
+    int trackTouch(const XIDeviceEvent *ev);
+    int idxTracked(const XIDeviceEvent *ev);
 
     size_t avgTrackedTouches(double *x, double *y, GHEventType t);
 
