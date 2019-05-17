@@ -52,6 +52,11 @@
 #include "cocoa.h"
 #endif
 
+#if ! (defined(WIN32) || defined(__APPLE__))
+#include <X11/extensions/XInput2.h>
+#include <X11/extensions/XI2.h>
+#endif
+
 #define EDGE_SCROLL_SIZE 32
 #define EDGE_SCROLL_SPEED 20
 
