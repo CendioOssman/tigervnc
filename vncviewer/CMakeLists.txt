@@ -32,7 +32,7 @@ if(WIN32)
 elseif(APPLE)
   set(VNCVIEWER_SOURCES ${VNCVIEWER_SOURCES} cocoa.mm osx_to_qnum.c)
 else()
-  set(VNCVIEWER_SOURCES ${VNCVIEWER_SOURCES} xkb_to_qnum.c)
+  set(VNCVIEWER_SOURCES ${VNCVIEWER_SOURCES} GestureHandler.cxx xkb_to_qnum.c)
 endif()
 
 if(WIN32)

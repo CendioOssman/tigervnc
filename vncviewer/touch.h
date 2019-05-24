@@ -19,6 +19,10 @@
 #ifndef __TOUCH_H__
 #define __TOUCH_H__
 
+#include <X11/extensions/XInput2.h>
+
+XEvent fakeXEvent(XIDeviceEvent *ev);
+
 void enable_touch();
 void disable_touch();
 

@@ -68,6 +68,10 @@
 
 #include "PlatformPixelBuffer.h"
 
+#if !defined(WIN32) && !defined(__APPLE__)
+#include "GestureHandler.h"
+#endif // LINUX
+
 #include <FL/fl_draw.H>
 #include <FL/fl_ask.H>
 
@@ -94,7 +98,6 @@ extern const unsigned int code_map_osx_to_qnum_len;
 #ifdef WIN32
 #include "win32.h"
 #endif
-
 
 using namespace rfb;
 using namespace rdr;
