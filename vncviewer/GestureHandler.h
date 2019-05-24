@@ -32,8 +32,9 @@
 #define GH_MIDDLEBTN   2
 #define GH_RIGHTBTN    4
 #define GH_VSCROLL     8
-#define GH_ZOOM        16
-#define GH_UNDEFINED   (32 | 64 | 128)
+#define GH_HSCROLL     16
+#define GH_ZOOM        32
+#define GH_UNDEFINED   (64 | 128)
 
 #define GH_INITSTATE   (255 & ~GH_UNDEFINED)
 
@@ -53,7 +54,7 @@
 #define GH_STTIMEOUT   1
 
 // Timeout when waiting for gestures
-#define GH_STTDELAY    0.25 // s
+#define GH_STTDELAY    250 // ms
 
 // Single-touch long-press mode
 // Only valid with GH_STTIMEOUT
@@ -129,6 +130,7 @@ class GestureHandler : public rfb::Timer::Callback {
     int sttTouchUpdate();
 
     int vDistanceMoved();
+    int hDistanceMoved();
     int relDistanceMoved();
 };
 

@@ -39,24 +39,28 @@ void GestureHandler::registerEvent(const XIDeviceEvent *devev) {
 
   switch (devev->evtype) {
     case XI_TouchBegin:
-      vlog.info("GestureHandler::registerEvent() got XI_TouchBegin");
       // Ignore any new touches if there is already an active gesture
       if (!hasState())
         trackTouch(devev);
+#if (GH_STTIMEOUT)
+      if (tracked.size() == 1)
+        timeoutTimer.start(GH_STTDELAY);
+#endif
       break;
 
     case XI_TouchUpdate:
-      //vlog.info("GestureHandler::registerEvent() got XI_TouchUpdate");
       // FIXME: Maybe only do this if we're in a state??
       //        Or if the movement is above the threshold????
       updateTouch(devev);
       break;
 
     case XI_TouchEnd:
-      vlog.info("GestureHandler::registerEvent() got XI_TouchEnd");
       if (idxTracked(devev) < 0)
         return;
 
+#if (GH_STTIMEOUT)
+      timeoutTimer.stop();
+#endif
       sttTouchEnd();
 
       // Ending a tracked touch also ends the associated gesture
@@ -64,9 +68,6 @@ void GestureHandler::registerEvent(const XIDeviceEvent *devev) {
       resetState();
       break;
   }
-
-  if (tracked.size() == 1)
-    timeoutTimer.start(GH_STTDELAY);
 }
 
 int GestureHandler::sttTouchUpdate() {
@@ -83,30 +84,30 @@ int GestureHandler::sttTouchUpdate() {
       break;
 
     case 1:
-      this->state &= ~(GH_MIDDLEBTN | GH_RIGHTBTN | GH_VSCROLL | GH_ZOOM);
+      this->state &= ~(GH_MIDDLEBTN | GH_RIGHTBTN | GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
       break;
 
     case 2:
       this->state &= ~GH_MIDDLEBTN;
 
-     /*
-      * - If the finger has moved along the y axis _more_ than what it has
-      *   relative to the other finger, then we're not looking at a zoom.
-      *
-      * - If the finger has moved relative to the other finger _more_ than
-      *   what it has along the y axis, then we're not looking at a scroll.
-      */
-      if (std::abs(relDistanceMoved()) >= std::abs(vDistanceMoved()))
+      int dv = std::abs(vDistanceMoved());
+      int dh = std::abs(hDistanceMoved());
+      int dt = std::abs(relDistanceMoved());
+
+      if (dv < dh || dv < dt)
         this->state &= ~GH_VSCROLL;
-      else
+
+      if (dh < dv || dh < dt)
+        this->state &= ~GH_HSCROLL;
+
+      if (dt < dv || dt < dh)
         this->state &= ~GH_ZOOM;
+
       break;
   }
 
-  if (hasState()) {
-    vlog.info("sttTouchUpdate gave us state %i", this->state);
+  if (hasState())
     pushEvent(GH_GestureBegin);
-  }
 
   return this->state;
 }
@@ -125,7 +126,7 @@ int GestureHandler::pushEvent(GHEventType t) {
       break;
 
     case GH_GestureUpdate:
-      if (this->state == GH_VSCROLL || this->state == GH_ZOOM) {
+      if (this->state == GH_VSCROLL || this->state == GH_HSCROLL || this->state == GH_ZOOM) {
 	// For zoom and scroll, we always want the event coordinates
 	// to be where the gesture began. So call avgTrackedTouches
 	// with GH_GestureBegin instead of GH_GestureUpdate. Also,
@@ -137,7 +138,12 @@ int GestureHandler::pushEvent(GHEventType t) {
 	  if (std::abs(ghev.detail) < GH_SCRLSENS)
             return 0;
 	}
-	else if (this->state == GH_ZOOM) {
+	else if (this->state == GH_HSCROLL) {
+          ghev.detail = hDistanceMoved();
+	  if (std::abs(ghev.detail) < GH_SCRLSENS)
+            return 0;
+        }
+	else { // GH_ZOOM
           ghev.detail = relDistanceMoved();
 	  if (std::abs(ghev.detail) < GH_ZOOMSENS)
             return 0;
@@ -192,12 +198,24 @@ int GestureHandler::vDistanceMoved() {
   return GH_INVRTSCRL ? -avg_dist : avg_dist;
 }
 
+int GestureHandler::hDistanceMoved() {
+  int avg_dist = 0;
+
+  for (size_t i = 0; i < tracked.size(); i++) {
+    avg_dist += tracked[i].prev_x - tracked[i].last_x;
+  }
+
+  avg_dist /= tracked.size();
+
+  return GH_INVRTSCRL ? -avg_dist : avg_dist;
+}
+
 int GestureHandler::sttTimeout() {
   if (hasState())
     return this->state;
 
   // Scroll and zoom are no longer valid gestures
-  this->state &= ~(GH_VSCROLL | GH_ZOOM);
+  this->state &= ~(GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
 
   switch (tracked.size()) {
     case 0:
@@ -227,6 +245,15 @@ int GestureHandler::sttTimeout() {
       this->state = GH_NOGESTURE;
   }
 
+#if (GH_DTLPMODE == 2)
+  if (tracked.size() == 2 && this->state == GH_RIGHTBTN);
+  else
+#else
+  if (hasState())
+#endif
+      pushEvent(GH_GestureBegin);
+
+/*
   if (hasState())
 #if (GH_DTLPMODE == 1)
     pushEvent(GH_GestureBegin);
@@ -234,6 +261,7 @@ int GestureHandler::sttTimeout() {
     if (!(tracked.size() == 2 && this->state == GH_RIGHTBTN))
       pushEvent(GH_GestureBegin);
 #endif
+*/
 
   return this->state;
 }
@@ -242,15 +270,16 @@ int GestureHandler::sttTouchEnd() {
 // FIXME: This is where we need to figure out the logic interplay
 //        between GH_DTLMODE and GH_STLPMODE. For now, it doesn't
 //        quite work properly.
-#if (GH_DTLPMODE == 1)
-  if (hasState())
+#if (GH_DTLPMODE == 2)
+  if (tracked.size() == 2 && (this->state & GH_RIGHTBTN) != 0);
+  else
 #else
-  if (hasState() && this->state != GH_RIGHTBTN)
+  if (hasState())
 #endif
     return this->state;
 
   // Scroll and zoom are no longer valid gestures
-  this->state &= ~(GH_VSCROLL | GH_ZOOM);
+  this->state &= ~(GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
 
   switch (tracked.size()) {
     case 1:
@@ -307,7 +336,7 @@ int GestureHandler::idxTracked(const XIDeviceEvent *ev) {
   return -1;
 }
 
-int GestureHandler::trackTouch(XIDeviceEvent *ev) {
+int GestureHandler::trackTouch(const XIDeviceEvent *ev) {
   GHTouch ght;
 
   // FIXME: Perhaps implement some sanity checks here,
@@ -332,7 +361,7 @@ int GestureHandler::trackTouch(XIDeviceEvent *ev) {
       break;
 
     case 3:
-      this->state &= ~(GH_RIGHTBTN | GH_VSCROLL | GH_ZOOM);
+      this->state &= ~(GH_RIGHTBTN | GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
       break;
 
     default:
@@ -374,7 +403,7 @@ size_t GestureHandler::avgTrackedTouches(double *x, double *y, GHEventType t) {
 
 bool GestureHandler::handleTimeout(rfb::Timer* t)
 {
-  if (t = &timeoutTimer)
+  if (t == &timeoutTimer)
     sttTimeout();
 
   return False;

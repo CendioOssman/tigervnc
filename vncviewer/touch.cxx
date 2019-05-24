@@ -41,8 +41,6 @@
 
 static rfb::LogWriter vlog("Touch");
 
-//GestureHandler* gh = new GestureHandler();
-
 #if !defined(WIN32) && !defined(__APPLE__)
 static int xi_major;
 #endif
@@ -55,15 +53,17 @@ public:
 
 protected:
   void copyXEventFields(XEvent* dst, const XIDeviceEvent* src);
-  void setTouchEventState(XEvent* dst);
+  //void setTouchEventState(XEvent* dst);
   void fakeMotionEvent(const XIDeviceEvent* origEvent);
   void fakeButtonEvent(bool press, int button,
                        const XIDeviceEvent* origEvent);
 
   virtual void handleGestureEvent(const GHEvent& event);
 
+/*
 private:
   int touchButtonMask;
+*/
 };
 
 static class FLTKGestureHandler gh;
@@ -108,11 +108,13 @@ void FLTKGestureHandler::copyXEventFields(XEvent* dst,
   dst->xbutton.same_screen = True; // FIXME
 }
 
+/*
 void FLTKGestureHandler::setTouchEventState(XEvent* dst)
 {
   if (tracking_touch)
     dst->xbutton.state |= touchButtonMask << 8;
 }
+*/
 
 void FLTKGestureHandler::fakeMotionEvent(const XIDeviceEvent* origEvent)
 {
@@ -137,7 +139,7 @@ void FLTKGestureHandler::fakeButtonEvent(bool press, int button,
   fakeEvent.type = press ? ButtonPress : ButtonRelease;
   fakeEvent.xbutton.button = button;
   copyXEventFields(&fakeEvent, origEvent);
-  setTouchEventState(&fakeEvent);
+  //setTouchEventState(&fakeEvent);
 
   fl_handle(fakeEvent);
 }
@@ -148,20 +150,42 @@ void FLTKGestureHandler::handleGestureEvent(const GHEvent& ev)
   case GH_GestureBegin:
     switch (ev.detail) {
     case GH_LEFTBTN:
+      vlog.info("Got GH_GestureBegin(GH_LEFTBTN)");
+      break;
     case GH_MIDDLEBTN:
+      vlog.info("Got GH_GestureBegin(GH_MIDDLEBTN)");
+      break;
     case GH_RIGHTBTN:
-      fakeMotionEvent(ev);
-      fakeButtonEvent(true, ev.detail, ev);
+      vlog.info("Got GH_GestureBegin(GH_RIGHTBTN)");
+      break;
+    case GH_VSCROLL:
+      vlog.info("Got GH_GestureBegin(GH_VSCROLL)");
+      break;
+    case GH_ZOOM:
+      vlog.info("Got GH_GestureBegin(GH_ZOOM)");
       break;
     }
     break;
 
   case GH_GestureUpdate:
-    switch (gh->getState()) {
+    switch (getState()) {
     case GH_LEFTBTN:
+      vlog.info("Got GH_GestureUpdate(GH_LEFTBTN)");
+      break;
     case GH_MIDDLEBTN:
+      vlog.info("Got GH_GestureUpdate(GH_MIDDLEBTN)");
+      break;
     case GH_RIGHTBTN:
-      fakeMotionEvent(ev);
+      vlog.info("Got GH_GestureUpdate(GH_RIGHTBTN)");
+      break;
+    case GH_VSCROLL:
+      vlog.info("Got GH_GestureUpdate(GH_VSCROLL)");
+      break;
+    case GH_HSCROLL:
+      vlog.info("Got GH_GestureUpdate(GH_HSCROLL)");
+      break;
+    case GH_ZOOM:
+      vlog.info("Got GH_GestureUpdate(GH_ZOOM)");
       break;
     }
     break;
@@ -169,10 +193,22 @@ void FLTKGestureHandler::handleGestureEvent(const GHEvent& ev)
   case GH_GestureEnd:
     switch (ev.detail) {
     case GH_LEFTBTN:
+      vlog.info("Got GH_GestureEnd(GH_LEFTBTN)");
+      break;
     case GH_MIDDLEBTN:
+      vlog.info("Got GH_GestureEnd(GH_MIDDLEBTN)");
+      break;
     case GH_RIGHTBTN:
-      fakeMotionEvent(ev);
-      fakeButtonEvent(false, ev.detail, ev);
+      vlog.info("Got GH_GestureEnd(GH_RIGHTBTN)");
+      break;
+    case GH_VSCROLL:
+      vlog.info("Got GH_GestureEnd(GH_VSCROLL)");
+      break;
+    case GH_HSCROLL:
+      vlog.info("Got GH_GestureEnd(GH_HSCROLL)");
+      break;
+    case GH_ZOOM:
+      vlog.info("Got GH_GestureEnd(GH_ZOOM)");
       break;
     }
     break;
