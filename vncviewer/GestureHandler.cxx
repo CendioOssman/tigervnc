@@ -253,30 +253,17 @@ int GestureHandler::sttTimeout() {
 #endif
       pushEvent(GH_GestureBegin);
 
-/*
-  if (hasState())
-#if (GH_DTLPMODE == 1)
-    pushEvent(GH_GestureBegin);
-#else
-    if (!(tracked.size() == 2 && this->state == GH_RIGHTBTN))
-      pushEvent(GH_GestureBegin);
-#endif
-*/
-
   return this->state;
 }
 
 int GestureHandler::sttTouchEnd() {
-// FIXME: This is where we need to figure out the logic interplay
-//        between GH_DTLMODE and GH_STLPMODE. For now, it doesn't
-//        quite work properly.
+  if (hasState()) {
 #if (GH_DTLPMODE == 2)
-  if (tracked.size() == 2 && (this->state & GH_RIGHTBTN) != 0);
-  else
-#else
-  if (hasState())
+    if (tracked.size() == 2 && this->state == GH_RIGHTBTN)
+      pushEvent(GH_GestureBegin);
 #endif
     return this->state;
+  }
 
   // Scroll and zoom are no longer valid gestures
   this->state &= ~(GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
