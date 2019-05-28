@@ -109,13 +109,13 @@ void GestureHandler::pushEvent(GHEventType t) {
       // with GH_GestureBegin instead of GH_GestureUpdate. Also,
       // the detail field for these updates is the magnitude of
       // the update rather than the state (the state is obvious).
-      avgTrackedTouches(&avg_x, &avg_y, GH_GestureBegin);
+      avgTrackedTouches(&avg_x, &avg_y, NULL, NULL);
       ghev.event_x = avg_x;
       ghev.event_y = avg_y;
       break;
 
     default:
-      avgTrackedTouches(&avg_x, &avg_y, t);
+      avgTrackedTouches(NULL, NULL, &avg_x, &avg_y);
       ghev.event_x = avg_x;
       ghev.event_y = avg_y;
   }
@@ -241,29 +241,26 @@ void GestureHandler::trackTouch(const XIDeviceEvent *ev) {
     longpressTimer.start(GH_LONGPRESS_TIMEOUT);
 }
 
-void GestureHandler::avgTrackedTouches(double *x, double *y, GHEventType t) {
+void GestureHandler::avgTrackedTouches(double *first_x, double *first_y,
+                                       double *last_x, double *last_y) {
   size_t size = tracked.size();
-  double _x = 0, _y = 0;
+  double fx = 0, fy = 0, lx = 0, ly = 0;
 
-  switch (t) {
-    case GH_GestureBegin:
-      for (size_t i = 0; i < size; i++) {
-        _x += tracked[i].first_x;
-        _y += tracked[i].first_y;
-      }
-      break;
-
-    case GH_GestureUpdate:
-    case GH_GestureEnd:
-      for (size_t i = 0; i < size; i++) {
-        _x += tracked[i].last_x;
-        _y += tracked[i].last_y;
-      }
-      break;
+  for (size_t i = 0; i < size; i++) {
+    fx += tracked[i].first_x;
+    fy += tracked[i].first_y;
+    lx += tracked[i].last_x;
+    ly += tracked[i].last_y;
   }
 
-  *x = _x / size;
-  *y = _y / size;
+  if (first_x)
+    *first_x = fx / size;
+  if (first_y)
+    *first_y = fy / size;
+  if (last_x)
+    *last_x = lx / size;
+  if (last_y)
+    *last_y = ly / size;
 }
 
 void GestureHandler::longpressTimeout() {

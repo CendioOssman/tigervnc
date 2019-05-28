@@ -94,7 +94,7 @@ class GestureHandler : public rfb::Timer::Callback {
     void endTouch(const XIDeviceEvent *ev);
     void endGesture();
 
-    void avgTrackedTouches(double *x, double *y, GHEventType t);
+    void avgTrackedTouches(double *first_x, double *first_y, double *last_x, double *last_y);
 
     int vDistanceMoved();
     int hDistanceMoved();
