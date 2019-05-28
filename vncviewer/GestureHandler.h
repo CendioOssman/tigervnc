@@ -19,8 +19,8 @@
 #ifndef __GESTUREHANDLER_H__
 #define __GESTUREHANDLER_H__
 
+#include <map>
 #include <set>
-#include <vector>
 
 #include <X11/Xlib.h>
 #include <X11/extensions/XInput2.h>
@@ -54,7 +54,6 @@ struct GHEvent {
 };
 
 struct GHTouch {
-  int id;
   struct timeval started;
   double first_x;
   double first_y;
@@ -75,7 +74,7 @@ class GestureHandler : public rfb::Timer::Callback {
   private:
     unsigned char state;
 
-    std::vector<GHTouch> tracked;
+    std::map<int, GHTouch> tracked;
     std::set<int> ignored;
 
    bool hasDetectedGesture();

@@ -86,7 +86,7 @@ void GestureHandler::registerEvent(const XIDeviceEvent *devev) {
 
     case XI_TouchEnd:
       // Something we're tracking?
-      if (idxTracked(devev) >= 0) {
+      if (tracked.count(devev->detail) > 0) {
         endTouch(devev);
       } else {
         ignored.erase(devev->detail);
@@ -202,33 +202,29 @@ bool GestureHandler::hasDetectedGesture() {
   return state && !(state & (state - 1));
 }
 
-int GestureHandler::idxTracked(const XIDeviceEvent *ev) {
-  for (size_t i = 0; i < tracked.size(); i++) {
-    if (tracked[i].id == ev->detail)
-      return (int)i;
-  }
-
-  return -1;
-}
-
 void GestureHandler::trackTouch(const XIDeviceEvent *ev) {
   GHTouch ght;
 
   // FIXME: Perhaps implement some sanity checks here,
   // e.g. duplicate IDs etc
   
-  ght.id = ev->detail;
   gettimeofday(&ght.started, NULL);
   ght.last_x = ght.first_x = ev->event_x;
   ght.last_y = ght.first_y = ev->event_y;
 
-  tracked.push_back(ght);
+  tracked[ev->detail] = ght;
 
   // Did it take too long between touches that we should no longer
   // consider this a single gesture?
-  if ((tracked.size() > 1) &&
-      (rfb::msSince(&tracked[0].started) > GH_MULTITOUCH_TIMEOUT))
-    this->state = GH_NOGESTURE;
+  if (tracked.size() > 1) {
+    std::map<int, GHTouch>::const_iterator iter;
+    for (iter = tracked.begin(); iter != tracked.end(); ++iter) {
+      if (rfb::msSince(&iter->second.started) > GH_MULTITOUCH_TIMEOUT) {
+        this->state = GH_NOGESTURE;
+        break;
+      }
+    }
+  }
 
   switch (tracked.size()) {
     case 1:
@@ -288,15 +284,17 @@ bool GestureHandler::handleTimeout(rfb::Timer* t)
 }
 
 void GestureHandler::updateTouch(const XIDeviceEvent *ev) {
-  int idx = idxTracked(ev);
+  GHTouch *touch;
 
   // If this is an update for a touch we're not tracking, ignore it
-  if (idx < 0)
+  if (tracked.count(ev->detail) == 0)
     return;
 
+  touch = &tracked[ev->detail];
+
   // Update the touches last position with the event coordinates
-  tracked[idx].last_x = ev->event_x;
-  tracked[idx].last_y = ev->event_y;
+  touch->last_x = ev->event_x;
+  touch->last_y = ev->event_y;
 
   if (hasDetectedGesture()) {
     pushEvent(GH_GestureUpdate);
@@ -304,8 +302,8 @@ void GestureHandler::updateTouch(const XIDeviceEvent *ev) {
   }
 
   // If the move is smaller than the minimum threshold, ignore it
-  if (std::abs(tracked[idx].first_x - ev->event_x) < GH_MTHRESHOLD &&
-      std::abs(tracked[idx].first_y - ev->event_y) < GH_MTHRESHOLD)
+  if (std::abs(touch->first_x - ev->event_x) < GH_MTHRESHOLD &&
+      std::abs(touch->first_y - ev->event_y) < GH_MTHRESHOLD)
     return;
 
   // Because it's impossible to distinguish from a scroll, right
@@ -388,11 +386,11 @@ void GestureHandler::endTouch(const XIDeviceEvent *ev) {
     pushEvent(GH_GestureEnd);
 
   // Ignore any remaining touches until they are ended
-  size_t size = tracked.size();
-  for (size_t i = 0; i < size; i++) {
-    if (tracked[i].id == ev->detail)
+  std::map<int, GHTouch>::const_iterator iter;
+  for (iter = tracked.begin(); iter != tracked.end(); ++iter) {
+    if (iter->first == ev->detail)
       continue;
-    ignored.insert(tracked[i].id);
+    ignored.insert(iter->first);
   }
   tracked.clear();
 
