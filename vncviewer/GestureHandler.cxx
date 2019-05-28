@@ -421,7 +421,8 @@ void GestureHandler::endTouch(const XIDeviceEvent *ev) {
   }
 
   // Ending a tracked touch also ends the associated gesture
-  pushEvent(GH_GestureEnd);
+  if (hasDetectedGesture())
+    pushEvent(GH_GestureEnd);
 
   // Ignore any remaining touches until they are ended
   size_t size = tracked.size();
