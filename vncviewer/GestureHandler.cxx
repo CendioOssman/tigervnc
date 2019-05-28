@@ -27,6 +27,39 @@
 
 static rfb::LogWriter vlog("GestureHandler");
 
+// Movement threshold for gestures
+#define GH_MTHRESHOLD  50
+
+// Sensitivity threshold for gestures
+#define GH_ZOOMSENS    30
+#define GH_SCRLSENS    50
+
+// Invert the scroll
+#define GH_INVRTSCRL   1
+
+// Enable timeout state transition
+// 0 = Disabled
+// 1 = Enabled
+#define GH_STTIMEOUT   1
+
+// Timeout when waiting for gestures
+#define GH_STTDELAY    250 // ms
+
+// Single-touch long-press mode
+// Only valid with GH_STTIMEOUT
+// 1 = Left button click-and-hold
+// 2 = Right button click-and-hold
+#define GH_STLPMODE    2
+
+// Double-touch long-press mode
+// Only valid with GH_STTIMEOUT
+// 1 = Right button click-and-hold
+// 2 = No effect (click on release)
+#define GH_DTLPMODE    2
+
+// TODO: A switch for the other STTs
+//       (sttTouchUpdate and sttEndTouch)
+
 GestureHandler::GestureHandler() :
   state(GH_INITSTATE), timeoutTimer(this) {
 }
