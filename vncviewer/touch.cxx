@@ -46,6 +46,16 @@ static int xi_major;
 #endif
 
 #if !defined(WIN32) && !defined(__APPLE__)
+
+// Sensitivity threshold for gestures
+    // By only doing this update on a successful GestureUpdate, we ensure
+    // that thresholds are treated as cumulative; i.e. a 30px threshold
+    // will be met after any number of updates total to 30. The alternative
+    // would be per-update thresholds, in which case gestures would respond
+    // to speed of change rather than total distance.
+#define GH_ZOOMSENS    30
+#define GH_SCRLSENS    50
+
 class FLTKGestureHandler: public GestureHandler
 {
 public:
@@ -60,8 +70,10 @@ protected:
 
   virtual void handleGestureEvent(const GHEvent& event);
 
-/*
+
 private:
+  int last_value;
+/*
   int touchButtonMask;
 */
 };
@@ -160,9 +172,17 @@ void FLTKGestureHandler::handleGestureEvent(const GHEvent& ev)
       break;
     case GH_VSCROLL:
       vlog.info("Got GH_GestureBegin(GH_VSCROLL)");
+      last_value = 0;
+      if (abs(ev.detail - last_value) < GH_SCRLSENS)
+        break;
+      last_value = ev.detail;
       break;
     case GH_ZOOM:
       vlog.info("Got GH_GestureBegin(GH_ZOOM)");
+      last_value = 0;
+      if (abs(ev.detail - last_value) < GH_ZOOMSENS)
+        break;
+      last_value = ev.detail;
       break;
     }
     break;
@@ -180,12 +200,21 @@ void FLTKGestureHandler::handleGestureEvent(const GHEvent& ev)
       break;
     case GH_VSCROLL:
       vlog.info("Got GH_GestureUpdate(GH_VSCROLL)");
+      if (abs(ev.detail - last_value) < GH_SCRLSENS)
+        break;
+      last_value = ev.detail;
       break;
     case GH_HSCROLL:
       vlog.info("Got GH_GestureUpdate(GH_HSCROLL)");
+      if (abs(ev.detail - last_value) < GH_SCRLSENS)
+        break;
+      last_value = ev.detail;
       break;
     case GH_ZOOM:
       vlog.info("Got GH_GestureUpdate(GH_ZOOM)");
+      if (abs(ev.detail - last_value) < GH_ZOOMSENS)
+        break;
+      last_value = ev.detail;
       break;
     }
     break;

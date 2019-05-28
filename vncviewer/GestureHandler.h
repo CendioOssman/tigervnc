@@ -56,8 +56,6 @@ struct GHTouch {
   int id;
   double first_x;
   double first_y;
-  double prev_x;
-  double prev_y;
   double last_x;
   double last_y;
 };

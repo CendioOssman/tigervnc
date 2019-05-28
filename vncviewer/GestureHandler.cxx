@@ -30,10 +30,6 @@ static rfb::LogWriter vlog("GestureHandler");
 // Movement threshold for gestures
 const unsigned GH_MTHRESHOLD = 50;
 
-// Sensitivity threshold for gestures
-#define GH_ZOOMSENS    30
-#define GH_SCRLSENS    50
-
 // Invert the scroll
 #define GH_INVRTSCRL   1
 
@@ -166,21 +162,12 @@ int GestureHandler::pushEvent(GHEventType t) {
 	// the detail field for these updates is the magnitude of
 	// the update rather than the state (the state is obvious).
         avgTrackedTouches(&avg_x, &avg_y, GH_GestureBegin);
-        if (this->state == GH_VSCROLL) {
+        if (this->state == GH_VSCROLL)
           ghev.detail = vDistanceMoved();
-	  if (std::abs(ghev.detail) < GH_SCRLSENS)
-            return 0;
-	}
-	else if (this->state == GH_HSCROLL) {
+	else if (this->state == GH_HSCROLL)
           ghev.detail = hDistanceMoved();
-	  if (std::abs(ghev.detail) < GH_SCRLSENS)
-            return 0;
-        }
-	else { // GH_ZOOM
+	else // GH_ZOOM
           ghev.detail = relDistanceMoved();
-	  if (std::abs(ghev.detail) < GH_ZOOMSENS)
-            return 0;
-	}
       }
       else {
         avgTrackedTouches(&avg_x, &avg_y, t);
@@ -205,8 +192,8 @@ int GestureHandler::relDistanceMoved() {
     return 0;
 
   for (size_t i = 1; i < tracked.size(); i++) {
-    int dx_t0 = tracked[i].prev_x - tracked[i-1].prev_x;
-    int dy_t0 = tracked[i].prev_y - tracked[i-1].prev_y;
+    int dx_t0 = tracked[i].first_x - tracked[i-1].first_x;
+    int dy_t0 = tracked[i].first_y - tracked[i-1].first_y;
     int dt0 = std::sqrt(dx_t0 * dx_t0 + dy_t0 * dy_t0);
 
     int dx_t1 = tracked[i].last_x - tracked[i-1].last_x;
@@ -223,7 +210,7 @@ int GestureHandler::vDistanceMoved() {
   int avg_dist = 0;
 
   for (size_t i = 0; i < tracked.size(); i++) {
-    avg_dist += tracked[i].prev_y - tracked[i].last_y;
+    avg_dist += tracked[i].first_y - tracked[i].last_y;
   }
 
   avg_dist /= tracked.size();
@@ -235,7 +222,7 @@ int GestureHandler::hDistanceMoved() {
   int avg_dist = 0;
 
   for (size_t i = 0; i < tracked.size(); i++) {
-    avg_dist += tracked[i].prev_x - tracked[i].last_x;
+    avg_dist += tracked[i].first_x - tracked[i].last_x;
   }
 
   avg_dist /= tracked.size();
@@ -359,8 +346,8 @@ int GestureHandler::trackTouch(const XIDeviceEvent *ev) {
   // e.g. duplicate IDs etc
   
   ght.id = ev->detail;
-  ght.last_x = ght.prev_x = ght.first_x = ev->event_x;
-  ght.last_y = ght.prev_y = ght.first_y = ev->event_y;
+  ght.last_x = ght.first_x = ev->event_x;
+  ght.last_y = ght.first_y = ev->event_y;
 
   tracked.push_back(ght);
 
@@ -428,26 +415,21 @@ int GestureHandler::updateTouch(const XIDeviceEvent *ev) {
   if (idx < 0)
     return 0;
 
+  // Update the touches last position with the event coordinates
+  tracked[idx].last_x = ev->event_x;
+  tracked[idx].last_y = ev->event_y;
+
+  if (hasDetectedGesture()) {
+    pushEvent(GH_GestureUpdate);
+    return idx;
+  }
+
   // If the move is smaller than the minimum threshold, ignore it
   if (std::abs(tracked[idx].first_x - ev->event_x) < GH_MTHRESHOLD &&
       std::abs(tracked[idx].first_y - ev->event_y) < GH_MTHRESHOLD)
     return 0;
 
-  // Update the touches last position with the event coordinates
-  tracked[idx].last_x = ev->event_x;
-  tracked[idx].last_y = ev->event_y;
-
   sttTouchUpdate();
-
-  if (pushEvent(GH_GestureUpdate)) {
-    // By only doing this update on a successful GestureUpdate, we ensure
-    // that thresholds are treated as cumulative; i.e. a 30px threshold
-    // will be met after any number of updates total to 30. The alternative
-    // would be per-update thresholds, in which case gestures would respond
-    // to speed of change rather than total distance.
-    tracked[idx].prev_x = tracked[idx].last_x;
-    tracked[idx].prev_y = tracked[idx].last_y;
-  }
 
   return idx;
 }
