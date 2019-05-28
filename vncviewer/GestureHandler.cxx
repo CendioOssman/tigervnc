@@ -28,7 +28,7 @@
 static rfb::LogWriter vlog("GestureHandler");
 
 // Movement threshold for gestures
-#define GH_MTHRESHOLD  50
+const unsigned GH_MTHRESHOLD = 50;
 
 // Sensitivity threshold for gestures
 #define GH_ZOOMSENS    30
