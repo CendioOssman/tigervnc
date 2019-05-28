@@ -334,7 +334,7 @@ void GestureHandler::resetState() {
 bool GestureHandler::hasDetectedGesture() {
   // Invalid state if any of the undefined bits are set
   if ((state & GH_UNDEFINED) != 0) {
-    return False;
+    return false;
   }
 
   // Check to see if the bitmask value is a power of 2
