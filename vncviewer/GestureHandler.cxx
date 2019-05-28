@@ -99,9 +99,9 @@ void GestureHandler::registerEvent(const XIDeviceEvent *devev) {
   }
 }
 
-int GestureHandler::sttTouchUpdate() {
+void GestureHandler::sttTouchUpdate() {
   if (hasDetectedGesture())
-    return this->state;
+    return;
 
   // Because it's impossible to distinguish from a scroll, right
   // click can never be initiated by a movement-based trigger.
@@ -137,11 +137,9 @@ int GestureHandler::sttTouchUpdate() {
 
   if (hasDetectedGesture())
     pushEvent(GH_GestureBegin);
-
-  return this->state;
 }
 
-int GestureHandler::pushEvent(GHEventType t) {
+void GestureHandler::pushEvent(GHEventType t) {
   GHEvent ghev;
   double avg_x, avg_y;
 
@@ -181,8 +179,6 @@ int GestureHandler::pushEvent(GHEventType t) {
   ghev.type = t;
 
   handleGestureEvent(ghev);
-
-  return 1;
 }
 
 int GestureHandler::relDistanceMoved() {
@@ -230,9 +226,9 @@ int GestureHandler::hDistanceMoved() {
   return GH_INVRTSCRL ? -avg_dist : avg_dist;
 }
 
-int GestureHandler::sttTimeout() {
+void GestureHandler::sttTimeout() {
   if (hasDetectedGesture())
-    return this->state;
+    return;
 
   // Scroll and zoom are no longer valid gestures
   this->state &= ~(GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
@@ -272,17 +268,15 @@ int GestureHandler::sttTimeout() {
   if (hasDetectedGesture())
 #endif
       pushEvent(GH_GestureBegin);
-
-  return this->state;
 }
 
-int GestureHandler::sttTouchEnd() {
+void GestureHandler::sttTouchEnd() {
   if (hasDetectedGesture()) {
 #if (GH_DTLPMODE == 2)
     if (tracked.size() == 2 && this->state == GH_RIGHTBTN)
       pushEvent(GH_GestureBegin);
 #endif
-    return this->state;
+    return;
   }
 
   // Scroll and zoom are no longer valid gestures
@@ -310,8 +304,6 @@ int GestureHandler::sttTouchEnd() {
 
   if (hasDetectedGesture())
     pushEvent(GH_GestureBegin);
-
-  return this->state;
 }
 
 void GestureHandler::resetState() {
@@ -339,7 +331,7 @@ int GestureHandler::idxTracked(const XIDeviceEvent *ev) {
   return -1;
 }
 
-int GestureHandler::trackTouch(const XIDeviceEvent *ev) {
+void GestureHandler::trackTouch(const XIDeviceEvent *ev) {
   GHTouch ght;
 
   // FIXME: Perhaps implement some sanity checks here,
@@ -369,11 +361,9 @@ int GestureHandler::trackTouch(const XIDeviceEvent *ev) {
 
   if (hasDetectedGesture())
     pushEvent(GH_GestureBegin);
-
-  return tracked.size();
 }
 
-size_t GestureHandler::avgTrackedTouches(double *x, double *y, GHEventType t) {
+void GestureHandler::avgTrackedTouches(double *x, double *y, GHEventType t) {
   size_t size = tracked.size();
   double _x = 0, _y = 0;
 
@@ -396,8 +386,6 @@ size_t GestureHandler::avgTrackedTouches(double *x, double *y, GHEventType t) {
 
   *x = _x / size;
   *y = _y / size;
-
-  return size;
 }
 
 bool GestureHandler::handleTimeout(rfb::Timer* t)
@@ -408,12 +396,12 @@ bool GestureHandler::handleTimeout(rfb::Timer* t)
   return False;
 }
 
-int GestureHandler::updateTouch(const XIDeviceEvent *ev) {
+void GestureHandler::updateTouch(const XIDeviceEvent *ev) {
   int idx = idxTracked(ev);
 
   // If this is an update for a touch we're not tracking, ignore it
   if (idx < 0)
-    return 0;
+    return;
 
   // Update the touches last position with the event coordinates
   tracked[idx].last_x = ev->event_x;
@@ -421,15 +409,13 @@ int GestureHandler::updateTouch(const XIDeviceEvent *ev) {
 
   if (hasDetectedGesture()) {
     pushEvent(GH_GestureUpdate);
-    return idx;
+    return;
   }
 
   // If the move is smaller than the minimum threshold, ignore it
   if (std::abs(tracked[idx].first_x - ev->event_x) < GH_MTHRESHOLD &&
       std::abs(tracked[idx].first_y - ev->event_y) < GH_MTHRESHOLD)
-    return 0;
+    return;
 
   sttTouchUpdate();
-
-  return idx;
 }
