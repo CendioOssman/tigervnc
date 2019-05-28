@@ -911,6 +911,9 @@ void DesktopWindow::grabPointer()
   eventmask.mask = flags;
   eventmask.mask_len = sizeof(flags);
 
+  // XInput doesn't have a way to grab all master devices, so we'll
+  // have to enumerate them manually
+
   devices = XIQueryDevice(fl_display, XIAllMasterDevices, &ndevices);
 
   for (int i = 0; i < ndevices; i++) {
@@ -934,11 +937,7 @@ void DesktopWindow::grabPointer()
     if (ret) {
       if (ret == XIAlreadyGrabbed)
         continue;
-      else {
-        vlog.error(_("Failure grabbing mouse"));
-        ungrabPointer();
-        return;
-      }
+      vlog.error(_("Failure grabbing pointer device %d"), device->deviceid);
     }
   }
 

@@ -31,6 +31,8 @@
 
 #include <rfb/LogWriter.h>
 
+#include "vncviewer.h"
+#include "i18n.h"
 #include "touch.h"
 
 static rfb::LogWriter vlog("Touch");
@@ -122,7 +124,7 @@ static int handleXinputEvent(void *event, void *data)
       XIDeviceEvent *devev;
 
       if (!XGetEventData(fl_display, &xevent->xcookie)) {
-        vlog.error("Failed to get event data for X Input event");
+        vlog.error(_("Failed to get event data for X Input event"));
         return 1;
       }
 
@@ -162,6 +164,12 @@ static int handleXinputEvent(void *event, void *data)
         tracking_touch = false;
         fakeButtonEvent(false, Button1, devev);
         break;
+      case XI_Enter:
+        vlog.debug("XI_Enter");
+        break;
+      case XI_Leave:
+        vlog.debug("XI_Leave");
+        break;
       }
 
       XFreeEventData(fl_display, &xevent->xcookie);
@@ -183,17 +191,15 @@ void enable_touch()
   fl_open_display();
 
   if (!XQueryExtension(fl_display, "XInputExtension", &xi_major, &ev, &err)) {
-    vlog.error("X Input extension not available.");
-    // FIXME: fatal
-    return;
+    exit_vncviewer(_("X Input extension not available."));
+    return; // Not reached
   }
 
   major_ver = 2;
   minor_ver = 2;
   if (XIQueryVersion(fl_display, &major_ver, &minor_ver) != Success) {
-    vlog.error("X Input 2 (or newer) is not available.");
-    // FIXME: fatal
-    return;
+    exit_vncviewer(_("X Input 2 (or newer) is not available."));
+    return; // Not reached
   }
 
   if ((major_ver == 2) && (minor_ver < 2))
