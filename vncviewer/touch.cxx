@@ -161,14 +161,20 @@ void FLTKGestureHandler::handleGestureEvent(const GHEvent& ev)
   switch (ev.type) {
   case GH_GestureBegin:
     switch (ev.gesture) {
-    case GH_LEFTBTN:
-      vlog.info("Got GH_GestureBegin(GH_LEFTBTN)");
+    case GH_ONETAP:
+      vlog.info("Got GH_GestureBegin(GH_ONETAP)");
       break;
-    case GH_MIDDLEBTN:
-      vlog.info("Got GH_GestureBegin(GH_MIDDLEBTN)");
+    case GH_TWOTAP:
+      vlog.info("Got GH_GestureBegin(GH_TWOTAP)");
       break;
-    case GH_RIGHTBTN:
-      vlog.info("Got GH_GestureBegin(GH_RIGHTBTN)");
+    case GH_THREETAP:
+      vlog.info("Got GH_GestureBegin(GH_THREETAP)");
+      break;
+    case GH_DRAG:
+      vlog.info("Got GH_GestureBegin(GH_DRAG)");
+      break;
+    case GH_LONGPRESS:
+      vlog.info("Got GH_GestureBegin(GH_LONGPRESS)");
       break;
     case GH_VSCROLL:
       vlog.info("Got GH_GestureBegin(GH_VSCROLL)");
@@ -189,14 +195,20 @@ void FLTKGestureHandler::handleGestureEvent(const GHEvent& ev)
 
   case GH_GestureUpdate:
     switch (ev.gesture) {
-    case GH_LEFTBTN:
-      vlog.info("Got GH_GestureUpdate(GH_LEFTBTN)");
+    case GH_ONETAP:
+      vlog.info("Got GH_GestureUpdate(GH_ONETAP)");
       break;
-    case GH_MIDDLEBTN:
-      vlog.info("Got GH_GestureUpdate(GH_MIDDLEBTN)");
+    case GH_TWOTAP:
+      vlog.info("Got GH_GestureUpdate(GH_TWOTAP)");
       break;
-    case GH_RIGHTBTN:
-      vlog.info("Got GH_GestureUpdate(GH_RIGHTBTN)");
+    case GH_THREETAP:
+      vlog.info("Got GH_GestureUpdate(GH_THREETAP)");
+      break;
+    case GH_DRAG:
+      vlog.info("Got GH_GestureUpdate(GH_DRAG)");
+      break;
+    case GH_LONGPRESS:
+      vlog.info("Got GH_GestureUpdate(GH_LONGPRESS)");
       break;
     case GH_VSCROLL:
       vlog.info("Got GH_GestureUpdate(GH_VSCROLL)");
@@ -221,14 +233,20 @@ void FLTKGestureHandler::handleGestureEvent(const GHEvent& ev)
 
   case GH_GestureEnd:
     switch (ev.gesture) {
-    case GH_LEFTBTN:
-      vlog.info("Got GH_GestureEnd(GH_LEFTBTN)");
+    case GH_ONETAP:
+      vlog.info("Got GH_GestureEnd(GH_ONETAP)");
       break;
-    case GH_MIDDLEBTN:
-      vlog.info("Got GH_GestureEnd(GH_MIDDLEBTN)");
+    case GH_TWOTAP:
+      vlog.info("Got GH_GestureEnd(GH_TWOTAP)");
       break;
-    case GH_RIGHTBTN:
-      vlog.info("Got GH_GestureEnd(GH_RIGHTBTN)");
+    case GH_THREETAP:
+      vlog.info("Got GH_GestureEnd(GH_THREETAP)");
+      break;
+    case GH_DRAG:
+      vlog.info("Got GH_GestureEnd(GH_DRAG)");
+      break;
+    case GH_LONGPRESS:
+      vlog.info("Got GH_GestureEnd(GH_LONGPRESS)");
       break;
     case GH_VSCROLL:
       vlog.info("Got GH_GestureEnd(GH_VSCROLL)");

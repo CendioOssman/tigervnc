@@ -29,15 +29,16 @@
 
 // Internal state bitmasks
 #define GH_NOGESTURE   0
-#define GH_LEFTBTN     1
-#define GH_MIDDLEBTN   2
-#define GH_RIGHTBTN    4
-#define GH_VSCROLL     8
-#define GH_HSCROLL     16
-#define GH_ZOOM        32
-#define GH_UNDEFINED   (64 | 128)
+#define GH_ONETAP      1
+#define GH_TWOTAP      2
+#define GH_THREETAP    4
+#define GH_DRAG        8
+#define GH_LONGPRESS   16
+#define GH_VSCROLL     32
+#define GH_HSCROLL     64
+#define GH_ZOOM        128
 
-#define GH_INITSTATE   (255 & ~GH_UNDEFINED)
+#define GH_INITSTATE   255
 
 enum GHEventType {
   GH_GestureBegin,
@@ -77,18 +78,21 @@ class GestureHandler : public rfb::Timer::Callback {
     std::map<int, GHTouch> tracked;
     std::set<int> ignored;
 
+    rfb::Timer longpressTimer;
+
    bool hasDetectedGesture();
 
    void resetState();
 
    void pushEvent(GHEventType t);
 
+   void longpressTimeout();
     virtual bool handleTimeout(rfb::Timer* t);
 
     void updateTouch(const XIDeviceEvent *ev);
     void trackTouch(const XIDeviceEvent *ev);
     void endTouch(const XIDeviceEvent *ev);
-    int idxTracked(const XIDeviceEvent *ev);
+    void endGesture();
 
     void avgTrackedTouches(double *x, double *y, GHEventType t);
 

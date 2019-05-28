@@ -42,23 +42,14 @@ const unsigned GH_MTHRESHOLD = 50;
 // Timeout when waiting for gestures (ms)
 const int GH_MULTITOUCH_TIMEOUT = 250;
 
-// Single-touch long-press mode
-// Only valid with GH_STTIMEOUT
-// 1 = Left button click-and-hold
-// 2 = Right button click-and-hold
-#define GH_STLPMODE    2
-
-// Double-touch long-press mode
-// Only valid with GH_STTIMEOUT
-// 1 = Right button click-and-hold
-// 2 = No effect (click on release)
-#define GH_DTLPMODE    2
+// Single-touch long-press gesture (ms)
+const int GH_LONGPRESS_TIMEOUT = 1000;
 
 // TODO: A switch for the other STTs
 //       (sttTouchUpdate and sttEndTouch)
 
 GestureHandler::GestureHandler() :
-  state(GH_INITSTATE) {
+  state(GH_INITSTATE), longpressTimer(this) {
 }
 
 GestureHandler::~GestureHandler()
@@ -192,11 +183,6 @@ void GestureHandler::resetState() {
 }
 
 bool GestureHandler::hasDetectedGesture() {
-  // Invalid state if any of the undefined bits are set
-  if ((state & GH_UNDEFINED) != 0) {
-    return false;
-  }
-
   // Check to see if the bitmask value is a power of 2
   // (i.e. only one bit set). If it is, we have a state.
   return state && !(state & (state - 1));
@@ -231,11 +217,12 @@ void GestureHandler::trackTouch(const XIDeviceEvent *ev) {
       break;
 
     case 2:
-      this->state &= ~GH_LEFTBTN;
+      this->state &= ~(GH_ONETAP | GH_LONGPRESS);
+      longpressTimer.stop();
       break;
 
     case 3:
-      this->state &= ~(GH_RIGHTBTN | GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
+      this->state &= ~(GH_TWOTAP | GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
       break;
 
     default:
@@ -244,10 +231,8 @@ void GestureHandler::trackTouch(const XIDeviceEvent *ev) {
 
   if (hasDetectedGesture())
     pushEvent(GH_GestureBegin);
-#if (GH_STTIMEOUT)
-  else if (tracked.size() == 1)
-    timeoutTimer.start(GH_STTDELAY);
-#endif
+  else if (this->state & GH_LONGPRESS)
+    longpressTimer.start(GH_LONGPRESS_TIMEOUT);
 }
 
 void GestureHandler::avgTrackedTouches(double *x, double *y, GHEventType t) {
@@ -275,10 +260,16 @@ void GestureHandler::avgTrackedTouches(double *x, double *y, GHEventType t) {
   *y = _y / size;
 }
 
+void GestureHandler::longpressTimeout() {
+  this->state = GH_LONGPRESS;
+  pushEvent(GH_GestureBegin);
+  endGesture();
+}
+
 bool GestureHandler::handleTimeout(rfb::Timer* t)
 {
-  if (t == &timeoutTimer)
-    touchTimeout();
+  if (t == &longpressTimer)
+    longpressTimeout();
 
   return False;
 }
@@ -306,9 +297,9 @@ void GestureHandler::updateTouch(const XIDeviceEvent *ev) {
       std::abs(touch->first_y - ev->event_y) < GH_MTHRESHOLD)
     return;
 
-  // Because it's impossible to distinguish from a scroll, right
-  // click can never be initiated by a movement-based trigger.
-  this->state &= ~GH_RIGHTBTN;
+  // Can't be a tap or long press as we've seen movement
+  this->state &= ~(GH_ONETAP | GH_TWOTAP | GH_THREETAP | GH_LONGPRESS);
+  longpressTimer.stop();
 
   switch (tracked.size()) {
     case 0:
@@ -316,12 +307,10 @@ void GestureHandler::updateTouch(const XIDeviceEvent *ev) {
       break;
 
     case 1:
-      this->state &= ~(GH_MIDDLEBTN | GH_RIGHTBTN | GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
+      this->state &= ~(GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
       break;
 
     case 2:
-      this->state &= ~GH_MIDDLEBTN;
-
       int dv = std::abs(vDistanceMoved());
       int dh = std::abs(hDistanceMoved());
       int dt = std::abs(relDistanceMoved());
@@ -343,55 +332,44 @@ void GestureHandler::updateTouch(const XIDeviceEvent *ev) {
 }
 
 void GestureHandler::endTouch(const XIDeviceEvent *ev) {
-#if (GH_STTIMEOUT)
-  timeoutTimer.stop();
-#endif
-
   // Some gesture don't trigger until a finger is released
   if (!hasDetectedGesture()) {
-    // Scroll and zoom are no longer valid gestures
-    this->state &= ~(GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
+    // Can't be a gesture that relies on movement
+    this->state &= ~(GH_DRAG | GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
+    // Or something that relies on more time
+    this->state &= ~GH_LONGPRESS;
+    longpressTimer.stop();
 
     switch (tracked.size()) {
       case 1:
-        // Not a multi-touch event
-        this->state &= ~(GH_MIDDLEBTN | GH_RIGHTBTN);
+        this->state &= ~(GH_TWOTAP | GH_THREETAP);
         break;
 
       case 2:
-        // Not a single- or triple-touch gesture
-        this->state &= ~(GH_LEFTBTN | GH_MIDDLEBTN);
+        this->state &= ~(GH_THREETAP);
         break;
-
-      case 3:
-        // Not a single- or double-touch gesture
-        this->state &= ~(GH_LEFTBTN | GH_RIGHTBTN);
-        break;
-
-      default:
-        this->state = GH_NOGESTURE;
     }
 
     if (hasDetectedGesture())
       pushEvent(GH_GestureBegin);
-  } else {
-#if (GH_DTLPMODE == 2)
-    if (tracked.size() == 2 && this->state == GH_RIGHTBTN)
-      pushEvent(GH_GestureBegin);
-#endif
   }
 
+  // Stop tracking this touch
+  tracked.erase(ev->detail);
+
   // Ending a tracked touch also ends the associated gesture
+  endGesture();
+}
+
+void GestureHandler::endGesture()
+{
   if (hasDetectedGesture())
     pushEvent(GH_GestureEnd);
 
   // Ignore any remaining touches until they are ended
   std::map<int, GHTouch>::const_iterator iter;
-  for (iter = tracked.begin(); iter != tracked.end(); ++iter) {
-    if (iter->first == ev->detail)
-      continue;
+  for (iter = tracked.begin(); iter != tracked.end(); ++iter)
     ignored.insert(iter->first);
-  }
   tracked.clear();
 
   state = GH_NOGESTURE;
