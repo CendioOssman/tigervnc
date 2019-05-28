@@ -68,7 +68,7 @@ class GestureHandler : public rfb::Timer::Callback {
 
    void registerEvent(const XIDeviceEvent *ev);
    unsigned char getState();
-   bool hasState();
+   bool hasDetectedGesture();
 
    void resetState();
 

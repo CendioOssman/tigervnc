@@ -73,7 +73,7 @@ void GestureHandler::registerEvent(const XIDeviceEvent *devev) {
   switch (devev->evtype) {
     case XI_TouchBegin:
       // Ignore any new touches if there is already an active gesture
-      if (!hasState())
+      if (!hasDetectedGesture())
         trackTouch(devev);
 #if (GH_STTIMEOUT)
       if (tracked.size() == 1)
@@ -104,7 +104,7 @@ void GestureHandler::registerEvent(const XIDeviceEvent *devev) {
 }
 
 int GestureHandler::sttTouchUpdate() {
-  if (hasState())
+  if (hasDetectedGesture())
     return this->state;
 
   // Because it's impossible to distinguish from a scroll, right
@@ -139,7 +139,7 @@ int GestureHandler::sttTouchUpdate() {
       break;
   }
 
-  if (hasState())
+  if (hasDetectedGesture())
     pushEvent(GH_GestureBegin);
 
   return this->state;
@@ -244,7 +244,7 @@ int GestureHandler::hDistanceMoved() {
 }
 
 int GestureHandler::sttTimeout() {
-  if (hasState())
+  if (hasDetectedGesture())
     return this->state;
 
   // Scroll and zoom are no longer valid gestures
@@ -282,7 +282,7 @@ int GestureHandler::sttTimeout() {
   if (tracked.size() == 2 && this->state == GH_RIGHTBTN);
   else
 #else
-  if (hasState())
+  if (hasDetectedGesture())
 #endif
       pushEvent(GH_GestureBegin);
 
@@ -290,7 +290,7 @@ int GestureHandler::sttTimeout() {
 }
 
 int GestureHandler::sttTouchEnd() {
-  if (hasState()) {
+  if (hasDetectedGesture()) {
 #if (GH_DTLPMODE == 2)
     if (tracked.size() == 2 && this->state == GH_RIGHTBTN)
       pushEvent(GH_GestureBegin);
@@ -321,7 +321,7 @@ int GestureHandler::sttTouchEnd() {
       this->state = GH_NOGESTURE;
   }
 
-  if (hasState())
+  if (hasDetectedGesture())
     pushEvent(GH_GestureBegin);
 
   return this->state;
@@ -336,7 +336,7 @@ unsigned char GestureHandler::getState() {
   return this->state;
 }
 
-bool GestureHandler::hasState() {
+bool GestureHandler::hasDetectedGesture() {
   // Invalid state if any of the undefined bits are set
   if ((state & GH_UNDEFINED) != 0) {
     return False;
@@ -388,7 +388,7 @@ int GestureHandler::trackTouch(const XIDeviceEvent *ev) {
       this->state = GH_NOGESTURE;
   }
 
-  if (hasState())
+  if (hasDetectedGesture())
     pushEvent(GH_GestureBegin);
 
   return tracked.size();
