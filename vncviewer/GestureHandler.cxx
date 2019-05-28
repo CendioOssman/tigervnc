@@ -94,40 +94,46 @@ void GestureHandler::pushEvent(GHEventType t) {
   GHEvent ghev;
   double avg_x, avg_y;
 
-  switch (t) {
-    case GH_GestureBegin:
-    case GH_GestureEnd:
-      avgTrackedTouches(&avg_x, &avg_y, t);
-      ghev.gesture = this->state;
+  ghev.type = t;
+  ghev.gesture = this->state;
+
+  switch (this->state) {
+    case GH_ONETAP:
+    case GH_TWOTAP:
+    case GH_THREETAP:
+    case GH_VSCROLL:
+    case GH_HSCROLL:
+    case GH_ZOOM:
+      // For these gestures, we always want the event coordinates
+      // to be where the gesture began. So call avgTrackedTouches
+      // with GH_GestureBegin instead of GH_GestureUpdate. Also,
+      // the detail field for these updates is the magnitude of
+      // the update rather than the state (the state is obvious).
+      avgTrackedTouches(&avg_x, &avg_y, GH_GestureBegin);
       ghev.event_x = avg_x;
       ghev.event_y = avg_y;
       break;
 
-    case GH_GestureUpdate:
-      if (this->state == GH_VSCROLL || this->state == GH_HSCROLL || this->state == GH_ZOOM) {
-	// For zoom and scroll, we always want the event coordinates
-	// to be where the gesture began. So call avgTrackedTouches
-	// with GH_GestureBegin instead of GH_GestureUpdate. Also,
-	// the detail field for these updates is the magnitude of
-	// the update rather than the state (the state is obvious).
-        avgTrackedTouches(&avg_x, &avg_y, GH_GestureBegin);
-        if (this->state == GH_VSCROLL)
-          ghev.detail = vDistanceMoved();
-	else if (this->state == GH_HSCROLL)
-          ghev.detail = hDistanceMoved();
-	else // GH_ZOOM
-          ghev.detail = relDistanceMoved();
-      }
-      else {
-        avgTrackedTouches(&avg_x, &avg_y, t);
-      }
-      ghev.gesture = this->state;
+    default:
+      avgTrackedTouches(&avg_x, &avg_y, t);
       ghev.event_x = avg_x;
       ghev.event_y = avg_y;
-      break;
   }
 
-  ghev.type = t;
+  // The detail field is the magnitude of the update for some gestures
+  switch (this->state) {
+    case GH_VSCROLL:
+      ghev.detail = vDistanceMoved();
+      break;
+    case GH_HSCROLL:
+      ghev.detail = hDistanceMoved();
+      break;
+    case GH_ZOOM:
+      ghev.detail = relDistanceMoved();
+      break;
+    default:
+      ghev.detail = 0;
+  }
 
   handleGestureEvent(ghev);
 }
