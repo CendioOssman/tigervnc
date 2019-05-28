@@ -359,12 +359,8 @@ int GestureHandler::trackTouch(const XIDeviceEvent *ev) {
   // e.g. duplicate IDs etc
   
   ght.id = ev->detail;
-  ght.first_x = ev->event_x;
-  ght.first_y = ev->event_y;
-  ght.prev_x = ght.first_x;
-  ght.prev_y = ght.first_y;
-  ght.last_x = ght.prev_x;
-  ght.last_y = ght.prev_y;
+  ght.last_x = ght.prev_x = ght.first_x = ev->event_x;
+  ght.last_y = ght.prev_y = ght.first_y = ev->event_y;
 
   tracked.push_back(ght);
 
