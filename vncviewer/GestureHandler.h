@@ -33,12 +33,13 @@
 #define GH_TWOTAP      2
 #define GH_THREETAP    4
 #define GH_DRAG        8
-#define GH_LONGPRESS   16
-#define GH_VSCROLL     32
-#define GH_HSCROLL     64
-#define GH_ZOOM        128
+#define GH_THREEDRAG   16
+#define GH_LONGPRESS   32
+#define GH_VSCROLL     64
+#define GH_HSCROLL     128
+#define GH_ZOOM        255
 
-#define GH_INITSTATE   255
+#define GH_INITSTATE   511
 
 enum GHEventType {
   GH_GestureBegin,
@@ -47,7 +48,7 @@ enum GHEventType {
 };
 
 struct GHEvent {
-  unsigned char gesture;
+  unsigned gesture;
   int detail;
   double event_x;
   double event_y;
@@ -73,7 +74,7 @@ class GestureHandler : public rfb::Timer::Callback {
     virtual void handleGestureEvent(const GHEvent& event) = 0;
 
   private:
-    unsigned char state;
+    unsigned state;
 
     std::map<int, GHTouch> tracked;
     std::set<int> ignored;

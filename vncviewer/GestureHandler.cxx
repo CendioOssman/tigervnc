@@ -338,7 +338,7 @@ void GestureHandler::endTouch(const XIDeviceEvent *ev) {
   // Some gesture don't trigger until a finger is released
   if (!hasDetectedGesture()) {
     // Can't be a gesture that relies on movement
-    this->state &= ~(GH_DRAG | GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
+    this->state &= ~(GH_DRAG | GH_THREEDRAG | GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
     // Or something that relies on more time
     this->state &= ~GH_LONGPRESS;
     longpressTimer.stop();
