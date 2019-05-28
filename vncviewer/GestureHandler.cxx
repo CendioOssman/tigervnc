@@ -69,8 +69,12 @@ void GestureHandler::registerEvent(const XIDeviceEvent *devev) {
   switch (devev->evtype) {
     case XI_TouchBegin:
       // Ignore any new touches if there is already an active gesture
-      if (!hasDetectedGesture())
-        trackTouch(devev);
+      if (hasDetectedGesture()) {
+        ignored.insert(devev->detail);
+        break;
+      }
+
+      trackTouch(devev);
 #if (GH_STTIMEOUT)
       if (tracked.size() == 1)
         timeoutTimer.start(GH_STTDELAY);
@@ -84,17 +88,33 @@ void GestureHandler::registerEvent(const XIDeviceEvent *devev) {
       break;
 
     case XI_TouchEnd:
-      if (idxTracked(devev) < 0)
-        return;
-
 #if (GH_STTIMEOUT)
       timeoutTimer.stop();
 #endif
-      sttTouchEnd();
 
-      // Ending a tracked touch also ends the associated gesture
-      pushEvent(GH_GestureEnd);
-      resetState();
+      // Something we're tracking?
+      if (idxTracked(devev) >= 0) {
+        sttTouchEnd();
+
+        // Ending a tracked touch also ends the associated gesture
+        pushEvent(GH_GestureEnd);
+
+        // Ignore any remaining touches until they are ended
+        size_t size = tracked.size();
+        for (size_t i = 0; i < size; i++) {
+          if (tracked[i].id == devev->detail)
+            continue;
+          ignored.insert(tracked[i].id);
+        }
+        tracked.clear();
+        state = GH_NOGESTURE;
+      } else {
+        ignored.erase(devev->detail);
+      }
+
+      if (tracked.empty() && ignored.empty())
+        resetState();
+
       break;
   }
 }

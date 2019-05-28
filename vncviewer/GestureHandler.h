@@ -19,6 +19,7 @@
 #ifndef __GESTUREHANDLER_H__
 #define __GESTUREHANDLER_H__
 
+#include <set>
 #include <vector>
 
 #include <X11/Xlib.h>
@@ -74,6 +75,7 @@ class GestureHandler : public rfb::Timer::Callback {
     unsigned char state;
 
     std::vector<GHTouch> tracked;
+    std::set<int> ignored;
 
     rfb::Timer timeoutTimer;
 
