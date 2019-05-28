@@ -336,6 +336,8 @@ void GestureHandler::updateTouch(const XIDeviceEvent *ev) {
 
 void GestureHandler::endTouch(const XIDeviceEvent *ev) {
   // Some gesture don't trigger until a finger is released
+  // FIXME: Should taps require that all fingers are released in quick
+  //        succession?
   if (!hasDetectedGesture()) {
     // Can't be a gesture that relies on movement
     this->state &= ~(GH_DRAG | GH_THREEDRAG | GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
