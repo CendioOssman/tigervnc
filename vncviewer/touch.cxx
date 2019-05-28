@@ -24,6 +24,7 @@
 #if ! (defined(WIN32) || defined(__APPLE__))
 #include <X11/extensions/XInput2.h>
 #include <X11/extensions/XI2.h>
+#include <X11/XKBlib.h>
 #endif
 
 #include <FL/Fl.H>
@@ -59,26 +60,36 @@ static int xi_major;
 class FLTKGestureHandler: public GestureHandler
 {
 public:
+  FLTKGestureHandler(Window wnd);
+
   void processEvent(const XIDeviceEvent* devev);
 
 protected:
   void copyXEventFields(XEvent* dst, const XIDeviceEvent* src);
-  //void setTouchEventState(XEvent* dst);
+  void setTouchEventState(XEvent* dst);
   void fakeMotionEvent(const XIDeviceEvent* origEvent);
   void fakeButtonEvent(bool press, int button,
                        const XIDeviceEvent* origEvent);
+
+  void prepareTouchXEvent(XEvent* dst, int x, int y);
+  void fakeMotionEvent(int x, int y);
+  void fakeButtonEvent(bool press, int button, int x, int y);
 
   virtual void handleGestureEvent(const GHEvent& event);
 
 
 private:
+  Window wnd;
   int last_value;
-/*
   int touchButtonMask;
-*/
 };
 
-static class FLTKGestureHandler gh;
+static std::map<Window, class FLTKGestureHandler*> handlers;
+
+FLTKGestureHandler::FLTKGestureHandler(Window wnd)
+  : wnd(wnd), touchButtonMask(0)
+{
+}
 
 void FLTKGestureHandler::processEvent(const XIDeviceEvent* devev)
 {
@@ -120,13 +131,12 @@ void FLTKGestureHandler::copyXEventFields(XEvent* dst,
   dst->xbutton.same_screen = True; // FIXME
 }
 
-/*
+
 void FLTKGestureHandler::setTouchEventState(XEvent* dst)
 {
-  if (tracking_touch)
-    dst->xbutton.state |= touchButtonMask << 8;
+  dst->xbutton.state |= touchButtonMask << 8;
 }
-*/
+
 
 void FLTKGestureHandler::fakeMotionEvent(const XIDeviceEvent* origEvent)
 {
@@ -137,6 +147,7 @@ void FLTKGestureHandler::fakeMotionEvent(const XIDeviceEvent* origEvent)
   fakeEvent.type = MotionNotify;
   fakeEvent.xmotion.is_hint = False;
   copyXEventFields(&fakeEvent, origEvent);
+  setTouchEventState(&fakeEvent);
 
   fl_handle(fakeEvent);
 }
@@ -151,7 +162,70 @@ void FLTKGestureHandler::fakeButtonEvent(bool press, int button,
   fakeEvent.type = press ? ButtonPress : ButtonRelease;
   fakeEvent.xbutton.button = button;
   copyXEventFields(&fakeEvent, origEvent);
-  //setTouchEventState(&fakeEvent);
+  setTouchEventState(&fakeEvent);
+
+  fl_handle(fakeEvent);
+}
+
+void FLTKGestureHandler::prepareTouchXEvent(XEvent* dst, int x, int y)
+{
+  Window root, child;
+  int x_root, y_root;
+  XkbStateRec state;
+
+  // We don't have a real event to steal things from, so we'll have
+  // to fake these events based on the current state of things
+
+  root = XDefaultRootWindow(fl_display);
+  XTranslateCoordinates(fl_display, wnd, root, x, y, &x_root, &y_root, &child);
+  XkbGetState(fl_display, XkbUseCoreKbd, &state);
+
+  // XButtonEvent and XMotionEvent are almost identical, so we
+  // don't have to care which it is for these fields
+  dst->xbutton.serial = XLastKnownRequestProcessed(fl_display);
+  dst->xbutton.display = fl_display;
+  dst->xbutton.window = wnd;
+  dst->xbutton.root = root;
+  dst->xbutton.subwindow = None;
+  dst->xbutton.time = fl_event_time;
+  dst->xbutton.x = x;
+  dst->xbutton.y = y;
+  dst->xbutton.x_root = x_root;
+  dst->xbutton.y_root = y_root;
+  dst->xbutton.state = state.mods;
+  dst->xbutton.state |= ((state.ptr_buttons >> 1) & 0x1f) << 8; // FIXME: Check this!
+  dst->xbutton.same_screen = True; // FIXME
+}
+
+void FLTKGestureHandler::fakeMotionEvent(int x, int y)
+{
+  XEvent fakeEvent;
+
+  memset(&fakeEvent, 0, sizeof(XEvent));
+
+  fakeEvent.type = MotionNotify;
+  fakeEvent.xmotion.is_hint = False;
+  prepareTouchXEvent(&fakeEvent, x, y);
+  setTouchEventState(&fakeEvent);
+
+  fl_handle(fakeEvent);
+}
+
+void FLTKGestureHandler::fakeButtonEvent(bool press, int button, int x, int y)
+{
+  XEvent fakeEvent;
+
+  if (press)
+    touchButtonMask |= 1 << button; // FIXME: Check this
+  else
+    touchButtonMask &= ~(1 << button);
+
+  memset(&fakeEvent, 0, sizeof(XEvent));
+
+  fakeEvent.type = press ? ButtonPress : ButtonRelease;
+  fakeEvent.xbutton.button = button;
+  prepareTouchXEvent(&fakeEvent, x, y);
+  setTouchEventState(&fakeEvent);
 
   fl_handle(fakeEvent);
 }
@@ -163,6 +237,9 @@ void FLTKGestureHandler::handleGestureEvent(const GHEvent& ev)
     switch (ev.gesture) {
     case GH_ONETAP:
       vlog.info("Got GH_GestureBegin(GH_ONETAP)");
+      fakeMotionEvent(ev.event_x, ev.event_y);
+      fakeButtonEvent(true, Button1, ev.event_x, ev.event_y);
+      fakeButtonEvent(false, Button1, ev.event_x, ev.event_y);
       break;
     case GH_TWOTAP:
       vlog.info("Got GH_GestureBegin(GH_TWOTAP)");
@@ -284,9 +361,15 @@ static int handleXinputEvent(void *event, void *data)
 
     XISelectEvents(fl_display, xevent->xmap.window, &eventmask, 1);
 
+    handlers[xevent->xmap.window] = new FLTKGestureHandler(xevent->xmap.window);
+
     // Fall through as we don't want to interfere with whatever someone
     // else might want to do with this event
 
+  } else if (xevent->type == UnmapNotify) {
+    handlers.erase(xevent->xunmap.window);
+  } else if (xevent->type == DestroyNotify) {
+    handlers.erase(xevent->xdestroywindow.window);
   } else if (xevent->type == GenericEvent) {
     if (xevent->xgeneric.extension == xi_major) {
       XIDeviceEvent *devev;
@@ -298,11 +381,17 @@ static int handleXinputEvent(void *event, void *data)
 
       devev = (XIDeviceEvent*)xevent->xcookie.data;
 
+      if (handlers.count(devev->event) == 0) {
+        vlog.error(_("X Input event for unknown window"));
+        XFreeEventData(fl_display, &xevent->xcookie);
+        return 1;
+      }
+
       // FLTK doesn't understand X Input events, and we've stopped
       // delivery of Core events by enabling the X Input ones. Make
       // FLTK happy by faking Core events based on the X Input ones.
 
-      gh.processEvent(devev);
+      handlers[devev->event]->processEvent(devev);
 
       XFreeEventData(fl_display, &xevent->xcookie);
 
