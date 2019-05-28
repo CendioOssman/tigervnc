@@ -556,8 +556,7 @@ int main(int argc, char** argv)
     }
   } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
-    if (alertOnFatalError)
-      fl_alert("%s", e.str());
+    fl_alert("%s", e.str());
   }
 
   for (int i = 1; i < argc;) {
