@@ -148,7 +148,7 @@ void FLTKGestureHandler::handleGestureEvent(const GHEvent& ev)
 {
   switch (ev.type) {
   case GH_GestureBegin:
-    switch (ev.detail) {
+    switch (ev.gesture) {
     case GH_LEFTBTN:
       vlog.info("Got GH_GestureBegin(GH_LEFTBTN)");
       break;
@@ -168,7 +168,7 @@ void FLTKGestureHandler::handleGestureEvent(const GHEvent& ev)
     break;
 
   case GH_GestureUpdate:
-    switch (getState()) {
+    switch (ev.gesture) {
     case GH_LEFTBTN:
       vlog.info("Got GH_GestureUpdate(GH_LEFTBTN)");
       break;
@@ -191,7 +191,7 @@ void FLTKGestureHandler::handleGestureEvent(const GHEvent& ev)
     break;
 
   case GH_GestureEnd:
-    switch (ev.detail) {
+    switch (ev.gesture) {
     case GH_LEFTBTN:
       vlog.info("Got GH_GestureEnd(GH_LEFTBTN)");
       break;

@@ -45,6 +45,7 @@ enum GHEventType {
 };
 
 struct GHEvent {
+  unsigned char gesture;
   int detail;
   double event_x;
   double event_y;
@@ -67,7 +68,6 @@ class GestureHandler : public rfb::Timer::Callback {
     virtual ~GestureHandler();
 
    void registerEvent(const XIDeviceEvent *ev);
-   unsigned char getState();
    bool hasDetectedGesture();
 
    void resetState();

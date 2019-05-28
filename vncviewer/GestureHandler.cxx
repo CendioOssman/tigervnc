@@ -153,7 +153,7 @@ int GestureHandler::pushEvent(GHEventType t) {
     case GH_GestureBegin:
     case GH_GestureEnd:
       avgTrackedTouches(&avg_x, &avg_y, t);
-      ghev.detail = this->state;
+      ghev.gesture = this->state;
       ghev.event_x = avg_x;
       ghev.event_y = avg_y;
       break;
@@ -184,8 +184,8 @@ int GestureHandler::pushEvent(GHEventType t) {
       }
       else {
         avgTrackedTouches(&avg_x, &avg_y, t);
-	ghev.detail = this->state;
       }
+      ghev.gesture = this->state;
       ghev.event_x = avg_x;
       ghev.event_y = avg_y;
       break;
@@ -330,10 +330,6 @@ int GestureHandler::sttTouchEnd() {
 void GestureHandler::resetState() {
   this->state = GH_INITSTATE;
   tracked.clear();
-}
-
-unsigned char GestureHandler::getState() {
-  return this->state;
 }
 
 bool GestureHandler::hasDetectedGesture() {
