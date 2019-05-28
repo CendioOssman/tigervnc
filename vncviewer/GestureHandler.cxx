@@ -19,6 +19,7 @@
 #include <cmath>
 
 #include <rfb/LogWriter.h>
+#include <rfb/util.h>
 
 #include <X11/extensions/XI2.h>
 #include <X11/extensions/XInput2.h>
@@ -38,8 +39,8 @@ const unsigned GH_MTHRESHOLD = 50;
 // 1 = Enabled
 #define GH_STTIMEOUT   1
 
-// Timeout when waiting for gestures
-#define GH_STTDELAY    250 // ms
+// Timeout when waiting for gestures (ms)
+const int GH_MULTITOUCH_TIMEOUT = 250;
 
 // Single-touch long-press mode
 // Only valid with GH_STTIMEOUT
@@ -57,7 +58,7 @@ const unsigned GH_MTHRESHOLD = 50;
 //       (sttTouchUpdate and sttEndTouch)
 
 GestureHandler::GestureHandler() :
-  state(GH_INITSTATE), timeoutTimer(this) {
+  state(GH_INITSTATE) {
 }
 
 GestureHandler::~GestureHandler()
@@ -185,51 +186,6 @@ int GestureHandler::hDistanceMoved() {
   return GH_INVRTSCRL ? -avg_dist : avg_dist;
 }
 
-void GestureHandler::touchTimeout() {
-  // Have other updates already determined the gestures?
-  if (hasDetectedGesture())
-    return;
-
-  // Scroll and zoom are no longer valid gestures
-  this->state &= ~(GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
-
-  switch (tracked.size()) {
-    case 0:
-      this->state = GH_INITSTATE;
-      break;
-
-    case 1:
-      // Not a multi-touch event
-#if (GH_STLPMODE == 1)
-      this->state &= ~(GH_MIDDLEBTN | GH_RIGHTBTN);
-#else
-      this->state &= ~(GH_LEFTBTN | GH_MIDDLEBTN);
-#endif
-      break;
-
-    case 2:
-      // Not a single- or triple-touch gesture
-      this->state &= ~(GH_LEFTBTN | GH_MIDDLEBTN);
-      break;
-
-    case 3:
-      // Not a single- or double-touch gesture
-      this->state &= ~(GH_LEFTBTN | GH_RIGHTBTN);
-      break;
-
-    default:
-      this->state = GH_NOGESTURE;
-  }
-
-#if (GH_DTLPMODE == 2)
-  if (tracked.size() == 2 && this->state == GH_RIGHTBTN);
-  else
-#else
-  if (hasDetectedGesture())
-#endif
-      pushEvent(GH_GestureBegin);
-}
-
 void GestureHandler::resetState() {
   this->state = GH_INITSTATE;
   tracked.clear();
@@ -262,10 +218,17 @@ void GestureHandler::trackTouch(const XIDeviceEvent *ev) {
   // e.g. duplicate IDs etc
   
   ght.id = ev->detail;
+  gettimeofday(&ght.started, NULL);
   ght.last_x = ght.first_x = ev->event_x;
   ght.last_y = ght.first_y = ev->event_y;
 
   tracked.push_back(ght);
+
+  // Did it take too long between touches that we should no longer
+  // consider this a single gesture?
+  if ((tracked.size() > 1) &&
+      (rfb::msSince(&tracked[0].started) > GH_MULTITOUCH_TIMEOUT))
+    this->state = GH_NOGESTURE;
 
   switch (tracked.size()) {
     case 1:

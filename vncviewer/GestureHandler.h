@@ -55,6 +55,7 @@ struct GHEvent {
 
 struct GHTouch {
   int id;
+  struct timeval started;
   double first_x;
   double first_y;
   double last_x;
@@ -77,13 +78,10 @@ class GestureHandler : public rfb::Timer::Callback {
     std::vector<GHTouch> tracked;
     std::set<int> ignored;
 
-    rfb::Timer timeoutTimer;
-
    bool hasDetectedGesture();
 
    void resetState();
 
-   void touchTimeout();
    void pushEvent(GHEventType t);
 
     virtual bool handleTimeout(rfb::Timer* t);
