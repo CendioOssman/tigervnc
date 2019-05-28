@@ -68,12 +68,6 @@ class GestureHandler : public rfb::Timer::Callback {
     virtual ~GestureHandler();
 
    void registerEvent(const XIDeviceEvent *ev);
-   bool hasDetectedGesture();
-
-   void resetState();
-
-   int sttTimeout();
-   int pushEvent(GHEventType t);
 
   protected:
     virtual void handleGestureEvent(const GHEvent& event) = 0;
@@ -84,6 +78,13 @@ class GestureHandler : public rfb::Timer::Callback {
     std::vector<GHTouch> tracked;
 
     rfb::Timer timeoutTimer;
+
+   bool hasDetectedGesture();
+
+   void resetState();
+
+   void sttTimeout();
+   void pushEvent(GHEventType t);
 
     virtual bool handleTimeout(rfb::Timer* t);
 
