@@ -75,10 +75,6 @@ void GestureHandler::registerEvent(const XIDeviceEvent *devev) {
       }
 
       trackTouch(devev);
-#if (GH_STTIMEOUT)
-      if (tracked.size() == 1)
-        timeoutTimer.start(GH_STTDELAY);
-#endif
       break;
 
     case XI_TouchUpdate:
@@ -88,26 +84,9 @@ void GestureHandler::registerEvent(const XIDeviceEvent *devev) {
       break;
 
     case XI_TouchEnd:
-#if (GH_STTIMEOUT)
-      timeoutTimer.stop();
-#endif
-
       // Something we're tracking?
       if (idxTracked(devev) >= 0) {
-        sttTouchEnd();
-
-        // Ending a tracked touch also ends the associated gesture
-        pushEvent(GH_GestureEnd);
-
-        // Ignore any remaining touches until they are ended
-        size_t size = tracked.size();
-        for (size_t i = 0; i < size; i++) {
-          if (tracked[i].id == devev->detail)
-            continue;
-          ignored.insert(tracked[i].id);
-        }
-        tracked.clear();
-        state = GH_NOGESTURE;
+        endTouch(devev);
       } else {
         ignored.erase(devev->detail);
       }
@@ -117,46 +96,6 @@ void GestureHandler::registerEvent(const XIDeviceEvent *devev) {
 
       break;
   }
-}
-
-void GestureHandler::sttTouchUpdate() {
-  if (hasDetectedGesture())
-    return;
-
-  // Because it's impossible to distinguish from a scroll, right
-  // click can never be initiated by a movement-based trigger.
-  this->state &= ~GH_RIGHTBTN;
-
-  switch (tracked.size()) {
-    case 0:
-      // huh?
-      break;
-
-    case 1:
-      this->state &= ~(GH_MIDDLEBTN | GH_RIGHTBTN | GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
-      break;
-
-    case 2:
-      this->state &= ~GH_MIDDLEBTN;
-
-      int dv = std::abs(vDistanceMoved());
-      int dh = std::abs(hDistanceMoved());
-      int dt = std::abs(relDistanceMoved());
-
-      if (dv < dh || dv < dt)
-        this->state &= ~GH_VSCROLL;
-
-      if (dh < dv || dh < dt)
-        this->state &= ~GH_HSCROLL;
-
-      if (dt < dv || dt < dh)
-        this->state &= ~GH_ZOOM;
-
-      break;
-  }
-
-  if (hasDetectedGesture())
-    pushEvent(GH_GestureBegin);
 }
 
 void GestureHandler::pushEvent(GHEventType t) {
@@ -246,7 +185,8 @@ int GestureHandler::hDistanceMoved() {
   return GH_INVRTSCRL ? -avg_dist : avg_dist;
 }
 
-void GestureHandler::sttTimeout() {
+void GestureHandler::touchTimeout() {
+  // Have other updates already determined the gestures?
   if (hasDetectedGesture())
     return;
 
@@ -288,42 +228,6 @@ void GestureHandler::sttTimeout() {
   if (hasDetectedGesture())
 #endif
       pushEvent(GH_GestureBegin);
-}
-
-void GestureHandler::sttTouchEnd() {
-  if (hasDetectedGesture()) {
-#if (GH_DTLPMODE == 2)
-    if (tracked.size() == 2 && this->state == GH_RIGHTBTN)
-      pushEvent(GH_GestureBegin);
-#endif
-    return;
-  }
-
-  // Scroll and zoom are no longer valid gestures
-  this->state &= ~(GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
-
-  switch (tracked.size()) {
-    case 1:
-      // Not a multi-touch event
-      this->state &= ~(GH_MIDDLEBTN | GH_RIGHTBTN);
-      break;
-
-    case 2:
-      // Not a single- or triple-touch gesture
-      this->state &= ~(GH_LEFTBTN | GH_MIDDLEBTN);
-      break;
-
-    case 3:
-      // Not a single- or double-touch gesture
-      this->state &= ~(GH_LEFTBTN | GH_RIGHTBTN);
-      break;
-
-    default:
-      this->state = GH_NOGESTURE;
-  }
-
-  if (hasDetectedGesture())
-    pushEvent(GH_GestureBegin);
 }
 
 void GestureHandler::resetState() {
@@ -381,6 +285,10 @@ void GestureHandler::trackTouch(const XIDeviceEvent *ev) {
 
   if (hasDetectedGesture())
     pushEvent(GH_GestureBegin);
+#if (GH_STTIMEOUT)
+  else if (tracked.size() == 1)
+    timeoutTimer.start(GH_STTDELAY);
+#endif
 }
 
 void GestureHandler::avgTrackedTouches(double *x, double *y, GHEventType t) {
@@ -411,7 +319,7 @@ void GestureHandler::avgTrackedTouches(double *x, double *y, GHEventType t) {
 bool GestureHandler::handleTimeout(rfb::Timer* t)
 {
   if (t == &timeoutTimer)
-    sttTimeout();
+    touchTimeout();
 
   return False;
 }
@@ -437,5 +345,92 @@ void GestureHandler::updateTouch(const XIDeviceEvent *ev) {
       std::abs(tracked[idx].first_y - ev->event_y) < GH_MTHRESHOLD)
     return;
 
-  sttTouchUpdate();
+  // Because it's impossible to distinguish from a scroll, right
+  // click can never be initiated by a movement-based trigger.
+  this->state &= ~GH_RIGHTBTN;
+
+  switch (tracked.size()) {
+    case 0:
+      // huh?
+      break;
+
+    case 1:
+      this->state &= ~(GH_MIDDLEBTN | GH_RIGHTBTN | GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
+      break;
+
+    case 2:
+      this->state &= ~GH_MIDDLEBTN;
+
+      int dv = std::abs(vDistanceMoved());
+      int dh = std::abs(hDistanceMoved());
+      int dt = std::abs(relDistanceMoved());
+
+      if (dv < dh || dv < dt)
+        this->state &= ~GH_VSCROLL;
+
+      if (dh < dv || dh < dt)
+        this->state &= ~GH_HSCROLL;
+
+      if (dt < dv || dt < dh)
+        this->state &= ~GH_ZOOM;
+
+      break;
+  }
+
+  if (hasDetectedGesture())
+    pushEvent(GH_GestureBegin);
+}
+
+void GestureHandler::endTouch(const XIDeviceEvent *ev) {
+#if (GH_STTIMEOUT)
+  timeoutTimer.stop();
+#endif
+
+  // Some gesture don't trigger until a finger is released
+  if (!hasDetectedGesture()) {
+    // Scroll and zoom are no longer valid gestures
+    this->state &= ~(GH_VSCROLL | GH_HSCROLL | GH_ZOOM);
+
+    switch (tracked.size()) {
+      case 1:
+        // Not a multi-touch event
+        this->state &= ~(GH_MIDDLEBTN | GH_RIGHTBTN);
+        break;
+
+      case 2:
+        // Not a single- or triple-touch gesture
+        this->state &= ~(GH_LEFTBTN | GH_MIDDLEBTN);
+        break;
+
+      case 3:
+        // Not a single- or double-touch gesture
+        this->state &= ~(GH_LEFTBTN | GH_RIGHTBTN);
+        break;
+
+      default:
+        this->state = GH_NOGESTURE;
+    }
+
+    if (hasDetectedGesture())
+      pushEvent(GH_GestureBegin);
+  } else {
+#if (GH_DTLPMODE == 2)
+    if (tracked.size() == 2 && this->state == GH_RIGHTBTN)
+      pushEvent(GH_GestureBegin);
+#endif
+  }
+
+  // Ending a tracked touch also ends the associated gesture
+  pushEvent(GH_GestureEnd);
+
+  // Ignore any remaining touches until they are ended
+  size_t size = tracked.size();
+  for (size_t i = 0; i < size; i++) {
+    if (tracked[i].id == ev->detail)
+      continue;
+    ignored.insert(tracked[i].id);
+  }
+  tracked.clear();
+
+  state = GH_NOGESTURE;
 }

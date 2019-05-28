@@ -83,19 +83,17 @@ class GestureHandler : public rfb::Timer::Callback {
 
    void resetState();
 
-   void sttTimeout();
+   void touchTimeout();
    void pushEvent(GHEventType t);
 
     virtual bool handleTimeout(rfb::Timer* t);
 
     void updateTouch(const XIDeviceEvent *ev);
     void trackTouch(const XIDeviceEvent *ev);
+    void endTouch(const XIDeviceEvent *ev);
     int idxTracked(const XIDeviceEvent *ev);
 
     void avgTrackedTouches(double *x, double *y, GHEventType t);
-
-    void sttTouchEnd();
-    void sttTouchUpdate();
 
     int vDistanceMoved();
     int hDistanceMoved();
