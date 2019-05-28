@@ -540,9 +540,6 @@ int main(int argc, char** argv)
   signal(SIGINT, CleanupSignalHandler);
   signal(SIGTERM, CleanupSignalHandler);
 
-  init_fltk();
-  enable_touch();
-
   Configuration::enableViewerParams();
 
   /* Load the default parameter settings */
@@ -556,7 +553,6 @@ int main(int argc, char** argv)
     }
   } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
-    fl_alert("%s", e.str());
   }
 
   for (int i = 1; i < argc;) {
@@ -581,11 +577,6 @@ int main(int argc, char** argv)
     i++;
   }
 
-  // Check if the server name in reality is a configuration file
-  potentiallyLoadConfigurationFile(vncServerName);
-
-  mkvnchomedir();
-
 #if !defined(WIN32) && !defined(__APPLE__)
   if (strcmp(display, "") != 0) {
     Fl::display(display);
@@ -593,6 +584,14 @@ int main(int argc, char** argv)
   fl_open_display();
   XkbSetDetectableAutoRepeat(fl_display, True, NULL);
 #endif
+
+  init_fltk();
+  enable_touch();
+
+  // Check if the server name in reality is a configuration file
+  potentiallyLoadConfigurationFile(vncServerName);
+
+  mkvnchomedir();
 
   CSecurity::upg = &dlg;
 #ifdef HAVE_GNUTLS
