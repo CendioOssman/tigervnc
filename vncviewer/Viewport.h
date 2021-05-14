@@ -20,8 +20,6 @@
 #ifndef __VIEWPORT_H__
 #define __VIEWPORT_H__
 
-#include <map>
-
 #include <rfb/Rect.h>
 
 #include <FL/Fl_Widget.H>
@@ -86,8 +84,9 @@ private:
 
   void resetKeyboard();
 
-  void handleKeyPress(int keyCode, uint32_t keySym);
-  void handleKeyRelease(int keyCode);
+  void handleKeyPress(int systemKeyCode,
+                      uint32_t keyCode, uint32_t keySym);
+  void handleKeyRelease(int systemKeyCode);
 
   static int handleSystemEvent(void *event, void *data);
 
@@ -113,12 +112,12 @@ private:
   rfb::Point lastPointerPos;
   uint8_t lastButtonMask;
 
-  typedef std::map<int, uint32_t> DownMap;
-  DownMap downKeySym;
-
 #ifdef WIN32
   bool altGrArmed;
   unsigned int altGrCtrlTime;
+
+  bool leftShiftDown;
+  bool rightShiftDown;
 #endif
 
   bool firstLEDState;
