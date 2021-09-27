@@ -2,6 +2,7 @@
 
 set -u
 set -e
+set -x
 trap onexit INT
 trap onexit TERM
 trap onexit EXIT
