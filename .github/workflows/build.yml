@@ -12,6 +12,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgnutls28-dev libfltk1.3-dev fluid gettext
           sudo apt-get install -y libxtst-dev libxdamage-dev libxfixes-dev libxrandr-dev libpam-dev
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v1
+        with:
+          languages: cpp
       - name: Configure
         run: cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
@@ -20,6 +24,8 @@ jobs:
       - name: Install
         working-directory: build
         run: make tarball
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
 
   build-windows:
     runs-on: windows-latest
@@ -33,6 +39,10 @@ jobs:
         run: |
           pacman --sync --noconfirm --needed make mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake
           pacman --sync --noconfirm --needed mingw-w64-x86_64-fltk mingw-w64-x86_64-libjpeg-turbo mingw-w64-x86_64-gnutls mingw-w64-x86_64-pixman
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v1
+        with:
+          languages: cpp
       - name: Configure
         run: cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
@@ -43,6 +53,8 @@ jobs:
         env:
           MSYS2_PATH_TYPE: inherit
         run: make installer winvnc_installer
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
 
   build-macos:
     runs-on: macos-latest
@@ -51,6 +63,10 @@ jobs:
       - name: Install dependencies
         run: |
           brew install fltk pixman
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v1
+        with:
+          languages: cpp
       - name: Configure
         run: cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
@@ -59,6 +75,8 @@ jobs:
       - name: Install
         working-directory: build
         run: make dmg
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
 
   build-java:
     runs-on: ubuntu-latest
@@ -72,12 +90,18 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v1
+        with:
+          languages: java
       - name: Configure
         working-directory: java
         run: cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
         working-directory: java/build
         run: make
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
 
   build-packages:
     strategy:
