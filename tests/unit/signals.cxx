@@ -225,6 +225,20 @@ TEST(Signals, disconnectAll)
   EXPECT_EQ(callCount, 1);
 }
 
+TEST(Signals, implicitDisconnect)
+{
+  Sender s;
+
+  callCount = 0;
+  s.registerSignal("isignal");
+  {
+    Receiver scoped_r;
+    s.connectSignal("isignal", &scoped_r, &Receiver::genericHandler);
+  }
+  s.emitSignal("isignal");
+  EXPECT_EQ(callCount, 0);
+}
+
 TEST(Signals, addWhileEmitting)
 {
   Sender s;
