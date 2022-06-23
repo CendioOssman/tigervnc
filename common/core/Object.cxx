@@ -85,6 +85,28 @@ void Object::emitSignal(const char *name)
   }
 }
 
+void Object::emitSignal(const char *name, SignalInfo &info)
+{
+  ReceiverList siglist;
+  ReceiverList::iterator iter;
+
+  assert(name);
+
+  if (signalReceivers.count(name) == 0)
+    throw std::logic_error(format("Cannot emit unknown signal %s", name));
+
+  // Convoluted iteration so that we safely handle changes to
+  // the list
+  siglist = signalReceivers[name];
+  for (iter = siglist.begin(); iter != siglist.end(); ++iter) {
+    if (std::find(signalReceivers[name].begin(),
+                  signalReceivers[name].end(),
+                  *iter) == signalReceivers[name].end())
+      continue;
+    (*iter)->emit(this, name, info);
+  }
+}
+
 void Object::connectSignal(const char *name, Object *obj,
                            const SignalReceiver *receiver)
 {
