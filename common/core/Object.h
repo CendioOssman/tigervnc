@@ -27,6 +27,7 @@
 #include <functional>
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 
 #include <core/comp_any.h>
@@ -68,7 +69,9 @@ namespace core {
     virtual ~Object();
 
     // connectSignal() registers an object and method on that object to
-    // be called whenever a signal of the specified name is emitted.
+    // be called whenever a signal of the specified name is emitted. Any
+    // method registered will automatically be unregistered when the
+    // method's object is destroyed.
     template<class T>
     Connection connectSignal(signal& signal, T* obj,
                              void (T::*callback)(Object*));
@@ -84,7 +87,8 @@ namespace core {
                           void (T::*callback)(Object*));
 
     // disconnectSignals() unregisters all methods for all names for the
-    // specified object.
+    // specified object. This is automatically called when the specified
+    // object is destroyed.
     void disconnectSignals(Object* obj);
 
   protected:
@@ -104,6 +108,9 @@ namespace core {
 
   private:
     std::list<Connection> connections;
+
+    // Other objects that we have connected to signals on
+    std::set<Object*> connectedObjects;
   };
 
   //////////////////////////////////////////////////////////////////////

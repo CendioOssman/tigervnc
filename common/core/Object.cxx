@@ -100,11 +100,23 @@ Object::Object()
 
 Object::~Object()
 {
+  // Disconnect from any signals we might have subscribed to
+  while (!connectedObjects.empty())
+    (*connectedObjects.begin())->disconnectSignals(this);
+
+  // And prevent other objects from trying to disconnect from us as we
+  // are going away
+  while (!connections.empty())
+    disconnectSignal(connections.front());
 }
 
 void Object::disconnectSignal(const Connection connection)
 {
   std::list<Connection>::iterator iter;
+  bool hasOthers;
+
+  assert(connection.dst);
+
   if (connection.src != this)
     throw std::logic_error("Disconnecting signal from wrong object");
 
@@ -115,6 +127,20 @@ void Object::disconnectSignal(const Connection connection)
       break;
     }
   }
+
+  hasOthers = false;
+
+  // Then check if the object is attached in more ways to this or
+  // to some other signal
+  for (iter = connections.begin(); iter != connections.end(); ++iter) {
+    if (iter->dst == connection.dst) {
+      hasOthers = true;
+      break;
+    }
+  }
+
+  if (!hasOthers)
+    connection.dst->connectedObjects.erase(this);
 }
 
 void Object::emitSignal(signal& signal)
@@ -148,6 +174,7 @@ Connection Object::connectSignal(signal& signal, class Object* obj,
 
   connection = signal.connect(this, obj, callback, emitter);
   connections.push_back(connection);
+  obj->connectedObjects.insert(this);
 
   return connection;
 }

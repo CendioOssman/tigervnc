@@ -161,6 +161,19 @@ TEST(Signals, disconnectAll)
   EXPECT_EQ(callCount, 1);
 }
 
+TEST(Signals, implicitDisconnect)
+{
+  Sender s;
+
+  callCount = 0;
+  {
+    Receiver scoped_r;
+    s.connectSignal(s.gsignal, &scoped_r, &Receiver::genericHandler);
+  }
+  s.emitSignal(s.gsignal);
+  EXPECT_EQ(callCount, 0);
+}
+
 TEST(Signals, addWhileEmitting)
 {
   Sender s;
