@@ -30,14 +30,26 @@ class Sender : public core::Object {
 public:
   Sender() {}
 
-  core::signal gsignal;
-  core::signal gsignal2;
+  core::signal<> gsignal;
+  core::signal<> gsignal2;
 
-  core::signal ssignal;
+  core::signal<> ssignal;
 
-  void emitSignal(core::signal& signal)
+  core::signal<const char*> strsignal;
+  core::signal<const char*> sstrsignal;
+
+  core::signal<int> refhandler;
+  core::signal<int&> refemitter;
+  core::signal<int*> consthandler;
+
+  void emitSignal(core::signal<>& signal)
   {
     core::Object::emitSignal(signal);
+  }
+  template<typename... Is>
+  void emitSignal(core::signal<Is...>& signal, const Is&... args)
+  {
+    core::Object::emitSignal(signal, args...);
   }
 };
 
@@ -48,6 +60,13 @@ public:
   void genericHandler(Object*) { callCount++; }
   void otherGenericHandler(Object*) { callCount++; }
   void specificHandler(Sender*) { callCount++; }
+
+  void genericStringHandler(Object*, const char*) { callCount++; }
+  void otherGenericStringHandler(Object*, const char*) { callCount++; }
+  void specificStringHandler(Sender*, const char*) { callCount++; }
+
+  void genericConstPtrHandler(Object*, const int*) { callCount++; }
+  void genericConstRefHandler(Object*, const int&) { callCount++; }
 
   void registerHandler(Object* s)
   {
@@ -77,6 +96,24 @@ TEST(Signals, connectSignal)
   EXPECT_EQ(callCount, 1);
 }
 
+TEST(Signals, connectSignalArg)
+{
+  Sender s;
+  Receiver r;
+
+  /* Generic handler */
+  callCount = 0;
+  s.connectSignal(s.strsignal, &r, &Receiver::genericStringHandler);
+  s.emitSignal(s.strsignal, "data");
+  EXPECT_EQ(callCount, 1);
+
+  /* Specific handler */
+  callCount = 0;
+  s.connectSignal(s.sstrsignal, &r, &Receiver::specificStringHandler);
+  s.emitSignal(s.sstrsignal, "data");
+  EXPECT_EQ(callCount, 1);
+}
+
 TEST(Signals, doubleConnect)
 {
   Sender s;
@@ -85,6 +122,11 @@ TEST(Signals, doubleConnect)
   s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
   EXPECT_THROW({
     s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  }, std::logic_error);
+
+  s.connectSignal(s.strsignal, &r, &Receiver::genericStringHandler);
+  EXPECT_THROW({
+    s.connectSignal(s.strsignal, &r, &Receiver::genericStringHandler);
   }, std::logic_error);
 }
 
@@ -106,6 +148,20 @@ TEST(Signals, disconnectSignal)
   c = s.connectSignal(s.ssignal, &r, &Receiver::specificHandler);
   s.disconnectSignal(c);
   s.emitSignal(s.ssignal);
+  EXPECT_EQ(callCount, 0);
+
+  /* Generic handler with args */
+  callCount = 0;
+  c = s.connectSignal(s.strsignal, &r, &Receiver::genericStringHandler);
+  s.disconnectSignal(c);
+  s.emitSignal(s.strsignal, "data");
+  EXPECT_EQ(callCount, 0);
+
+  /* Specific handler with args */
+  callCount = 0;
+  c = s.connectSignal(s.sstrsignal, &r, &Receiver::specificStringHandler);
+  s.disconnectSignal(c);
+  s.emitSignal(s.sstrsignal, "data");
   EXPECT_EQ(callCount, 0);
 }
 
@@ -155,6 +211,26 @@ TEST(Signals, disconnectHelper)
   EXPECT_EQ(callCount, 0);
 }
 
+TEST(Signals, disconnectHelperArg)
+{
+  Sender s;
+  Receiver r;
+
+  /* Generic handler */
+  callCount = 0;
+  s.connectSignal(s.strsignal, &r, &Receiver::genericStringHandler);
+  s.disconnectSignal(s.strsignal, &r, &Receiver::genericStringHandler);
+  s.emitSignal(s.strsignal, "data");
+  EXPECT_EQ(callCount, 0);
+
+  /* Specific handler */
+  callCount = 0;
+  s.connectSignal(s.sstrsignal, &r, &Receiver::specificStringHandler);
+  s.disconnectSignal(s.sstrsignal, &r, &Receiver::specificStringHandler);
+  s.emitSignal(s.sstrsignal, "data");
+  EXPECT_EQ(callCount, 0);
+}
+
 TEST(Signals, disconnectSimilar)
 {
   Sender s;
@@ -168,6 +244,19 @@ TEST(Signals, disconnectSimilar)
   EXPECT_EQ(callCount, 1);
 }
 
+TEST(Signals, disconnectSimilarArg)
+{
+  Sender s;
+  Receiver r;
+
+  callCount = 0;
+  s.connectSignal(s.strsignal, &r, &Receiver::genericStringHandler);
+  s.connectSignal(s.strsignal, &r, &Receiver::otherGenericStringHandler);
+  s.disconnectSignal(s.strsignal, &r, &Receiver::genericStringHandler);
+  s.emitSignal(s.strsignal, "data");
+  EXPECT_EQ(callCount, 1);
+}
+
 TEST(Signals, disconnectAll)
 {
   Sender s;
@@ -175,12 +264,15 @@ TEST(Signals, disconnectAll)
   Receiver r2;
 
   callCount = 0;
+
   s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
   s.connectSignal(s.gsignal2, &r, &Receiver::genericHandler);
+  s.connectSignal(s.strsignal, &r, &Receiver::genericStringHandler);
   s.connectSignal(s.gsignal, &r2, &Receiver::genericHandler);
   s.disconnectSignals(&r);
   s.emitSignal(s.gsignal);
   s.emitSignal(s.gsignal2);
+  s.emitSignal(s.strsignal, "data");
   EXPECT_EQ(callCount, 1);
 }
 
@@ -220,6 +312,33 @@ TEST(Signals, removeWhileEmitting)
   s.connectSignal(s.gsignal, &r, &Receiver::otherGenericHandler);
   s.emitSignal(s.gsignal);
   EXPECT_EQ(callCount, 1);
+}
+
+TEST(Signals, emitConversion)
+{
+  Sender s;
+  Receiver r;
+
+  /* Receiver adds reference */
+  callCount = 0;
+  s.connectSignal(s.refhandler, &r, &Receiver::genericConstRefHandler);
+  s.emitSignal(s.refhandler, 123);
+  EXPECT_EQ(callCount, 1);
+
+  /* Sender adds reference */
+  callCount = 0;
+  s.connectSignal(s.refemitter, &r, &Receiver::genericConstRefHandler);
+  s.emitSignal(s.refemitter, 123);
+  EXPECT_EQ(callCount, 1);
+
+  /* Receiver adds pointer const qualifier */
+#if 0 /* FIXME: Currently broken */
+  callCount = 0;
+  int count;
+  s.connectSignal(s.consthandler, &r, &Receiver::genericConstPtrHandler);
+  s.emitSignal(s.consthandler, &count);
+  EXPECT_EQ(callCount, 1);
+#endif
 }
 
 int main(int argc, char** argv)

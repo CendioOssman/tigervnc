@@ -20,8 +20,6 @@
 #include <config.h>
 #endif
 
-#include <assert.h>
-
 #include <algorithm>
 #include <stdexcept>
 
@@ -36,15 +34,17 @@ static bool operator==(const Connection& a, const Connection& b)
          a.callback == b.callback;
 }
 
-signal::signal()
+template<typename... Is>
+core::signal<Is...>::signal()
 {
 }
 
-Connection signal::connect(Object* src, Object* dst,
-                           const comp_any& callback,
-                           const emitter_t& emitter)
+template<typename... Is>
+Connection core::signal<Is...>::connect(Object* src, Object* dst,
+                                  const comp_any& callback,
+                                  const emitter_t& emitter)
 {
-  ReceiverList::iterator iter;
+  typename ReceiverList::iterator iter;
   Connection connection;
 
   assert(src);
@@ -62,9 +62,10 @@ Connection signal::connect(Object* src, Object* dst,
   return connection;
 }
 
-void signal::disconnect(const Connection connection)
+template<typename... Is>
+void core::signal<Is...>::disconnect(const Connection connection)
 {
-  ReceiverList::iterator iter;
+  typename ReceiverList::iterator iter;
 
   assert(connection.sig == this);
 
@@ -76,10 +77,11 @@ void signal::disconnect(const Connection connection)
   }
 }
 
-void signal::emit()
+template<typename... Is>
+void core::signal<Is...>::emit(const Is&... args)
 {
   ReceiverList siglist;
-  ReceiverList::iterator iter;
+  typename ReceiverList::iterator iter;
 
   // Convoluted iteration so that we safely handle changes to
   // the list
@@ -90,7 +92,7 @@ void signal::emit()
                        return recv.connection == iter->connection;
                      }) == receivers.end())
       continue;
-    iter->emitter();
+    iter->emitter(args...);
   }
 }
 
@@ -143,7 +145,7 @@ void Object::disconnectSignal(const Connection connection)
     connection.dst->connectedObjects.erase(this);
 }
 
-void Object::emitSignal(signal& signal)
+void Object::emitSignal(signal<>& signal)
 {
   signal.emit();
 }
@@ -166,9 +168,9 @@ void Object::disconnectSignals(Object* obj)
   } while (!done);
 }
 
-Connection Object::connectSignal(signal& signal, class Object* obj,
+Connection Object::connectSignal(signal<>& signal, class Object* obj,
                                  const comp_any& callback,
-                                 const signal::emitter_t& emitter)
+                                 const core::signal<>::emitter_t& emitter)
 {
   Connection connection;
 

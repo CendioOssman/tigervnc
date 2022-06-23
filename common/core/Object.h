@@ -24,12 +24,15 @@
 #ifndef __CORE_OBJECT_H__
 #define __CORE_OBJECT_H__
 
+#include <assert.h>
+
 #include <functional>
 #include <list>
 #include <map>
 #include <set>
 #include <string>
 
+#include <core/any.h>
 #include <core/comp_any.h>
 
 namespace core {
@@ -37,7 +40,18 @@ namespace core {
   // Opaque identifier for tracking a connection to a signal
   struct Connection;
 
-  class signal {
+  class sigbase {
+  public:
+    virtual ~sigbase() {}
+
+    friend class Object;
+
+  protected:
+    virtual void disconnect(const Connection connection) = 0;
+  };
+
+  template<typename... Is>
+  class signal : public sigbase {
   public:
     signal();
 
@@ -45,14 +59,14 @@ namespace core {
 
   protected:
     // Wrapper to contain member function pointers
-    typedef std::function<void()> emitter_t;
+    typedef std::function<void(Is...)> emitter_t;
 
     Connection connect(class Object* src, class Object* dst,
                        const comp_any& callback,
                        const emitter_t& emitter);
-    void disconnect(const Connection connection);
+    void disconnect(const Connection connection) override;
 
-    void emit();
+    void emit(const Is&... args);
 
   protected:
     struct SignalReceiver;
@@ -69,12 +83,17 @@ namespace core {
     virtual ~Object();
 
     // connectSignal() registers an object and method on that object to
-    // be called whenever a signal of the specified name is emitted. Any
-    // method registered will automatically be unregistered when the
-    // method's object is destroyed.
+    // be called whenever a signal of the specified name is emitted.
+    // Inclusion of signal information must match how the signal is
+    // emitted, or an exception will be thrown. Any method registered
+    // will automatically be unregistered when the method's object is
+    // destroyed.
     template<class T, class S>
-    Connection connectSignal(signal& signal, T* obj,
+    Connection connectSignal(signal<>& signal, T* obj,
                              void (T::*callback)(S*));
+    template<class T, class S, typename... Is>
+    Connection connectSignal(signal<Is...>& signal, T* obj,
+                             void (T::*callback)(S*, Is...));
 
     // disconnectSignal() unregisters a method that was previously
     // registered using connectSignal().
@@ -83,8 +102,11 @@ namespace core {
     // Methods can be disconneced by reference, rather than tracking
     // the connection object.
     template<class T, class S>
-    void disconnectSignal(signal& signal, T* obj,
+    void disconnectSignal(signal<>& signal, T* obj,
                           void (T::*callback)(S*));
+    template<class T, class S, typename... Is>
+    void disconnectSignal(signal<Is...>& signal, T* obj,
+                          void (T::*callback)(S*, Is...));
 
     // disconnectSignals() unregisters all methods for all names for the
     // specified object. This is automatically called when the specified
@@ -93,12 +115,16 @@ namespace core {
 
   protected:
     // emitSignal() calls all the registered object methods for the
-    // specified name.
-    void emitSignal(signal& signal);
+    // specified name. Inclusion of signal information must match the
+    // connected methods or an exception will be thrown.
+    void emitSignal(signal<>& signal);
+    template<typename... Is>
+    void emitSignal(signal<Is...>& signal, const Is&... args);
 
-    Connection connectSignal(signal& signal, class Object* obj,
-                       const comp_any& callback,
-                       const signal::emitter_t& emitter);
+  private:
+    Connection connectSignal(signal<>& signal, Object* obj,
+                             const comp_any& callback,
+                             const core::signal<>::emitter_t& emitter);
 
   private:
     // Signal handling makes these objects difficult to copy, so it
@@ -120,15 +146,16 @@ namespace core {
 
   // Visible to everyone so it can be copied
   struct Connection {
-    signal* sig;
+    sigbase* sig;
     Object* src;
     Object* dst;
     comp_any callback;
   };
 
-  struct signal::SignalReceiver {
+  template<typename... Is>
+  struct signal<Is...>::SignalReceiver {
     Connection connection;
-    signal::emitter_t emitter;
+    signal<Is...>::emitter_t emitter;
   };
 
   //////////////////////////////////////////////////////////////////////
@@ -137,23 +164,49 @@ namespace core {
   //
 
   template<class T, class S>
-  Connection Object::connectSignal(signal& signal, T* obj,
+  Connection Object::connectSignal(signal<>& signal, T* obj,
                                    void (T::*callback)(S*))
   {
     static_assert(std::is_base_of<Object, S>::value,
                   "Incompatible signal callback");
     S* sender = static_cast<S*>(this);
-    signal::emitter_t emitter = [sender, obj, callback]() {
+    typename core::signal<>::emitter_t emitter = [sender, obj, callback]() {
       (obj->*callback)(sender);
     };
     return connectSignal(signal, obj, callback, emitter);
   }
 
+  template<class T, class S, typename... Is>
+  Connection Object::connectSignal(signal<Is...>& signal, T* obj,
+                                   void (T::*callback)(S*, Is...))
+  {
+    static_assert(std::is_base_of<Object, S>::value,
+                  "Incompatible signal callback");
+    S* sender = static_cast<S*>(this);
+    typename core::signal<Is...>::emitter_t emitter = [sender, obj, callback](const Is&... args) {
+      (obj->*callback)(sender, args...);
+    };
+    return connectSignal(signal, obj, callback, emitter);
+  }
+
   template<class T, class S>
-  void Object::disconnectSignal(signal& signal, T* obj,
+  void Object::disconnectSignal(signal<>& signal, T* obj,
                                 void (T::*callback)(S*))
   {
     disconnectSignal({&signal, this, obj, callback});
+  }
+
+  template<class T, class S, typename... Is>
+  void Object::disconnectSignal(signal<Is...>& signal, T* obj,
+                                void (T::*callback)(S*, Is...))
+  {
+    disconnectSignal({&signal, this, obj, callback});
+  }
+
+  template<typename... Is>
+  void Object::emitSignal(signal<Is...>& signal, const Is&... args)
+  {
+    signal.emit(args...);
   }
 
 }
