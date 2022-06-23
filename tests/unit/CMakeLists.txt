@@ -36,6 +36,10 @@ add_executable(pixelformat pixelformat.cxx)
 target_link_libraries(pixelformat rfb GTest::gtest_main)
 gtest_discover_tests(pixelformat)
 
+add_executable(signals signals.cxx)
+target_link_libraries(signals core GTest::gtest_main)
+gtest_discover_tests(signals)
+
 add_executable(unicode unicode.cxx)
 target_link_libraries(unicode core GTest::gtest_main)
 gtest_discover_tests(unicode)
