@@ -50,9 +50,15 @@ Object::~Object()
     while (!siglist->empty())
       disconnectSignals(siglist->front()->getObject());
   }
+
+  while (!signalCheckers.empty()) {
+    delete signalCheckers.begin()->second;
+    signalCheckers.erase(signalCheckers.begin());
+  }
 }
 
-void Object::registerSignal(const char *name)
+void Object::registerSignal(const char *name,
+                            const InfoChecker *checker)
 {
   assert(name);
 
@@ -61,6 +67,8 @@ void Object::registerSignal(const char *name)
 
   // Just to force it being created
   signalReceivers[name].clear();
+
+  signalCheckers[name] = checker;
 }
 
 void Object::emitSignal(const char *name)
@@ -72,6 +80,9 @@ void Object::emitSignal(const char *name)
 
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot emit unknown signal %s", name));
+
+  if (signalCheckers[name] != nullptr)
+    throw std::logic_error(format("Missing data when emitting signal %s", name));
 
   // Convoluted iteration so that we safely handle changes to
   // the list
@@ -95,6 +106,12 @@ void Object::emitSignal(const char *name, SignalInfo &info)
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot emit unknown signal %s", name));
 
+  if (signalCheckers[name] == nullptr)
+    throw std::logic_error(format("Unexpected data emitting signal %s", name));
+
+  if (!signalCheckers[name]->isInstanceOf(info))
+    throw std::logic_error(format("Incompatible signal data for signal %s", name));
+
   // Convoluted iteration so that we safely handle changes to
   // the list
   siglist = signalReceivers[name];
@@ -108,7 +125,8 @@ void Object::emitSignal(const char *name, SignalInfo &info)
 }
 
 void Object::connectSignal(const char *name, Object *obj,
-                           const SignalReceiver *receiver)
+                           const SignalReceiver *receiver,
+                           const std::type_info *info)
 {
   ReceiverList::iterator iter;
 
@@ -117,6 +135,19 @@ void Object::connectSignal(const char *name, Object *obj,
 
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot connect to unknown signal %s", name));
+
+  if (signalCheckers[name] == nullptr) {
+    if (info != nullptr)
+      throw std::logic_error(format("Unexpected callback data argument "
+                                    "for signal %s", name));
+  } else {
+    if (info == nullptr)
+      throw std::logic_error(format("Missing callback data argument "
+                                    "for signal %s", name));
+    if (!signalCheckers[name]->isType(*info))
+      throw std::logic_error(format("Incompatible callback data "
+                                    "argument for signal %s", name));
+  }
 
   for (iter = signalReceivers[name].begin();
        iter != signalReceivers[name].end(); ++iter) {
