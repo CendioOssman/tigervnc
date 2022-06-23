@@ -1,4 +1,4 @@
-/* Copyright 2022 Pierre Ossman for Cendio AB
+/* Copyright 2022-2024 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,11 +17,17 @@
  */
 
 //
-// Object - Base class for all non-trival objects
+// Object - Base class for all non-trival objects. Handles signal
+//          infrastructure for passing events between objects.
 //
 
 #ifndef __CORE_OBJECT_H__
 #define __CORE_OBJECT_H__
+
+#include <functional>
+#include <list>
+#include <map>
+#include <string>
 
 namespace core {
 
@@ -31,8 +37,56 @@ namespace core {
     Object();
   public:
     virtual ~Object();
+
+    // connectSignal() registers an object and method on that object to
+    // be called whenever a signal of the specified name is emitted.
+    template<class T>
+    void connectSignal(const char* name, T* obj,
+                       void (T::*callback)(Object*, const char*));
+
+  protected:
+    // registerSignal() registers a new signal type with the specified
+    // name. This must always be done before connectSignal() or
+    // emitSignal() is used.
+    void registerSignal(const char* name);
+
+    // emitSignal() calls all the registered object methods for the
+    // specified name.
+    void emitSignal(const char* name);
+
+  private:
+    // Wrapper to contain member function pointers
+    typedef std::function<void()> emitter_t;
+
+    void connectSignal(const char* name, const emitter_t& emitter);
+
+  private:
+    // Signal handling makes these objects difficult to copy, so it
+    // is disabled for now
+    Object(const Object&) = delete;
+    Object& operator=(const Object&) = delete;
+
+  private:
+    typedef std::list<emitter_t> ReceiverList;
+
+    // Mapping between signal names and the methods receiving them
+    std::map<std::string, ReceiverList> signalReceivers;
   };
 
+  //////////////////////////////////////////////////////////////////////
+  //
+  // Inline methods definitions
+  //
+
+  template<class T>
+  void Object::connectSignal(const char* name, T* obj,
+                             void (T::*callback)(Object*, const char*))
+  {
+    emitter_t emitter = [this, name, obj, callback]() {
+      (obj->*callback)(this, name);
+    };
+    connectSignal(name, emitter);
+  }
 }
 
 #endif
