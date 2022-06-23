@@ -1,0 +1,107 @@
+/* Copyright 2024-2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
+ *
+ * This is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this software; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+ * USA.
+ */
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <gtest/gtest.h>
+
+#include <core/Object.h>
+
+static unsigned callCount;
+
+class SenderBase : public core::Object {
+public:
+  SenderBase() {}
+
+  template<class S>
+  void emitSignal(const core::signal S::* signal)
+  {
+    core::Object::emitSignal(signal);
+  }
+};
+
+class Receiver : public core::Object {
+public:
+  Receiver() {}
+
+  void handler() { callCount++; }
+};
+
+TEST(Signals, connectSignal)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal signal;
+  };
+
+  Sender s;
+  Receiver r;
+
+  /* Normal handler */
+  callCount = 0;
+  s.connectSignal(&Sender::signal, &r, &Receiver::handler);
+  s.emitSignal(&Sender::signal);
+  EXPECT_EQ(callCount, 1);
+}
+
+TEST(Signals, connectBadSignal)
+{
+  class SenderA : public SenderBase {
+  public:
+    core::signal goodsignal;
+  };
+  class SenderB : public SenderBase {
+  public:
+    core::signal badsignal;
+  };
+
+  SenderA s;
+  Receiver r;
+
+  s.connectSignal(&SenderA::goodsignal, &r, &Receiver::handler);
+  EXPECT_THROW({
+    s.connectSignal(&SenderB::badsignal, &r, &Receiver::handler);
+  }, std::logic_error);
+}
+
+TEST(Signals, emitBadSignal)
+{
+  class SenderA : public SenderBase {
+  public:
+    core::signal goodsignal;
+  };
+  class SenderB : public SenderBase {
+  public:
+    core::signal badsignal;
+  };
+
+  SenderA s;
+
+  s.emitSignal(&SenderA::goodsignal);
+  EXPECT_THROW({
+    s.emitSignal(&SenderB::badsignal);
+  }, std::logic_error);
+}
+
+int main(int argc, char** argv)
+{
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
