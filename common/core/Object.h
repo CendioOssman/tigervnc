@@ -24,6 +24,8 @@
 #ifndef __CORE_OBJECT_H__
 #define __CORE_OBJECT_H__
 
+#include <assert.h>
+
 #include <functional>
 #include <list>
 #include <map>
@@ -31,6 +33,7 @@
 #include <stdexcept>
 #include <string>
 
+#include <core/any.h>
 #include <core/comp_any.h>
 
 namespace core {
@@ -46,12 +49,17 @@ namespace core {
     virtual ~Object();
 
     // connectSignal() registers an object and method on that object to
-    // be called whenever a signal of the specified name is emitted. Any
-    // method registered will automatically be unregistered when the
-    // method's object is destroyed.
+    // be called whenever a signal of the specified name is emitted.
+    // Inclusion of signal information must match how the signal is
+    // emitted, or an exception will be thrown. Any method registered
+    // will automatically be unregistered when the method's object is
+    // destroyed.
     template<class T, class S>
     Connection connectSignal(const char* name, T* obj,
                              void (T::*callback)(S*, const char*));
+    template<class T, class S, typename I>
+    Connection connectSignal(const char* name, T* obj,
+                             void (T::*callback)(S*, const char*, I));
 
     // disconnectSignal() unregisters a method that was previously
     // registered using connectSignal().
@@ -62,6 +70,9 @@ namespace core {
     template<class T, class S>
     void disconnectSignal(const char* name, T* obj,
                           void (T::*callback)(S*, const char*));
+    template<class T, class S, typename I>
+    void disconnectSignal(const char* name, T* obj,
+                          void (T::*callback)(S*, const char*, I));
 
     // disconnectSignals() unregisters all methods for all names for the
     // specified object. This is automatically called when the specified
@@ -75,12 +86,17 @@ namespace core {
     void registerSignal(const char* name);
 
     // emitSignal() calls all the registered object methods for the
-    // specified name.
+    // specified name. Inclusion of signal information must match the
+    // connected methods or an exception will be thrown.
     void emitSignal(const char* name);
+    template<typename I>
+    void emitSignal(const char* name, const I& info);
 
   private:
     // Wrapper to contain member function pointers
-    typedef std::function<void()> emitter_t;
+    typedef std::function<void(const any&)> emitter_t;
+
+    void emitSignal(const char* name, const any& info);
 
     Connection connectSignal(const char* name, Object* obj,
                              const comp_any& callback,
@@ -128,8 +144,24 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Incompatible signal callback");
-    emitter_t emitter = [sender, name, obj, callback]() {
+    emitter_t emitter = [sender, name, obj, callback](const any& info) {
+      assert(!info.has_value());
       (obj->*callback)(sender, name);
+    };
+    return connectSignal(name, obj, callback, emitter);
+  }
+
+  template<class T, class S, typename I>
+  Connection Object::connectSignal(const char* name, T* obj,
+                                   void (T::*callback)(S*, const char*, I))
+  {
+    S* sender = dynamic_cast<S*>(this);
+    if (!sender)
+      throw std::logic_error("Incompatible signal callback");
+    emitter_t emitter = [sender, name, obj, callback](const any& info) {
+      assert(info.has_value());
+      using I_d = typename std::decay<I>::type;
+      (obj->*callback)(sender, name, any_cast<I_d>(info));
     };
     return connectSignal(name, obj, callback, emitter);
   }
@@ -139,6 +171,19 @@ namespace core {
                                 void (T::*callback)(S*, const char*))
   {
     disconnectSignal({name, this, obj, callback});
+  }
+
+  template<class T, class S, typename I>
+  void Object::disconnectSignal(const char* name, T* obj,
+                                void (T::*callback)(S*, const char*, I))
+  {
+    disconnectSignal({name, this, obj, callback});
+  }
+
+  template<typename I>
+  void Object::emitSignal(const char* name, const I& info)
+  {
+    emitSignal(name, any(info));
   }
 
 }
