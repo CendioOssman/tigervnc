@@ -130,7 +130,7 @@ static void testConnect()
 static void testDisconnect()
 {
     Sender s;
-    Receiver r;
+    Receiver r, r2;
     bool ok;
 
     printf("%s: ", __func__);
@@ -151,6 +151,18 @@ static void testDisconnect()
         ok = true;
     }
     ASSERT_EQ(ok, true);
+
+    /* Disconnect all signals */
+    count = 0;
+    s.registerSignal("signal1");
+    s.registerSignal("signal2");
+    s.connectSignal("signal1", &r, &Receiver::genericHandler);
+    s.connectSignal("signal2", &r, &Receiver::genericHandler);
+    s.connectSignal("signal1", &r2, &Receiver::genericHandler);
+    s.disconnectSignals(&r);
+    s.emitSignal("signal1");
+    s.emitSignal("signal2");
+    ASSERT_EQ(count, 1);
 
     printf("OK\n");
 }
