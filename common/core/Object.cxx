@@ -36,13 +36,19 @@ Object::~Object()
 {
   std::map<std::string, ReceiverList>::iterator sigiter;
 
+  // Disconnect from any signals we might have subscribed to
+  while (!connectedObjects.empty())
+    (*connectedObjects.begin())->disconnectSignals(this);
+
+  // And prevent other objects from trying to disconnect from us as we
+  // are going away
   for (sigiter = signalReceivers.begin();
        sigiter != signalReceivers.end(); ++sigiter) {
     ReceiverList *siglist;
 
     siglist = &sigiter->second;
     while (!siglist->empty())
-      disconnectSignal(sigiter->first.c_str(), siglist->front());
+      disconnectSignals(siglist->front()->getObject());
   }
 }
 
@@ -79,12 +85,13 @@ void Object::emitSignal(const char *name)
   }
 }
 
-void Object::connectSignal(const char *name,
+void Object::connectSignal(const char *name, Object *obj,
                            const SignalReceiver *receiver)
 {
   ReceiverList::iterator iter;
 
   assert(name);
+  assert(obj);
 
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot connect to unknown signal %s", name));
@@ -96,18 +103,24 @@ void Object::connectSignal(const char *name,
   }
 
   signalReceivers[name].push_back(receiver);
+
+  obj->connectedObjects.insert(this);
 }
 
-void Object::disconnectSignal(const char *name,
+void Object::disconnectSignal(const char *name, Object *obj,
                               const SignalReceiver *receiver)
 {
+  std::map<std::string, ReceiverList>::iterator sigiter;
   ReceiverList::iterator iter;
+  bool hasOthers;
 
   assert(name);
+  assert(obj);
 
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot disconnect unknown signal %s", name));
 
+  // Find and remove the specific connection
   for (iter = signalReceivers[name].begin();
        iter != signalReceivers[name].end(); ++iter) {
     if (**iter == *receiver) {
@@ -116,6 +129,26 @@ void Object::disconnectSignal(const char *name,
       break;
     }
   }
+
+  hasOthers = false;
+
+  // Then check if the object is attached in more ways to this or
+  // to some other signal
+  for (sigiter = signalReceivers.begin();
+       sigiter != signalReceivers.end(); ++sigiter) {
+    for (iter = sigiter->second.begin();
+         iter != sigiter->second.end(); ++iter) {
+      if ((*iter)->getObject() == obj) {
+        hasOthers = true;
+        break;
+      }
+    }
+    if (hasOthers)
+      break;
+  }
+
+  if (!hasOthers)
+    obj->connectedObjects.erase(this);
 }
 
 void Object::disconnectSignals(Object *obj)
@@ -140,4 +173,6 @@ void Object::disconnectSignals(Object *obj)
       }
     }
   }
+
+  obj->connectedObjects.erase(this);
 }
