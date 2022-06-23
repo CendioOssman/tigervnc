@@ -28,6 +28,7 @@
 
 #include <string>
 #include <list>
+#include <set>
 #include <map>
 
 namespace core {
@@ -40,7 +41,9 @@ namespace core {
     virtual ~Object();
 
     // connectSignal() registers an object and method on that object to
-    // be called whenever a signal of the specified name is emitted.
+    // be called whenever a signal of the specified name is emitted. Any
+    // method registered will automatically be unregistered when the
+    // method's object is destroyed.
     template<class T>
     void connectSignal(const char *name, T *obj,
                        void (T::*callback)(Object*, const char*));
@@ -53,7 +56,8 @@ namespace core {
                           void (T::*callback)(Object*, const char*));
 
     // disconnectSignals() unregisters all methods for all names for the
-    // specified object.
+    // specified object. This is automatically called when the specified
+    // object is destroyed.
     void disconnectSignals(Object *obj);
 
   protected:
@@ -71,9 +75,9 @@ namespace core {
     class SignalReceiver;
     template<class T> class SignalReceiverT;
 
-    void connectSignal(const char *name,
+    void connectSignal(const char *name, Object *obj,
                        const SignalReceiver *receiver);
-    void disconnectSignal(const char *name,
+    void disconnectSignal(const char *name, Object *obj,
                           const SignalReceiver *receiver);
 
   private:
@@ -81,6 +85,9 @@ namespace core {
 
     // Mapping between signal names and the methods receiving them
     std::map<std::string, ReceiverList> signalReceivers;
+
+    // Other objects that we have connected to signals on
+    std::set<Object*> connectedObjects;
   };
 
   //
@@ -122,15 +129,15 @@ namespace core {
   void Object::connectSignal(const char *name, T *obj,
                              void (T::*callback)(Object*, const char*))
   {
-    connectSignal(name, new SignalReceiverT<T>(obj, callback));
+    connectSignal(name, obj, new SignalReceiverT<T>(obj, callback));
   }
 
   template<class T>
   void Object::disconnectSignal(const char *name, T *obj,
-                                void (T::*callback)(Object*, const char*))
+                              void (T::*callback)(Object*, const char*))
   {
     SignalReceiverT<T> other(obj, callback);
-    disconnectSignal(name, &other);
+    disconnectSignal(name, obj, &other);
   }
 
   // Object::SignalReceiver - Inline methods definitions
