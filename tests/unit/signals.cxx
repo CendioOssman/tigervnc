@@ -34,6 +34,12 @@ public:
   {
     core::Object::registerSignal(name);
   }
+  template<typename I>
+  void registerSignal(const char* name)
+  {
+    core::Object::registerSignal<I>(name);
+  }
+
   void emitSignal(const char* name)
   {
     core::Object::emitSignal(name);
@@ -95,6 +101,26 @@ static void testRegister()
   printf("OK\n");
 }
 
+static void testRegisterArg()
+{
+  Sender s;
+  bool ok;
+
+  printf("%s: ", __func__);
+
+  /* Double register */
+  s.registerSignal<const char*>("signal");
+  ok = false;
+  try {
+    s.registerSignal<const char*>("signal");
+  } catch (std::exception&) {
+    ok = true;
+  }
+  ASSERT_EQ(ok, true);
+
+  printf("OK\n");
+}
+
 static void testEmit()
 {
   Sender s;
@@ -106,6 +132,16 @@ static void testEmit()
   ok = false;
   try {
     s.emitSignal("nosignal");
+  } catch (std::exception&) {
+    ok = true;
+  }
+  ASSERT_EQ(ok, true);
+
+  /* Unexpected data */
+  s.registerSignal("signal");
+  ok = false;
+  try {
+    s.emitSignal("signal", "data");
   } catch (std::exception&) {
     ok = true;
   }
@@ -125,6 +161,25 @@ static void testEmitArg()
   ok = false;
   try {
     s.emitSignal("nosignal", "data");
+  } catch (std::exception&) {
+    ok = true;
+  }
+  ASSERT_EQ(ok, true);
+
+  /* Missing data */
+  s.registerSignal<const char*>("signal");
+  ok = false;
+  try {
+    s.emitSignal("signal");
+  } catch (std::exception&) {
+    ok = true;
+  }
+  ASSERT_EQ(ok, true);
+
+  /* Wrong data */
+  ok = false;
+  try {
+    s.emitSignal("signal", 1234);
   } catch (std::exception&) {
     ok = true;
   }
@@ -173,6 +228,16 @@ static void testConnect()
   }
   ASSERT_EQ(ok, true);
 
+  /* Unexpected data */
+  s.registerSignal("nodata");
+  ok = false;
+  try {
+    s.connectSignal("nodata", &r, &Receiver::genericStringHandler);
+  } catch (std::exception&) {
+    ok = true;
+  }
+  ASSERT_EQ(ok, true);
+
   printf("OK\n");
 }
 
@@ -186,14 +251,14 @@ static void testConnectArg()
 
   /* Generic handler */
   count = 0;
-  s.registerSignal("gsignal");
+  s.registerSignal<const char*>("gsignal");
   s.connectSignal("gsignal", &r, &Receiver::genericStringHandler);
   s.emitSignal("gsignal", "data");
   ASSERT_EQ(count, 1);
 
   /* Specific handler */
   count = 0;
-  s.registerSignal("ssignal");
+  s.registerSignal<const char*>("ssignal");
   s.connectSignal("ssignal", &r, &Receiver::specificStringHandler);
   s.emitSignal("ssignal", "data");
   ASSERT_EQ(count, 1);
@@ -211,6 +276,25 @@ static void testConnectArg()
   ok = false;
   try {
     s.connectSignal("gsignal", &r, &Receiver::genericStringHandler);
+  } catch (std::exception&) {
+    ok = true;
+  }
+  ASSERT_EQ(ok, true);
+
+  /* Missing data */
+  s.registerSignal<int>("withdata");
+  ok = false;
+  try {
+    s.connectSignal("withdata", &r, &Receiver::genericHandler);
+  } catch (std::exception&) {
+    ok = true;
+  }
+  ASSERT_EQ(ok, true);
+
+  /* Wrong data type */
+  ok = false;
+  try {
+    s.connectSignal("withdata", &r, &Receiver::genericStringHandler);
   } catch (std::exception&) {
     ok = true;
   }
@@ -247,7 +331,7 @@ static void testDisconnect()
 
   /* Generic handler with args */
   count = 0;
-  s.registerSignal("gasignal");
+  s.registerSignal<const char*>("gasignal");
   c = s.connectSignal("gasignal", &r, &Receiver::genericStringHandler);
   s.disconnectSignal(c);
   s.emitSignal("gasignal", "data");
@@ -255,7 +339,7 @@ static void testDisconnect()
 
   /* Specific handler with args */
   count = 0;
-  s.registerSignal("sasignal");
+  s.registerSignal<const char*>("sasignal");
   c = s.connectSignal("sasignal", &r, &Receiver::specificStringHandler);
   s.disconnectSignal(c);
   s.emitSignal("sasignal", "data");
@@ -354,7 +438,7 @@ static void testDisconnectHelperArg()
 
   /* Generic handler */
   count = 0;
-  s.registerSignal("gsignal");
+  s.registerSignal<const char*>("gsignal");
   s.connectSignal("gsignal", &r, &Receiver::genericStringHandler);
   s.disconnectSignal("gsignal", &r, &Receiver::genericStringHandler);
   s.emitSignal("gsignal", "data");
@@ -362,7 +446,7 @@ static void testDisconnectHelperArg()
 
   /* Specific handler */
   count = 0;
-  s.registerSignal("ssignal");
+  s.registerSignal<const char*>("ssignal");
   s.connectSignal("ssignal", &r, &Receiver::specificStringHandler);
   s.disconnectSignal("ssignal", &r, &Receiver::specificStringHandler);
   s.emitSignal("ssignal", "data");
@@ -370,7 +454,7 @@ static void testDisconnectHelperArg()
 
   /* Similar handlers */
   count = 0;
-  s.registerSignal("osignal");
+  s.registerSignal<const char*>("osignal");
   s.connectSignal("osignal", &r, &Receiver::genericStringHandler);
   s.connectSignal("osignal", &r, &Receiver::otherGenericStringHandler);
   s.disconnectSignal("osignal", &r, &Receiver::genericStringHandler);
@@ -401,7 +485,7 @@ static void testDisconnectAll()
   count = 0;
   s.registerSignal("signal1");
   s.registerSignal("signal2");
-  s.registerSignal("signal3");
+  s.registerSignal<const char*>("signal3");
   s.connectSignal("signal1", &r, &Receiver::genericHandler);
   s.connectSignal("signal2", &r, &Receiver::genericHandler);
   s.connectSignal("signal3", &r, &Receiver::genericStringHandler);
@@ -461,14 +545,14 @@ static void testEmitConversion()
 
   /* Receiver adds reference */
   count = 0;
-  s.registerSignal("refhandler");
+  s.registerSignal<int>("refhandler");
   s.connectSignal("refhandler", &r, &Receiver::genericConstRefHandler);
   s.emitSignal("refhandler", 123);
   ASSERT_EQ(count, 1);
 
   /* Sender adds reference */
   count = 0;
-  s.registerSignal("refemitter");
+  s.registerSignal<const int&>("refemitter");
   s.connectSignal("refemitter", &r, &Receiver::genericConstRefHandler);
   s.emitSignal("refemitter", 123);
   ASSERT_EQ(count, 1);
@@ -476,7 +560,7 @@ static void testEmitConversion()
   /* Receiver adds pointer const qualifier */
 #if 0 /* FIXME: Currently broken*/
   count = 0;
-  s.registerSignal("constemitter");
+  s.registerSignal<int*>("constemitter");
   s.connectSignal("constemitter", &r, &Receiver::genericConstPtrHandler);
   s.emitSignal("constemitter", &count);
   ASSERT_EQ(count, 1);
@@ -488,6 +572,7 @@ static void testEmitConversion()
 int main(int /*argc*/, char** /*argv*/)
 {
   testRegister();
+  testRegisterArg();
   testEmit();
   testEmitArg();
   testConnect();
