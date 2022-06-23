@@ -89,6 +89,64 @@ TEST(Signals, connectUnknown)
   }, std::logic_error);
 }
 
+TEST(Signals, disconnectSignal)
+{
+  Sender s;
+  Receiver r;
+  core::Connection c;
+
+  /* Generic handler */
+  callCount = 0;
+  s.registerSignal("gsignal");
+  c = s.connectSignal("gsignal", &r, &Receiver::genericHandler);
+  s.disconnectSignal(c);
+  s.emitSignal("gsignal");
+  EXPECT_EQ(callCount, 0);
+}
+
+TEST(Signals, doubleDisconnect)
+{
+  Sender s;
+  Receiver r;
+  core::Connection c;
+
+  s.registerSignal("dblsignal");
+  c = s.connectSignal("dblsignal", &r, &Receiver::genericHandler);
+  s.disconnectSignal(c);
+  EXPECT_NO_THROW({
+    s.disconnectSignal(c);
+  });
+}
+
+TEST(Signals, disconnectWrongObject)
+{
+  Sender s;
+  Sender s2;
+  Receiver r;
+  core::Connection c;
+
+  s.registerSignal("othersignal");
+  c = s.connectSignal("othersignal", &r, &Receiver::genericHandler);
+  EXPECT_THROW({
+    s2.disconnectSignal(c);
+  }, std::logic_error);
+}
+
+TEST(Signals, disconnectWrongSignal)
+{
+  Sender s;
+  Receiver r;
+  core::Connection c;
+
+  /* Incorrect signal name (should be impossible) */
+  s.registerSignal("renamesignal");
+  c = s.connectSignal("renamesignal", &r, &Receiver::genericHandler);
+  c.name = "badname";
+  EXPECT_THROW({
+    s.disconnectSignal(c);
+  }, std::logic_error);
+}
+
 int main(int argc, char** argv)
 {
   testing::InitGoogleTest(&argc, argv);
