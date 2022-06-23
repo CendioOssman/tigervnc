@@ -29,6 +29,17 @@
 
 using namespace core;
 
+static bool operator==(const Connection& a, const Connection& b)
+{
+  return a.name == b.name && a.src == b.src && a.dst == b.dst &&
+         a.callback == b.callback;
+}
+
+struct Object::SignalReceiver {
+  Connection connection;
+  emitter_t emitter;
+};
+
 Object::Object()
 {
 }
@@ -59,17 +70,44 @@ void Object::emitSignal(const char* name)
 
   for (iter = signalReceivers[name].begin();
        iter != signalReceivers[name].end(); ++iter)
-    (*iter)();
+    iter->emitter();
 }
 
-void Object::connectSignal(const char* name, const emitter_t& emitter)
+Connection Object::connectSignal(const char* name, Object* obj,
+                                 const comp_any& callback,
+                                 const emitter_t& emitter)
 {
   ReceiverList::iterator iter;
+  Connection connection;
 
   assert(name);
+  assert(obj);
 
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot connect to unknown signal %s", name));
 
-  signalReceivers[name].push_back(emitter);
+  connection = {name, this, obj, callback};
+
+  signalReceivers[name].push_back({connection, emitter});
+
+  return connection;
+}
+
+void Object::disconnectSignal(const Connection connection)
+{
+  ReceiverList::iterator iter;
+
+  if (connection.src != this)
+    throw std::logic_error("Disconnecting signal from wrong object");
+  if (signalReceivers.count(connection.name) == 0)
+    throw std::logic_error(format("Cannot disconnect unknown signal %s",
+                                  connection.name.c_str()));
+
+  for (iter = signalReceivers[connection.name].begin();
+       iter != signalReceivers[connection.name].end(); ++iter) {
+    if (iter->connection == connection) {
+      signalReceivers[connection.name].erase(iter);
+      break;
+    }
+  }
 }

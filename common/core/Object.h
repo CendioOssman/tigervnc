@@ -29,7 +29,12 @@
 #include <map>
 #include <string>
 
+#include <core/comp_any.h>
+
 namespace core {
+
+  // Opaque identifier for tracking a connection to a signal
+  struct Connection;
 
   class Object {
   protected:
@@ -41,8 +46,12 @@ namespace core {
     // connectSignal() registers an object and method on that object to
     // be called whenever a signal of the specified name is emitted.
     template<class T>
-    void connectSignal(const char* name, T* obj,
-                       void (T::*callback)(Object*, const char*));
+    Connection connectSignal(const char* name, T* obj,
+                             void (T::*callback)(Object*, const char*));
+
+    // disconnectSignal() unregisters a method that was previously
+    // registered using connectSignal().
+    void disconnectSignal(const Connection connection);
 
   protected:
     // registerSignal() registers a new signal type with the specified
@@ -58,7 +67,9 @@ namespace core {
     // Wrapper to contain member function pointers
     typedef std::function<void()> emitter_t;
 
-    void connectSignal(const char* name, const emitter_t& emitter);
+    Connection connectSignal(const char* name, Object* obj,
+                             const comp_any& callback,
+                             const emitter_t& emitter);
 
   private:
     // Signal handling makes these objects difficult to copy, so it
@@ -67,10 +78,24 @@ namespace core {
     Object& operator=(const Object&) = delete;
 
   private:
-    typedef std::list<emitter_t> ReceiverList;
+    struct SignalReceiver;
+    typedef std::list<SignalReceiver> ReceiverList;
 
     // Mapping between signal names and the methods receiving them
     std::map<std::string, ReceiverList> signalReceivers;
+  };
+
+  //////////////////////////////////////////////////////////////////////
+  //
+  // Internal structures
+  //
+
+  // Visible to everyone so it can be copied
+  struct Connection {
+    std::string name;
+    Object* src;
+    Object* dst;
+    comp_any callback;
   };
 
   //////////////////////////////////////////////////////////////////////
@@ -79,14 +104,16 @@ namespace core {
   //
 
   template<class T>
-  void Object::connectSignal(const char* name, T* obj,
-                             void (T::*callback)(Object*, const char*))
+  Connection Object::connectSignal(const char* name, T* obj,
+                                   void (T::*callback)(Object*,
+                                                       const char*))
   {
     emitter_t emitter = [this, name, obj, callback]() {
       (obj->*callback)(this, name);
     };
-    connectSignal(name, emitter);
+    return connectSignal(name, obj, callback, emitter);
   }
+
 }
 
 #endif
