@@ -45,6 +45,13 @@ namespace core {
     void connectSignal(const char *name, T *obj,
                        void (T::*callback)(Object*, const char*));
 
+    // disconnectSignal() unregisters a method that was previously
+    // registered using connectSignal(). Only the specified object and
+    // the specific name will be unregistered.
+    template<class T>
+    void disconnectSignal(const char *name, T *obj,
+                          void (T::*callback)(Object*, const char*));
+
   protected:
     // registerSignal() registers a new signal type with the specified
     // name. This must always be done before connectSignal() or
@@ -60,7 +67,10 @@ namespace core {
     class SignalReceiver;
     template<class T> class SignalReceiverT;
 
-    void connectSignal(const char *name, SignalReceiver *receiver);
+    void connectSignal(const char *name,
+                       const SignalReceiver *receiver);
+    void disconnectSignal(const char *name,
+                          const SignalReceiver *receiver);
 
   private:
     typedef std::list<const SignalReceiver*> ReceiverList;
@@ -107,6 +117,14 @@ namespace core {
                              void (T::*callback)(Object*, const char*))
   {
     connectSignal(name, new SignalReceiverT<T>(obj, callback));
+  }
+
+  template<class T>
+  void Object::disconnectSignal(const char *name, T *obj,
+                                void (T::*callback)(Object*, const char*))
+  {
+    SignalReceiverT<T> other(obj, callback);
+    disconnectSignal(name, &other);
   }
 
   // Object::SignalReceiver - Inline methods definitions
