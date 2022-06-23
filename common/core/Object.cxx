@@ -1,4 +1,4 @@
-/* Copyright 2022 Pierre Ossman for Cendio AB
+/* Copyright 2022-2026 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
+
 #include <core/Object.h>
 
 using namespace core;
@@ -30,4 +32,31 @@ Object::Object()
 
 Object::~Object()
 {
+}
+
+void Object::emitSignalImpl(const void* signal)
+{
+  ReceiverList::iterator iter;
+
+  assert(signal);
+
+  if (signalReceivers.count(signal) == 0)
+    return;
+
+  for (iter = signalReceivers[signal].begin();
+       iter != signalReceivers[signal].end(); ++iter)
+    (*iter)();
+}
+
+void Object::connectSignalImpl(const void* signal,
+                               const emitter_t& emitter)
+{
+  ReceiverList::iterator iter;
+
+  assert(signal);
+
+  if (signalReceivers.count(signal) == 0)
+    signalReceivers[signal].clear();
+
+  signalReceivers[signal].push_back(emitter);
 }
