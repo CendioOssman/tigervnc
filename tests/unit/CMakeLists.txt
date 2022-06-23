@@ -40,6 +40,10 @@ add_executable(shortcuthandler shortcuthandler.cxx ../../vncviewer/ShortcutHandl
 target_link_libraries(shortcuthandler core ${Intl_LIBRARIES} GTest::gtest_main)
 gtest_discover_tests(shortcuthandler)
 
+add_executable(signals signals.cxx)
+target_link_libraries(signals core GTest::gtest_main)
+gtest_discover_tests(signals)
+
 add_executable(unicode unicode.cxx)
 target_link_libraries(unicode core GTest::gtest_main)
 gtest_discover_tests(unicode)
