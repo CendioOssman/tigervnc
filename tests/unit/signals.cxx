@@ -118,11 +118,68 @@ static void testConnect()
   printf("OK\n");
 }
 
+static void testDisconnect()
+{
+  Sender s;
+  Sender s2;
+  Receiver r;
+  core::Connection c;
+  bool ok;
+
+  printf("%s: ", __func__);
+
+  /* Generic handler */
+  count = 0;
+  s.registerSignal("gsignal");
+  c = s.connectSignal("gsignal", &r, &Receiver::genericHandler);
+  s.disconnectSignal(c);
+  s.emitSignal("gsignal");
+  ASSERT_EQ(count, 0);
+
+  /* Double remove */
+  ok = true;
+  s.registerSignal("dblsignal");
+  c = s.connectSignal("dblsignal", &r, &Receiver::genericHandler);
+  s.disconnectSignal(c);
+  try {
+    s.disconnectSignal(c);
+  } catch (std::exception&) {
+    ok = false;
+  }
+  ASSERT_EQ(ok, true);
+
+  /* Wrong object */
+  ok = false;
+  s.registerSignal("othersignal");
+  c = s.connectSignal("othersignal", &r, &Receiver::genericHandler);
+  try {
+    s2.disconnectSignal(c);
+  } catch (std::exception&) {
+    ok = true;
+  }
+  ASSERT_EQ(ok, true);
+
+  /* Incorrect signal name (should be impossible) */
+  ok = false;
+  s.registerSignal("renamesignal");
+  c = s.connectSignal("renamesignal", &r, &Receiver::genericHandler);
+  c.name = "badname";
+  try {
+    s.disconnectSignal(c);
+  } catch (std::exception&) {
+    ok = true;
+  }
+  ASSERT_EQ(ok, true);
+
+  printf("OK\n");
+}
+
 int main(int /*argc*/, char** /*argv*/)
 {
   testRegister();
   testEmit();
   testConnect();
+  testDisconnect();
 
   return 0;
 }
