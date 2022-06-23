@@ -52,6 +52,10 @@ namespace core {
     void disconnectSignal(const char *name, T *obj,
                           void (T::*callback)(Object*, const char*));
 
+    // disconnectSignals() unregisters all methods for all names for the
+    // specified object.
+    void disconnectSignals(Object *obj);
+
   protected:
     // registerSignal() registers a new signal type with the specified
     // name. This must always be done before connectSignal() or
@@ -98,6 +102,7 @@ namespace core {
 
     virtual void emit(Object*, const char*) const = 0;
 
+    virtual Object* getObject() const = 0;
     virtual bool operator==(const SignalReceiver&) const = 0;
   };
 
@@ -109,6 +114,7 @@ namespace core {
 
     void emit(Object*, const char*) const override;
 
+    Object* getObject() const override;
     bool operator==(const SignalReceiver&) const override;
 
   private:
@@ -148,6 +154,12 @@ namespace core {
                                         const char *name) const
   {
     (obj->*callback)(sender, name);
+  }
+
+  template<class T>
+  Object* Object::SignalReceiverT<T>::getObject() const
+  {
+    return obj;
   }
 
   template<class T>
