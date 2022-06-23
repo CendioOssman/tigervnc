@@ -128,11 +128,40 @@ static void testConnect()
     printf("OK\n");
 }
 
+static void testDisconnect()
+{
+    Sender s;
+    Receiver r;
+    bool ok;
+
+    printf("%s: ", __func__);
+
+    /* Generic handler */
+    count = 0;
+    s.registerSignal("gsignal");
+    s.connectSignal("gsignal", &r, &Receiver::genericHandler);
+    s.disconnectSignal("gsignal", &r, &Receiver::genericHandler);
+    s.emitSignal("gsignal");
+    ASSERT_EQ(count, 0);
+
+    /* Unknown signal */
+    ok = false;
+    try {
+        s.disconnectSignal("nosignal", &r, &Receiver::genericHandler);
+    } catch (core::Exception&) {
+        ok = true;
+    }
+    ASSERT_EQ(ok, true);
+
+    printf("OK\n");
+}
+
 int main(int /*argc*/, char** /*argv*/)
 {
     testRegister();
     testEmit();
     testConnect();
+    testDisconnect();
 
     return 0;
 }
