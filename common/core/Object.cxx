@@ -117,3 +117,27 @@ void Object::disconnectSignal(const char *name,
     }
   }
 }
+
+void Object::disconnectSignals(Object *obj)
+{
+  std::map<std::string, ReceiverList>::iterator sigiter;
+
+  assert(obj);
+
+  for (sigiter = signalReceivers.begin();
+       sigiter != signalReceivers.end(); ++sigiter) {
+    ReceiverList *siglist;
+    ReceiverList::iterator iter;
+
+    siglist = &sigiter->second;
+    iter = siglist->begin();
+    while (iter != siglist->end()) {
+      if ((*iter)->getObject() == obj) {
+        delete *iter;
+        siglist->erase(iter++);
+      } else {
+        ++iter;
+      }
+    }
+  }
+}
