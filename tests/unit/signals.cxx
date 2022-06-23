@@ -165,6 +165,15 @@ static void testDisconnect()
     s.emitSignal("signal2");
     ASSERT_EQ(count, 1);
 
+    /* Implicit disconnect */
+    count = 0;
+    {
+        Receiver scoped_r;
+        s.connectSignal("gsignal", &scoped_r, &Receiver::genericHandler);
+    }
+    s.emitSignal("gsignal");
+    ASSERT_EQ(count, 0);
+
     printf("OK\n");
 }
 
