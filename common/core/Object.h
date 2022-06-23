@@ -61,6 +61,10 @@ namespace core {
     void disconnectSignal(const signal S::* signal, T* obj,
                           void (T::*callback)());
 
+    // disconnectSignals() unregisters all methods for all signals for
+    // the specified object
+    void disconnectSignals(Object* obj);
+
   protected:
     // emitSignal() calls all the registered object methods for the
     // specified signal

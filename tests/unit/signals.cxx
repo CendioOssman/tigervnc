@@ -210,6 +210,27 @@ TEST(Signals, disconnectSimilar)
   EXPECT_EQ(callCount, 1);
 }
 
+TEST(Signals, disconnectAll)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal signal1, signal2;
+  };
+
+  Sender s;
+  Receiver r;
+  Receiver r2;
+
+  callCount = 0;
+  s.connectSignal(&Sender::signal1, &r, &Receiver::handler);
+  s.connectSignal(&Sender::signal2, &r, &Receiver::handler);
+  s.connectSignal(&Sender::signal1, &r2, &Receiver::handler);
+  s.disconnectSignals(&r);
+  s.emitSignal(&Sender::signal1);
+  s.emitSignal(&Sender::signal2);
+  EXPECT_EQ(callCount, 1);
+}
+
 TEST(Signals, disconnectBadSignal)
 {
   class SenderA : public SenderBase {
