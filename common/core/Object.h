@@ -43,12 +43,17 @@ namespace core {
     virtual ~Object();
 
     // connectSignal() registers an object and method on that object to
-    // be called whenever a signal of the specified name is emitted. Any
-    // method registered will automatically be unregistered when the
-    // method's object is destroyed.
+    // be called whenever a signal of the specified name is emitted.
+    // Inclusion of signal information must match how the signal is
+    // emitted, or an exception will be thrown. Any method registered
+    // will automatically be unregistered when the method's object is
+    // destroyed.
     template<class T, class S>
     void connectSignal(const char *name, T *obj,
                        void (T::*callback)(S*, const char*));
+    template<class T, class S, typename I>
+    void connectSignal(const char *name, T *obj,
+                       void (T::*callback)(S*, const char*, I));
 
     // disconnectSignal() unregisters a method that was previously
     // registered using connectSignal(). Only the specified object and
@@ -56,6 +61,9 @@ namespace core {
     template<class T, class S>
     void disconnectSignal(const char *name, T *obj,
                           void (T::*callback)(S*, const char*));
+    template<class T, class S, typename I>
+    void disconnectSignal(const char *name, T *obj,
+                          void (T::*callback)(S*, const char*, I));
 
     // disconnectSignals() unregisters all methods for all names for the
     // specified object. This is automatically called when the specified
@@ -69,13 +77,22 @@ namespace core {
     void registerSignal(const char *name);
 
     // emitSignal() calls all the registered object methods for the
-    // specified name.
+    // specified name. Inclusion of signal information must match the
+    // registered connected methods or an exception will be thrown.
     void emitSignal(const char *name);
+    template<typename I>
+    void emitSignal(const char *name, I info);
 
   private:
     // Helper classes to handle the type glue for calling object methods
     class SignalReceiver;
     template<class T, class S> class SignalReceiverTS;
+    template<class T, class S, typename I> class SignalReceiverTSI;
+
+    struct SignalInfo;
+    template<typename I> struct TypedInfo;
+
+    void emitSignal(const char *name, SignalInfo &info);
 
     void connectSignal(const char *name, Object *obj,
                        const SignalReceiver *receiver);
@@ -98,6 +115,18 @@ namespace core {
     std::set<Object*> connectedObjects;
   };
 
+  struct Object::SignalInfo {
+    virtual ~SignalInfo() {}
+  };
+
+  template<typename T>
+  struct Object::TypedInfo : public SignalInfo {
+    TypedInfo(T &d) : data(d) {}
+    T& getData() { return data; }
+  private:
+    T &data;
+  };
+
   //
   // Object::SignalReceiver - Glue objects that allow us to call any
   //                          method on any object, as long as the
@@ -110,6 +139,7 @@ namespace core {
     virtual ~SignalReceiver() {}
 
     virtual void emit(Object*, const char*) const = 0;
+    virtual void emit(Object*, const char*, SignalInfo&) const = 0;
 
     virtual Object* getObject() const = 0;
     virtual bool operator==(const SignalReceiver&) const = 0;
@@ -122,6 +152,7 @@ namespace core {
     virtual ~SignalReceiverTS() {}
 
     void emit(Object*, const char*) const override;
+    void emit(Object*, const char*, SignalInfo&) const override;
 
     Object* getObject() const override;
     bool operator==(const SignalReceiver&) const override;
@@ -129,6 +160,23 @@ namespace core {
   private:
     T *obj;
     void (T::*callback)(S*, const char*);
+  };
+
+  template<class T, class S, typename I>
+  class Object::SignalReceiverTSI: public Object::SignalReceiver {
+  public:
+    SignalReceiverTSI(T *obj, void (T::*callback)(S*, const char*, I));
+    virtual ~SignalReceiverTSI() {}
+
+    void emit(Object*, const char*) const override;
+    void emit(Object*, const char*, SignalInfo&) const override;
+
+    Object* getObject() const override;
+    bool operator==(const SignalReceiver&) const override;
+
+  private:
+    T *obj;
+    void (T::*callback)(S*, const char*, I);
   };
 
   // Object - Inline methods definitions
@@ -144,12 +192,39 @@ namespace core {
     connectSignal(name, obj, new SignalReceiverTS<T,S>(obj, callback));
   }
 
+  template<class T, class S, typename I>
+  void Object::connectSignal(const char *name, T *obj,
+                             void (T::*callback)(S*, const char*, I))
+  {
+    if (!std::is_same<S, Object>::value &&
+        (dynamic_cast<S*>(this) == nullptr))
+      throw Exception("Incorrect callback object type for signal %s",
+                      name);
+    connectSignal(name, obj,
+                  new SignalReceiverTSI<T,S,I>(obj, callback));
+  }
+
   template<class T, class S>
   void Object::disconnectSignal(const char *name, T *obj,
                                 void (T::*callback)(S*, const char*))
   {
     SignalReceiverTS<T,S> other(obj, callback);
     disconnectSignal(name, obj, &other);
+  }
+
+  template<class T, class S, typename I>
+  void Object::disconnectSignal(const char *name, T *obj,
+                                void (T::*callback)(S*, const char*, I))
+  {
+    SignalReceiverTSI<T,S,I> other(obj, callback);
+    disconnectSignal(name, obj, &other);
+  }
+
+  template<typename I>
+  void Object::emitSignal(const char *name, I info)
+  {
+    TypedInfo<I> tinfo(info);
+    emitSignal(name, (SignalInfo&)tinfo);
   }
 
   // Object::SignalReceiver - Inline methods definitions
@@ -175,6 +250,14 @@ namespace core {
   }
 
   template<class T, class S>
+  void Object::SignalReceiverTS<T,S>::emit(Object * /*sender*/,
+                                           const char * /*name*/,
+                                           SignalInfo & /*_info*/) const
+  {
+    assert(false);
+  }
+
+  template<class T, class S>
   Object* Object::SignalReceiverTS<T,S>::getObject() const
   {
     return obj;
@@ -186,6 +269,61 @@ namespace core {
     const Object::SignalReceiverTS<T,S> *other;
 
     other = dynamic_cast<const Object::SignalReceiverTS<T,S>*>(&_other);
+    if (other == nullptr)
+      return false;
+
+    if (other->obj != obj)
+      return false;
+    if (other->callback != callback)
+      return false;
+
+    return true;
+  }
+
+  template<class T, class S, typename I>
+  Object::SignalReceiverTSI<T, S, I>::SignalReceiverTSI(T *obj_, void (T::*callback_)(S*, const char*, I))
+    : obj(obj_), callback(callback_)
+  {
+    assert(obj_);
+    assert(callback_);
+  }
+
+  template<class T, class S, typename I>
+  void Object::SignalReceiverTSI<T, S, I>::emit(Object * /*sender*/,
+                                                const char * /*name*/) const
+  {
+    assert(false);
+  }
+
+  template<class T, class S, typename I>
+  void Object::SignalReceiverTSI<T, S, I>::emit(Object *_sender,
+                                                const char *name,
+                                                SignalInfo &_info) const
+  {
+    S *sender;
+    TypedInfo<I> *info;
+
+    sender = dynamic_cast<S*>(_sender);
+    assert(sender != nullptr);
+
+    info = dynamic_cast<TypedInfo<I>*>(&_info);
+    assert(info != nullptr);
+
+    (obj->*callback)(sender, name, info->getData());
+  }
+
+  template<class T, class S, typename I>
+  Object* Object::SignalReceiverTSI<T, S, I>::getObject() const
+  {
+    return obj;
+  }
+
+  template<class T, class S, typename I>
+  bool Object::SignalReceiverTSI<T, S, I>::operator==(const Object::SignalReceiver &_other) const
+  {
+    const Object::SignalReceiverTSI<T, S, I> *other;
+
+    other = dynamic_cast<const Object::SignalReceiverTSI<T, S, I>*>(&_other);
     if (other == nullptr)
       return false;
 
