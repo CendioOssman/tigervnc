@@ -41,10 +41,8 @@ Object::~Object()
     ReceiverList *siglist;
 
     siglist = &sigiter->second;
-    while (!siglist->empty()) {
-      delete siglist->front();
-      siglist->erase(siglist->begin());
-    }
+    while (!siglist->empty())
+      disconnectSignal(sigiter->first.c_str(), siglist->front());
   }
 }
 
@@ -81,7 +79,8 @@ void Object::emitSignal(const char *name)
   }
 }
 
-void Object::connectSignal(const char *name, SignalReceiver *receiver)
+void Object::connectSignal(const char *name,
+                           const SignalReceiver *receiver)
 {
   ReceiverList::iterator iter;
 
@@ -97,4 +96,24 @@ void Object::connectSignal(const char *name, SignalReceiver *receiver)
   }
 
   signalReceivers[name].push_back(receiver);
+}
+
+void Object::disconnectSignal(const char *name,
+                              const SignalReceiver *receiver)
+{
+  ReceiverList::iterator iter;
+
+  assert(name);
+
+  if (signalReceivers.count(name) == 0)
+    throw std::logic_error(format("Cannot disconnect unknown signal %s", name));
+
+  for (iter = signalReceivers[name].begin();
+       iter != signalReceivers[name].end(); ++iter) {
+    if (**iter == *receiver) {
+      delete *iter;
+      signalReceivers[name].erase(iter);
+      break;
+    }
+  }
 }
