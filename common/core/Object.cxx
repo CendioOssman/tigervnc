@@ -22,9 +22,22 @@
 
 #include <assert.h>
 
+#include <stdexcept>
+
 #include <core/Object.h>
 
 using namespace core;
+
+static bool operator==(const Connection& a, const Connection& b)
+{
+  return a.signal == b.signal && a.src == b.src && a.dst == b.dst &&
+         a.comparer(a.callback, b.callback);
+}
+
+struct Object::SignalReceiver {
+  Connection connection;
+  emitter_t emitter;
+};
 
 Object::Object()
 {
@@ -45,18 +58,43 @@ void Object::emitSignalImpl(const void* signal)
 
   for (iter = signalReceivers[signal].begin();
        iter != signalReceivers[signal].end(); ++iter)
-    (*iter)();
+    iter->emitter();
 }
 
-void Object::connectSignalImpl(const void* signal,
-                               const emitter_t& emitter)
+Connection Object::connectSignalImpl(const void* signal, Object* obj,
+                                     const std::any& callback,
+                                     bool (*comparer)(const std::any&,
+                                                      const std::any&),
+                                     const emitter_t& emitter)
 {
   ReceiverList::iterator iter;
+  Connection connection;
 
   assert(signal);
+  assert(obj);
 
   if (signalReceivers.count(signal) == 0)
     signalReceivers[signal].clear();
 
-  signalReceivers[signal].push_back(emitter);
+  connection = {signal, this, obj, callback, comparer};
+
+  signalReceivers[signal].push_back({connection, emitter});
+
+  return connection;
+}
+
+void Object::disconnectSignal(const Connection connection)
+{
+  ReceiverList::iterator iter;
+
+  if (connection.src != this)
+    throw std::logic_error("Disconnecting signal from wrong object");
+
+  for (iter = signalReceivers[connection.signal].begin();
+       iter != signalReceivers[connection.signal].end(); ++iter) {
+    if (iter->connection == connection) {
+      signalReceivers[connection.signal].erase(iter);
+      break;
+    }
+  }
 }

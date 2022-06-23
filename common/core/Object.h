@@ -24,6 +24,7 @@
 #ifndef __CORE_OBJECT_H__
 #define __CORE_OBJECT_H__
 
+#include <any>
 #include <functional>
 #include <list>
 #include <map>
@@ -33,6 +34,9 @@ namespace core {
 
   // Identifier for a signal
   class signal {};
+
+  // Opaque identifier for tracking a connection to a signal
+  struct Connection;
 
   class Object {
   protected:
@@ -44,8 +48,12 @@ namespace core {
     // connectSignal() registers an object and method on that object to
     // be called whenever the specified signal is emitted
     template<class S, class T>
-    void connectSignal(const signal S::* signal, T* obj,
-                       void (T::*callback)());
+    Connection connectSignal(const signal S::* signal, T* obj,
+                             void (T::*callback)());
+
+    // disconnectSignal() unregisters a method that was previously
+    // registered using connectSignal()
+    void disconnectSignal(const Connection connection);
 
   protected:
     // emitSignal() calls all the registered object methods for the
@@ -59,8 +67,16 @@ namespace core {
 
     void emitSignalImpl(const void* signal);
 
-    void connectSignalImpl(const void* signal,
-                           const emitter_t& emitter);
+    Connection connectSignalImpl(const void* signal, Object* obj,
+                                 const std::any& callback,
+                                 bool (*comparer)(const std::any&,
+                                                  const std::any&),
+                                 const emitter_t& emitter);
+
+    // Compares two any objects, returning true if they are both type T
+    // and have the same value
+    template<class T>
+    static bool compareAny(const std::any& a, const std::any& b);
 
   private:
     // Signal handling makes these objects difficult to copy, so it
@@ -69,10 +85,25 @@ namespace core {
     Object& operator=(const Object&) = delete;
 
   private:
-    typedef std::list<emitter_t> ReceiverList;
+    struct SignalReceiver;
+    typedef std::list<SignalReceiver> ReceiverList;
 
     // Mapping between signals and the methods receiving them
     std::map<const void*, ReceiverList> signalReceivers;
+  };
+
+  //////////////////////////////////////////////////////////////////////
+  //
+  // Internal structures
+  //
+
+  // Visible to everyone so it can be copied
+  struct Connection {
+    const void* signal;
+    Object* src;
+    Object* dst;
+    std::any callback;
+    bool (*comparer)(const std::any&, const std::any&);
   };
 
   //////////////////////////////////////////////////////////////////////
@@ -81,8 +112,8 @@ namespace core {
   //
 
   template<class S, class T>
-  void Object::connectSignal(const signal S::* signal, T* obj,
-                             void (T::*callback)())
+  Connection Object::connectSignal(const signal S::* signal, T* obj,
+                                   void (T::*callback)())
   {
     static_assert(std::is_base_of_v<Object, S>,
                   "Signal owner is not subclass of core::Object");
@@ -92,7 +123,8 @@ namespace core {
     emitter_t emitter = [obj, callback]() {
       (obj->*callback)();
     };
-    connectSignalImpl(&(sender->*signal), emitter);
+    return connectSignalImpl(&(sender->*signal), obj, callback,
+                             compareAny<typeof(callback)>, emitter);
   }
 
   template<class S>
@@ -104,6 +136,18 @@ namespace core {
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
     emitSignalImpl(&(sender->*signal));
+  }
+
+  template<class T>
+  bool Object::compareAny(const std::any& a, const std::any& b)
+  {
+    try {
+      const T& va = std::any_cast<T>(a);
+      const T& vb = std::any_cast<T>(b);
+      return std::equal_to<T>()(va, vb);
+    } catch (const std::bad_cast&) {
+      return false;
+    }
   }
 
 }

@@ -81,6 +81,61 @@ TEST(Signals, connectBadSignal)
   }, std::logic_error);
 }
 
+TEST(Signals, disconnectSignal)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal signal;
+  };
+
+  Sender s;
+  Receiver r;
+  core::Connection c;
+
+  /* Normal handler */
+  callCount = 0;
+  c = s.connectSignal(&Sender::signal, &r, &Receiver::handler);
+  s.disconnectSignal(c);
+  s.emitSignal(&Sender::signal);
+  EXPECT_EQ(callCount, 0);
+}
+
+TEST(Signals, doubleDisconnect)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal dblsignal;
+  };
+
+  Sender s;
+  Receiver r;
+  core::Connection c;
+
+  c = s.connectSignal(&Sender::dblsignal, &r, &Receiver::handler);
+  s.disconnectSignal(c);
+  EXPECT_NO_THROW({
+    s.disconnectSignal(c);
+  });
+}
+
+TEST(Signals, disconnectWrongObject)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal othersignal;
+  };
+
+  Sender s;
+  Sender s2;
+  Receiver r;
+  core::Connection c;
+
+  c = s.connectSignal(&Sender::othersignal, &r, &Receiver::handler);
+  EXPECT_THROW({
+    s2.disconnectSignal(c);
+  }, std::logic_error);
+}
+
 TEST(Signals, emitBadSignal)
 {
   class SenderA : public SenderBase {
