@@ -31,6 +31,7 @@ public:
   Sender() {}
 
   core::signal gsignal;
+  core::signal gsignal2;
 
   void emitSignal(core::signal& signal)
   {
@@ -141,6 +142,22 @@ TEST(Signals, disconnectSimilar)
   s.connectSignal(s.gsignal, &r, &Receiver::otherGenericHandler);
   s.disconnectSignal(s.gsignal, &r, &Receiver::genericHandler);
   s.emitSignal(s.gsignal);
+  EXPECT_EQ(callCount, 1);
+}
+
+TEST(Signals, disconnectAll)
+{
+  Sender s;
+  Receiver r;
+  Receiver r2;
+
+  callCount = 0;
+  s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  s.connectSignal(s.gsignal2, &r, &Receiver::genericHandler);
+  s.connectSignal(s.gsignal, &r2, &Receiver::genericHandler);
+  s.disconnectSignals(&r);
+  s.emitSignal(s.gsignal);
+  s.emitSignal(s.gsignal2);
   EXPECT_EQ(callCount, 1);
 }
 

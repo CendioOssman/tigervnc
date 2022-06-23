@@ -104,13 +104,50 @@ Object::~Object()
 
 void Object::disconnectSignal(const Connection connection)
 {
+  std::list<Connection>::iterator iter;
   if (connection.src != this)
     throw std::logic_error("Disconnecting signal from wrong object");
 
   connection.sig->disconnect(connection);
+  for (iter = connections.begin(); iter != connections.end(); ++iter) {
+    if (*iter == connection) {
+      connections.erase(iter);
+      break;
+    }
+  }
 }
 
 void Object::emitSignal(signal& signal)
 {
   signal.emit();
+}
+
+void Object::disconnectSignals(Object* obj)
+{
+  bool done;
+
+  assert(obj);
+
+  do {
+    done = true;
+    for (Connection& connection : connections) {
+      if (connection.dst == obj) {
+        disconnectSignal(connection);
+        done = false;
+        break;
+      }
+    }
+  } while (!done);
+}
+
+Connection Object::connectSignal(signal& signal, class Object* obj,
+                                 const comp_any& callback,
+                                 const signal::emitter_t& emitter)
+{
+  Connection connection;
+
+  connection = signal.connect(this, obj, callback, emitter);
+  connections.push_back(connection);
+
+  return connection;
 }

@@ -83,16 +83,27 @@ namespace core {
     void disconnectSignal(signal& signal, T* obj,
                           void (T::*callback)(Object*));
 
+    // disconnectSignals() unregisters all methods for all names for the
+    // specified object.
+    void disconnectSignals(Object* obj);
+
   protected:
     // emitSignal() calls all the registered object methods for the
     // specified name.
     void emitSignal(signal& signal);
+
+    Connection connectSignal(signal& signal, class Object* obj,
+                       const comp_any& callback,
+                       const signal::emitter_t& emitter);
 
   private:
     // Signal handling makes these objects difficult to copy, so it
     // is disabled for now
     Object(const Object&) = delete;
     Object& operator=(const Object&) = delete;
+
+  private:
+    std::list<Connection> connections;
   };
 
   //////////////////////////////////////////////////////////////////////
@@ -125,7 +136,7 @@ namespace core {
     signal::emitter_t emitter = [this, obj, callback]() {
       (obj->*callback)(this);
     };
-    return signal.connect(this, obj, callback, emitter);
+    return connectSignal(signal, obj, callback, emitter);
   }
 
   template<class T>
