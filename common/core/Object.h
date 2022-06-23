@@ -29,7 +29,12 @@
 #include <map>
 #include <string>
 
+#include <core/comp_any.h>
+
 namespace core {
+
+  // Opaque identifier for tracking a connection to a signal
+  struct Connection;
 
   class signal {
   public:
@@ -41,11 +46,16 @@ namespace core {
     // Wrapper to contain member function pointers
     typedef std::function<void()> emitter_t;
 
-    void connect(const emitter_t& emitter);
+    Connection connect(class Object* src, class Object* dst,
+                       const comp_any& callback,
+                       const emitter_t& emitter);
+    void disconnect(const Connection connection);
+
     void emit();
 
   protected:
-    typedef std::list<emitter_t> ReceiverList;
+    struct SignalReceiver;
+    typedef std::list<SignalReceiver> ReceiverList;
 
     ReceiverList receivers;
   };
@@ -60,8 +70,12 @@ namespace core {
     // connectSignal() registers an object and method on that object to
     // be called whenever a signal of the specified name is emitted.
     template<class T>
-    void connectSignal(signal& signal, T* obj,
-                       void (T::*callback)(Object*));
+    Connection connectSignal(signal& signal, T* obj,
+                             void (T::*callback)(Object*));
+
+    // disconnectSignal() unregisters a method that was previously
+    // registered using connectSignal().
+    void disconnectSignal(const Connection connection);
 
   protected:
     // emitSignal() calls all the registered object methods for the
@@ -77,18 +91,37 @@ namespace core {
 
   //////////////////////////////////////////////////////////////////////
   //
+  // Internal structures
+  //
+
+  // Visible to everyone so it can be copied
+  struct Connection {
+    signal* sig;
+    Object* src;
+    Object* dst;
+    comp_any callback;
+  };
+
+  struct signal::SignalReceiver {
+    Connection connection;
+    signal::emitter_t emitter;
+  };
+
+  //////////////////////////////////////////////////////////////////////
+  //
   // Inline methods definitions
   //
 
   template<class T>
-  void Object::connectSignal(signal& signal, T* obj,
-                             void (T::*callback)(Object*))
+  Connection Object::connectSignal(signal& signal, T* obj,
+                                   void (T::*callback)(Object*))
   {
     signal::emitter_t emitter = [this, obj, callback]() {
       (obj->*callback)(this);
     };
-    signal.connect(emitter);
+    return signal.connect(this, obj, callback, emitter);
   }
+
 }
 
 #endif

@@ -57,6 +57,46 @@ TEST(Signals, connectSignal)
   EXPECT_EQ(callCount, 1);
 }
 
+TEST(Signals, disconnectSignal)
+{
+  Sender s;
+  Receiver r;
+  core::Connection c;
+
+  /* Generic handler */
+  callCount = 0;
+  c = s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  s.disconnectSignal(c);
+  s.emitSignal(s.gsignal);
+  EXPECT_EQ(callCount, 0);
+}
+
+TEST(Signals, doubleDisconnect)
+{
+  Sender s;
+  Receiver r;
+  core::Connection c;
+
+  c = s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  s.disconnectSignal(c);
+  EXPECT_NO_THROW({
+    s.disconnectSignal(c);
+  });
+}
+
+TEST(Signals, disconnectWrongObject)
+{
+  Sender s;
+  Sender s2;
+  Receiver r;
+  core::Connection c;
+
+  c = s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  EXPECT_THROW({
+    s2.disconnectSignal(c);
+  }, std::logic_error);
+}
+
 int main(int argc, char** argv)
 {
   testing::InitGoogleTest(&argc, argv);
