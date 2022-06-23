@@ -35,6 +35,12 @@ public:
     {
         core::Object::registerSignal(name);
     }
+    template<typename I>
+    void registerSignal(const char *name)
+    {
+        core::Object::registerSignal<I>(name);
+    }
+
     void emitSignal(const char *name)
     {
         core::Object::emitSignal(name);
@@ -55,6 +61,7 @@ public:
     void badHandler(core::Exception*, const char*) { count++; }
 
     void genericStringHandler(Object*, const char*, const char*) { count++; }
+    void genericIntHandler(Object*, const char*, int) { count++; }
     void specificStringHandler(Sender*, const char*, const char*) { count++; }
     void badStringHandler(core::Exception*, const char*) { count++; }
 };
@@ -84,6 +91,26 @@ static void testRegister()
     printf("OK\n");
 }
 
+static void testRegisterArg()
+{
+    Sender s;
+    bool ok;
+
+    printf("%s: ", __func__);
+
+    /* Double register */
+    s.registerSignal<const char*>("signal");
+    ok = false;
+    try {
+        s.registerSignal<const char*>("signal");
+    } catch (core::Exception&) {
+        ok = true;
+    }
+    ASSERT_EQ(ok, true);
+
+    printf("OK\n");
+}
+
 static void testEmit()
 {
     Sender s;
@@ -95,6 +122,16 @@ static void testEmit()
     ok = false;
     try {
         s.emitSignal("nosignal");
+    } catch (core::Exception&) {
+        ok = true;
+    }
+    ASSERT_EQ(ok, true);
+
+    /* Unexpected data */
+    s.registerSignal("signal");
+    ok = false;
+    try {
+        s.emitSignal("signal", "data");
     } catch (core::Exception&) {
         ok = true;
     }
@@ -114,6 +151,25 @@ static void testEmitArg()
     ok = false;
     try {
         s.emitSignal("nosignal", "data");
+    } catch (core::Exception&) {
+        ok = true;
+    }
+    ASSERT_EQ(ok, true);
+
+    /* Missing data */
+    s.registerSignal<const char*>("signal");
+    ok = false;
+    try {
+        s.emitSignal("signal");
+    } catch (core::Exception&) {
+        ok = true;
+    }
+    ASSERT_EQ(ok, true);
+
+    /* Wrong data */
+    ok = false;
+    try {
+        s.emitSignal("signal", 1234);
     } catch (core::Exception&) {
         ok = true;
     }
@@ -171,6 +227,16 @@ static void testConnect()
     }
     ASSERT_EQ(ok, true);
 
+    /* Unexpected data */
+    s.registerSignal("nodata");
+    ok = false;
+    try {
+        s.connectSignal("nodata", &r, &Receiver::genericStringHandler);
+    } catch (core::Exception&) {
+        ok = true;
+    }
+    ASSERT_EQ(ok, true);
+
     printf("OK\n");
 }
 
@@ -184,14 +250,14 @@ static void testConnectArg()
 
     /* Generic handler */
     count = 0;
-    s.registerSignal("gsignal");
+    s.registerSignal<const char*>("gsignal");
     s.connectSignal("gsignal", &r, &Receiver::genericStringHandler);
     s.emitSignal("gsignal", "data");
     ASSERT_EQ(count, 1);
 
     /* Specific handler */
     count = 0;
-    s.registerSignal("ssignal");
+    s.registerSignal<const char*>("ssignal");
     s.connectSignal("ssignal", &r, &Receiver::specificStringHandler);
     s.emitSignal("ssignal", "data");
     ASSERT_EQ(count, 1);
@@ -218,6 +284,25 @@ static void testConnectArg()
     ok = false;
     try {
         s.connectSignal("gsignal", &r, &Receiver::genericStringHandler);
+    } catch (core::Exception&) {
+        ok = true;
+    }
+    ASSERT_EQ(ok, true);
+
+    /* Missing data */
+    s.registerSignal<const char*>("withdata");
+    ok = false;
+    try {
+        s.connectSignal("withdata", &r, &Receiver::genericHandler);
+    } catch (core::Exception&) {
+        ok = true;
+    }
+    ASSERT_EQ(ok, true);
+
+    /* Wrong data */
+    ok = false;
+    try {
+        s.connectSignal("withdata", &r, &Receiver::genericIntHandler);
     } catch (core::Exception&) {
         ok = true;
     }
@@ -272,7 +357,7 @@ static void testDisconnectArg()
 
     /* Generic handler */
     count = 0;
-    s.registerSignal("gsignal");
+    s.registerSignal<const char*>("gsignal");
     s.connectSignal("gsignal", &r, &Receiver::genericStringHandler);
     s.disconnectSignal("gsignal", &r, &Receiver::genericStringHandler);
     s.emitSignal("gsignal", "data");
@@ -280,7 +365,7 @@ static void testDisconnectArg()
 
     /* Specific handler */
     count = 0;
-    s.registerSignal("ssignal");
+    s.registerSignal<const char*>("ssignal");
     s.connectSignal("ssignal", &r, &Receiver::specificStringHandler);
     s.disconnectSignal("ssignal", &r, &Receiver::specificStringHandler);
     s.emitSignal("ssignal", "data");
@@ -309,7 +394,7 @@ static void testDisconnectAll()
     count = 0;
     s.registerSignal("signal1");
     s.registerSignal("signal2");
-    s.registerSignal("signal3");
+    s.registerSignal<const char*>("signal3");
     s.connectSignal("signal1", &r, &Receiver::genericHandler);
     s.connectSignal("signal2", &r, &Receiver::genericHandler);
     s.connectSignal("signal3", &r, &Receiver::genericStringHandler);
@@ -336,6 +421,7 @@ static void testDisconnectAll()
 int main(int /*argc*/, char** /*argv*/)
 {
     testRegister();
+    testRegisterArg();
     testEmit();
     testEmitArg();
     testConnect();

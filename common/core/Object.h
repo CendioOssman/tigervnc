@@ -30,6 +30,7 @@
 #include <list>
 #include <set>
 #include <map>
+#include <typeinfo>
 
 #include <core/Exception.h>
 
@@ -73,12 +74,16 @@ namespace core {
   protected:
     // registerSignal() registers a new signal type with the specified
     // name. This must always be done before connectSignal() or
-    // emitSignal() is used.
+    // emitSignal() is used. If the signal will include signal
+    // information, then the typed version must be called with the
+    // intended type that will be used with emitSignal().
+    void registerSignal(const char *name);
+    template<typename I>
     void registerSignal(const char *name);
 
     // emitSignal() calls all the registered object methods for the
     // specified name. Inclusion of signal information must match the
-    // registered connected methods or an exception will be thrown.
+    // type from registerSignal() or an exception will be thrown.
     void emitSignal(const char *name);
     template<typename I>
     void emitSignal(const char *name, I info);
@@ -89,13 +94,20 @@ namespace core {
     template<class T, class S> class SignalReceiverTS;
     template<class T, class S, typename I> class SignalReceiverTSI;
 
+    // Helper classes to check the signal information type early
+    class InfoChecker;
+    template<typename I> class InfoCheckerI;
+
+    void registerSignal(const char *name, const InfoChecker *checker);
+
     struct SignalInfo;
     template<typename I> struct TypedInfo;
 
     void emitSignal(const char *name, SignalInfo &info);
 
     void connectSignal(const char *name, Object *obj,
-                       const SignalReceiver *receiver);
+                       const SignalReceiver *receiver,
+                       const std::type_info *info);
     void disconnectSignal(const char *name, Object *obj,
                           const SignalReceiver *receiver);
 
@@ -110,6 +122,8 @@ namespace core {
 
     // Mapping between signal names and the methods receiving them
     std::map<std::string, ReceiverList> signalReceivers;
+    // Signal information type checkers for each signal name
+    std::map<std::string, const InfoChecker*> signalCheckers;
 
     // Other objects that we have connected to signals on
     std::set<Object*> connectedObjects;
@@ -179,6 +193,32 @@ namespace core {
     void (T::*callback)(S*, const char*, I);
   };
 
+  //
+  // Object::InfoChecker - Helper objects that can verify that the
+  //                       correct type is used for signal information
+  //                       objects at an earlier point than when a
+  //                       method is called.
+  //
+
+  class Object::InfoChecker {
+  public:
+    InfoChecker() {}
+    virtual ~InfoChecker() {}
+
+    virtual bool isInstanceOf(const SignalInfo&) const = 0;
+    virtual bool isType(const std::type_info&) const = 0;
+  };
+
+  template<typename I>
+  class Object::InfoCheckerI : public Object::InfoChecker {
+  public:
+    InfoCheckerI() {}
+    virtual ~InfoCheckerI() {}
+
+    bool isInstanceOf(const SignalInfo&) const override;
+    bool isType(const std::type_info&) const override;
+  };
+
   // Object - Inline methods definitions
 
   template<class T, class S>
@@ -189,7 +229,8 @@ namespace core {
         (dynamic_cast<S*>(this) == nullptr))
       throw Exception("Incorrect callback object type for signal %s",
                       name);
-    connectSignal(name, obj, new SignalReceiverTS<T,S>(obj, callback));
+    connectSignal(name, obj, new SignalReceiverTS<T,S>(obj, callback),
+                  nullptr);
   }
 
   template<class T, class S, typename I>
@@ -201,7 +242,8 @@ namespace core {
       throw Exception("Incorrect callback object type for signal %s",
                       name);
     connectSignal(name, obj,
-                  new SignalReceiverTSI<T,S,I>(obj, callback));
+                  new SignalReceiverTSI<T,S,I>(obj, callback),
+                  &typeid(I));
   }
 
   template<class T, class S>
@@ -218,6 +260,17 @@ namespace core {
   {
     SignalReceiverTSI<T,S,I> other(obj, callback);
     disconnectSignal(name, obj, &other);
+  }
+
+  inline void Object::registerSignal(const char *name)
+  {
+    registerSignal(name, nullptr);
+  }
+
+  template<typename I>
+  void Object::registerSignal(const char *name)
+  {
+    registerSignal(name, new InfoCheckerI<I>());
   }
 
   template<typename I>
@@ -333,6 +386,20 @@ namespace core {
       return false;
 
     return true;
+  }
+
+  // Object::InfoChecker - Inline methods definitions
+
+  template<typename I>
+  bool Object::InfoCheckerI<I>::isInstanceOf(const SignalInfo &_info) const
+  {
+    return dynamic_cast<const TypedInfo<I>*>(&_info) != nullptr;
+  }
+
+  template<typename I>
+  bool Object::InfoCheckerI<I>::isType(const std::type_info &info) const
+  {
+    return info == typeid(I);
   }
 
 }
