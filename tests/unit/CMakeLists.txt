@@ -16,6 +16,9 @@ target_link_libraries(hostport network)
 add_executable(pixelformat pixelformat.cxx)
 target_link_libraries(pixelformat rfb)
 
+add_executable(signals signals.cxx)
+target_link_libraries(signals core)
+
 add_executable(unicode unicode.cxx)
 target_link_libraries(unicode core)
 

@@ -20,6 +20,9 @@
 #include <config.h>
 #endif
 
+#include <algorithm>
+
+#include <core/Exception.h>
 #include <core/Object.h>
 
 using namespace core;
@@ -30,4 +33,67 @@ Object::Object()
 
 Object::~Object()
 {
+  std::map<std::string, ReceiverList>::iterator sigiter;
+
+  for (sigiter = signalReceivers.begin();
+       sigiter != signalReceivers.end(); ++sigiter) {
+    ReceiverList *siglist;
+
+    siglist = &sigiter->second;
+    while (!siglist->empty()) {
+      delete siglist->front();
+      siglist->erase(siglist->begin());
+    }
+  }
+}
+
+void Object::registerSignal(const char *name)
+{
+  assert(name);
+
+  if (signalReceivers.count(name) != 0)
+    throw Exception("Signal %s is already registered", name);
+
+  // Just to force it being created
+  signalReceivers[name].clear();
+}
+
+void Object::emitSignal(const char *name)
+{
+  ReceiverList siglist;
+  ReceiverList::iterator iter;
+
+  assert(name);
+
+  if (signalReceivers.count(name) == 0)
+    throw Exception("Cannot emit unknown signal %s", name);
+
+  // Convoluted iteration so that we safely handle changes to
+  // the list
+  siglist = signalReceivers[name];
+  for (iter = siglist.begin(); iter != siglist.end(); ++iter) {
+    if (std::find(signalReceivers[name].begin(),
+                  signalReceivers[name].end(),
+                  *iter) == signalReceivers[name].end())
+      continue;
+    (*iter)->emit(this, name);
+  }
+}
+
+void Object::connectSignal(const char *name, SignalReceiver *receiver)
+{
+  ReceiverList::iterator iter;
+
+  assert(name);
+
+  if (signalReceivers.count(name) == 0)
+    throw Exception("Cannot connect to unknown signal %s", name);
+
+  for (iter = signalReceivers[name].begin();
+       iter != signalReceivers[name].end(); ++iter) {
+    if (**iter == *receiver)
+      throw Exception("Signal %s is already connected", name);
+  }
+
+  signalReceivers[name].push_back(receiver);
 }
