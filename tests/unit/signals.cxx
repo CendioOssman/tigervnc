@@ -207,6 +207,24 @@ TEST(Signals, disconnectUnknown)
   }, std::logic_error);
 }
 
+TEST(Signals, disconnectAll)
+{
+  Sender s;
+  Receiver r;
+  Receiver r2;
+
+  callCount = 0;
+  s.registerSignal("signal1");
+  s.registerSignal("signal2");
+  s.connectSignal("signal1", &r, &Receiver::genericHandler);
+  s.connectSignal("signal2", &r, &Receiver::genericHandler);
+  s.connectSignal("signal1", &r2, &Receiver::genericHandler);
+  s.disconnectSignals(&r);
+  s.emitSignal("signal1");
+  s.emitSignal("signal2");
+  EXPECT_EQ(callCount, 1);
+}
+
 TEST(Signals, addWhileEmitting)
 {
   Sender s;

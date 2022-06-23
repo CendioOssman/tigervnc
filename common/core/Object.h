@@ -59,6 +59,10 @@ namespace core {
     void disconnectSignal(const char* name, T* obj,
                           void (T::*callback)(Object*, const char*));
 
+    // disconnectSignals() unregisters all methods for all names for the
+    // specified object.
+    void disconnectSignals(Object* obj);
+
   protected:
     // registerSignal() registers a new signal type with the specified
     // name. This must always be done before connectSignal() or
