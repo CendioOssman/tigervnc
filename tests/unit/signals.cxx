@@ -46,6 +46,8 @@ public:
     Receiver() {}
 
     void genericHandler(Object*, const char*) { count++; }
+    void specificHandler(Sender*, const char*) { count++; }
+    void badHandler(core::Exception*, const char*) { count++; }
 };
 
 #define ASSERT_EQ(expr, val) if ((expr) != (val)) { \
@@ -107,6 +109,22 @@ static void testConnect()
     s.emitSignal("gsignal");
     ASSERT_EQ(count, 1);
 
+    /* Specific handler */
+    count = 0;
+    s.registerSignal("ssignal");
+    s.connectSignal("ssignal", &r, &Receiver::specificHandler);
+    s.emitSignal("ssignal");
+    ASSERT_EQ(count, 1);
+
+    /* Bad handler */
+    ok = false;
+    try {
+        s.connectSignal("ssignal", &r, &Receiver::badHandler);
+    } catch (core::Exception&) {
+        ok = true;
+    }
+    ASSERT_EQ(ok, true);
+
     /* Unknown signal */
     ok = false;
     try {
@@ -142,6 +160,14 @@ static void testDisconnect()
     s.connectSignal("gsignal", &r, &Receiver::genericHandler);
     s.disconnectSignal("gsignal", &r, &Receiver::genericHandler);
     s.emitSignal("gsignal");
+    ASSERT_EQ(count, 0);
+
+    /* Specific handler */
+    count = 0;
+    s.registerSignal("ssignal");
+    s.connectSignal("ssignal", &r, &Receiver::specificHandler);
+    s.disconnectSignal("ssignal", &r, &Receiver::specificHandler);
+    s.emitSignal("ssignal");
     ASSERT_EQ(count, 0);
 
     /* Unknown signal */
