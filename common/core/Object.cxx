@@ -23,7 +23,6 @@
 #include <assert.h>
 
 #include <algorithm>
-#include <stdexcept>
 
 #include <core/Object.h>
 #include <core/string.h>

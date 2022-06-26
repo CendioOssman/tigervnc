@@ -28,6 +28,7 @@
 #include <list>
 #include <map>
 #include <set>
+#include <stdexcept>
 #include <string>
 
 #include <core/comp_any.h>
@@ -48,9 +49,9 @@ namespace core {
     // be called whenever a signal of the specified name is emitted. Any
     // method registered will automatically be unregistered when the
     // method's object is destroyed.
-    template<class T>
+    template<class T, class S>
     Connection connectSignal(const char* name, T* obj,
-                             void (T::*callback)(Object*, const char*));
+                             void (T::*callback)(S*, const char*));
 
     // disconnectSignal() unregisters a method that was previously
     // registered using connectSignal().
@@ -58,9 +59,9 @@ namespace core {
 
     // Methods can be disconneced by reference, rather than tracking
     // the connection object.
-    template<class T>
+    template<class T, class S>
     void disconnectSignal(const char* name, T* obj,
-                          void (T::*callback)(Object*, const char*));
+                          void (T::*callback)(S*, const char*));
 
     // disconnectSignals() unregisters all methods for all names for the
     // specified object. This is automatically called when the specified
@@ -120,21 +121,22 @@ namespace core {
   // Inline methods definitions
   //
 
-  template<class T>
+  template<class T, class S>
   Connection Object::connectSignal(const char* name, T* obj,
-                                   void (T::*callback)(Object*,
-                                                       const char*))
+                                   void (T::*callback)(S*, const char*))
   {
-    emitter_t emitter = [this, name, obj, callback]() {
-      (obj->*callback)(this, name);
+    S* sender = dynamic_cast<S*>(this);
+    if (!sender)
+      throw std::logic_error("Incompatible signal callback");
+    emitter_t emitter = [sender, name, obj, callback]() {
+      (obj->*callback)(sender, name);
     };
     return connectSignal(name, obj, callback, emitter);
   }
 
-  template<class T>
+  template<class T, class S>
   void Object::disconnectSignal(const char* name, T* obj,
-                                void (T::*callback)(Object*,
-                                                    const char*))
+                                void (T::*callback)(S*, const char*))
   {
     disconnectSignal({name, this, obj, callback});
   }
