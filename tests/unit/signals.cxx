@@ -33,6 +33,8 @@ public:
   core::signal gsignal;
   core::signal gsignal2;
 
+  core::signal ssignal;
+
   void emitSignal(core::signal& signal)
   {
     core::Object::emitSignal(signal);
@@ -45,6 +47,7 @@ public:
 
   void genericHandler(Object*) { callCount++; }
   void otherGenericHandler(Object*) { callCount++; }
+  void specificHandler(Sender*) { callCount++; }
 
   void registerHandler(Object* s)
   {
@@ -65,6 +68,12 @@ TEST(Signals, connectSignal)
   callCount = 0;
   s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
   s.emitSignal(s.gsignal);
+  EXPECT_EQ(callCount, 1);
+
+  /* Specific handler */
+  callCount = 0;
+  s.connectSignal(s.ssignal, &r, &Receiver::specificHandler);
+  s.emitSignal(s.ssignal);
   EXPECT_EQ(callCount, 1);
 }
 
@@ -90,6 +99,13 @@ TEST(Signals, disconnectSignal)
   c = s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
   s.disconnectSignal(c);
   s.emitSignal(s.gsignal);
+  EXPECT_EQ(callCount, 0);
+
+  /* Specific handler */
+  callCount = 0;
+  c = s.connectSignal(s.ssignal, &r, &Receiver::specificHandler);
+  s.disconnectSignal(c);
+  s.emitSignal(s.ssignal);
   EXPECT_EQ(callCount, 0);
 }
 
@@ -129,6 +145,13 @@ TEST(Signals, disconnectHelper)
   s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
   s.disconnectSignal(s.gsignal, &r, &Receiver::genericHandler);
   s.emitSignal(s.gsignal);
+  EXPECT_EQ(callCount, 0);
+
+  /* Specific handler */
+  callCount = 0;
+  s.connectSignal(s.ssignal, &r, &Receiver::specificHandler);
+  s.disconnectSignal(s.ssignal, &r, &Receiver::specificHandler);
+  s.emitSignal(s.ssignal);
   EXPECT_EQ(callCount, 0);
 }
 

@@ -72,9 +72,9 @@ namespace core {
     // be called whenever a signal of the specified name is emitted. Any
     // method registered will automatically be unregistered when the
     // method's object is destroyed.
-    template<class T>
+    template<class T, class S>
     Connection connectSignal(signal& signal, T* obj,
-                             void (T::*callback)(Object*));
+                             void (T::*callback)(S*));
 
     // disconnectSignal() unregisters a method that was previously
     // registered using connectSignal().
@@ -82,9 +82,9 @@ namespace core {
 
     // Methods can be disconneced by reference, rather than tracking
     // the connection object.
-    template<class T>
+    template<class T, class S>
     void disconnectSignal(signal& signal, T* obj,
-                          void (T::*callback)(Object*));
+                          void (T::*callback)(S*));
 
     // disconnectSignals() unregisters all methods for all names for the
     // specified object. This is automatically called when the specified
@@ -136,19 +136,22 @@ namespace core {
   // Inline methods definitions
   //
 
-  template<class T>
+  template<class T, class S>
   Connection Object::connectSignal(signal& signal, T* obj,
-                                   void (T::*callback)(Object*))
+                                   void (T::*callback)(S*))
   {
-    signal::emitter_t emitter = [this, obj, callback]() {
-      (obj->*callback)(this);
+    static_assert(std::is_base_of<Object, S>::value,
+                  "Incompatible signal callback");
+    S* sender = static_cast<S*>(this);
+    signal::emitter_t emitter = [sender, obj, callback]() {
+      (obj->*callback)(sender);
     };
     return connectSignal(signal, obj, callback, emitter);
   }
 
-  template<class T>
+  template<class T, class S>
   void Object::disconnectSignal(signal& signal, T* obj,
-                                void (T::*callback)(Object*))
+                                void (T::*callback)(S*))
   {
     disconnectSignal({&signal, this, obj, callback});
   }
