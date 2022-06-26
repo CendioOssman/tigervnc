@@ -46,6 +46,7 @@ public:
 
   void genericHandler(Object*, const char*) { count++; }
   void otherGenericHandler(Object*, const char*) { count++; }
+  void specificHandler(Sender*, const char*) { count++; }
 
   void registerHandler(Object* s, const char* signal)
   {
@@ -116,6 +117,13 @@ static void testConnect()
   s.emitSignal("gsignal");
   ASSERT_EQ(count, 1);
 
+  /* Specific handler */
+  count = 0;
+  s.registerSignal("ssignal");
+  s.connectSignal("ssignal", &r, &Receiver::specificHandler);
+  s.emitSignal("ssignal");
+  ASSERT_EQ(count, 1);
+
   /* Unknown signal */
   ok = false;
   try {
@@ -153,6 +161,14 @@ static void testDisconnect()
   c = s.connectSignal("gsignal", &r, &Receiver::genericHandler);
   s.disconnectSignal(c);
   s.emitSignal("gsignal");
+  ASSERT_EQ(count, 0);
+
+  /* Specific handler */
+  count = 0;
+  s.registerSignal("ssignal");
+  c = s.connectSignal("ssignal", &r, &Receiver::specificHandler);
+  s.disconnectSignal(c);
+  s.emitSignal("ssignal");
   ASSERT_EQ(count, 0);
 
   /* Double remove */
@@ -208,6 +224,14 @@ static void testDisconnectHelper()
   s.connectSignal("gsignal", &r, &Receiver::genericHandler);
   s.disconnectSignal("gsignal", &r, &Receiver::genericHandler);
   s.emitSignal("gsignal");
+  ASSERT_EQ(count, 0);
+
+  /* Specific handler */
+  count = 0;
+  s.registerSignal("ssignal");
+  s.connectSignal("ssignal", &r, &Receiver::specificHandler);
+  s.disconnectSignal("ssignal", &r, &Receiver::specificHandler);
+  s.emitSignal("ssignal");
   ASSERT_EQ(count, 0);
 
   /* Similar handlers */
