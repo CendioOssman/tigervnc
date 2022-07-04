@@ -17,10 +17,10 @@ jobs:
         run: cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
         working-directory: build
-        run: make
+        run: make --jobs `nproc` --output-sync
       - name: Install
         working-directory: build
-        run: make tarball
+        run: make --jobs `nproc` --output-sync tarball
 
   build-windows:
     runs-on: windows-latest
@@ -38,12 +38,12 @@ jobs:
         run: cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
         working-directory: build
-        run: make
+        run: make --jobs `nproc` --output-sync
       - name: Install
         working-directory: build
         env:
           MSYS2_PATH_TYPE: inherit
-        run: make installer winvnc_installer
+        run: make --jobs `nproc` --output-sync installer winvnc_installer
 
   build-macos:
     runs-on: macos-latest
@@ -56,10 +56,10 @@ jobs:
         run: cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
         working-directory: build
-        run: make
+        run: make --jobs `nproc` --output-sync
       - name: Install
         working-directory: build
-        run: make dmg
+        run: make --jobs `nproc` --output-sync dmg
 
   build-java:
     runs-on: ubuntu-latest
@@ -78,7 +78,7 @@ jobs:
         run: cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
         working-directory: java/build
-        run: make
+        run: make --jobs `nproc` --output-sync
 
   build-packages:
     strategy:
