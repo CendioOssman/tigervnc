@@ -30,7 +30,6 @@
 #include <rfb/CMsgWriter.h>
 #include <rfb/CSecurity.h>
 #include <rfb/Exception.h>
-#include <rfb/Hostname.h>
 #include <rfb/LogWriter.h>
 #include <rfb/Security.h>
 #include <rfb/screenTypes.h>
@@ -56,6 +55,7 @@
 #include "win32.h"
 #endif
 
+using namespace network;
 using namespace rfb;
 
 static rfb::LogWriter vlog("CConn");
