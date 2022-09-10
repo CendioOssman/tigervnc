@@ -35,8 +35,10 @@
 #include <errno.h>
 #endif
 
+#include <assert.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include <network/TcpSocket.h>
 #include <rfb/LogWriter.h>
@@ -94,6 +96,91 @@ int network::findFreeTcpPort (void)
 
   closesocket (sock);
   return ntohs(addr.sin_port);
+}
+
+static bool isAllSpace(const char *string) {
+  if (string == nullptr)
+    return false;
+  while(*string != '\0') {
+    if (! isspace(*string))
+      return false;
+    string++;
+  }
+  return true;
+}
+
+void network::getHostAndPort(const char* hi, std::string* host,
+                             int* port, int basePort)
+{
+  const char* hostStart;
+  const char* hostEnd;
+  const char* portStart;
+
+  if (hi == nullptr)
+    throw rdr::Exception("NULL host specified");
+
+  // Trim leading whitespace
+  while(isspace(*hi))
+    hi++;
+
+  assert(host);
+  assert(port);
+
+  if (hi[0] == '[') {
+    hostStart = &hi[1];
+    hostEnd = strchr(hostStart, ']');
+    if (hostEnd == nullptr)
+      throw rdr::Exception("unmatched [ in host");
+
+    portStart = hostEnd + 1;
+    if (isAllSpace(portStart))
+      portStart = nullptr;
+  } else {
+    hostStart = &hi[0];
+    hostEnd = strrchr(hostStart, ':');
+
+    if (hostEnd == nullptr) {
+      hostEnd = hostStart + strlen(hostStart);
+      portStart = nullptr;
+    } else {
+      if ((hostEnd > hostStart) && (hostEnd[-1] == ':'))
+        hostEnd--;
+      portStart = strchr(hostStart, ':');
+      if (portStart != hostEnd) {
+        // We found more : in the host. This is probably an IPv6 address
+        hostEnd = hostStart + strlen(hostStart);
+        portStart = nullptr;
+      }
+    }
+  }
+
+  // Back up past trailing space
+  while(isspace(*(hostEnd - 1)) && hostEnd > hostStart)
+    hostEnd--;
+
+  if (hostStart == hostEnd)
+    *host = "localhost";
+  else
+    *host = std::string(hostStart, hostEnd - hostStart);
+
+  if (portStart == nullptr)
+    *port = basePort;
+  else {
+    char* end;
+
+    if (portStart[0] != ':')
+      throw rdr::Exception("invalid port specified");
+
+    if (portStart[1] != ':')
+      *port = strtol(portStart + 1, &end, 10);
+    else
+      *port = strtol(portStart + 2, &end, 10);
+    if (*end != '\0' && ! isAllSpace(end))
+      throw rdr::Exception("invalid port specified");
+
+    if ((portStart[1] != ':') && (*port < 100))
+      *port += basePort;
+  }
 }
 
 int network::getSockPort(int sock)
@@ -743,4 +830,29 @@ std::string TcpFilter::patternToStr(const TcpFilter::Pattern& p) {
   delete [] result;
 
   return out;
+}
+
+GAIException::GAIException(const char* s, int err_)
+  : rdr::Exception("%s", s), err(err_)
+{
+  strncat(str_, ": ", len-1-strlen(str_));
+#ifdef _WIN32
+  wchar_t *currStr = new wchar_t[len-strlen(str_)];
+  wcsncpy(currStr, gai_strerrorW(err), len-1-strlen(str_));
+  WideCharToMultiByte(CP_UTF8, 0, currStr, -1, str_+strlen(str_),
+                      len-1-strlen(str_), nullptr, nullptr);
+  delete [] currStr;
+#else
+  strncat(str_, gai_strerror(err), len-1-strlen(str_));
+#endif
+  strncat(str_, " (", len-1-strlen(str_));
+  char buf[20];
+#ifdef WIN32
+  if (err < 0)
+    sprintf(buf, "%x", err);
+  else
+#endif
+    sprintf(buf,"%d",err);
+  strncat(str_, buf, len-1-strlen(str_));
+  strncat(str_, ")", len-1-strlen(str_));
 }

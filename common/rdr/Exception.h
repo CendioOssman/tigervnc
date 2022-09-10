@@ -37,11 +37,6 @@ namespace rdr {
     SystemException(const char* s, int err_);
   };
 
-  struct GAIException : public Exception {
-    int err;
-    GAIException(const char* s, int err_);
-  };
-
   struct EndOfStream : public Exception {
     EndOfStream() : Exception("End of stream") {}
   };

@@ -22,24 +22,15 @@
 #include <config.h>
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
-
-#include <rdr/Exception.h>
-#include <rdr/TLSException.h>
-#ifdef _WIN32
-#include <winsock2.h>
-#include <windows.h>
-#include <ws2tcpip.h>
-#else
-#include <netdb.h>
-#endif
-
 #include <string.h>
 
-#ifdef HAVE_GNUTLS
-#include <gnutls/gnutls.h>
-#endif
+#include <rdr/Exception.h>
 
 using namespace rdr;
 
@@ -49,31 +40,6 @@ Exception::Exception(const char *format, ...) {
 	va_start(ap, format);
 	(void) vsnprintf(str_, len, format, ap);
 	va_end(ap);
-}
-
-GAIException::GAIException(const char* s, int err_)
-  : Exception("%s", s), err(err_)
-{
-  strncat(str_, ": ", len-1-strlen(str_));
-#ifdef _WIN32
-  wchar_t *currStr = new wchar_t[len-strlen(str_)];
-  wcsncpy(currStr, gai_strerrorW(err), len-1-strlen(str_));
-  WideCharToMultiByte(CP_UTF8, 0, currStr, -1, str_+strlen(str_),
-                      len-1-strlen(str_), nullptr, nullptr);
-  delete [] currStr;
-#else
-  strncat(str_, gai_strerror(err), len-1-strlen(str_));
-#endif
-  strncat(str_, " (", len-1-strlen(str_));
-  char buf[20];
-#ifdef WIN32
-  if (err < 0)
-    sprintf(buf, "%x", err);
-  else
-#endif
-    sprintf(buf,"%d",err);
-  strncat(str_, buf, len-1-strlen(str_));
-  strncat(str_, ")", len-1-strlen(str_));
 }
 
 SystemException::SystemException(const char* s, int err_)
