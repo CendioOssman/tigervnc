@@ -124,7 +124,7 @@ namespace rfb {
   //     a plain black desktop of the specified format.
   class SStaticDesktop : public SDesktop {
   public:
-    SStaticDesktop(const Point& size)
+    SStaticDesktop(const core::Point& size)
       : server(nullptr), buffer(nullptr)
     {
       PixelFormat pf;
@@ -133,7 +133,7 @@ namespace rfb {
       if (buffer)
         buffer->fillRect(buffer->getRect(), black);
     }
-    SStaticDesktop(const Point& size, const PixelFormat& pf)
+    SStaticDesktop(const core::Point& size, const PixelFormat& pf)
       : buffer(nullptr)
     {
       const uint8_t black[4] = { 0, 0, 0, 0 };

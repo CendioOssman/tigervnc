@@ -22,7 +22,7 @@
 
 #include <map>
 
-#include <rfb/Rect.h>
+#include <core/Rect.h>
 
 #include <FL/Fl_Widget.H>
 
@@ -48,7 +48,7 @@ public:
   void updateWindow();
 
   // New image for the locally rendered cursor
-  void setCursor(int width, int height, const rfb::Point& hotspot,
+  void setCursor(int width, int height, const core::Point& hotspot,
                  const uint8_t* data);
 
   // Change client LED state
@@ -70,7 +70,7 @@ public:
   int handle(int event) override;
 
 protected:
-  void sendPointerEvent(const rfb::Point& pos, int buttonMask) override;
+  void sendPointerEvent(const core::Point& pos, int buttonMask) override;
 
 private:
   bool hasFocus();
@@ -81,7 +81,7 @@ private:
 
   void flushPendingClipboard();
 
-  void handlePointerEvent(const rfb::Point& pos, int buttonMask);
+  void handlePointerEvent(const core::Point& pos, int buttonMask);
   static void handlePointerTimeout(void *data);
 
   void resetKeyboard();
@@ -110,7 +110,7 @@ private:
 
   PlatformPixelBuffer* frameBuffer;
 
-  rfb::Point lastPointerPos;
+  core::Point lastPointerPos;
   int lastButtonMask;
 
   typedef std::map<int, uint32_t> DownMap;
@@ -135,7 +135,7 @@ private:
   bool menuAltKey;
 
   Fl_RGB_Image *cursor;
-  rfb::Point cursorHotspot;
+  core::Point cursorHotspot;
 };
 
 #endif

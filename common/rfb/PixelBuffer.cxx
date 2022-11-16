@@ -62,7 +62,7 @@ PixelBuffer::~PixelBuffer() {}
 
 
 void
-PixelBuffer::getImage(void* imageBuf, const Rect& r, int outStride) const
+PixelBuffer::getImage(void* imageBuf, const core::Rect& r, int outStride) const
 {
   int inStride;
   const uint8_t* data;
@@ -96,7 +96,7 @@ PixelBuffer::getImage(void* imageBuf, const Rect& r, int outStride) const
 }
 
 void PixelBuffer::getImage(const PixelFormat& pf, void* imageBuf,
-                           const Rect& r, int stride) const
+                           const core::Rect& r, int stride) const
 {
   const uint8_t* srcBuffer;
   int srcStride;
@@ -147,7 +147,7 @@ ModifiablePixelBuffer::~ModifiablePixelBuffer()
 {
 }
 
-void ModifiablePixelBuffer::fillRect(const Rect& r, const void* pix)
+void ModifiablePixelBuffer::fillRect(const core::Rect& r, const void* pix)
 {
   int stride;
   uint8_t *buf;
@@ -194,7 +194,7 @@ void ModifiablePixelBuffer::fillRect(const Rect& r, const void* pix)
   commitBufferRW(r);
 }
 
-void ModifiablePixelBuffer::imageRect(const Rect& r,
+void ModifiablePixelBuffer::imageRect(const core::Rect& r,
                                       const void* pixels, int srcStride)
 {
   uint8_t* dest;
@@ -231,15 +231,15 @@ void ModifiablePixelBuffer::imageRect(const Rect& r,
   commitBufferRW(r);
 }
 
-void ModifiablePixelBuffer::copyRect(const Rect &rect,
-                                     const Point &move_by_delta)
+void ModifiablePixelBuffer::copyRect(const core::Rect &rect,
+                                     const core::Point &move_by_delta)
 {
   int srcStride, dstStride;
   int bytesPerPixel;
   const uint8_t* srcData;
   uint8_t* dstData;
 
-  Rect drect, srect;
+  core::Rect drect, srect;
 
   drect = rect;
   if (!drect.enclosed_by(getRect()))
@@ -289,7 +289,7 @@ void ModifiablePixelBuffer::copyRect(const Rect &rect,
   commitBufferRW(drect);
 }
 
-void ModifiablePixelBuffer::fillRect(const PixelFormat& pf, const Rect &dest,
+void ModifiablePixelBuffer::fillRect(const PixelFormat& pf, const core::Rect &dest,
                                      const void* pix)
 {
   uint8_t buf[4];
@@ -297,7 +297,7 @@ void ModifiablePixelBuffer::fillRect(const PixelFormat& pf, const Rect &dest,
   fillRect(dest, buf);
 }
 
-void ModifiablePixelBuffer::imageRect(const PixelFormat& pf, const Rect &dest,
+void ModifiablePixelBuffer::imageRect(const PixelFormat& pf, const core::Rect &dest,
                                       const void* pixels, int stride)
 {
   uint8_t* dstBuffer;
@@ -330,7 +330,7 @@ FullFramePixelBuffer::FullFramePixelBuffer() : data(nullptr) {}
 
 FullFramePixelBuffer::~FullFramePixelBuffer() {}
 
-uint8_t* FullFramePixelBuffer::getBufferRW(const Rect& r, int* stride_)
+uint8_t* FullFramePixelBuffer::getBufferRW(const core::Rect& r, int* stride_)
 {
   if (!r.enclosed_by(getRect()))
     throw rfb::Exception("Pixel buffer request %dx%d at %d,%d exceeds framebuffer %dx%d",
@@ -341,11 +341,11 @@ uint8_t* FullFramePixelBuffer::getBufferRW(const Rect& r, int* stride_)
   return &data[(r.tl.x + (r.tl.y * stride)) * (format.bpp/8)];
 }
 
-void FullFramePixelBuffer::commitBufferRW(const Rect& /*r*/)
+void FullFramePixelBuffer::commitBufferRW(const core::Rect& /*r*/)
 {
 }
 
-const uint8_t* FullFramePixelBuffer::getBuffer(const Rect& r, int* stride_) const
+const uint8_t* FullFramePixelBuffer::getBuffer(const core::Rect& r, int* stride_) const
 {
   if (!r.enclosed_by(getRect()))
     throw rfb::Exception("Pixel buffer request %dx%d at %d,%d exceeds framebuffer %dx%d",

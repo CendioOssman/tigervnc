@@ -35,7 +35,7 @@
 #define XK_XKB_KEYS
 #include <rfb/keysymdef.h>
 #include <rfb/XF86keysym.h>
-#include <rfb/Rect.h>
+#include <core/Rect.h>
 
 #include "keysym2ucs.h"
 
@@ -74,7 +74,7 @@ int cocoa_capture_displays(Fl_Window *win)
   CGDirectDisplayID displays[16];
 
   int sx, sy, sw, sh;
-  rfb::Rect windows_rect, screen_rect;
+  core::Rect windows_rect, screen_rect;
 
   windows_rect.setXYWH(win->x(), win->y(), win->w(), win->h());
 

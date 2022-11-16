@@ -42,6 +42,10 @@
 #include <rfb/TightEncoder.h>
 #include <rfb/TightJPEGEncoder.h>
 
+using core::Point;
+using core::Rect;
+using core::Region;
+
 using namespace rfb;
 
 static LogWriter vlog("EncodeManager");

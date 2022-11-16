@@ -54,7 +54,7 @@ public:
   bool isRunning();
   void queryConnection(network::Socket* sock,
                        const char* userName) override;
-  void pointerEvent(const rfb::Point& pos, int buttonMask) override;
+  void pointerEvent(const core::Point& pos, int buttonMask) override;
   void keyEvent(uint32_t keysym, uint32_t xtcode, bool down) override;
   void clientCutText(const char* str) override;
   unsigned int setScreenLayout(int fb_width, int fb_height,

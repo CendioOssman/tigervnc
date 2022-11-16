@@ -100,6 +100,7 @@ extern const unsigned int code_map_osx_to_qnum_len;
 #endif
 
 
+using namespace core;
 using namespace rfb;
 
 static rfb::LogWriter vlog("Viewport");
@@ -188,7 +189,7 @@ Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc
   OptionsDialog::addCallback(handleOptions, this);
 
   // Make sure we have an initial blank cursor set
-  setCursor(0, 0, rfb::Point(0, 0), nullptr);
+  setCursor(0, 0, core::Point(0, 0), nullptr);
 }
 
 
@@ -660,7 +661,7 @@ int Viewport::handle(int event)
   return Fl_Widget::handle(event);
 }
 
-void Viewport::sendPointerEvent(const rfb::Point& pos, int buttonMask)
+void Viewport::sendPointerEvent(const core::Point& pos, int buttonMask)
 {
   if (viewOnly)
       return;
@@ -790,7 +791,7 @@ void Viewport::flushPendingClipboard()
 }
 
 
-void Viewport::handlePointerEvent(const rfb::Point& pos, int buttonMask)
+void Viewport::handlePointerEvent(const core::Point& pos, int buttonMask)
 {
   filterPointerEvent(pos, buttonMask);
 }

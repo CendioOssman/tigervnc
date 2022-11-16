@@ -69,8 +69,8 @@ public:
 
   void initDone() override;
   void setPixelFormat(const rfb::PixelFormat& pf) override;
-  void setCursor(int, int, const rfb::Point&, const uint8_t*) override;
-  void setCursorPos(const rfb::Point&) override;
+  void setCursor(int, int, const core::Point&, const uint8_t*) override;
+  void setCursorPos(const core::Point&) override;
   void framebufferUpdateStart() override;
   void framebufferUpdateEnd() override;
   void setColourMapEntries(int, int, uint16_t*) override;
@@ -145,11 +145,11 @@ void CConn::setPixelFormat(const rfb::PixelFormat& /*pf*/)
   CConnection::setPixelFormat(filePF);
 }
 
-void CConn::setCursor(int, int, const rfb::Point&, const uint8_t*)
+void CConn::setCursor(int, int, const core::Point&, const uint8_t*)
 {
 }
 
-void CConn::setCursorPos(const rfb::Point&)
+void CConn::setCursorPos(const core::Point&)
 {
 }
 

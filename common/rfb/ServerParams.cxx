@@ -38,7 +38,7 @@ ServerParams::ServerParams()
 {
   setName("");
 
-  cursor_ = new Cursor(0, 0, Point(), nullptr);
+  cursor_ = new Cursor(0, 0, core::Point(), nullptr);
 
   clipFlags = 0;
   memset(clipSizes, 0, sizeof(clipSizes));

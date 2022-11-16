@@ -25,7 +25,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <rfb/Rect.h>
+#include <core/Rect.h>
 #include <list>
 #include <set>
 
@@ -52,7 +52,7 @@ namespace rfb {
     }
 
     uint32_t id;
-    Rect dimensions;
+    core::Rect dimensions;
     uint32_t flags;
   };
 
@@ -87,7 +87,7 @@ namespace rfb {
     inline bool validate(int fb_width, int fb_height) const {
       std::list<Screen>::const_iterator iter;
       std::set<uint32_t> seen_ids;
-      Rect fb_rect;
+      core::Rect fb_rect;
 
       if (screens.empty())
         return false;
