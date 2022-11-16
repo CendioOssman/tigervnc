@@ -33,11 +33,13 @@
 #include <unistd.h>
 #include <os/os.h>
 
+#include <core/util.h>
 #include <rfb/obfuscate.h>
 
 #include <termios.h>
 
 
+using namespace core;
 using namespace rfb;
 
 char* prog;

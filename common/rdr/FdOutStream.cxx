@@ -46,7 +46,7 @@
 
 #include <rdr/FdOutStream.h>
 #include <rdr/Exception.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 
 using namespace rdr;
@@ -68,7 +68,7 @@ FdOutStream::~FdOutStream()
 
 unsigned FdOutStream::getIdleTime()
 {
-  return rfb::msSince(&lastWrite);
+  return core::msSince(&lastWrite);
 }
 
 void FdOutStream::cork(bool enable)

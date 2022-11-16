@@ -30,7 +30,7 @@
 #include <rfb/Decoder.h>
 #include <rfb/Exception.h>
 #include <rfb/LogWriter.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 #include <rdr/Exception.h>
 #include <rdr/MemOutStream.h>
@@ -228,20 +228,20 @@ void DecodeManager::logStats()
     ratio = (double)stats[i].equivalent / stats[i].bytes;
 
     vlog.info("    %s: %s, %s", encodingName(i),
-              siPrefix(stats[i].rects, "rects").c_str(),
-              siPrefix(stats[i].pixels, "pixels").c_str());
+              core::siPrefix(stats[i].rects, "rects").c_str(),
+              core::siPrefix(stats[i].pixels, "pixels").c_str());
     vlog.info("    %*s  %s (1:%g ratio)",
               (int)strlen(encodingName(i)), "",
-              iecPrefix(stats[i].bytes, "B").c_str(), ratio);
+              core::iecPrefix(stats[i].bytes, "B").c_str(), ratio);
   }
 
   ratio = (double)equivalent / bytes;
 
   vlog.info("  Total: %s, %s",
-            siPrefix(rects, "rects").c_str(),
-            siPrefix(pixels, "pixels").c_str());
+            core::siPrefix(rects, "rects").c_str(),
+            core::siPrefix(pixels, "pixels").c_str());
   vlog.info("         %s (1:%g ratio)",
-            iecPrefix(bytes, "B").c_str(), ratio);
+            core::iecPrefix(bytes, "B").c_str(), ratio);
 }
 
 void DecodeManager::setThreadException(const rdr::Exception& e)

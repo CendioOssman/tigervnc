@@ -19,9 +19,10 @@
 #include <vncconfig/Legacy.h>
 
 #include <rfb/LogWriter.h>
-#include <rfb/util.h>
+#include <core/util.h>
 #include <rfb_win32/CurrentUser.h>
 
+using namespace core;
 using namespace rfb;
 using namespace win32;
 
@@ -70,7 +71,7 @@ void LegacyPage::LoadPrefs()
             try {
               // Split the AuthHosts string into patterns to match
               std::vector<std::string> patterns;
-              patterns = rfb::split(authHosts.c_str(), ':');
+              patterns = split(authHosts.c_str(), ':');
               for (size_t i = 0; i < patterns.size(); i++) {
                 if (!patterns[i].empty()) {
                   int bits = 0;
@@ -80,7 +81,7 @@ void LegacyPage::LoadPrefs()
 
                   // Split the pattern into IP address parts and process
                   std::vector<std::string> parts;
-                  parts = rfb::split(&patterns[i][1], '.');
+                  parts = split(&patterns[i][1], '.');
                   for (size_t j = 0; j < parts.size(); j++) {
                     if (bits)
                       strcat(pattern, ".");

@@ -28,10 +28,11 @@
 #include <rfb/LogWriter.h>
 #include <rfb/Logger_stdio.h>
 #include <rfb/Logger_syslog.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 #include "RFBGlue.h"
 
+using namespace core;
 using namespace rfb;
 
 // Loggers used by C code must be created here

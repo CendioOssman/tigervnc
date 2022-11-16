@@ -30,7 +30,7 @@
 
 #include <rfb/LogWriter.h>
 #include <rfb/CMsgWriter.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 #include "DesktopWindow.h"
 #include "OptionsDialog.h"
@@ -70,6 +70,7 @@ static int edge_scroll_size_y = 96;
 // default: roughly 60 fps for smooth motion
 #define EDGE_SCROLL_SECONDS_PER_FRAME 0.016666
 
+using namespace core;
 using namespace rfb;
 
 static rfb::LogWriter vlog("DesktopWindow");

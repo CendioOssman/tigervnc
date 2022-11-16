@@ -25,10 +25,11 @@
 
 #include <rfb_win32/Clipboard.h>
 #include <rfb_win32/WMShatter.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 #include <rfb/LogWriter.h>
 
+using namespace core;
 using namespace rfb;
 using namespace rfb::win32;
 

@@ -37,6 +37,7 @@
 
 #include <rfb/LogWriter.h>
 
+using namespace core;
 using namespace rfb;
 using namespace win32;
 using namespace winvnc;

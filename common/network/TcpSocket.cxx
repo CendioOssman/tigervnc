@@ -43,7 +43,7 @@
 #include <network/TcpSocket.h>
 #include <rfb/LogWriter.h>
 #include <rfb/Configuration.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 #ifdef WIN32
 #include <os/winerrno.h>
@@ -590,7 +590,7 @@ void network::createTcpListeners(std::list<SocketListener*> *listeners,
 TcpFilter::TcpFilter(const char* spec) {
   std::vector<std::string> patterns;
 
-  patterns = rfb::split(spec, ',');
+  patterns = core::split(spec, ',');
 
   for (size_t i = 0; i < patterns.size(); i++) {
     if (!patterns[i].empty())
@@ -692,7 +692,7 @@ TcpFilter::Pattern TcpFilter::parsePattern(const char* p) {
 
   initSockets();
 
-  parts = rfb::split(&p[1], '/');
+  parts = core::split(&p[1], '/');
   if (parts.size() > 2)
     throw Exception("invalid filter specified");
 

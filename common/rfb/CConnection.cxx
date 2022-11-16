@@ -38,7 +38,7 @@
 #include <rfb/Security.h>
 #include <rfb/SecurityClient.h>
 #include <rfb/CConnection.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 #include <rfb/LogWriter.h>
 
@@ -598,11 +598,11 @@ void CConnection::handleClipboardProvide(uint32_t flags,
   }
 
   // FIXME: This conversion magic should be in CMsgReader
-  if (!isValidUTF8((const char*)data[0], lengths[0])) {
+  if (!core::isValidUTF8((const char*)data[0], lengths[0])) {
     vlog.error("Invalid UTF-8 sequence in clipboard - ignoring");
     return;
   }
-  serverClipboard = convertLF((const char*)data[0], lengths[0]);
+  serverClipboard = core::convertLF((const char*)data[0], lengths[0]);
   hasRemoteClipboard = true;
 
   // FIXME: Should probably verify that this data was actually requested
@@ -673,7 +673,7 @@ void CConnection::sendClipboardData(const char* data)
 {
   if (server.clipboardFlags() & rfb::clipboardProvide) {
     // FIXME: This conversion magic should be in CMsgWriter
-    std::string filtered(convertCRLF(data));
+    std::string filtered(core::convertCRLF(data));
     size_t sizes[1] = { filtered.size() + 1 };
     const uint8_t* datas[1] = { (const uint8_t*)filtered.c_str() };
 

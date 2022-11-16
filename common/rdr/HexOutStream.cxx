@@ -22,7 +22,7 @@
 #endif
 #include <algorithm>
 #include <rdr/HexOutStream.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 using namespace rdr;
 
@@ -42,7 +42,7 @@ bool HexOutStream::flushBuffer()
     size_t length = std::min((size_t)(ptr-sentUpTo), out_stream.avail()/2);
 
     for (size_t i=0; i<length; i++)
-      rfb::binToHex(&sentUpTo[i], 1, (char*)&optr[i*2], 2);
+      core::binToHex(&sentUpTo[i], 1, (char*)&optr[i*2], 2);
 
     out_stream.setptr(length*2);
     sentUpTo += length;

@@ -42,7 +42,7 @@
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
 #include <rfb/keysymdef.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 using namespace rfb;
 
@@ -69,9 +69,9 @@ VNCSConnectionST::VNCSConnectionST(VNCServerST* server_, network::Socket *s,
   if (rfb::Server::idleTimeout) {
     // minimum of 15 seconds while authenticating
     if (rfb::Server::idleTimeout < 15)
-      idleTimer.start(secsToMillis(15));
+      idleTimer.start(core::secsToMillis(15));
     else
-      idleTimer.start(secsToMillis(rfb::Server::idleTimeout));
+      idleTimer.start(core::secsToMillis(rfb::Server::idleTimeout));
   }
 }
 
@@ -433,7 +433,7 @@ void VNCSConnectionST::approveConnectionOrClose(bool accept,
 void VNCSConnectionST::authSuccess()
 {
   if (rfb::Server::idleTimeout)
-    idleTimer.start(secsToMillis(rfb::Server::idleTimeout));
+    idleTimer.start(core::secsToMillis(rfb::Server::idleTimeout));
 
   // - Set the connection parameters appropriately
   client.setDimensions(server->getPixelBuffer()->width(),
@@ -460,7 +460,7 @@ void VNCSConnectionST::queryConnection(const char* userName)
 void VNCSConnectionST::clientInit(bool shared)
 {
   if (rfb::Server::idleTimeout)
-    idleTimer.start(secsToMillis(rfb::Server::idleTimeout));
+    idleTimer.start(core::secsToMillis(rfb::Server::idleTimeout));
   if (rfb::Server::alwaysShared || reverseConnection) shared = true;
   if (!accessCheck(AccessNonShared)) shared = true;
   if (rfb::Server::neverShared) shared = false;
@@ -480,7 +480,7 @@ void VNCSConnectionST::setPixelFormat(const PixelFormat& pf)
 void VNCSConnectionST::pointerEvent(const core::Point& pos, uint8_t buttonMask)
 {
   if (rfb::Server::idleTimeout)
-    idleTimer.start(secsToMillis(rfb::Server::idleTimeout));
+    idleTimer.start(core::secsToMillis(rfb::Server::idleTimeout));
   pointerEventTime = time(nullptr);
   if (!accessCheck(AccessPtrEvents)) return;
   if (!rfb::Server::acceptPointerEvents) return;
@@ -514,7 +514,7 @@ void VNCSConnectionST::keyEvent(uint32_t keysym, uint32_t keycode, bool down) {
   uint32_t lookup;
 
   if (rfb::Server::idleTimeout)
-    idleTimer.start(secsToMillis(rfb::Server::idleTimeout));
+    idleTimer.start(core::secsToMillis(rfb::Server::idleTimeout));
   if (!accessCheck(AccessKeyEvents)) return;
   if (!rfb::Server::acceptKeyEvents) return;
 
