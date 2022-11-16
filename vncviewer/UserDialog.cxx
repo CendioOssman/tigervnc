@@ -114,7 +114,7 @@ void UserDialog::getUserPasswd(bool secure_, std::string* user,
 
     fp = fopen(passwordFileName, "rb");
     if (!fp)
-      throw rfb::Exception(_("Opening password file failed"));
+      throw core::Exception(_("Opening password file failed"));
 
     obfPwd.resize(fread(obfPwd.data(), 1, obfPwd.size(), fp));
     fclose(fp);

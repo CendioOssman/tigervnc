@@ -19,7 +19,7 @@
  */
 
 #include <os/Mutex.h>
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/LogWriter.h>
 
 #include <rfb/H264DecoderContext.h>
@@ -41,7 +41,7 @@ H264DecoderContext *H264DecoderContext::createContext(const core::Rect &r)
   H264DecoderContext *ret = new H264DecoderContextType(r);
   if (!ret->initCodec())
   {
-    throw Exception("H264DecoderContext: Unable to create context");
+    throw core::Exception("H264DecoderContext: Unable to create context");
   }
 
   return ret;

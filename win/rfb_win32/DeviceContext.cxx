@@ -24,7 +24,7 @@
 #include <rfb_win32/DeviceContext.h>
 #include <rfb_win32/CompatibleBitmap.h>
 #include <rfb_win32/BitmapInfo.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <rfb/LogWriter.h>
 
 using namespace core;
@@ -52,10 +52,10 @@ PixelFormat DeviceContext::getPF(HDC dc) {
   bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
   bi.bmiHeader.biBitCount = 0;
   if (!::GetDIBits(dc, bitmap, 0, 1, nullptr, (BITMAPINFO*)&bi, DIB_RGB_COLORS)) {
-    throw rdr::SystemException("unable to determine device pixel format", GetLastError());
+    throw core::SystemException("unable to determine device pixel format", GetLastError());
   }
   if (!::GetDIBits(dc, bitmap, 0, 1, nullptr, (BITMAPINFO*)&bi, DIB_RGB_COLORS)) {
-    throw rdr::SystemException("unable to determine pixel shifts/palette", GetLastError());
+    throw core::SystemException("unable to determine pixel shifts/palette", GetLastError());
   }
 
   // Set the initial format information
@@ -88,7 +88,7 @@ PixelFormat DeviceContext::getPF(HDC dc) {
         break;
       default:
         vlog.error("bits per pixel %u not supported", bi.bmiHeader.biBitCount);
-        throw rdr::Exception("unknown bits per pixel specified");
+        throw core::Exception("unknown bits per pixel specified");
       };
       break;
     case BI_BITFIELDS:
@@ -152,7 +152,7 @@ Rect DeviceContext::getClipBox(HDC dc) {
   // Get the display dimensions
   RECT cr;
   if (!GetClipBox(dc, &cr))
-    throw rdr::SystemException("GetClipBox", GetLastError());
+    throw core::SystemException("GetClipBox", GetLastError());
   return Rect(cr.left, cr.top, cr.right, cr.bottom);
 }
 
@@ -160,7 +160,7 @@ Rect DeviceContext::getClipBox(HDC dc) {
 DeviceDC::DeviceDC(const char* deviceName) {
   dc = ::CreateDC("DISPLAY", deviceName, nullptr, nullptr);
   if (!dc)
-    throw rdr::SystemException("failed to create DeviceDC", GetLastError());
+    throw core::SystemException("failed to create DeviceDC", GetLastError());
 }
 
 DeviceDC::~DeviceDC() {
@@ -172,7 +172,7 @@ DeviceDC::~DeviceDC() {
 WindowDC::WindowDC(HWND wnd) : hwnd(wnd) {
   dc = GetDC(wnd);
   if (!dc)
-    throw rdr::SystemException("GetDC failed", GetLastError());
+    throw core::SystemException("GetDC failed", GetLastError());
 }
 
 WindowDC::~WindowDC() {
@@ -184,7 +184,7 @@ WindowDC::~WindowDC() {
 CompatibleDC::CompatibleDC(HDC existing) {
   dc = CreateCompatibleDC(existing);
   if (!dc)
-    throw rdr::SystemException("CreateCompatibleDC failed", GetLastError());
+    throw core::SystemException("CreateCompatibleDC failed", GetLastError());
 }
 
 CompatibleDC::~CompatibleDC() {
@@ -196,7 +196,7 @@ CompatibleDC::~CompatibleDC() {
 BitmapDC::BitmapDC(HDC hdc, HBITMAP hbitmap) : CompatibleDC(hdc){
   oldBitmap = (HBITMAP)SelectObject(dc, hbitmap);
   if (!oldBitmap)
-    throw rdr::SystemException("SelectObject to CompatibleDC failed",
+    throw core::SystemException("SelectObject to CompatibleDC failed",
     GetLastError());
 }
 

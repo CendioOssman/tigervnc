@@ -42,6 +42,8 @@
 #include <rfb/Exception.h>
 #include <os/os.h>
 
+using core::Exception;
+
 using namespace rfb;
 
 CSecurityMSLogonII::CSecurityMSLogonII(CConnection* cc_)

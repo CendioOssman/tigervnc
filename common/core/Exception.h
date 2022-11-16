@@ -18,10 +18,10 @@
  * USA.
  */
 
-#ifndef __RDR_EXCEPTION_H__
-#define __RDR_EXCEPTION_H__
+#ifndef __CORE_EXCEPTION_H__
+#define __CORE_EXCEPTION_H__
 
-namespace rdr {
+namespace core {
 
   struct Exception {
     enum { len = 256 };
@@ -35,10 +35,6 @@ namespace rdr {
   struct SystemException : public Exception {
     int err;
     SystemException(const char* s, int err_);
-  };
-
-  struct EndOfStream : public Exception {
-    EndOfStream() : Exception("End of stream") {}
   };
 
 }

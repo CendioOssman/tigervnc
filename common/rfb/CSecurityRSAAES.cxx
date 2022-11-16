@@ -54,6 +54,8 @@ enum {
 const int MinKeyLength = 1024;
 const int MaxKeyLength = 8192;
 
+using core::Exception;
+
 using namespace rfb;
 
 CSecurityRSAAES::CSecurityRSAAES(CConnection* cc_, uint32_t _secType,

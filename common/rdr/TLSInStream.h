@@ -41,7 +41,7 @@ namespace rdr {
     InStream* in;
 
     bool streamEmpty;
-    Exception* saved_exception;
+    core::Exception* saved_exception;
   };
 };
 

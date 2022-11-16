@@ -36,6 +36,8 @@
 #include <rfb/CSecurityVeNCrypt.h>
 #include <rfb/LogWriter.h>
 
+using core::Exception;
+
 using namespace rfb;
 using namespace rdr;
 using namespace std;

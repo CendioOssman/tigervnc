@@ -1,4 +1,5 @@
 add_library(core STATIC
+  Exception.cxx
   Region.cxx
   util.cxx)
 

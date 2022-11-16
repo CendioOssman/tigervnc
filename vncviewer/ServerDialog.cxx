@@ -36,7 +36,7 @@
 #include <FL/Fl_File_Chooser.H>
 
 #include <os/os.h>
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/LogWriter.h>
 
 #include "fltk/layout.h"
@@ -48,6 +48,7 @@
 
 
 using namespace std;
+using namespace core;
 using namespace rfb;
 
 static LogWriter vlog("ServerDialog");

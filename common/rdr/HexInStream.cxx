@@ -23,7 +23,7 @@
 
 #include <algorithm>
 #include <rdr/HexInStream.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <core/util.h>
 
 using namespace rdr;
@@ -46,7 +46,7 @@ bool HexInStream::fillBuffer() {
   uint8_t* optr = (uint8_t*) end;
   for (size_t i=0; i<length; i++) {
     if (!core::hexToBin((const char*)&iptr[i*2], 2, &optr[i], 1))
-      throw Exception("HexInStream: Invalid input data");
+      throw core::Exception("HexInStream: Invalid input data");
   }
 
   in_stream.setptr(length*2);

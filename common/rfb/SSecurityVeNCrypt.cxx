@@ -32,6 +32,8 @@
 #include <rdr/InStream.h>
 #include <rdr/OutStream.h>
 
+using core::Exception;
+
 using namespace rfb;
 using namespace rdr;
 using namespace std;

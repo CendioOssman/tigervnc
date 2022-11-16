@@ -33,13 +33,15 @@
 #include <rfb/msgTypes.h>
 #include <rfb/fenceTypes.h>
 #include <rfb/clipboardTypes.h>
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/ClientParams.h>
 #include <rfb/UpdateTracker.h>
 #include <rfb/Encoder.h>
 #include <rfb/SMsgWriter.h>
 #include <rfb/LogWriter.h>
 #include <rfb/ledStates.h>
+
+using core::Exception;
 
 using namespace rfb;
 

@@ -58,6 +58,8 @@
 #define gnutls_free free
 #endif
 
+using core::Exception;
+
 using namespace rfb;
 
 static const char* configdirfn(const char* fn);

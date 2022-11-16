@@ -42,6 +42,8 @@
 
 #include <rfb/LogWriter.h>
 
+using core::Exception;
+
 using namespace rfb;
 
 static LogWriter vlog("SConnection");
@@ -221,7 +223,7 @@ void SConnection::processSecurityType(int secType)
   try {
     state_ = RFBSTATE_SECURITY;
     ssecurity = security.GetSSecurity(this, secType);
-  } catch (rdr::Exception& e) {
+  } catch (Exception& e) {
     throwConnFailedException("%s", e.str());
   }
 }
@@ -291,7 +293,7 @@ void SConnection::handleAuthFailureTimeout(Timer* /*t*/)
                      authFailureMsg.size());
     }
     os->flush();
-  } catch (rdr::Exception& e) {
+  } catch (Exception& e) {
     close(e.str());
     return;
   }

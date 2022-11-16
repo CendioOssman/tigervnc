@@ -23,7 +23,7 @@
 
 #include <windows.h>
 #include <rfb/UpdateTracker.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <rfb_win32/Win32Util.h>
 
 namespace rfb {

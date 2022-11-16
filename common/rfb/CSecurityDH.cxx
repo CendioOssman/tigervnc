@@ -42,6 +42,8 @@
 #include <rfb/Exception.h>
 #include <os/os.h>
 
+using core::Exception;
+
 using namespace rfb;
 
 const int MinKeyLength = 128;

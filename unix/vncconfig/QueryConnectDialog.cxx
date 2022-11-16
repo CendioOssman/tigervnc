@@ -21,7 +21,7 @@
 #endif
 
 #include <stdio.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include "QueryConnectDialog.h"
 #include "vncExt.h"
 

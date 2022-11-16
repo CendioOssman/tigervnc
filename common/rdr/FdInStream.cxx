@@ -42,7 +42,7 @@
 #endif
 
 #include <rdr/FdInStream.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 
 using namespace rdr;
 
@@ -92,7 +92,7 @@ size_t FdInStream::readFd(uint8_t* buf, size_t len)
   } while (n < 0 && errorNumber == EINTR);
 
   if (n < 0)
-    throw SystemException("select", errorNumber);
+    throw core::SystemException("select", errorNumber);
 
   if (n == 0)
     return 0;
@@ -102,7 +102,7 @@ size_t FdInStream::readFd(uint8_t* buf, size_t len)
   } while (n < 0 && errorNumber == EINTR);
 
   if (n < 0)
-    throw SystemException("read", errorNumber);
+    throw core::SystemException("read", errorNumber);
   if (n == 0)
     throw EndOfStream();
 

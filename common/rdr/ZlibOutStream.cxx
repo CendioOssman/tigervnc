@@ -24,7 +24,7 @@
 #include <stdio.h>
 
 #include <rdr/ZlibOutStream.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <rfb/LogWriter.h>
 
 #include <zlib.h>
@@ -46,7 +46,7 @@ ZlibOutStream::ZlibOutStream(OutStream* os, int compressLevel)
   zs->avail_in  = 0;
   if (deflateInit(zs, compressLevel) != Z_OK) {
     delete zs;
-    throw Exception("ZlibOutStream: deflateInit failed");
+    throw core::Exception("ZlibOutStream: deflateInit failed");
   }
 }
 
@@ -54,7 +54,7 @@ ZlibOutStream::~ZlibOutStream()
 {
   try {
     flush();
-  } catch (Exception&) {
+  } catch (core::Exception&) {
   }
   deflateEnd(zs);
   delete zs;
@@ -113,7 +113,7 @@ void ZlibOutStream::deflate(int flush)
   int rc;
 
   if (!underlying)
-    throw Exception("ZlibOutStream: underlying OutStream has not been set");
+    throw core::Exception("ZlibOutStream: underlying OutStream has not been set");
 
   if ((flush == Z_NO_FLUSH) && (zs->avail_in == 0))
     return;
@@ -134,7 +134,7 @@ void ZlibOutStream::deflate(int flush)
       if ((rc == Z_BUF_ERROR) && (flush != Z_NO_FLUSH))
         break;
 
-      throw Exception("ZlibOutStream: deflate failed");
+      throw core::Exception("ZlibOutStream: deflate failed");
     }
 
 #ifdef ZLIBOUT_DEBUG
@@ -168,7 +168,7 @@ void ZlibOutStream::checkCompressionLevel()
       // explicit flush we did above. It should be safe to ignore though
       // as the first flush should have left things in a stable state...
       if (rc != Z_BUF_ERROR)
-        throw Exception("ZlibOutStream: deflateParams failed");
+        throw core::Exception("ZlibOutStream: deflateParams failed");
     }
 
     compressionLevel = newLevel;

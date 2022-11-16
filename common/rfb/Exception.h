@@ -18,19 +18,18 @@
 #ifndef __RFB_EXCEPTION_H__
 #define __RFB_EXCEPTION_H__
 
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 
 namespace rfb {
-  typedef rdr::Exception Exception;
-  struct AuthFailureException : public Exception {
+  struct AuthFailureException : public core::Exception {
     AuthFailureException(const char* reason)
       : Exception("%s", reason) {}
   };
-  struct AuthCancelledException : public rfb::Exception {
+  struct AuthCancelledException : public core::Exception {
     AuthCancelledException()
       : Exception("Authentication cancelled") {}
   };
-  struct ConnFailedException : public Exception {
+  struct ConnFailedException : public core::Exception {
     ConnFailedException(const char* reason)
       : Exception("%s", reason) {}
   };

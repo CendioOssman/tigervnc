@@ -57,6 +57,8 @@ static const gnutls_datum_t ffdhe_pkcs3_param = {
 };
 #endif
 
+using core::Exception;
+
 using namespace rfb;
 
 StringParameter SSecurityTLS::X509_CertFile

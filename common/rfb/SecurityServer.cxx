@@ -21,7 +21,7 @@
 #include <config.h>
 #endif
 
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <rfb/Security.h>
 #include <rfb/SSecurityNone.h>
 #include <rfb/SSecurityStack.h>
@@ -91,6 +91,6 @@ SSecurity* SecurityServer::GetSSecurity(SConnection* sc, uint32_t secType)
   }
 
 bail:
-  throw Exception("Security type not supported");
+  throw core::Exception("Security type not supported");
 }
 

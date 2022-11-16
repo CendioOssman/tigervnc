@@ -54,8 +54,7 @@
 #endif
 #include <rfb/LogWriter.h>
 #include <rfb/Timer.h>
-#include <rfb/Exception.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <network/TcpSocket.h>
 #include <os/os.h>
 
@@ -81,6 +80,7 @@
 
 static rfb::LogWriter vlog("main");
 
+using namespace core;
 using namespace network;
 using namespace rfb;
 
@@ -156,7 +156,7 @@ void abort_connection(const char *error, ...)
   exitMainloop = true;
 }
 
-void abort_connection_with_unexpected_error(const rdr::Exception &e) {
+void abort_connection_with_unexpected_error(const core::Exception &e) {
   abort_connection(_("An unexpected error occurred when communicating "
                      "with the server:\n\n%s"), e.str());
 }
@@ -519,7 +519,7 @@ potentiallyLoadConfigurationFile(const char *filename)
       // don't try to connect to the filename
       strncpy(vncServerName, newServerName, VNCSERVERNAMELEN-1);
       vncServerName[VNCSERVERNAMELEN-1] = '\0';
-    } catch (rfb::Exception& e) {
+    } catch (core::Exception& e) {
       vlog.error("%s", e.str());
       abort_vncviewer(_("Unable to load the specified configuration "
                         "file:\n\n%s"), e.str());
@@ -660,7 +660,7 @@ int main(int argc, char** argv)
       strncpy(defaultServerName, configServerName, VNCSERVERNAMELEN-1);
       defaultServerName[VNCSERVERNAMELEN-1] = '\0';
     }
-  } catch (rfb::Exception& e) {
+  } catch (core::Exception& e) {
     vlog.error("%s", e.str());
   }
 
@@ -792,7 +792,7 @@ int main(int argc, char** argv)
             vlog.debug("Interrupted select() system call");
             continue;
           } else {
-            throw rdr::SystemException("select", errno);
+            throw SystemException("select", errno);
           }
         }
 
@@ -804,7 +804,7 @@ int main(int argc, char** argv)
               break;
           }
       }
-    } catch (rdr::Exception& e) {
+    } catch (core::Exception& e) {
       vlog.error("%s", e.str());
       abort_vncviewer(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str());
       return 1; /* Not reached */

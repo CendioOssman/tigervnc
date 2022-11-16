@@ -108,7 +108,7 @@ CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
         vlog.info(_("Connected to host %s port %d"),
                   serverHost.c_str(), serverPort);
       }
-    } catch (rdr::Exception& e) {
+    } catch (core::Exception& e) {
       vlog.error("%s", e.str());
       abort_connection(_("Failed to connect to \"%s\":\n\n%s"),
                        vncServerName, e.str());
@@ -280,7 +280,7 @@ void CConn::socketEvent(FL_SOCKET fd, void *data)
     vlog.error(_("Authentication failed: %s"), e.str());
     abort_connection(_("Failed to authenticate with the server. Reason "
                        "given by the server:\n\n%s"), e.str());
-  } catch (rdr::Exception& e) {
+  } catch (core::Exception& e) {
     vlog.error("%s", e.str());
     abort_connection_with_unexpected_error(e);
   }

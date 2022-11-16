@@ -128,7 +128,7 @@ Clipboard::setClipText(const char* text) {
 
     // - Firstly, we must open the clipboard
     if (!OpenClipboard(getHandle()))
-      throw rdr::SystemException("unable to open Win32 clipboard", GetLastError());
+      throw core::SystemException("unable to open Win32 clipboard", GetLastError());
 
     // - Convert the supplied clipboard text into UTF-16 format with CRLF
     std::string filtered(convertCRLF(text));
@@ -143,15 +143,15 @@ Clipboard::setClipText(const char* text) {
 
     // - Next, we must clear out any existing data
     if (!EmptyClipboard())
-      throw rdr::SystemException("unable to empty Win32 clipboard", GetLastError());
+      throw core::SystemException("unable to empty Win32 clipboard", GetLastError());
 
     // - Set the new clipboard data
     if (!SetClipboardData(CF_UNICODETEXT, clip_handle))
-      throw rdr::SystemException("unable to set Win32 clipboard", GetLastError());
+      throw core::SystemException("unable to set Win32 clipboard", GetLastError());
     clip_handle = nullptr;
 
     vlog.debug("set clipboard");
-  } catch (rdr::Exception& e) {
+  } catch (core::Exception& e) {
     vlog.debug("%s", e.str());
   }
 

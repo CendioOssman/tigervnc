@@ -31,12 +31,14 @@
 #include <rfb/msgTypes.h>
 #include <rfb/qemuTypes.h>
 #include <rfb/clipboardTypes.h>
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/SMsgHandler.h>
 #include <rfb/SMsgReader.h>
 #include <rfb/Configuration.h>
 #include <rfb/LogWriter.h>
 #include <core/util.h>
+
+using core::Exception;
 
 using namespace rfb;
 

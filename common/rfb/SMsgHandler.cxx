@@ -21,7 +21,7 @@
 #include <config.h>
 #endif
 
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/LogWriter.h>
 #include <rfb/SMsgHandler.h>
 #include <rfb/ScreenSet.h>

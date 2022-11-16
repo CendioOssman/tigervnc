@@ -33,11 +33,13 @@
 #include <rfb/fenceTypes.h>
 #include <rfb/qemuTypes.h>
 #include <rfb/clipboardTypes.h>
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/PixelFormat.h>
 #include <core/Rect.h>
 #include <rfb/ServerParams.h>
 #include <rfb/CMsgWriter.h>
+
+using core::Exception;
 
 using namespace rfb;
 

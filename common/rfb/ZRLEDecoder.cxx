@@ -25,7 +25,7 @@
 #include <rdr/MemInStream.h>
 #include <rdr/OutStream.h>
 
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/ServerParams.h>
 #include <rfb/PixelBuffer.h>
 #include <rfb/ZRLEDecoder.h>
@@ -64,7 +64,7 @@ static inline T readPixel(rdr::ZlibInStream* zis)
 static inline void zlibHasData(rdr::ZlibInStream* zis, size_t length)
 {
   if (!zis->hasData(length))
-    throw Exception("ZRLE decode error");
+    throw core::Exception("ZRLE decode error");
 }
 
 ZRLEDecoder::ZRLEDecoder() : Decoder(DecoderOrdered)
@@ -242,7 +242,7 @@ void ZRLEDecoder::zrleDecode(const core::Rect& r, rdr::InStream* is,
             } while (b == 255);
 
             if (end - ptr < len) {
-              throw Exception ("ZRLE decode error");
+              throw core::Exception ("ZRLE decode error");
             }
 
             while (len-- > 0) *ptr++ = pix;
@@ -267,7 +267,7 @@ void ZRLEDecoder::zrleDecode(const core::Rect& r, rdr::InStream* is,
               } while (b == 255);
 
               if (end - ptr < len) {
-                throw Exception ("ZRLE decode error");
+                throw core::Exception ("ZRLE decode error");
               }
             }
 

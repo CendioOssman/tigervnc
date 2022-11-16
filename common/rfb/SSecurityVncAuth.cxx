@@ -83,7 +83,7 @@ bool SSecurityVncAuth::processMsg()
   if (!sentChallenge) {
     rdr::RandomStream rs;
     if (!rs.hasData(vncAuthChallengeSize))
-      throw Exception("Could not generate random data for VNC auth challenge");
+      throw core::Exception("Could not generate random data for VNC auth challenge");
     rs.readBytes(challenge, vncAuthChallengeSize);
     os->writeBytes(challenge, vncAuthChallengeSize);
     os->flush();
@@ -100,7 +100,7 @@ bool SSecurityVncAuth::processMsg()
   pg->getVncAuthPasswd(&passwd, &passwdReadOnly);
 
   if (passwd.empty())
-    throw Exception("No password configured");
+    throw core::Exception("No password configured");
 
   if (verifyResponse(passwd.c_str())) {
     accessRights = AccessDefault;

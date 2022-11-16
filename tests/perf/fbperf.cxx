@@ -28,7 +28,7 @@
 #include <FL/fl_draw.H>
 #include <FL/x.H>
 
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <core/util.h>
 
 #include "../vncviewer/PlatformPixelBuffer.h"

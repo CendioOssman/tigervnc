@@ -173,12 +173,12 @@ void SDisplay::startCore() {
   // Currently, we just check whether we're in the console session, and
   //   fail if not
   if (!inConsoleSession())
-    throw rdr::Exception("Console is not session zero - oreconnect to restore Console sessin");
+    throw core::Exception("Console is not session zero - oreconnect to restore Console sessin");
   
   // Switch to the current input desktop
   if (rfb::win32::desktopChangeRequired()) {
     if (!rfb::win32::changeDesktop())
-      throw rdr::Exception("unable to switch into input desktop");
+      throw core::Exception("unable to switch into input desktop");
   }
 
   // Initialise the change tracker and clipper
@@ -198,10 +198,10 @@ void SDisplay::startCore() {
       else
         core = new SDisplayCorePolling(this, &updates);
       core->setScreenRect(screenRect);
-    } catch (rdr::Exception& e) {
+    } catch (core::Exception& e) {
       delete core; core = nullptr;
       if (tryMethod == 0)
-        throw rdr::Exception("unable to access desktop");
+        throw core::Exception("unable to access desktop");
       tryMethod--;
       vlog.error("%s", e.str());
     }
@@ -288,7 +288,7 @@ void SDisplay::restartCore() {
     // Start a new Core if possible
     startCore();
     vlog.info("restarted");
-  } catch (rdr::Exception& e) {
+  } catch (core::Exception& e) {
     // If startCore() fails then we MUST disconnect all clients,
     // to cause the server to stop() the desktop.
     // Otherwise, the SDesktop is in an inconsistent state
@@ -401,7 +401,7 @@ SDisplay::processEvent(HANDLE event) {
       // - Flush any updates from the core
       try {
         core->flushUpdates();
-      } catch (rdr::Exception& e) {
+      } catch (core::Exception& e) {
         vlog.error("%s", e.str());
         restartCore();
         return;
@@ -436,7 +436,7 @@ SDisplay::processEvent(HANDLE event) {
     }
     return;
   }
-  throw rdr::Exception("No such event");
+  throw core::Exception("No such event");
 }
 
 
