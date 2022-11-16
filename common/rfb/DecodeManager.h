@@ -23,8 +23,10 @@
 
 #include <os/Thread.h>
 
-#include <rfb/Region.h>
+#include <core/Region.h>
 #include <rfb/encodings.h>
+
+namespace core { struct Rect; }
 
 namespace os {
   class Condition;
@@ -40,14 +42,13 @@ namespace rfb {
   class CConnection;
   class Decoder;
   class ModifiablePixelBuffer;
-  struct Rect;
 
   class DecodeManager {
   public:
     DecodeManager(CConnection *conn);
     ~DecodeManager();
 
-    bool decodeRect(const Rect& r, int encoding,
+    bool decodeRect(const core::Rect& r, int encoding,
                     ModifiablePixelBuffer* pb);
 
     void flush();
@@ -73,13 +74,13 @@ namespace rfb {
 
     struct QueueEntry {
       bool active;
-      Rect rect;
+      core::Rect rect;
       int encoding;
       Decoder* decoder;
       const ServerParams* server;
       ModifiablePixelBuffer* pb;
       rdr::MemOutStream* bufferStream;
-      Region affectedRegion;
+      core::Region affectedRegion;
     };
 
     std::list<rdr::MemOutStream*> freeBuffers;

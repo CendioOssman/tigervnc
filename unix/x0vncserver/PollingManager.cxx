@@ -35,6 +35,7 @@
 
 #include <x0vncserver/PollingManager.h>
 
+using namespace core;
 using namespace rfb;
 
 static LogWriter vlog("PollingMgr");

@@ -79,7 +79,7 @@ void SMsgHandler::keyEvent(uint32_t /*keysym*/, uint32_t /*keycode*/,
 {
 }
 
-void SMsgHandler::pointerEvent(const Point& /*pos*/,
+void SMsgHandler::pointerEvent(const core::Point& /*pos*/,
                                uint8_t /*buttonMask*/)
 {
 }

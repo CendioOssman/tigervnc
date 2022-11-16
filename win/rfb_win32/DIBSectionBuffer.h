@@ -27,7 +27,7 @@
 
 #include <windows.h>
 #include <rfb/PixelBuffer.h>
-#include <rfb/Region.h>
+#include <core/Region.h>
 #include <rfb/Exception.h>
 
 namespace rfb {

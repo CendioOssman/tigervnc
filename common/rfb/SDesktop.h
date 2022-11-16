@@ -97,7 +97,7 @@ namespace rfb {
 
     // pointerEvent() is called whenever a client sends an event that
     // the pointer moved, or a button was pressed or released.
-    virtual void pointerEvent(const Point& /*pos*/,
+    virtual void pointerEvent(const core::Point& /*pos*/,
                               uint8_t /*buttonMask*/) {};
 
     // handleClipboardRequest() is called whenever a client requests
@@ -128,7 +128,7 @@ namespace rfb {
   //     a plain black desktop of the specified format.
   class SStaticDesktop : public SDesktop {
   public:
-    SStaticDesktop(const Point& size)
+    SStaticDesktop(const core::Point& size)
       : server(nullptr), buffer(nullptr)
     {
       PixelFormat pf;
@@ -137,7 +137,7 @@ namespace rfb {
       if (buffer)
         buffer->fillRect(buffer->getRect(), black);
     }
-    SStaticDesktop(const Point& size, const PixelFormat& pf)
+    SStaticDesktop(const core::Point& size, const PixelFormat& pf)
       : buffer(nullptr)
     {
       const uint8_t black[4] = { 0, 0, 0, 0 };

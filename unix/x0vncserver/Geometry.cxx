@@ -29,6 +29,7 @@
 #include <rfb/LogWriter.h>
 #include <x0vncserver/Geometry.h>
 
+using namespace core;
 using namespace rfb;
 
 static LogWriter vlog("Geometry");

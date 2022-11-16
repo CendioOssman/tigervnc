@@ -27,7 +27,7 @@
 #include <stdint.h>
 
 #include <rfb/ServerParams.h>
-#include <rfb/Rect.h>
+#include <core/Rect.h>
 #include <rfb/ScreenSet.h>
 
 namespace rdr { class InStream; }
@@ -50,9 +50,10 @@ namespace rfb {
     virtual void setExtendedDesktopSize(unsigned reason, unsigned result,
                                         int w, int h,
                                         const ScreenSet& layout);
-    virtual void setCursor(int width, int height, const Point& hotspot,
+    virtual void setCursor(int width, int height, const
+                           core::Point& hotspot,
                            const uint8_t* data) = 0;
-    virtual void setCursorPos(const Point& pos) = 0;
+    virtual void setCursorPos(const core::Point& pos) = 0;
     virtual void setName(const char* name);
     virtual void fence(uint32_t flags, unsigned len, const uint8_t data[]);
     virtual void endOfContinuousUpdates();
@@ -61,12 +62,12 @@ namespace rfb {
                             const PixelFormat& pf,
                             const char* name) = 0;
 
-    virtual bool readAndDecodeRect(const Rect& r, int encoding,
+    virtual bool readAndDecodeRect(const core::Rect& r, int encoding,
                                    ModifiablePixelBuffer* pb) = 0;
 
     virtual void framebufferUpdateStart();
     virtual void framebufferUpdateEnd();
-    virtual bool dataRect(const Rect& r, int encoding) = 0;
+    virtual bool dataRect(const core::Rect& r, int encoding) = 0;
 
     virtual void setColourMapEntries(int firstColour, int nColours,
 				     uint16_t* rgbs) = 0;

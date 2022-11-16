@@ -22,7 +22,7 @@
 
 #include <stdint.h>
 
-#include <rfb/Rect.h>
+#include <core/Rect.h>
 
 namespace rfb {
   class SConnection;

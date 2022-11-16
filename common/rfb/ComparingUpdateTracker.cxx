@@ -50,8 +50,8 @@ ComparingUpdateTracker::~ComparingUpdateTracker()
 
 bool ComparingUpdateTracker::compare()
 {
-  std::vector<Rect> rects;
-  std::vector<Rect>::iterator i;
+  std::vector<core::Rect> rects;
+  std::vector<core::Rect>::iterator i;
 
   if (!enabled)
     return false;
@@ -62,7 +62,7 @@ bool ComparingUpdateTracker::compare()
     oldFb.setSize(fb->width(), fb->height());
 
     for (int y=0; y<fb->height(); y+=BLOCK_SIZE) {
-      Rect pos(0, y, fb->width(), __rfbmin(fb->height(), y+BLOCK_SIZE));
+      core::Rect pos(0, y, fb->width(), __rfbmin(fb->height(), y+BLOCK_SIZE));
       int srcStride;
       const uint8_t* srcData = fb->getBuffer(pos, &srcStride);
       oldFb.imageRect(pos, srcData, srcStride);
@@ -79,7 +79,7 @@ bool ComparingUpdateTracker::compare()
 
   changed.get_rects(&rects);
 
-  Region newChanged;
+  core::Region newChanged;
   for (i = rects.begin(); i != rects.end(); i++)
     compareRect(*i, &newChanged);
 
@@ -111,10 +111,10 @@ void ComparingUpdateTracker::disable()
   firstCompare = true;
 }
 
-void ComparingUpdateTracker::compareRect(const Rect& r, Region* newChanged)
+void ComparingUpdateTracker::compareRect(const core::Rect& r, core::Region* newChanged)
 {
   if (!r.enclosed_by(fb->getRect())) {
-    Rect safe;
+    core::Rect safe;
     // Crop the rect and try again
     safe = r.intersect(fb->getRect());
     if (!safe.is_empty())
@@ -134,7 +134,7 @@ void ComparingUpdateTracker::compareRect(const Rect& r, Region* newChanged)
   for (int blockTop = r.tl.y; blockTop < r.br.y; blockTop += BLOCK_SIZE)
   {
     // Get a strip of the source buffer
-    Rect pos(r.tl.x, blockTop, r.br.x, __rfbmin(r.br.y, blockTop+BLOCK_SIZE));
+    core::Rect pos(r.tl.x, blockTop, r.br.x, __rfbmin(r.br.y, blockTop+BLOCK_SIZE));
     int fbStride;
     const uint8_t* newBlockPtr = fb->getBuffer(pos, &fbStride);
     int newStrideBytes = fbStride * bytesPerPixel;
@@ -224,7 +224,7 @@ void ComparingUpdateTracker::compareRect(const Rect& r, Region* newChanged)
         endOfChangeRight:
 
           // Block change extends from (changeLeft, y) to (changeRight, y + changeHeight)
-          newChanged->assign_union(Region(Rect(changeLeft, y, changeRight, y + changeHeight)));
+          newChanged->assign_union(core::Region(core::Rect(changeLeft, y, changeRight, y + changeHeight)));
 
           // Copy the change from fb to oldFb to allow future changes to be identified
           for (int row = 0; row < changeHeight; row++)

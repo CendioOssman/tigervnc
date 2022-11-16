@@ -199,7 +199,7 @@ EmulateMB::EmulateMB()
 {
 }
 
-void EmulateMB::filterPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
+void EmulateMB::filterPointerEvent(const core::Point& pos, uint8_t buttonMask)
 {
   int btstate;
   int action1, action2;
@@ -312,7 +312,7 @@ void EmulateMB::handleTimeout(rfb::Timer *t)
   state = stateTab[state][4][2];
 }
 
-void EmulateMB::sendAction(const rfb::Point& pos, uint8_t buttonMask, int action)
+void EmulateMB::sendAction(const core::Point& pos, uint8_t buttonMask, int action)
 {
   assert(action != 0);
 

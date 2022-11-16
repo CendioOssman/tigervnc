@@ -33,7 +33,7 @@
 #include <rfb/clipboardTypes.h>
 #include <rfb/Exception.h>
 #include <rfb/PixelFormat.h>
-#include <rfb/Rect.h>
+#include <core/Rect.h>
 #include <rfb/ServerParams.h>
 #include <rfb/CMsgWriter.h>
 #include <rfb/util.h>
@@ -101,7 +101,7 @@ void CMsgWriter::writeSetDesktopSize(int width, int height,
   endMsg();
 }
 
-void CMsgWriter::writeFramebufferUpdateRequest(const Rect& r, bool incremental)
+void CMsgWriter::writeFramebufferUpdateRequest(const core::Rect& r, bool incremental)
 {
   startMsg(msgTypeFramebufferUpdateRequest);
   os->writeU8(incremental);
@@ -173,9 +173,9 @@ void CMsgWriter::writeKeyEvent(uint32_t keysym, uint32_t keycode, bool down)
 }
 
 
-void CMsgWriter::writePointerEvent(const Point& pos, uint8_t buttonMask)
+void CMsgWriter::writePointerEvent(const core::Point& pos, uint8_t buttonMask)
 {
-  Point p(pos);
+  core::Point p(pos);
   if (p.x < 0) p.x = 0;
   if (p.y < 0) p.y = 0;
   if (p.x >= server->width()) p.x = server->width() - 1;
