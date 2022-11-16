@@ -28,8 +28,10 @@
 #include <rfb_win32/Handle.h>
 #include <rdr/HexOutStream.h>
 #include <rdr/Exception.h>
-#include <rfb/util.h>
+#include <core/util.h>
 #include <stdio.h>
+
+using namespace core;
 
 namespace rfb {
 namespace win32 {

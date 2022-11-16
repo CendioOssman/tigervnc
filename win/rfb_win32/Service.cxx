@@ -30,9 +30,10 @@
 #include <logmessages/messages.h>
 #include <rdr/Exception.h>
 #include <rfb/LogWriter.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 
+using namespace core;
 using namespace rdr;
 using namespace rfb;
 using namespace win32;

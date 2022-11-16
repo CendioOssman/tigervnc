@@ -39,7 +39,7 @@
 #include <rfb/LogWriter.h>
 #include <rfb/Exception.h>
 #include <rfb/UserMsgBox.h>
-#include <rfb/util.h>
+#include <core/util.h>
 #include <rdr/AESInStream.h>
 #include <rdr/AESOutStream.h>
 #include <os/os.h>
@@ -210,7 +210,7 @@ void CSecurityRSAAES::verifyServer()
   sha1_update(&ctx, serverKey.size, serverKeyE);
   sha1_digest(&ctx, sizeof(f), f);
   const char *title = "Server key fingerprint";
-  std::string text = format(
+  std::string text = core::format(
     "The server has provided the following identifying information:\n"
     "Fingerprint: %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x\n"
     "Please verify that the information is correct and press \"Yes\". "

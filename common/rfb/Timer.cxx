@@ -29,7 +29,7 @@
 #include <algorithm>
 
 #include <rfb/Timer.h>
-#include <rfb/util.h>
+#include <core/util.h>
 #include <rfb/LogWriter.h>
 
 using namespace rfb;
@@ -134,7 +134,7 @@ void Timer::repeat(int timeoutMs_) {
     stop();
   }
 
-  if (msBetween(&lastDueTime, &dueTime) != 0)
+  if (core::msBetween(&lastDueTime, &dueTime) != 0)
     vlog.error("Timer incorrectly modified whilst repeating");
 
   if (timeoutMs_ != -1)

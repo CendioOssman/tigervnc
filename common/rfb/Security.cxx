@@ -27,7 +27,7 @@
 
 #include <rfb/LogWriter.h>
 #include <rfb/Security.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 using namespace rfb;
 using namespace std;
@@ -185,7 +185,7 @@ std::list<uint32_t> rfb::parseSecTypes(const char* types_)
 {
   std::list<uint32_t> result;
   std::vector<std::string> types;
-  types = split(types_, ',');
+  types = core::split(types_, ',');
   for (size_t i = 0; i < types.size(); i++) {
     uint32_t typeNum = secTypeNum(types[i].c_str());
     if (typeNum != secTypeInvalid)

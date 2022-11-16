@@ -32,7 +32,7 @@
 
 #include <os/Mutex.h>
 
-#include <rfb/util.h>
+#include <core/util.h>
 #include <rfb/Configuration.h>
 #include <rfb/LogWriter.h>
 #include <rfb/Exception.h>
@@ -429,7 +429,7 @@ BinaryParameter::~BinaryParameter() {
 
 bool BinaryParameter::setParam(const char* v) {
   if (immutable) return true;
-  std::vector<uint8_t> newValue = hexToBin(v, strlen(v));
+  std::vector<uint8_t> newValue = core::hexToBin(v, strlen(v));
   if (newValue.empty() && strlen(v) > 0)
     return false;
   setParam(newValue.data(), newValue.size());
@@ -452,12 +452,12 @@ void BinaryParameter::setParam(const uint8_t* v, size_t len) {
 }
 
 std::string BinaryParameter::getDefaultStr() const {
-  return binToHex(def_value, def_length);
+  return core::binToHex(def_value, def_length);
 }
 
 std::string BinaryParameter::getValueStr() const {
   LOCK_CONFIG;
-  return binToHex(value, length);
+  return core::binToHex(value, length);
 }
 
 std::vector<uint8_t> BinaryParameter::getData() const {

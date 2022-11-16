@@ -24,7 +24,7 @@
 
 #include <winvnc/VNCServerService.h>
 #include <rfb/LogWriter.h>
-#include <rfb/util.h>
+#include <core/util.h>
 #include <rfb_win32/TsSessions.h>
 #include <rfb_win32/ModuleFileName.h>
 #include <windows.h>
@@ -32,6 +32,7 @@
 #include <tlhelp32.h>
 
 using namespace winvnc;
+using namespace core;
 using namespace rfb;
 using namespace win32;
 
