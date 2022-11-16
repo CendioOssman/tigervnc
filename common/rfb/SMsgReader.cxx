@@ -201,7 +201,7 @@ bool SMsgReader::readFramebufferUpdateRequest()
   int y = is->readU16();
   int w = is->readU16();
   int h = is->readU16();
-  handler->framebufferUpdateRequest(Rect(x, y, x+w, y+h), inc);
+  handler->framebufferUpdateRequest(core::Rect(x, y, x+w, y+h), inc);
   return true;
 }
 
@@ -277,7 +277,7 @@ bool SMsgReader::readPointerEvent()
   int mask = is->readU8();
   int x = is->readU16();
   int y = is->readU16();
-  handler->pointerEvent(Point(x, y), mask);
+  handler->pointerEvent(core::Point(x, y), mask);
   return true;
 }
 

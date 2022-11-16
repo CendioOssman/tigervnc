@@ -23,7 +23,7 @@
 #ifndef __GEOMETRY_H__
 #define __GEOMETRY_H__
 
-#include <rfb/Rect.h>
+#include <core/Rect.h>
 #include <rfb/Configuration.h>
 
 class Geometry
@@ -42,18 +42,18 @@ public:
   int offsetTop() const { return m_rect.tl.y; }
 
   // Return the same information as a Rect structure.
-  const rfb::Rect& getRect() const { return m_rect; }
+  const core::Rect& getRect() const { return m_rect; }
 
 protected:
   // Parse a string, extract size and coordinates,
   // and return that rectangle clipped to m_rect.
-  rfb::Rect parseString(const char *arg) const;
+  core::Rect parseString(const char *arg) const;
 
   static rfb::StringParameter m_geometryParam;
 
   int m_fullWidth;
   int m_fullHeight;
-  rfb::Rect m_rect;
+  core::Rect m_rect;
 };
 
 #endif // __GEOMETRY_H__

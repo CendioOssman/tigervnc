@@ -48,7 +48,7 @@ using namespace rfb;
 
 static LogWriter vlog("VNCSConnST");
 
-static Cursor emptyCursor(0, 0, Point(0, 0), nullptr);
+static Cursor emptyCursor(0, 0, core::Point(0, 0), nullptr);
 
 VNCSConnectionST::VNCSConnectionST(VNCServerST* server_, network::Socket *s,
                                    bool reverse, AccessRights ar)
@@ -228,10 +228,10 @@ void VNCSConnectionST::pixelBufferChange()
       //updates.intersect(server->pb->getRect());
       //
       //if (server->pb->width() > client.width())
-      //  updates.add_changed(Rect(client.width(), 0, server->pb->width(),
+      //  updates.add_changed(core::Rect(client.width(), 0, server->pb->width(),
       //                           server->pb->height()));
       //if (server->pb->height() > client.height())
-      //  updates.add_changed(Rect(0, client.height(), client.width(),
+      //  updates.add_changed(core::Rect(0, client.height(), client.width(),
       //                           server->pb->height()));
 
       damagedCursorRegion.assign_intersect(server->getPixelBuffer()->getRect());
@@ -248,7 +248,7 @@ void VNCSConnectionST::pixelBufferChange()
       }
 
       // Drop any lossy tracking that is now outside the framebuffer
-      encodeManager.pruneLosslessRefresh(Region(server->getPixelBuffer()->getRect()));
+      encodeManager.pruneLosslessRefresh(core::Region(server->getPixelBuffer()->getRect()));
     }
     // Just update the whole screen at the moment because we're too lazy to
     // work out what's actually changed.
@@ -477,7 +477,7 @@ void VNCSConnectionST::setPixelFormat(const PixelFormat& pf)
   setCursor();
 }
 
-void VNCSConnectionST::pointerEvent(const Point& pos, int buttonMask)
+void VNCSConnectionST::pointerEvent(const core::Point& pos, int buttonMask)
 {
   if (rfb::Server::idleTimeout)
     idleTimer.start(secsToMillis(rfb::Server::idleTimeout));
@@ -617,27 +617,27 @@ void VNCSConnectionST::keyEvent(uint32_t keysym, uint32_t keycode, bool down) {
   server->keyEvent(keysym, keycode, down);
 }
 
-void VNCSConnectionST::framebufferUpdateRequest(const Rect& r,bool incremental)
+void VNCSConnectionST::framebufferUpdateRequest(const core::Rect& r,bool incremental)
 {
-  Rect safeRect;
+  core::Rect safeRect;
 
   if (!accessCheck(AccessView)) return;
 
   SConnection::framebufferUpdateRequest(r, incremental);
 
   // Check that the client isn't sending crappy requests
-  if (!r.enclosed_by(Rect(0, 0, client.width(), client.height()))) {
+  if (!r.enclosed_by(core::Rect(0, 0, client.width(), client.height()))) {
     vlog.error("FramebufferUpdateRequest %dx%d at %d,%d exceeds framebuffer %dx%d",
                r.width(), r.height(), r.tl.x, r.tl.y,
                client.width(), client.height());
-    safeRect = r.intersect(Rect(0, 0, client.width(), client.height()));
+    safeRect = r.intersect(core::Rect(0, 0, client.width(), client.height()));
   } else {
     safeRect = r;
   }
 
   // Just update the requested region.
   // Framebuffer update will be sent a bit later, see processMessages().
-  Region reqRgn(safeRect);
+  core::Region reqRgn(safeRect);
   if (!incremental || !continuousUpdates)
     requested.assign_union(reqRgn);
 
@@ -728,7 +728,7 @@ void VNCSConnectionST::fence(uint32_t flags, unsigned len, const uint8_t data[])
 void VNCSConnectionST::enableContinuousUpdates(bool enable,
                                                int x, int y, int w, int h)
 {
-  Rect rect;
+  core::Rect rect;
 
   if (!client.supportsFence() || !client.supportsContinuousUpdates())
     throw Exception("Client tried to enable continuous updates when not allowed");
@@ -933,7 +933,7 @@ void VNCSConnectionST::writeNoDataUpdate()
 
 void VNCSConnectionST::writeDataUpdate()
 {
-  Region req;
+  core::Region req;
   UpdateInfo ui;
   bool needNewUpdateInfo;
   const RenderedCursor *cursor;
@@ -958,7 +958,7 @@ void VNCSConnectionST::writeDataUpdate()
   // destination will be wrong, so add it to the changed region.
 
   if (!ui.copied.is_empty() && !damagedCursorRegion.is_empty()) {
-    Region bogusCopiedCursor;
+    core::Region bogusCopiedCursor;
 
     bogusCopiedCursor = damagedCursorRegion;
     bogusCopiedCursor.translate(ui.copy_delta);
@@ -1005,7 +1005,7 @@ void VNCSConnectionST::writeDataUpdate()
 
   cursor = nullptr;
   if (needRenderedCursor()) {
-    Rect renderedCursorRect;
+    core::Rect renderedCursorRect;
 
     cursor = server->getRenderedCursor();
     renderedCursorRect = cursor->getEffectiveRect();
@@ -1045,7 +1045,7 @@ void VNCSConnectionST::writeDataUpdate()
 
 void VNCSConnectionST::writeLosslessRefresh()
 {
-  Region req, pending;
+  core::Region req, pending;
   const RenderedCursor *cursor;
 
   int nextRefresh, nextUpdate;

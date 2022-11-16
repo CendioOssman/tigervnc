@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 
-#include <rfb/Rect.h>
+#include <core/Rect.h>
 
 namespace rfb {
 
@@ -34,7 +34,7 @@ namespace rfb {
     virtual ~InputHandler() {}
     virtual void keyEvent(uint32_t /*keysym*/, uint32_t /*keycode*/,
                           bool /*down*/) { }
-    virtual void pointerEvent(const Point& /*pos*/,
+    virtual void pointerEvent(const core::Point& /*pos*/,
                               int /*buttonMask*/) { }
     virtual void clientCutText(const char* /*str*/) { }
   };

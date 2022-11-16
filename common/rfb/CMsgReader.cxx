@@ -466,7 +466,7 @@ bool CMsgReader::readFramebufferUpdate()
   return true;
 }
 
-bool CMsgReader::readRect(const Rect& r, int encoding)
+bool CMsgReader::readRect(const core::Rect& r, int encoding)
 {
   if ((r.br.x > handler->server.width()) ||
       (r.br.y > handler->server.height())) {
@@ -482,7 +482,7 @@ bool CMsgReader::readRect(const Rect& r, int encoding)
   return handler->dataRect(r, encoding);
 }
 
-bool CMsgReader::readSetXCursor(int width, int height, const Point& hotspot)
+bool CMsgReader::readSetXCursor(int width, int height, const core::Point& hotspot)
 {
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
@@ -546,7 +546,7 @@ bool CMsgReader::readSetXCursor(int width, int height, const Point& hotspot)
   return true;
 }
 
-bool CMsgReader::readSetCursor(int width, int height, const Point& hotspot)
+bool CMsgReader::readSetCursor(int width, int height, const core::Point& hotspot)
 {
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
@@ -592,7 +592,7 @@ bool CMsgReader::readSetCursor(int width, int height, const Point& hotspot)
   return true;
 }
 
-bool CMsgReader::readSetCursorWithAlpha(int width, int height, const Point& hotspot)
+bool CMsgReader::readSetCursorWithAlpha(int width, int height, const core::Point& hotspot)
 {
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
@@ -653,7 +653,7 @@ bool CMsgReader::readSetCursorWithAlpha(int width, int height, const Point& hots
   return true;
 }
 
-bool CMsgReader::readSetVMwareCursor(int width, int height, const Point& hotspot)
+bool CMsgReader::readSetVMwareCursor(int width, int height, const core::Point& hotspot)
 {
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");

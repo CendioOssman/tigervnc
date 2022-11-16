@@ -26,10 +26,11 @@
 #endif
 
 #include <vector>
-#include <rfb/Region.h>
+#include <core/Region.h>
 #include <X11/Xlib.h>
 #include <x0vncserver/XPixelBuffer.h>
 
+using namespace core;
 using namespace rfb;
 
 XPixelBuffer::XPixelBuffer(Display *dpy, ImageFactory &factory,
@@ -72,7 +73,7 @@ XPixelBuffer::~XPixelBuffer()
 }
 
 void
-XPixelBuffer::grabRegion(const rfb::Region& region)
+XPixelBuffer::grabRegion(const core::Region& region)
 {
   std::vector<Rect> rects;
   std::vector<Rect>::const_iterator i;

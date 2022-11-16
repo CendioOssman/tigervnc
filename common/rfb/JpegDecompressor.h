@@ -27,7 +27,7 @@
 #define __RFB_JPEGDECOMPRESSOR_H__
 
 #include <rfb/PixelFormat.h>
-#include <rfb/Rect.h>
+#include <core/Rect.h>
 
 struct jpeg_decompress_struct;
 
@@ -43,7 +43,7 @@ namespace rfb {
     JpegDecompressor(void);
     virtual ~JpegDecompressor();
 
-    void decompress(const uint8_t *, int, uint8_t *, int, const Rect&,
+    void decompress(const uint8_t *, int, uint8_t *, int, const core::Rect&,
                     const PixelFormat&);
 
   private:
