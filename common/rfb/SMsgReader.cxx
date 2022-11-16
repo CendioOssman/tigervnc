@@ -36,7 +36,7 @@
 #include <rfb/SMsgReader.h>
 #include <rfb/Configuration.h>
 #include <rfb/LogWriter.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 using namespace rfb;
 
@@ -317,8 +317,8 @@ bool SMsgReader::readClientCutText()
   std::vector<char> ca(len);
   is->readBytes((uint8_t*)ca.data(), len);
 
-  std::string utf8(latin1ToUTF8(ca.data(), ca.size()));
-  std::string filtered(convertLF(utf8.data(), utf8.size()));
+  std::string utf8(core::latin1ToUTF8(ca.data(), ca.size()));
+  std::string filtered(core::convertLF(utf8.data(), utf8.size()));
 
   handler->clientCutText(filtered.c_str());
 

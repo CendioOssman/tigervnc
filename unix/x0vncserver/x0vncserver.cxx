@@ -54,6 +54,7 @@
 
 extern char buildtime[];
 
+using namespace core;
 using namespace rfb;
 using namespace network;
 

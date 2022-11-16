@@ -29,7 +29,7 @@
 #include <rdr/HexInStream.h>
 #include <stdlib.h>
 #include <rfb/LogWriter.h>
-#include <rfb/util.h>
+#include <core/util.h>
 
 // These flags are required to control access control inheritance,
 // but are not defined by VC6's headers.  These definitions comes
@@ -42,6 +42,7 @@
 #endif
 
 
+using namespace core;
 using namespace rfb;
 using namespace rfb::win32;
 

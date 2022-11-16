@@ -24,7 +24,7 @@
 #include <rfb/SSecurityPlain.h>
 #include <rfb/SConnection.h>
 #include <rfb/Exception.h>
-#include <rfb/util.h>
+#include <core/util.h>
 #include <rdr/InStream.h>
 #if !defined(WIN32) && !defined(__APPLE__)
 #include <rfb/UnixPasswordValidator.h>
@@ -50,7 +50,7 @@ bool PasswordValidator::validUser(const char* username)
 {
   std::vector<std::string> users;
 
-  users = split(plainUsers, ',');
+  users = core::split(plainUsers, ',');
 
   for (size_t i = 0; i < users.size(); i++) {
     if (users[i] == "*")
