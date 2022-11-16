@@ -23,7 +23,7 @@
 #include <config.h>
 #endif
 
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <rdr/TLSException.h>
 #include <rdr/TLSInStream.h>
 #include <rfb/LogWriter.h>
@@ -56,15 +56,15 @@ ssize_t TLSInStream::pull(gnutls_transport_ptr_t str, void* data, size_t size)
     in->readBytes((uint8_t*)data, size);
   } catch (EndOfStream&) {
     return 0;
-  } catch (SystemException &e) {
+  } catch (core::SystemException &e) {
     vlog.error("Failure reading TLS data: %s", e.str());
     gnutls_transport_set_errno(self->session, e.err);
-    self->saved_exception = new SystemException(e);
+    self->saved_exception = new core::SystemException(e);
     return -1;
-  } catch (Exception& e) {
+  } catch (core::Exception& e) {
     vlog.error("Failure reading TLS data: %s", e.str());
     gnutls_transport_set_errno(self->session, EINVAL);
-    self->saved_exception = new Exception(e);
+    self->saved_exception = new core::Exception(e);
     return -1;
   }
 

@@ -45,6 +45,8 @@
 #include <rdr/InStream.h>
 #include <rdr/OutStream.h>
 
+using core::Exception;
+
 using namespace rfb;
 
 static LogWriter vlog("CConnection");
@@ -387,7 +389,7 @@ void CConnection::close()
    */
   try {
     decoder.flush();
-  } catch (rdr::Exception& e) {
+  } catch (Exception& e) {
     vlog.error("%s", e.str());
   }
 

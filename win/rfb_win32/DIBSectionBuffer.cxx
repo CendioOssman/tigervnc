@@ -26,6 +26,7 @@
 #include <rfb_win32/BitmapInfo.h>
 #include <rfb/LogWriter.h>
 
+using namespace core;
 using namespace rfb;
 using namespace win32;
 
@@ -56,7 +57,7 @@ void DIBSectionBuffer::initBuffer(const PixelFormat& pf, int w, int h) {
   uint8_t* new_data = nullptr;
 
   if (!pf.trueColour)
-    throw rfb::Exception("palette format not supported");
+    throw core::Exception("palette format not supported");
 
   format = pf;
 
@@ -85,7 +86,7 @@ void DIBSectionBuffer::initBuffer(const PixelFormat& pf, int w, int h) {
 
     if (!new_bitmap) {
       int err = GetLastError();
-      throw rdr::SystemException("unable to create DIB section", err);
+      throw core::SystemException("unable to create DIB section", err);
     }
 
     vlog.debug("recreateBuffer()");
@@ -128,7 +129,7 @@ void DIBSectionBuffer::initBuffer(const PixelFormat& pf, int w, int h) {
     // Determine the *actual* DIBSection format
     DIBSECTION ds;
     if (!GetObject(bitmap, sizeof(ds), &ds))
-      throw rdr::SystemException("GetObject", GetLastError());
+      throw core::SystemException("GetObject", GetLastError());
 
     // Correct the "stride" of the DIB
     // *** This code DWORD aligns each row - is that right???

@@ -27,7 +27,7 @@
 #include <rfb_win32/MonitorInfo.h>
 #include <rfb_win32/Handle.h>
 #include <rdr/HexOutStream.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <core/util.h>
 #include <stdio.h>
 
@@ -48,19 +48,19 @@ FileVersionInfo::FileVersionInfo(const char* filename) {
   {
     Handle file(CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
 	  if (file.h == INVALID_HANDLE_VALUE)
-      throw rdr::SystemException("Failed to open file", GetLastError());
+      throw core::SystemException("Failed to open file", GetLastError());
   }
 
   // Get version info size
   DWORD handle;
   int size = GetFileVersionInfoSize((char*)filename, &handle);
   if (!size)
-    throw rdr::SystemException("GetVersionInfoSize failed", GetLastError());
+    throw core::SystemException("GetVersionInfoSize failed", GetLastError());
 
   // Get version info
   buf = new char[size];
   if (!GetFileVersionInfo((char*)filename, handle, size, buf))
-    throw rdr::SystemException("GetVersionInfo failed", GetLastError());
+    throw core::SystemException("GetVersionInfo failed", GetLastError());
 }
 
 FileVersionInfo::~FileVersionInfo() {
@@ -83,7 +83,7 @@ const char* FileVersionInfo::getVerString(const char* name, DWORD langId) {
   UINT length = 0;
   if (!VerQueryValue(buf, infoName.c_str(), (void**)&buffer, &length)) {
     printf("unable to find %s version string", infoName.c_str());
-    throw rdr::Exception("VerQueryValue failed");
+    throw core::Exception("VerQueryValue failed");
   }
   return buffer;
 }

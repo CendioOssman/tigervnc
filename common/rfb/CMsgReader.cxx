@@ -32,10 +32,12 @@
 #include <rfb/msgTypes.h>
 #include <rfb/clipboardTypes.h>
 #include <core/util.h>
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/LogWriter.h>
 #include <rfb/CMsgHandler.h>
 #include <rfb/CMsgReader.h>
+
+using core::Exception;
 
 static rfb::LogWriter vlog("CMsgReader");
 

@@ -24,7 +24,7 @@
 #include <assert.h>
 
 #include <rdr/BufferedInStream.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 
 using namespace rdr;
 
@@ -63,7 +63,7 @@ void BufferedInStream::ensureSpace(size_t needed)
     uint8_t* newBuffer;
 
     if (needed > MAX_BUF_SIZE)
-      throw Exception("BufferedInStream overrun: requested size of "
+      throw core::Exception("BufferedInStream overrun: requested size of "
                       "%lu bytes exceeds maximum of %lu bytes",
                       (long unsigned)needed, (long unsigned)MAX_BUF_SIZE);
 

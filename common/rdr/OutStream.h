@@ -27,7 +27,7 @@
 #include <stdint.h>
 #include <string.h> // for memcpy
 
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <rdr/InStream.h>
 
 namespace rdr {
@@ -129,7 +129,7 @@ namespace rdr {
 
     inline uint8_t* getptr(size_t length) { check(length); return ptr; }
     inline void setptr(size_t length) { if (length > avail())
-                                          throw Exception("Output stream overflow");
+                                          throw core::Exception("Output stream overflow");
                                         ptr += length; }
 
   private:

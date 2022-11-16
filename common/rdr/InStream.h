@@ -28,7 +28,7 @@
 #include <stdint.h>
 #include <string.h> // for memcpy
 
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 
 // Check that callers are using InStream properly,
 // useful when writing new protocol handling
@@ -37,6 +37,10 @@
 #endif
 
 namespace rdr {
+
+  struct EndOfStream : public core::Exception {
+    EndOfStream() : Exception("End of stream") {}
+  };
 
   class InStream {
 
@@ -101,21 +105,21 @@ namespace rdr {
     inline void setRestorePoint() {
 #ifdef RFB_INSTREAM_CHECK
       if (restorePoint != nullptr)
-        throw Exception("Nested use of input stream restore point");
+        throw core::Exception("Nested use of input stream restore point");
 #endif
       restorePoint = ptr;
     }
     inline void clearRestorePoint() {
 #ifdef RFB_INSTREAM_CHECK
       if (restorePoint == nullptr)
-        throw Exception("Incorrect clearing of input stream restore point");
+        throw core::Exception("Incorrect clearing of input stream restore point");
 #endif
       restorePoint = nullptr;
     }
     inline void gotoRestorePoint() {
 #ifdef RFB_INSTREAM_CHECK
       if (restorePoint == nullptr)
-        throw Exception("Incorrect activation of input stream restore point");
+        throw core::Exception("Incorrect activation of input stream restore point");
 #endif
       ptr = restorePoint;
       clearRestorePoint();
@@ -176,7 +180,7 @@ namespace rdr {
     inline const uint8_t* getptr(size_t length) { check(length);
                                                   return ptr; }
     inline void setptr(size_t length) { if (length > avail())
-                                          throw Exception("Input stream overflow");
+                                          throw core::Exception("Input stream overflow");
                                         skip(length); }
 
   private:
@@ -189,11 +193,11 @@ namespace rdr {
     inline void check(size_t bytes) {
 #ifdef RFB_INSTREAM_CHECK
       if (bytes > checkedBytes)
-        throw Exception("Input stream used without underrun check");
+        throw core::Exception("Input stream used without underrun check");
       checkedBytes -= bytes;
 #endif
       if (bytes > (size_t)(end - ptr))
-        throw Exception("InStream buffer underrun");
+        throw core::Exception("InStream buffer underrun");
     }
 
     // overrun() is implemented by a derived class to cope with buffer overrun.

@@ -34,7 +34,7 @@
 #include <FL/Fl_Return_Button.H>
 #include <FL/Fl_Pixmap.H>
 
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/obfuscate.h>
 
 #include "fltk/layout.h"
@@ -96,7 +96,7 @@ void UserDialog::getUserPasswd(bool secure_, std::string* user,
 
     fp = fopen(passwordFileName, "rb");
     if (!fp)
-      throw rfb::Exception(_("Opening password file failed"));
+      throw core::Exception(_("Opening password file failed"));
 
     obfPwd.resize(fread(obfPwd.data(), 1, obfPwd.size(), fp));
     fclose(fp);
@@ -204,7 +204,7 @@ void UserDialog::getUserPasswd(bool secure_, std::string* user,
   delete win;
 
   if (ret_val != 0)
-    throw rfb::Exception(_("Authentication cancelled"));
+    throw core::Exception(_("Authentication cancelled"));
 }
 
 bool UserDialog::showMsgBox(int flags, const char* title, const char* text)

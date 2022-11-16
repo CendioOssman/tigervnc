@@ -21,11 +21,11 @@
 #ifndef __RDR_TLSEXCEPTION_H__
 #define __RDR_TLSEXCEPTION_H__
 
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 
 namespace rdr {
 
-  struct TLSException : public Exception {
+  struct TLSException : public core::Exception {
     int err;
     TLSException(const char* s, int err_);
   };

@@ -23,7 +23,7 @@
 #endif
 
 #include <rdr/BufferedOutStream.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 
 
 using namespace rdr;
@@ -138,7 +138,7 @@ void BufferedOutStream::overrun(size_t needed)
   // We'll need to allocate more buffer space...
 
   if (totalNeeded > MAX_BUF_SIZE)
-    throw Exception("BufferedOutStream overrun: requested size of "
+    throw core::Exception("BufferedOutStream overrun: requested size of "
                     "%lu bytes exceeds maximum of %lu bytes",
                     (long unsigned)totalNeeded,
                     (long unsigned)MAX_BUF_SIZE);

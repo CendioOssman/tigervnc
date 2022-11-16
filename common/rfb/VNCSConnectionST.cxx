@@ -44,6 +44,8 @@
 #include <rfb/keysymdef.h>
 #include <core/util.h>
 
+using core::Exception;
+
 using namespace rfb;
 
 static LogWriter vlog("VNCSConnST");
@@ -132,7 +134,7 @@ void VNCSConnectionST::close(const char* reason)
       if (sock->outStream().hasBufferedData())
         vlog.error("Failed to flush remaining socket data on close");
     }
-  } catch (rdr::Exception& e) {
+  } catch (Exception& e) {
     vlog.error("Failed to flush remaining socket data on close: %s", e.str());
   }
 
@@ -149,7 +151,7 @@ bool VNCSConnectionST::init()
 {
   try {
     initialiseProtocol();
-  } catch (rdr::Exception& e) {
+  } catch (Exception& e) {
     close(e.str());
     return false;
   }
@@ -192,7 +194,7 @@ void VNCSConnectionST::processMessages()
     writeFramebufferUpdate();
   } catch (rdr::EndOfStream&) {
     close("Clean disconnection");
-  } catch (rdr::Exception &e) {
+  } catch (Exception &e) {
     close(e.str());
   }
 }
@@ -206,7 +208,7 @@ void VNCSConnectionST::flushSocket()
     // delayed because of congestion.
     if (!sock->outStream().hasBufferedData())
       writeFramebufferUpdate();
-  } catch (rdr::Exception &e) {
+  } catch (Exception &e) {
     close(e.str());
   }
 }
@@ -255,7 +257,7 @@ void VNCSConnectionST::pixelBufferChange()
     updates.clear();
     updates.add_changed(server->getPixelBuffer()->getRect());
     writeFramebufferUpdate();
-  } catch(rdr::Exception &e) {
+  } catch(Exception &e) {
     close(e.str());
   }
 }
@@ -264,7 +266,7 @@ void VNCSConnectionST::writeFramebufferUpdateOrClose()
 {
   try {
     writeFramebufferUpdate();
-  } catch(rdr::Exception &e) {
+  } catch(Exception &e) {
     close(e.str());
   }
 }
@@ -274,7 +276,7 @@ void VNCSConnectionST::screenLayoutChangeOrClose(uint16_t reason)
   try {
     screenLayoutChange(reason);
     writeFramebufferUpdate();
-  } catch(rdr::Exception &e) {
+  } catch(Exception &e) {
     close(e.str());
   }
 }
@@ -283,7 +285,7 @@ void VNCSConnectionST::bellOrClose()
 {
   try {
     if (state() == RFBSTATE_NORMAL) writer()->writeBell();
-  } catch(rdr::Exception& e) {
+  } catch(Exception& e) {
     close(e.str());
   }
 }
@@ -293,7 +295,7 @@ void VNCSConnectionST::setDesktopNameOrClose(const char *name)
   try {
     setDesktopName(name);
     writeFramebufferUpdate();
-  } catch(rdr::Exception& e) {
+  } catch(Exception& e) {
     close(e.str());
   }
 }
@@ -303,7 +305,7 @@ void VNCSConnectionST::setCursorOrClose()
   try {
     setCursor();
     writeFramebufferUpdate();
-  } catch(rdr::Exception& e) {
+  } catch(Exception& e) {
     close(e.str());
   }
 }
@@ -313,7 +315,7 @@ void VNCSConnectionST::setLEDStateOrClose(unsigned int state)
   try {
     setLEDState(state);
     writeFramebufferUpdate();
-  } catch(rdr::Exception& e) {
+  } catch(Exception& e) {
     close(e.str());
   }
 }
@@ -325,7 +327,7 @@ void VNCSConnectionST::requestClipboardOrClose()
     if (!accessCheck(AccessCutText)) return;
     if (!rfb::Server::acceptCutText) return;
     requestClipboard();
-  } catch(rdr::Exception& e) {
+  } catch(Exception& e) {
     close(e.str());
   }
 }
@@ -337,7 +339,7 @@ void VNCSConnectionST::announceClipboardOrClose(bool available)
     if (!accessCheck(AccessCutText)) return;
     if (!rfb::Server::sendCutText) return;
     announceClipboard(available);
-  } catch(rdr::Exception& e) {
+  } catch(Exception& e) {
     close(e.str());
   }
 }
@@ -349,7 +351,7 @@ void VNCSConnectionST::sendClipboardDataOrClose(const char* data)
     if (!accessCheck(AccessCutText)) return;
     if (!rfb::Server::sendCutText) return;
     sendClipboardData(data);
-  } catch(rdr::Exception& e) {
+  } catch(Exception& e) {
     close(e.str());
   }
 }
@@ -421,7 +423,7 @@ void VNCSConnectionST::approveConnectionOrClose(bool accept,
 {
   try {
     approveConnection(accept, reason);
-  } catch (rdr::Exception& e) {
+  } catch (Exception& e) {
     close(e.str());
   }
 }
@@ -808,7 +810,7 @@ void VNCSConnectionST::handleTimeout(Timer* t)
     if ((t == &congestionTimer) ||
         (t == &losslessTimer))
       writeFramebufferUpdate();
-  } catch (rdr::Exception& e) {
+  } catch (Exception& e) {
     close(e.str());
   }
 

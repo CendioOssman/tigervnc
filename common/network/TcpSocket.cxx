@@ -66,8 +66,9 @@
 #define AI_NUMERICSERV 0
 #endif
 
+using core::Exception;
+
 using namespace network;
-using namespace rdr;
 
 static rfb::LogWriter vlog("TcpSocket");
 
@@ -117,7 +118,7 @@ void network::getHostAndPort(const char* hi, std::string* host,
   const char* portStart;
 
   if (hi == nullptr)
-    throw rdr::Exception("NULL host specified");
+    throw Exception("NULL host specified");
 
   // Trim leading whitespace
   while(isspace(*hi))
@@ -130,7 +131,7 @@ void network::getHostAndPort(const char* hi, std::string* host,
     hostStart = &hi[1];
     hostEnd = strchr(hostStart, ']');
     if (hostEnd == nullptr)
-      throw rdr::Exception("unmatched [ in host");
+      throw Exception("unmatched [ in host");
 
     portStart = hostEnd + 1;
     if (isAllSpace(portStart))
@@ -169,14 +170,14 @@ void network::getHostAndPort(const char* hi, std::string* host,
     char* end;
 
     if (portStart[0] != ':')
-      throw rdr::Exception("invalid port specified");
+      throw Exception("invalid port specified");
 
     if (portStart[1] != ':')
       *port = strtol(portStart + 1, &end, 10);
     else
       *port = strtol(portStart + 2, &end, 10);
     if (*end != '\0' && ! isAllSpace(end))
-      throw rdr::Exception("invalid port specified");
+      throw Exception("invalid port specified");
 
     if ((portStart[1] != ':') && (*port < 100))
       *port += basePort;
@@ -729,7 +730,7 @@ TcpFilter::Pattern TcpFilter::parsePattern(const char* p) {
       if (family == AF_INET &&
           (parts[1].find('.') != std::string::npos)) {
         throw Exception("mask no longer supported for filter, "
-                        "use prefix instead");
+                              "use prefix instead");
       }
 
       pattern.prefixlen = (unsigned int) atoi(parts[1].c_str());
@@ -751,7 +752,7 @@ TcpFilter::Pattern TcpFilter::parsePattern(const char* p) {
 
   if (pattern.prefixlen > (family == AF_INET ? 32: 128))
     throw Exception("invalid prefix length for filter address: %u",
-                    pattern.prefixlen);
+                          pattern.prefixlen);
 
   // Compute mask from address and prefix length
   memset (&pattern.mask, 0, sizeof (pattern.mask));
@@ -833,7 +834,7 @@ std::string TcpFilter::patternToStr(const TcpFilter::Pattern& p) {
 }
 
 GAIException::GAIException(const char* s, int err_)
-  : rdr::Exception("%s", s), err(err_)
+  : Exception("%s", s), err(err_)
 {
   strncat(str_, ": ", len-1-strlen(str_));
 #ifdef _WIN32

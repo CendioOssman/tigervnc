@@ -28,7 +28,7 @@
 #include <FL/Fl_Window.H>
 #include <FL/x.H>
 
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 
 #include "cocoa.h"
 #include "Surface.h"
@@ -47,7 +47,7 @@ static CGImageRef create_image(CGColorSpaceRef lut,
   provider = CGDataProviderCreateWithData(nullptr, data,
                                           w * h * 4, nullptr);
   if (!provider)
-    throw rdr::Exception("CGDataProviderCreateWithData");
+    throw core::Exception("CGDataProviderCreateWithData");
 
   // FIXME: This causes a performance hit, but is necessary to avoid
   //        artifacts in the edges of the window
@@ -62,7 +62,7 @@ static CGImageRef create_image(CGColorSpaceRef lut,
                         kCGRenderingIntentDefault);
   CGDataProviderRelease(provider);
   if (!image)
-    throw rdr::Exception("CGImageCreate");
+    throw core::Exception("CGImageCreate");
 
   return image;
 }
@@ -85,7 +85,7 @@ static void render(CGContextRef gc, CGColorSpaceRef lut,
 
   subimage = CGImageCreateWithImageInRect(image, rect);
   if (!subimage)
-    throw rdr::Exception("CGImageCreateImageWithImageInRect");
+    throw core::Exception("CGImageCreateImageWithImageInRect");
 
   CGContextSaveGState(gc);
 
@@ -112,7 +112,7 @@ static CGContextRef make_bitmap(int width, int height, unsigned char* data)
   bitmap = CGBitmapContextCreate(data, width, height, 8, width*4, srgb,
                                  kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
   if (!bitmap)
-    throw rdr::Exception("CGBitmapContextCreate");
+    throw core::Exception("CGBitmapContextCreate");
 
   return bitmap;
 }

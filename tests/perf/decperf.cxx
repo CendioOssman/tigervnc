@@ -33,7 +33,7 @@
 #include <math.h>
 #include <sys/time.h>
 
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <rdr/FileInStream.h>
 #include <rdr/OutStream.h>
 
@@ -108,7 +108,7 @@ void DummyOutStream::overrun(size_t needed)
 {
   flush();
   if (avail() < needed)
-    throw rdr::Exception("Insufficient dummy output buffer");
+    throw core::Exception("Insufficient dummy output buffer");
 }
 
 CConn::CConn(const char *filename)
@@ -197,7 +197,7 @@ static struct stats runTest(const char *fn)
 
   try {
     cc = new CConn(fn);
-  } catch (rdr::Exception& e) {
+  } catch (core::Exception& e) {
     fprintf(stderr, "Failed to open rfb file: %s\n", e.str());
     exit(1);
   }
@@ -206,7 +206,7 @@ static struct stats runTest(const char *fn)
     while (true)
       cc->processMsg();
   } catch (rdr::EndOfStream& e) {
-  } catch (rdr::Exception& e) {
+  } catch (core::Exception& e) {
     fprintf(stderr, "Failed to run rfb file: %s\n", e.str());
     exit(1);
   }

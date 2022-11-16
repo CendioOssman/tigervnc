@@ -25,6 +25,8 @@
 
 #include <algorithm>
 
+#include <core/Exception.h>
+
 #include <rfb/LogWriter.h>
 #include <rfb/Security.h>
 #include <core/util.h>

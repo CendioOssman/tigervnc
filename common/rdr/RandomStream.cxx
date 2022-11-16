@@ -21,7 +21,7 @@
 #endif
 
 #include <rdr/RandomStream.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <rfb/LogWriter.h>
 #include <time.h>
 #include <stdlib.h>
@@ -89,7 +89,7 @@ bool RandomStream::fillBuffer() {
 #ifdef RFB_HAVE_WINCRYPT
   if (provider) {
     if (!CryptGenRandom(provider, availSpace(), (uint8_t*)end))
-      throw rdr::SystemException("unable to CryptGenRandom", GetLastError());
+      throw core::SystemException("unable to CryptGenRandom", GetLastError());
     end += availSpace();
   } else {
 #else
@@ -97,7 +97,7 @@ bool RandomStream::fillBuffer() {
   if (fp) {
     size_t n = fread((uint8_t*)end, 1, availSpace(), fp);
     if (n <= 0)
-      throw rdr::SystemException("reading /dev/urandom or /dev/random failed",
+      throw core::SystemException("reading /dev/urandom or /dev/random failed",
                                  errno);
     end += n;
   } else {

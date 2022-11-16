@@ -28,7 +28,7 @@
 #include <string.h>
 #include <rdr/InStream.h>
 #include <rdr/OutStream.h>
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/PixelFormat.h>
 
 #ifdef _WIN32
@@ -86,7 +86,7 @@ PixelFormat::PixelFormat(int b, int d, bool e, bool t,
     redShift(rs), greenShift(gs), blueShift(bs)
 {
   if (!isSane())
-    throw Exception("invalid pixel format");
+    throw core::Exception("invalid pixel format");
 
   updateState();
 }
@@ -180,7 +180,7 @@ void PixelFormat::read(rdr::InStream* is)
   }
 
   if (!isSane())
-    throw Exception("invalid pixel format");
+    throw core::Exception("invalid pixel format");
 
   updateState();
 }

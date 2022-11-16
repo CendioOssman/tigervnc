@@ -103,7 +103,7 @@ DeviceFrameBuffer::grabRect(const Rect &rect) {
     if (ignoreGrabErrors)
       vlog.error("BitBlt failed:%ld", GetLastError());
     else
-      throw rdr::SystemException("BitBlt failed", GetLastError());
+      throw core::SystemException("BitBlt failed", GetLastError());
   }
 }
 
@@ -139,11 +139,11 @@ void DeviceFrameBuffer::setCursor(HCURSOR hCursor, VNCServer* server)
 
     BITMAP maskInfo;
     if (!GetObject(iconInfo.hbmMask, sizeof(BITMAP), &maskInfo))
-      throw rdr::SystemException("GetObject() failed", GetLastError());
+      throw core::SystemException("GetObject() failed", GetLastError());
     if (maskInfo.bmPlanes != 1)
-      throw rdr::Exception("unsupported multi-plane cursor");
+      throw core::Exception("unsupported multi-plane cursor");
     if (maskInfo.bmBitsPixel != 1)
-      throw rdr::Exception("unsupported cursor mask format");
+      throw core::Exception("unsupported cursor mask format");
 
     width = maskInfo.bmWidth;
     height = maskInfo.bmHeight;
@@ -175,7 +175,7 @@ void DeviceFrameBuffer::setCursor(HCURSOR hCursor, VNCServer* server)
 
       if (!GetDIBits(dc, iconInfo.hbmColor, 0, height,
                      buffer.data(), (LPBITMAPINFO)&bi, DIB_RGB_COLORS))
-        throw rdr::SystemException("GetDIBits", GetLastError());
+        throw core::SystemException("GetDIBits", GetLastError());
 
       // We may not get the RGBA order we want, so shuffle things around
       int ridx, gidx, bidx, aidx;
@@ -189,7 +189,7 @@ void DeviceFrameBuffer::setCursor(HCURSOR hCursor, VNCServer* server)
       if ((bi.bV5RedMask != ((unsigned)0xff << ridx*8)) ||
           (bi.bV5GreenMask != ((unsigned)0xff << gidx*8)) ||
           (bi.bV5BlueMask != ((unsigned)0xff << bidx*8)))
-        throw rdr::Exception("unsupported cursor colour format");
+        throw core::Exception("unsupported cursor colour format");
 
       uint8_t* rwbuffer = buffer.data();
       for (int y = 0; y < height; y++) {
@@ -218,7 +218,7 @@ void DeviceFrameBuffer::setCursor(HCURSOR hCursor, VNCServer* server)
 
       if (!GetBitmapBits(iconInfo.hbmMask,
                          maskInfo.bmWidthBytes * maskInfo.bmHeight, mask.data()))
-        throw rdr::SystemException("GetBitmapBits", GetLastError());
+        throw core::SystemException("GetBitmapBits", GetLastError());
 
       bool doOutline = false;
       uint8_t* rwbuffer = buffer.data();
@@ -309,7 +309,7 @@ void DeviceFrameBuffer::setCursor(HCURSOR hCursor, VNCServer* server)
 
     server->setCursor(width, height, hotspot, buffer.data());
 
-  } catch (rdr::Exception& e) {
+  } catch (core::Exception& e) {
     vlog.error("%s", e.str());
   }
 }

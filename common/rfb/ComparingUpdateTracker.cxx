@@ -24,7 +24,7 @@
 #include <string.h>
 #include <vector>
 
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/LogWriter.h>
 #include <core/util.h>
 

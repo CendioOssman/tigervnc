@@ -32,7 +32,7 @@
 #include <FL/x.H>
 
 #include <rfb/LogWriter.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 
 #include "PlatformPixelBuffer.h"
 
@@ -52,11 +52,11 @@ PlatformPixelBuffer::PlatformPixelBuffer(int width, int height) :
     xim = XCreateImage(fl_display, (Visual*)CopyFromParent, 32,
                        ZPixmap, 0, nullptr, width, height, 32, 0);
     if (!xim)
-      throw rdr::Exception("XCreateImage");
+      throw core::Exception("XCreateImage");
 
     xim->data = (char*)malloc(xim->bytes_per_line * xim->height);
     if (!xim->data)
-      throw rdr::Exception("malloc");
+      throw core::Exception("malloc");
 
     vlog.debug("Using standard XImage");
   }

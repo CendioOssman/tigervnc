@@ -30,9 +30,9 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 
-using namespace rdr;
+using namespace core;
 
 Exception::Exception(const char *format, ...) {
 	va_list ap;
