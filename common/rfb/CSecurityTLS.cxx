@@ -338,7 +338,7 @@ void CSecurityTLS::checkSession()
                                                        GNUTLS_CRT_X509,
                                                        &status_str,
                                                        0) < 0)
-        throw Exception("Failed to get certificate error description");
+        throw AuthFailureException("Failed to get certificate error description");
 
       error = core::format("Invalid server certificate: %s", status_str.data);
 
@@ -351,7 +351,7 @@ void CSecurityTLS::checkSession()
                                                      GNUTLS_CRT_X509,
                                                      &status_str,
                                                      0) < 0)
-      throw Exception("Failed to get certificate error description");
+      throw AuthFailureException("Failed to get certificate error description");
 
     vlog.info("Server certificate errors: %s", status_str.data);
 

@@ -20,7 +20,7 @@
 #define __RFB_WIN32_COMPAT_BITMAP_H__
 
 #include <windows.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 
 namespace rfb {
   namespace win32 {
@@ -30,7 +30,7 @@ namespace rfb {
       CompatibleBitmap(HDC hdc, int width, int height) {
         hbmp = CreateCompatibleBitmap(hdc, width, height);
         if (!hbmp)
-          throw rdr::SystemException("CreateCompatibleBitmap() failed", GetLastError());
+          throw core::SystemException("CreateCompatibleBitmap() failed", GetLastError());
       }
       virtual ~CompatibleBitmap() {
         if (hbmp) DeleteObject(hbmp);

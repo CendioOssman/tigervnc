@@ -24,7 +24,7 @@
 #endif
 
 #include <rfb/JpegDecompressor.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <core/Rect.h>
 #include <rfb/PixelFormat.h>
 
@@ -120,7 +120,7 @@ JpegDecompressor::JpegDecompressor(void)
 
   if(setjmp(err->jmpBuffer)) {
     // this will execute if libjpeg has an error
-    throw rdr::Exception("%s", err->lastError);
+    throw core::Exception("%s", err->lastError);
   }
 
   jpeg_create_decompress(dinfo);
@@ -169,7 +169,7 @@ void JpegDecompressor::decompress(const uint8_t *jpegBuf,
     jpeg_abort_decompress(dinfo);
     if (dstBufIsTemp && dstBuf) delete[] dstBuf;
     if (rowPointer) delete[] rowPointer;
-    throw rdr::Exception("%s", err->lastError);
+    throw core::Exception("%s", err->lastError);
   }
 
   src->pub.next_input_byte = jpegBuf;
@@ -218,7 +218,7 @@ void JpegDecompressor::decompress(const uint8_t *jpegBuf,
     jpeg_abort_decompress(dinfo);
     if (dstBufIsTemp && dstBuf) delete[] dstBuf;
     if (rowPointer) delete[] rowPointer;
-    throw rdr::Exception("Tight Decoding: Wrong JPEG data received.\n");
+    throw core::Exception("Tight Decoding: Wrong JPEG data received.\n");
   }
 
   while (dinfo->output_scanline < dinfo->output_height) {

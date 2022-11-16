@@ -30,7 +30,7 @@ extern "C" {
 #define FFMPEG_INIT_PACKET_DEPRECATED
 #endif
 
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/LogWriter.h>
 #include <rfb/PixelBuffer.h>
 #include <rfb/H264LibavDecoderContext.h>
@@ -118,7 +118,7 @@ uint8_t* H264LibavDecoderContext::makeH264WorkBuffer(const uint8_t* buffer, uint
   {
     h264WorkBuffer = (uint8_t*)realloc(h264WorkBuffer, reserve_len);
     if (h264WorkBuffer == nullptr) {
-      throw Exception("H264LibavDecoderContext: Unable to allocate memory");
+      throw core::Exception("H264LibavDecoderContext: Unable to allocate memory");
     }
     h264WorkBufferLength = reserve_len;
   }

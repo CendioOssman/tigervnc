@@ -26,17 +26,17 @@
 #include <core/Region.h>
 #include <rfb/encodings.h>
 
-namespace core { struct Rect; }
+namespace core {
+  struct Exception;
+  struct Rect;
+}
 
 namespace os {
   class Condition;
   class Mutex;
 }
 
-namespace rdr {
-  struct Exception;
-  class MemOutStream;
-}
+namespace rdr { class MemOutStream; }
 
 namespace rfb {
   class CConnection;
@@ -56,7 +56,7 @@ namespace rfb {
   private:
     void logStats();
 
-    void setThreadException(const rdr::Exception& e);
+    void setThreadException(const core::Exception& e);
     void throwThreadException();
 
   private:
@@ -109,7 +109,7 @@ namespace rfb {
     };
 
     std::list<DecodeThread*> threads;
-    rdr::Exception *threadException;
+    core::Exception *threadException;
   };
 }
 

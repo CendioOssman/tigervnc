@@ -34,7 +34,7 @@ using namespace rdr;
 
 #ifdef HAVE_GNUTLS
 TLSException::TLSException(const char* s, int err_)
-  : Exception("%s: %s (%d)", s, gnutls_strerror(err_), err_), err(err_)
+  : core::Exception("%s: %s (%d)", s, gnutls_strerror(err_), err_), err(err_)
 {
 }
 #endif /* HAVE_GNUTLS */

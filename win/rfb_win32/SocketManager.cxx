@@ -69,7 +69,7 @@ void SocketManager::addListener(network::SocketListener* sock_,
     flags |= FD_ADDRESS_LIST_CHANGE;
   try {
     if (event && (WSAEventSelect(sock_->getFd(), event, flags) == SOCKET_ERROR))
-      throw rdr::SystemException("Unable to select on listener", WSAGetLastError());
+      throw core::SystemException("Unable to select on listener", WSAGetLastError());
 
     // requestAddressChangeEvents MUST happen after WSAEventSelect, so that the socket is non-blocking
     if (acn)
@@ -77,8 +77,8 @@ void SocketManager::addListener(network::SocketListener* sock_,
 
     // addEvent is the last thing we do, so that the event is NOT registered if previous steps fail
     if (!event || !addEvent(event, this))
-      throw rdr::Exception("Unable to add listener");
-  } catch (rdr::Exception& e) {
+      throw core::Exception("Unable to add listener");
+  } catch (core::Exception& e) {
     if (event)
       WSACloseEvent(event);
     delete sock_;
@@ -105,7 +105,7 @@ void SocketManager::remListener(network::SocketListener* sock) {
       return;
     }
   }
-  throw rdr::Exception("Listener not registered");
+  throw core::Exception("Listener not registered");
 }
 
 
@@ -138,7 +138,7 @@ void SocketManager::remSocket(network::Socket* sock_) {
       return;
     }
   }
-  throw rdr::Exception("Socket not registered");
+  throw core::Exception("Socket not registered");
 }
 
 bool SocketManager::getDisable(VNCServer* srvr)
@@ -149,7 +149,7 @@ bool SocketManager::getDisable(VNCServer* srvr)
       return i->second.disable;
     }
   }
-  throw rdr::Exception("Listener not registered");
+  throw core::Exception("Listener not registered");
 }
 
 void SocketManager::setDisable(VNCServer* srvr, bool disable)
@@ -165,7 +165,7 @@ void SocketManager::setDisable(VNCServer* srvr, bool disable)
     }
   }
   if (!found)
-    throw rdr::Exception("Listener not registered");
+    throw core::Exception("Listener not registered");
 }
 
 int SocketManager::checkTimeouts() {
@@ -186,7 +186,7 @@ int SocketManager::checkTimeouts() {
       if (j->second.sock->outStream().hasBufferedData())
         eventMask |= FD_WRITE;
       if (WSAEventSelect(j->second.sock->getFd(), j->first, eventMask) == SOCKET_ERROR)
-        throw rdr::SystemException("unable to adjust WSAEventSelect:%u", WSAGetLastError());
+        throw core::SystemException("unable to adjust WSAEventSelect:%u", WSAGetLastError());
     }
   }
 
@@ -236,11 +236,11 @@ void SocketManager::processEvent(HANDLE event) {
 
       // Fetch why this event notification triggered
       if (WSAEnumNetworkEvents(ci.sock->getFd(), event, &network_events) == SOCKET_ERROR)
-        throw rdr::SystemException("unable to get WSAEnumNetworkEvents:%u", WSAGetLastError());
+        throw core::SystemException("unable to get WSAEnumNetworkEvents:%u", WSAGetLastError());
 
       // Cancel event notification for this socket
       if (WSAEventSelect(ci.sock->getFd(), event, 0) == SOCKET_ERROR)
-        throw rdr::SystemException("unable to disable WSAEventSelect:%u", WSAGetLastError());
+        throw core::SystemException("unable to disable WSAEventSelect:%u", WSAGetLastError());
 
       // Reset the event object
       WSAResetEvent(event);
@@ -268,8 +268,8 @@ void SocketManager::processEvent(HANDLE event) {
       if (ci.sock->outStream().hasBufferedData())
         eventMask |= FD_WRITE;
       if (WSAEventSelect(ci.sock->getFd(), event, eventMask) == SOCKET_ERROR)
-        throw rdr::SystemException("unable to re-enable WSAEventSelect:%u", WSAGetLastError());
-    } catch (rdr::Exception& e) {
+        throw core::SystemException("unable to re-enable WSAEventSelect:%u", WSAGetLastError());
+    } catch (core::Exception& e) {
       vlog.error("%s", e.str());
       remSocket(ci.sock);
     }

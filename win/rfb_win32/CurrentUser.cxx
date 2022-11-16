@@ -80,7 +80,7 @@ CurrentUserToken::CurrentUserToken() {
     if (!OpenProcessToken(GetCurrentProcess(), GENERIC_ALL, &h)) {
       DWORD err = GetLastError();
       if (err != ERROR_CALL_NOT_IMPLEMENTED)
-        throw rdr::SystemException("OpenProcessToken failed", err);
+        throw core::SystemException("OpenProcessToken failed", err);
       h = INVALID_HANDLE_VALUE;
     }
   }
@@ -92,11 +92,11 @@ ImpersonateCurrentUser::ImpersonateCurrentUser() {
   if (!isServiceProcess())
     return;
   if (!token.canImpersonate())
-    throw rdr::Exception("Cannot impersonate unsafe or null token");
+    throw core::Exception("Cannot impersonate unsafe or null token");
   if (!ImpersonateLoggedOnUser(token)) {
     DWORD err = GetLastError();
     if (err != ERROR_CALL_NOT_IMPLEMENTED)
-      throw rdr::SystemException("Failed to impersonate user", GetLastError());
+      throw core::SystemException("Failed to impersonate user", GetLastError());
   }
 }
 
@@ -114,7 +114,7 @@ UserName::UserName() {
   char buf[UNLEN+1];
   DWORD len = UNLEN+1;
   if (!GetUserName(buf, &len))
-    throw rdr::SystemException("GetUserName failed", GetLastError());
+    throw core::SystemException("GetUserName failed", GetLastError());
   assign(buf);
 }
 

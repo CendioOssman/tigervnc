@@ -116,7 +116,7 @@ namespace network {
     std::list<Pattern> filter;
   };
 
-  struct GAIException : public rdr::Exception {
+  struct GAIException : public core::Exception {
     int err;
     GAIException(const char* s, int err_);
   };

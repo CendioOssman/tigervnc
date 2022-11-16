@@ -34,7 +34,7 @@
 #include <rfb_win32/MonitorInfo.h>
 #include <rfb_win32/Service.h>
 #include <rfb_win32/keymap.h>
-#include <rdr/Exception.h>
+#include <core/Exception.h>
 #include <rfb/LogWriter.h>
 
 using namespace core;
@@ -127,7 +127,7 @@ win32::SPointer::pointerEvent(const Point& pos, int buttonmask)
     evt.mi.mouseData = data;
     evt.mi.time = 0;
     if (SendInput(1, &evt, sizeof(evt)) != 1)
-      throw rdr::SystemException("SendInput", GetLastError());
+      throw core::SystemException("SendInput", GetLastError());
   }
 }
 

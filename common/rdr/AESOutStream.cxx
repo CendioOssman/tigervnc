@@ -21,7 +21,7 @@
 #endif
 
 #include <assert.h>
-#include <rdr/Exception.h>
+
 #include <rdr/AESOutStream.h>
 
 #ifdef HAVE_NETTLE

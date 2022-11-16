@@ -107,7 +107,7 @@ void RREDecoder::rreDecode(const core::Rect& r, rdr::InStream* is,
     int h = is->readU16();
 
     if (((x+w) > r.width()) || ((y+h) > r.height()))
-      throw Exception ("RRE decode error");
+      throw core::Exception ("RRE decode error");
 
     pb->fillRect(pf, core::Rect(r.tl.x+x, r.tl.y+y, r.tl.x+x+w, r.tl.y+y+h), &pix);
   }

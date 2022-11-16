@@ -26,7 +26,7 @@
 #include <rdr/InStream.h>
 #include <rdr/OutStream.h>
 #include <rfb/LogWriter.h>
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/H264Decoder.h>
 #include <rfb/H264DecoderContext.h>
 
@@ -124,12 +124,12 @@ void H264Decoder::decodeRect(const core::Rect& r, const uint8_t* buffer,
     }
     ctx = H264DecoderContext::createContext(r);
     if (!ctx)
-      throw Exception("H264Decoder: Context not be created");
+      throw core::Exception("H264Decoder: Context not be created");
     contexts.push_back(ctx);
   }
 
   if (!ctx->isReady())
-    throw Exception("H264Decoder: Context is not ready");
+    throw core::Exception("H264Decoder: Context is not ready");
 
   if (flags & resetContext)
     ctx->reset();

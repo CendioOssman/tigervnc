@@ -69,6 +69,7 @@
 #include <core/util.h>
 #include <rfb/ledStates.h>
 
+using core::Exception;
 
 using namespace rfb;
 
@@ -151,7 +152,7 @@ void VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
       os.writeU32(strlen(reason));
       os.writeBytes((const uint8_t*)reason, strlen(reason));
       os.flush();
-    } catch (rdr::Exception&) {
+    } catch (Exception&) {
     }
     sock->shutdown();
     closingSockets.push_back(sock);
@@ -221,7 +222,7 @@ void VNCServerST::processSocketReadEvent(network::Socket* sock)
       return;
     }
   }
-  throw rdr::Exception("invalid Socket in VNCServerST");
+  throw Exception("invalid Socket in VNCServerST");
 }
 
 void VNCServerST::processSocketWriteEvent(network::Socket* sock)
@@ -234,7 +235,7 @@ void VNCServerST::processSocketWriteEvent(network::Socket* sock)
       return;
     }
   }
-  throw rdr::Exception("invalid Socket in VNCServerST");
+  throw Exception("invalid Socket in VNCServerST");
 }
 
 void VNCServerST::blockUpdates()

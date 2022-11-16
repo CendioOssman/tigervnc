@@ -217,7 +217,7 @@ int vncIsTCPPortUsed(int port)
       delete dummy.back();
       dummy.pop_back();
     }
-  } catch (rdr::Exception& e) {
+  } catch (core::Exception& e) {
     return 1;
   }
   return 0;

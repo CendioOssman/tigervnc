@@ -25,9 +25,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <core/Exception.h>
+
 #include <rfb/CMsgWriter.h>
 #include <rfb/LogWriter.h>
-#include <rfb/Exception.h>
 #include <rfb/KeysymStr.h>
 #include <rfb/ledStates.h>
 #include <core/util.h>
@@ -131,11 +132,11 @@ Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc
 
   xkb = XkbGetMap(fl_display, 0, XkbUseCoreKbd);
   if (!xkb)
-    throw rfb::Exception("XkbGetMap");
+    throw core::Exception("XkbGetMap");
 
   status = XkbGetNames(fl_display, XkbKeyNamesMask, xkb);
   if (status != Success)
-    throw rfb::Exception("XkbGetNames");
+    throw core::Exception("XkbGetNames");
 
   memset(code_map_keycode_to_qnum, 0, sizeof(code_map_keycode_to_qnum));
   for (KeyCode keycode = xkb->min_key_code;
@@ -576,7 +577,7 @@ int Viewport::handle(int event)
 
     try {
       cc->sendClipboardData(filtered.c_str());
-    } catch (rdr::Exception& e) {
+    } catch (core::Exception& e) {
       vlog.error("%s", e.str());
       abort_connection_with_unexpected_error(e);
     }
@@ -669,7 +670,7 @@ void Viewport::sendPointerEvent(const core::Point& pos, int buttonMask)
   if ((pointerEventInterval == 0) || (buttonMask != lastButtonMask)) {
     try {
       cc->writer()->writePointerEvent(pos, buttonMask);
-    } catch (rdr::Exception& e) {
+    } catch (core::Exception& e) {
       vlog.error("%s", e.str());
       abort_connection_with_unexpected_error(e);
     }
@@ -768,7 +769,7 @@ void Viewport::handleClipboardChange(int source, void *data)
   vlog.debug("Local clipboard changed, notifying server");
   try {
     self->cc->announceClipboard(true);
-  } catch (rdr::Exception& e) {
+  } catch (core::Exception& e) {
     vlog.error("%s", e.str());
     abort_connection_with_unexpected_error(e);
   }
@@ -781,7 +782,7 @@ void Viewport::flushPendingClipboard()
     vlog.debug("Focus regained after local clipboard change, notifying server");
     try {
       cc->announceClipboard(true);
-    } catch (rdr::Exception& e) {
+    } catch (core::Exception& e) {
       vlog.error("%s", e.str());
       abort_connection_with_unexpected_error(e);
     }
@@ -806,7 +807,7 @@ void Viewport::handlePointerTimeout(void *data)
   try {
     self->cc->writer()->writePointerEvent(self->lastPointerPos,
                                           self->lastButtonMask);
-  } catch (rdr::Exception& e) {
+  } catch (core::Exception& e) {
     vlog.error("%s", e.str());
     abort_connection_with_unexpected_error(e);
   }
@@ -878,7 +879,7 @@ void Viewport::handleKeyPress(int keyCode, uint32_t keySym)
       cc->writer()->writeKeyEvent(keySym, 0, true);
     else
       cc->writer()->writeKeyEvent(keySym, keyCode, true);
-  } catch (rdr::Exception& e) {
+  } catch (core::Exception& e) {
     vlog.error("%s", e.str());
     abort_connection_with_unexpected_error(e);
   }
@@ -908,7 +909,7 @@ void Viewport::handleKeyRelease(int keyCode)
       cc->writer()->writeKeyEvent(iter->second, 0, false);
     else
       cc->writer()->writeKeyEvent(iter->second, keyCode, false);
-  } catch (rdr::Exception& e) {
+  } catch (core::Exception& e) {
     vlog.error("%s", e.str());
     abort_connection_with_unexpected_error(e);
   }

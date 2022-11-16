@@ -83,7 +83,7 @@ bool SSecurityVncAuth::processMsg()
   if (!sentChallenge) {
     rdr::RandomStream rs;
     if (!rs.hasData(vncAuthChallengeSize))
-      throw Exception("Could not generate random data for VNC auth challenge");
+      throw core::Exception("Could not generate random data for VNC auth challenge");
     rs.readBytes(challenge, vncAuthChallengeSize);
     os->writeBytes(challenge, vncAuthChallengeSize);
     os->flush();

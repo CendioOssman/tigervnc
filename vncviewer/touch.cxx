@@ -36,7 +36,7 @@
 #include <FL/Fl.H>
 #include <FL/x.H>
 
-#include <rfb/Exception.h>
+#include <core/Exception.h>
 #include <rfb/LogWriter.h>
 
 #include "i18n.h"
@@ -180,7 +180,7 @@ static int handleTouchEvent(void *event, void* /*data*/)
   if (msg->message == WM_PAINT && handlers.count(msg->hwnd) == 0) {
     try {
       handlers[msg->hwnd] = new Win32TouchHandler(msg->hwnd);
-    } catch (rfb::Exception& e) {
+    } catch (core::Exception& e) {
       vlog.error(_("Failed to create touch handler: %s"), e.str());
       abort_vncviewer(_("Failed to create touch handler: %s"), e.str());
     }
