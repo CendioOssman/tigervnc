@@ -27,11 +27,11 @@
 
 #include <rfb/KeyRemapper.h>
 #include <core/Configuration.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using namespace rfb;
 
-static LogWriter vlog("KeyRemapper");
+static core::LogWriter vlog("KeyRemapper");
 
 KeyRemapper KeyRemapper::defInstance;
 

@@ -30,12 +30,12 @@
 #include <stddef.h>
 
 #include <network/UnixSocket.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using namespace network;
 using namespace rdr;
 
-static rfb::LogWriter vlog("UnixSocket");
+static core::LogWriter vlog("UnixSocket");
 
 // -=- UnixSocket
 

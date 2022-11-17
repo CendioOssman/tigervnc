@@ -32,7 +32,7 @@
 
 #include <rfb/SSecurityTLS.h>
 #include <rfb/SConnection.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <rfb/Exception.h>
 #include <rdr/TLSInStream.h>
 #include <rdr/TLSOutStream.h>
@@ -64,7 +64,7 @@ core::StringParameter SSecurityTLS::X509_CertFile
 core::StringParameter SSecurityTLS::X509_KeyFile
 ("X509Key", "Path to the key of the X509 certificate in PEM format", "", core::ConfServer);
 
-static LogWriter vlog("TLS");
+static core::LogWriter vlog("TLS");
 
 SSecurityTLS::SSecurityTLS(SConnection* sc_, bool _anon)
   : SSecurity(sc_), session(nullptr), anon_cred(nullptr),

@@ -24,7 +24,7 @@
 #include <rfb_win32/DIBSectionBuffer.h>
 #include <rfb_win32/DeviceContext.h>
 #include <rfb_win32/BitmapInfo.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using namespace core;
 using namespace rfb;

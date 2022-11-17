@@ -25,13 +25,13 @@
 
 #include <rdr/ZlibOutStream.h>
 #include <core/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 #include <zlib.h>
 
 #undef ZLIBOUT_DEBUG
 
-static rfb::LogWriter vlog("ZlibOutStream");
+static core::LogWriter vlog("ZlibOutStream");
 
 using namespace rdr;
 

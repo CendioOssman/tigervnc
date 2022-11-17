@@ -24,12 +24,13 @@
 
 #include <network/TcpSocket.h>
 
+#include <core/LogWriter.h>
+
 #include <rfb/ComparingUpdateTracker.h>
 #include <rfb/Encoder.h>
 #include <rfb/Exception.h>
 #include <rfb/KeyRemapper.h>
 #include <rfb/KeysymStr.h>
-#include <rfb/LogWriter.h>
 #include <rfb/Security.h>
 #include <rfb/ServerCore.h>
 #include <rfb/SMsgWriter.h>
@@ -48,7 +49,7 @@ using core::Exception;
 
 using namespace rfb;
 
-static LogWriter vlog("VNCSConnST");
+static core::LogWriter vlog("VNCSConnST");
 
 static Cursor emptyCursor(0, 0, core::Point(0, 0), nullptr);
 

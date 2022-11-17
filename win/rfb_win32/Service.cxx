@@ -29,7 +29,7 @@
 #include <rfb_win32/Handle.h>
 #include <logmessages/messages.h>
 #include <core/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <core/util.h>
 
 

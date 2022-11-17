@@ -25,7 +25,7 @@
 #include <rfb_win32/CompatibleBitmap.h>
 #include <rfb_win32/BitmapInfo.h>
 #include <core/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using namespace core;
 using namespace rfb;

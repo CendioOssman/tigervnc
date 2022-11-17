@@ -22,7 +22,7 @@
 
 #include <rdr/RandomStream.h>
 #include <core/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <time.h>
 #include <stdlib.h>
 #ifndef WIN32
@@ -35,7 +35,7 @@
 #endif
 #endif
 
-static rfb::LogWriter vlog("RandomStream");
+static core::LogWriter vlog("RandomStream");
 
 using namespace rdr;
 

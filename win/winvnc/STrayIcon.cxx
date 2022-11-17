@@ -29,7 +29,7 @@
 #include <os/Mutex.h>
 #include <os/Thread.h>
 
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <core/Configuration.h>
 
 #include <rfb_win32/LaunchProcess.h>

@@ -41,8 +41,8 @@
 #include "vncExt.h"
 #include <core/Exception.h>
 #include <core/Configuration.h>
-#include <rfb/Logger_stdio.h>
-#include <rfb/LogWriter.h>
+#include <core/Logger_stdio.h>
+#include <core/LogWriter.h>
 #include "TXWindow.h"
 #include "TXCheckbox.h"
 #include "TXLabel.h"
@@ -208,8 +208,8 @@ void removeArgs(int* argc, char** argv, int first, int n)
 int main(int argc, char** argv)
 {
   programName = argv[0];
-  rfb::initStdIOLoggers();
-  rfb::LogWriter::setLogParams("*:stderr:30");
+  core::initStdIOLoggers();
+  core::LogWriter::setLogParams("*:stderr:30");
 
   // Process vncconfig's own parameters first, then we process the
   // other arguments when we have the X display.

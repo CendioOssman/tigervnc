@@ -24,15 +24,14 @@
 
 #include <string.h>
 
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <core/Configuration.h>
 #include <core/util.h>
 #include <stdlib.h>
 
-rfb::LogParameter rfb::logParams;
+using namespace core;
 
-using namespace rfb;
-
+LogParameter core::logParams;
 
 LogWriter::LogWriter(const char* name)
   : m_name(name), m_level(0), m_log(nullptr), m_next(log_writers) {
@@ -78,7 +77,7 @@ LogWriter::getLogWriter(const char* name) {
 
 bool LogWriter::setLogParams(const char* params) {
   std::vector<std::string> parts;
-  parts = core::split(params, ':');
+  parts = split(params, ':');
   if (parts.size() != 3) {
     fprintf(stderr,"failed to parse log params:%s\n",params);
     return false;
@@ -125,7 +124,7 @@ bool LogParameter::setParam(const char* v) {
   LogWriter::setLogParams("*::0");
   StringParameter::setParam(v);
   std::vector<std::string> parts;
-  parts = core::split(v, ',');
+  parts = split(v, ',');
   for (size_t i = 0; i < parts.size(); i++) {
     if (parts[i].empty())
         continue;
