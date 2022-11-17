@@ -32,7 +32,7 @@
 #include <rfb/AccessRights.h>
 #include <rfb/SMsgHandler.h>
 #include <rfb/SecurityServer.h>
-#include <rfb/Timer.h>
+#include <core/Timer.h>
 
 namespace rfb {
 
@@ -237,7 +237,7 @@ namespace rfb {
     bool processSecurityFailure();
     bool processInitMsg();
 
-    void handleAuthFailureTimeout(Timer* t);
+    void handleAuthFailureTimeout(core::Timer* t);
 
     int defaultMajorVersion, defaultMinorVersion;
 
@@ -250,7 +250,7 @@ namespace rfb {
     SecurityServer security;
     SSecurity* ssecurity;
 
-    MethodTimer<SConnection> authFailureTimer;
+    core::MethodTimer<SConnection> authFailureTimer;
     std::string authFailureMsg;
 
     stateEnum state_;

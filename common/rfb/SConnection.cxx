@@ -278,7 +278,7 @@ bool SConnection::processInitMsg()
   return reader_->readClientInit();
 }
 
-void SConnection::handleAuthFailureTimeout(Timer* /*t*/)
+void SConnection::handleAuthFailureTimeout(core::Timer* /*t*/)
 {
   if (state_ != RFBSTATE_SECURITY_FAILURE) {
     close("SConnection::handleAuthFailureTimeout: invalid state");
