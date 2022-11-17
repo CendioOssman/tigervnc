@@ -28,14 +28,14 @@
 
 #include <algorithm>
 
-#include <rfb/Timer.h>
+#include <core/Timer.h>
 #include <core/util.h>
 #include <core/LogWriter.h>
 
-using namespace rfb;
+using namespace core;
 
 #ifndef __NO_DEFINE_VLOG__
-static core::LogWriter vlog("Timer");
+static LogWriter vlog("Timer");
 #endif
 
 
@@ -134,7 +134,7 @@ void Timer::repeat(int timeoutMs_) {
     stop();
   }
 
-  if (core::msBetween(&lastDueTime, &dueTime) != 0)
+  if (msBetween(&lastDueTime, &dueTime) != 0)
     vlog.error("Timer incorrectly modified whilst repeating");
 
   if (timeoutMs_ != -1)

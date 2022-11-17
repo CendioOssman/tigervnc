@@ -35,7 +35,7 @@
 #include <core/LogWriter.h>
 #include <rfb/VNCServerST.h>
 #include <core/Configuration.h>
-#include <rfb/Timer.h>
+#include <core/Timer.h>
 #include <network/TcpSocket.h>
 #include <network/UnixSocket.h>
 #ifdef HAVE_LIBSYSTEMD

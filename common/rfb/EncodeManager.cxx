@@ -299,7 +299,7 @@ void EncodeManager::writeLosslessRefresh(const Region& req, const PixelBuffer* p
            Region(), Point(), pb, renderedCursor);
 }
 
-void EncodeManager::handleTimeout(Timer* t)
+void EncodeManager::handleTimeout(core::Timer* t)
 {
   if (t == &recentChangeTimer) {
     // Any lossy region that wasn't recently updated can
