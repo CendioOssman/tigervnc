@@ -56,13 +56,13 @@
 
 #include "util.h"
 
-static rfb::IntParameter width("width", "Frame buffer width", 0);
-static rfb::IntParameter height("height", "Frame buffer height", 0);
-static rfb::IntParameter count("count", "Number of benchmark iterations", 9);
+static core::IntParameter width("width", "Frame buffer width", 0);
+static core::IntParameter height("height", "Frame buffer height", 0);
+static core::IntParameter count("count", "Number of benchmark iterations", 9);
 
-static rfb::StringParameter format("format", "Pixel format (e.g. bgr888)", "");
+static core::StringParameter format("format", "Pixel format (e.g. bgr888)", "");
 
-static rfb::BoolParameter translate("translate",
+static core::BoolParameter translate("translate",
                                     "Translate 8-bit and 16-bit datasets into 24-bit",
                                     true);
 
@@ -410,7 +410,7 @@ static void usage(const char *argv0)
 {
   fprintf(stderr, "Syntax: %s [options] <rfb file>\n", argv0);
   fprintf(stderr, "Options:\n");
-  rfb::Configuration::listParams(79, 14);
+  core::Configuration::listParams(79, 14);
   exit(1);
 }
 
@@ -422,12 +422,12 @@ int main(int argc, char **argv)
 
   fn = nullptr;
   for (i = 1; i < argc; i++) {
-    if (rfb::Configuration::setParam(argv[i]))
+    if (core::Configuration::setParam(argv[i]))
       continue;
 
     if (argv[i][0] == '-') {
       if (i + 1 < argc) {
-        if (rfb::Configuration::setParam(&argv[i][1], argv[i + 1])) {
+        if (core::Configuration::setParam(&argv[i][1], argv[i + 1])) {
           i++;
           continue;
         }

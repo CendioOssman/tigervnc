@@ -24,7 +24,7 @@
 
 #include <stdint.h>
 
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 
 #include <list>
 
@@ -76,7 +76,7 @@ namespace rfb {
      * Create Security instance.
      */
     Security();
-    Security(StringParameter &secTypes);
+    Security(core::StringParameter &secTypes);
 
     /*
      * Note about security types.
@@ -105,7 +105,7 @@ namespace rfb {
     char *ToString(void);
 
 #ifdef HAVE_GNUTLS
-    static StringParameter GnuTLSPriority;
+    static core::StringParameter GnuTLSPriority;
 #endif
 
   private:

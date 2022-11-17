@@ -27,12 +27,12 @@
 #include <rfb/HextileEncoder.h>
 #include <rfb/Palette.h>
 #include <rfb/PixelBuffer.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 #include <rfb/hextileConstants.h>
 
 using namespace rfb;
 
-BoolParameter improvedHextile("ImprovedHextile",
+core::BoolParameter improvedHextile("ImprovedHextile",
                               "Use improved compression algorithm for Hextile "
                               "encoding which achieves better compression "
                               "ratios by the cost of using more CPU time",

@@ -37,7 +37,7 @@ using namespace std;
 static LogWriter vlog("Security");
 
 #ifdef HAVE_GNUTLS
-StringParameter Security::GnuTLSPriority("GnuTLSPriority",
+core::StringParameter Security::GnuTLSPriority("GnuTLSPriority",
   "GnuTLS priority string that controls the TLS session’s handshake algorithms",
   "");
 #endif
@@ -46,7 +46,7 @@ Security::Security()
 {
 }
 
-Security::Security(StringParameter &secTypes)
+Security::Security(core::StringParameter &secTypes)
 {
   enabledSecTypes = parseSecTypes(secTypes);
 }

@@ -20,7 +20,7 @@
 #define WINVNC_TRAYICON_H
 
 #include <winvnc/VNCServerWin32.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 
 namespace os {
   class Mutex;
@@ -37,8 +37,8 @@ namespace winvnc {
 
     void setToolTip(const char* text);
 
-    static rfb::BoolParameter disableOptions;
-    static rfb::BoolParameter disableClose;
+    static core::BoolParameter disableOptions;
+    static core::BoolParameter disableClose;
 
     friend class STrayIcon;
   protected:

@@ -25,7 +25,7 @@
 #define __RFB_WIN32_INPUT_H__
 
 #include <core/Rect.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 
 #include <map>
 #include <vector>
@@ -56,8 +56,8 @@ namespace rfb {
     public:
       SKeyboard();
       void keyEvent(uint32_t keysym, uint32_t keycode, bool down);
-      static BoolParameter deadKeyAware;
-      static BoolParameter rawKeyboard;
+      static core::BoolParameter deadKeyAware;
+      static core::BoolParameter rawKeyboard;
     private:
       std::map<uint32_t,uint8_t> vkMap;
       std::map<uint32_t,bool> extendedMap;

@@ -28,7 +28,7 @@
 #include <rfb/SSecurityVncAuth.h>
 #include <rdr/RandomStream.h>
 #include <rfb/SConnection.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 #include <rfb/LogWriter.h>
 #include <rfb/Exception.h>
 #include <rfb/obfuscate.h>
@@ -44,10 +44,10 @@ using namespace rfb;
 
 static LogWriter vlog("SVncAuth");
 
-StringParameter SSecurityVncAuth::vncAuthPasswdFile
-("PasswordFile", "Password file for VNC authentication", "", ConfServer);
-AliasParameter rfbauth("rfbauth", "Alias for PasswordFile",
-		       &SSecurityVncAuth::vncAuthPasswdFile, ConfServer);
+core::StringParameter SSecurityVncAuth::vncAuthPasswdFile
+("PasswordFile", "Password file for VNC authentication", "", core::ConfServer);
+core::AliasParameter rfbauth("rfbauth", "Alias for PasswordFile",
+		       &SSecurityVncAuth::vncAuthPasswdFile, core::ConfServer);
 VncAuthPasswdParameter SSecurityVncAuth::vncAuthPasswd
 ("Password", "Obfuscated binary encoding of the password which clients must supply to "
  "access the server", &SSecurityVncAuth::vncAuthPasswdFile);
@@ -118,8 +118,8 @@ bool SSecurityVncAuth::processMsg()
 
 VncAuthPasswdParameter::VncAuthPasswdParameter(const char* name_,
                                                const char* desc,
-                                               StringParameter* passwdFile_)
-: BinaryParameter(name_, desc, nullptr, 0, ConfServer),
+                                               core::StringParameter* passwdFile_)
+: core::BinaryParameter(name_, desc, nullptr, 0, core::ConfServer),
   passwdFile(passwdFile_)
 {
 }

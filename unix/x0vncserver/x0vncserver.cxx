@@ -34,7 +34,7 @@
 #include <rfb/Logger_stdio.h>
 #include <rfb/LogWriter.h>
 #include <rfb/VNCServerST.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 #include <rfb/Timer.h>
 #include <network/TcpSocket.h>
 #include <network/UnixSocket.h>

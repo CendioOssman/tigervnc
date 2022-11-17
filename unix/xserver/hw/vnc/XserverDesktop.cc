@@ -41,7 +41,7 @@
 #include <core/Exception.h>
 #include <rfb/VNCServerST.h>
 #include <rfb/LogWriter.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 #include <rfb/ServerCore.h>
 
 #include "XserverDesktop.h"

@@ -38,7 +38,7 @@
 using namespace rdr;
 using namespace rfb;
 
-StringParameter SecurityServer::secTypes
+core::StringParameter SecurityServer::secTypes
 ("SecurityTypes",
  "Specify which security scheme to use (None, VncAuth, Plain"
 #ifdef HAVE_GNUTLS
@@ -52,7 +52,7 @@ StringParameter SecurityServer::secTypes
  "TLSVnc,"
 #endif
  "VncAuth",
-ConfServer);
+core::ConfServer);
 
 SSecurity* SecurityServer::GetSSecurity(SConnection* sc, uint32_t secType)
 {

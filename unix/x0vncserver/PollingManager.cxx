@@ -30,7 +30,7 @@
 #include <X11/Xlib.h>
 #include <rfb/LogWriter.h>
 #include <rfb/VNCServer.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 #include <rfb/ServerCore.h>
 
 #include <x0vncserver/PollingManager.h>
