@@ -22,13 +22,13 @@
 #endif
 
 #include <core/Region.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 extern "C" {
 #include <pixman.h>
 }
 
-static rfb::LogWriter vlog("Region");
+static core::LogWriter vlog("Region");
 
 core::Region::Region() {
   rgn = new struct pixman_region16;

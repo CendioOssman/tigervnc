@@ -37,7 +37,7 @@
 #include <nettle/asn1.h>
 #include <rfb/SSecurityRSAAES.h>
 #include <rfb/SConnection.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <rfb/Exception.h>
 #include <rdr/AESInStream.h>
 #include <rdr/AESOutStream.h>

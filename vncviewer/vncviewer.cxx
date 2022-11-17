@@ -48,11 +48,11 @@
 #include <X11/XKBlib.h>
 #endif
 
-#include <rfb/Logger_stdio.h>
+#include <core/Logger_stdio.h>
 #ifdef HAVE_GNUTLS
 #include <rfb/CSecurityTLS.h>
 #endif
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <rfb/Timer.h>
 #include <core/Exception.h>
 #include <network/TcpSocket.h>
@@ -78,7 +78,7 @@
 #include "win32.h"
 #endif
 
-static rfb::LogWriter vlog("main");
+static core::LogWriter vlog("main");
 
 using namespace core;
 using namespace network;
@@ -635,13 +635,13 @@ int main(int argc, char** argv)
   bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
   bind_textdomain_codeset("libc", "UTF-8");
 
-  rfb::initStdIOLoggers();
+  core::initStdIOLoggers();
 #ifdef WIN32
-  rfb::initFileLogger("C:\\temp\\vncviewer.log");
+  core::initFileLogger("C:\\temp\\vncviewer.log");
 #else
-  rfb::initFileLogger("/tmp/vncviewer.log");
+  core::initFileLogger("/tmp/vncviewer.log");
 #endif
-  rfb::LogWriter::setLogParams("*:stderr:30");
+  core::LogWriter::setLogParams("*:stderr:30");
 
 #ifdef SIGHUP
   signal(SIGHUP, CleanupSignalHandler);

@@ -28,7 +28,7 @@
 #include <rdr/HexOutStream.h>
 #include <rdr/HexInStream.h>
 #include <stdlib.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <core/util.h>
 
 // These flags are required to control access control inheritance,

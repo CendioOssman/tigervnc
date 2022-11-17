@@ -25,14 +25,14 @@
 #include <rdr/MemInStream.h>
 #include <rdr/InStream.h>
 #include <rdr/OutStream.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <core/Exception.h>
 #include <rfb/H264Decoder.h>
 #include <rfb/H264DecoderContext.h>
 
 using namespace rfb;
 
-static LogWriter vlog("H264Decoder");
+static core::LogWriter vlog("H264Decoder");
 
 enum rectFlags {
   resetContext       = 0x1,

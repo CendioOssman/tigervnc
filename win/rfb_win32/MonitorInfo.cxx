@@ -23,7 +23,7 @@
 #include <rfb_win32/MonitorInfo.h>
 #include <rfb_win32/Win32Util.h>
 #include <core/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 #ifndef min
  #define min(a,b) ((a)<(b)?(a):(b))
@@ -33,6 +33,7 @@
  #define max(a,b) ((a)>(b)?(a):(b))
 #endif
 
+using namespace core;
 using namespace rfb;
 using namespace win32;
 

@@ -27,7 +27,7 @@
 #include <rfb_win32/WMShatter.h>
 #include <core/util.h>
 
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using namespace core;
 using namespace rfb;

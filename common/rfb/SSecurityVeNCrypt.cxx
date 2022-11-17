@@ -28,7 +28,7 @@
 
 #include <rfb/SSecurityVeNCrypt.h>
 #include <rfb/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <rdr/InStream.h>
 #include <rdr/OutStream.h>
 
@@ -38,7 +38,7 @@ using namespace rfb;
 using namespace rdr;
 using namespace std;
 
-static LogWriter vlog("SVeNCrypt");
+static core::LogWriter vlog("SVeNCrypt");
 
 SSecurityVeNCrypt::SSecurityVeNCrypt(SConnection* sc_,
                                      SecurityServer *sec)

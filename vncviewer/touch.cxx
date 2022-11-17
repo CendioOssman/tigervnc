@@ -37,7 +37,7 @@
 #include <FL/x.H>
 
 #include <core/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 #include "i18n.h"
 #include "vncviewer.h"
@@ -50,7 +50,7 @@
 
 #include "touch.h"
 
-static rfb::LogWriter vlog("Touch");
+static core::LogWriter vlog("Touch");
 
 #if !defined(WIN32) && !defined(__APPLE__)
 static int xi_major;

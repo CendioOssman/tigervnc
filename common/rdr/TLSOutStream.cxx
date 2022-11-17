@@ -26,13 +26,13 @@
 #include <core/Exception.h>
 #include <rdr/TLSException.h>
 #include <rdr/TLSOutStream.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <errno.h>
 
 #ifdef HAVE_GNUTLS
 using namespace rdr;
 
-static rfb::LogWriter vlog("TLSOutStream");
+static core::LogWriter vlog("TLSOutStream");
 
 ssize_t TLSOutStream::push(gnutls_transport_ptr_t str, const void* data,
 				   size_t size)

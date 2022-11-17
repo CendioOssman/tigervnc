@@ -30,12 +30,12 @@
 
 #include <rfb/Timer.h>
 #include <core/util.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using namespace rfb;
 
 #ifndef __NO_DEFINE_VLOG__
-static LogWriter vlog("Timer");
+static core::LogWriter vlog("Timer");
 #endif
 
 

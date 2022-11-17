@@ -27,10 +27,11 @@
 #include <unistd.h>
 #endif
 
+#include <core/LogWriter.h>
+
 #include <rfb/CMsgWriter.h>
 #include <rfb/CSecurity.h>
 #include <rfb/Exception.h>
-#include <rfb/LogWriter.h>
 #include <rfb/Security.h>
 #include <rfb/screenTypes.h>
 #include <rfb/fenceTypes.h>
@@ -59,7 +60,7 @@ using namespace core;
 using namespace network;
 using namespace rfb;
 
-static rfb::LogWriter vlog("CConn");
+static core::LogWriter vlog("CConn");
 
 // 8 colours (1 bit per component)
 static const PixelFormat verylowColourPF(8, 3,false, true,

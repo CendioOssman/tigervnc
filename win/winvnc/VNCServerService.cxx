@@ -23,7 +23,7 @@
 #endif
 
 #include <winvnc/VNCServerService.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <core/util.h>
 #include <rfb_win32/TsSessions.h>
 #include <rfb_win32/ModuleFileName.h>

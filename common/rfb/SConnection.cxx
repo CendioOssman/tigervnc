@@ -40,13 +40,13 @@
 #include <rfb/SSecurity.h>
 #include <core/util.h>
 
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using core::Exception;
 
 using namespace rfb;
 
-static LogWriter vlog("SConnection");
+static core::LogWriter vlog("SConnection");
 
 SConnection::SConnection(AccessRights accessRights_)
   : readyForSetColourMapEntries(false), is(nullptr), os(nullptr),

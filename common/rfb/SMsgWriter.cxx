@@ -38,14 +38,14 @@
 #include <rfb/UpdateTracker.h>
 #include <rfb/Encoder.h>
 #include <rfb/SMsgWriter.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <rfb/ledStates.h>
 
 using core::Exception;
 
 using namespace rfb;
 
-static LogWriter vlog("SMsgWriter");
+static core::LogWriter vlog("SMsgWriter");
 
 SMsgWriter::SMsgWriter(ClientParams* client_, rdr::OutStream* os_)
   : client(client_), os(os_),

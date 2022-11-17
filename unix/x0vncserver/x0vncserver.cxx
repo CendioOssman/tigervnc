@@ -31,8 +31,8 @@
 #include <errno.h>
 #include <pwd.h>
 
-#include <rfb/Logger_stdio.h>
-#include <rfb/LogWriter.h>
+#include <core/Logger_stdio.h>
+#include <core/LogWriter.h>
 #include <rfb/VNCServerST.h>
 #include <core/Configuration.h>
 #include <rfb/Timer.h>

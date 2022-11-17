@@ -29,7 +29,7 @@
 #include <string.h>
 
 #include <core/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <rfb/PixelBuffer.h>
 
 using core::Exception;
@@ -37,7 +37,7 @@ using core::Exception;
 using namespace rfb;
 using namespace rdr;
 
-static LogWriter vlog("PixelBuffer");
+static core::LogWriter vlog("PixelBuffer");
 
 // We do a lot of byte offset calculations that assume the result fits
 // inside a signed 32 bit integer. Limit the maximum size of pixel

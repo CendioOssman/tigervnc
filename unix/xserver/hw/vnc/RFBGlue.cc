@@ -25,15 +25,14 @@
 
 #include <network/TcpSocket.h>
 #include <core/Configuration.h>
-#include <rfb/LogWriter.h>
-#include <rfb/Logger_stdio.h>
-#include <rfb/Logger_syslog.h>
+#include <core/LogWriter.h>
+#include <core/Logger_stdio.h>
+#include <core/Logger_syslog.h>
 #include <core/util.h>
 
 #include "RFBGlue.h"
 
 using namespace core;
-using namespace rfb;
 
 // Loggers used by C code must be created here
 static LogWriter inputLog("Input");
@@ -41,9 +40,9 @@ static LogWriter selectionLog("Selection");
 
 void vncInitRFB(void)
 {
-  rfb::initStdIOLoggers();
-  rfb::initSyslogLogger();
-  rfb::LogWriter::setLogParams("*:stderr:30");
+  core::initStdIOLoggers();
+  core::initSyslogLogger();
+  core::LogWriter::setLogParams("*:stderr:30");
   core::Configuration::enableServerParams();
 }
 

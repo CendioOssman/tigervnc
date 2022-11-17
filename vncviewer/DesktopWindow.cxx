@@ -28,7 +28,7 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <rfb/CMsgWriter.h>
 #include <core/util.h>
 
@@ -73,7 +73,7 @@ static int edge_scroll_size_y = 96;
 using namespace core;
 using namespace rfb;
 
-static rfb::LogWriter vlog("DesktopWindow");
+static core::LogWriter vlog("DesktopWindow");
 
 // Global due to http://www.fltk.org/str.php?L2177 and the similar
 // issue for Fl::event_dispatch.
