@@ -49,7 +49,6 @@
 #include "QueryConnectDialog.h"
 
 using namespace core;
-using namespace rfb;
 
 static LogWriter vlog("vncconfig");
 

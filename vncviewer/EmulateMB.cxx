@@ -277,7 +277,7 @@ void EmulateMB::filterPointerEvent(const core::Point& pos, uint8_t buttonMask)
   }
 }
 
-void EmulateMB::handleTimeout(rfb::Timer *t)
+void EmulateMB::handleTimeout(core::Timer *t)
 {
   int action1, action2;
   uint8_t buttonMask;
