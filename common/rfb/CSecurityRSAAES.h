@@ -43,7 +43,7 @@ namespace rfb {
     int getType() const override { return secType; }
     bool isSecure() const override { return secType == secTypeRA256; }
 
-    static IntParameter RSAKeyLength;
+    static core::IntParameter RSAKeyLength;
 
   private:
     void cleanup();

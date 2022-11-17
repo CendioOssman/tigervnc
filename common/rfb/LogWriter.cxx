@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include <rfb/LogWriter.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 #include <core/util.h>
 #include <stdlib.h>
 

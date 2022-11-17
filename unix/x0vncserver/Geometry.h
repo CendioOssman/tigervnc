@@ -24,7 +24,7 @@
 #define __GEOMETRY_H__
 
 #include <core/Rect.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 
 class Geometry
 {
@@ -49,7 +49,7 @@ protected:
   // and return that rectangle clipped to m_rect.
   core::Rect parseString(const char *arg) const;
 
-  static rfb::StringParameter m_geometryParam;
+  static core::StringParameter m_geometryParam;
 
   int m_fullWidth;
   int m_fullHeight;

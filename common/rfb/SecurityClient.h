@@ -22,7 +22,7 @@
 #ifndef __RFB_SECURITYCLIENT_H__
 #define __RFB_SECURITYCLIENT_H__
 
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 #include <rfb/Security.h>
 #include <rfb/CSecurity.h>
 
@@ -35,7 +35,7 @@ namespace rfb {
     /* Create client side CSecurity class instance */
     CSecurity* GetCSecurity(CConnection* cc, uint32_t secType);
 
-    static StringParameter secTypes;
+    static core::StringParameter secTypes;
   };
 
 }

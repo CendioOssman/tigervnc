@@ -40,7 +40,7 @@
 #include <X11/keysym.h>
 #include "vncExt.h"
 #include <core/Exception.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 #include <rfb/Logger_stdio.h>
 #include <rfb/LogWriter.h>
 #include "TXWindow.h"

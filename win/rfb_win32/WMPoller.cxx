@@ -25,7 +25,7 @@
 #include <rfb_win32/WMPoller.h>
 #include <rfb/Exception.h>
 #include <rfb/LogWriter.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 
 using namespace core;
 using namespace rfb;
