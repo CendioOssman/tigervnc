@@ -46,7 +46,7 @@ UserPasswdGetter *CSecurity::upg = nullptr;
 UserMsgBox *CSecurity::msg = nullptr;
 #endif
 
-StringParameter SecurityClient::secTypes
+core::StringParameter SecurityClient::secTypes
 ("SecurityTypes",
  "Specify which security scheme to use (None, VncAuth, Plain"
 #ifdef HAVE_GNUTLS
@@ -63,7 +63,7 @@ StringParameter SecurityClient::secTypes
  "RA2,RA2_256,RA2ne,RA2ne_256,DH,MSLogonII"
 #endif
  "VncAuth,None",
-ConfViewer);
+core::ConfViewer);
 
 CSecurity* SecurityClient::GetCSecurity(CConnection* cc, uint32_t secType)
 {

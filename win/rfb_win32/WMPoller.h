@@ -30,7 +30,7 @@
 
 #include <windows.h>
 #include <rfb/UpdateTracker.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 
 namespace rfb {
 
@@ -43,7 +43,7 @@ namespace rfb {
       bool processEvent();
       bool setUpdateTracker(UpdateTracker* ut);
 
-      static BoolParameter poll_console_windows;
+      static core::BoolParameter poll_console_windows;
     protected:
       struct PollInfo {
         core::Region poll_include;

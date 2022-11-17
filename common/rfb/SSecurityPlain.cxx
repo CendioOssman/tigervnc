@@ -37,7 +37,7 @@
 
 using namespace rfb;
 
-StringParameter PasswordValidator::plainUsers
+core::StringParameter PasswordValidator::plainUsers
 ("PlainUsers",
  "Users permitted to access via Plain security type (including TLSPlain, X509Plain etc.)"
 #ifdef HAVE_NETTLE

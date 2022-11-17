@@ -33,7 +33,7 @@
 #include <os/Mutex.h>
 
 #include <core/util.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 #include <rfb/LogWriter.h>
 #include <core/Exception.h>
 
@@ -42,9 +42,9 @@
 #include <rdr/HexOutStream.h>
 #include <rdr/HexInStream.h>
 
-using namespace rfb;
+using namespace core;
 
-static LogWriter vlog("Config");
+static rfb::LogWriter vlog("Config");
 
 
 // -=- The Global/server/viewer Configuration objects
@@ -376,7 +376,7 @@ StringParameter::StringParameter(const char* name_, const char* desc_,
 {
   if (!v) {
     vlog.error("Default value <null> for %s not allowed",name_);
-    throw core::Exception("Default value <null> not allowed");
+    throw Exception("Default value <null> not allowed");
   }
 }
 
@@ -387,7 +387,7 @@ bool StringParameter::setParam(const char* v) {
   LOCK_CONFIG;
   if (immutable) return true;
   if (!v)
-    throw core::Exception("setParam(<null>) not allowed");
+    throw Exception("setParam(<null>) not allowed");
   vlog.debug("set %s(String) to %s", getName(), v);
   value = v;
   return true;
@@ -429,7 +429,7 @@ BinaryParameter::~BinaryParameter() {
 
 bool BinaryParameter::setParam(const char* v) {
   if (immutable) return true;
-  std::vector<uint8_t> newValue = core::hexToBin(v, strlen(v));
+  std::vector<uint8_t> newValue = hexToBin(v, strlen(v));
   if (newValue.empty() && strlen(v) > 0)
     return false;
   setParam(newValue.data(), newValue.size());
@@ -452,12 +452,12 @@ void BinaryParameter::setParam(const uint8_t* v, size_t len) {
 }
 
 std::string BinaryParameter::getDefaultStr() const {
-  return core::binToHex(def_value, def_length);
+  return binToHex(def_value, def_length);
 }
 
 std::string BinaryParameter::getValueStr() const {
   LOCK_CONFIG;
-  return core::binToHex(value, length);
+  return binToHex(value, length);
 }
 
 std::vector<uint8_t> BinaryParameter::getData() const {

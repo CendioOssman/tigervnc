@@ -44,8 +44,8 @@ namespace rfb {
       return accessRights;
     }
 
-    static StringParameter keyFile;
-    static BoolParameter requireUsername;
+    static core::StringParameter keyFile;
+    static core::BoolParameter requireUsername;
 
   private:
     void cleanup();

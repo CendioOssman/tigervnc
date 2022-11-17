@@ -30,7 +30,7 @@
 #include <os/Thread.h>
 
 #include <rfb/LogWriter.h>
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 
 #include <rfb_win32/LaunchProcess.h>
 #include <rfb_win32/TrayIcon.h>

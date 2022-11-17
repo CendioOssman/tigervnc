@@ -30,7 +30,7 @@
 #include <set>
 #include <string>
 
-#include <rfb/Configuration.h>
+#include <core/Configuration.h>
 #include <rfb/Logger_stdio.h>
 #include <rfb/LogWriter.h>
 #include <rfb/ServerCore.h>
@@ -81,25 +81,25 @@ static ParamSet allowOverrideSet;
 
 static const char* defaultDesktopName();
 
-rfb::IntParameter rfbport("rfbport", "TCP port to listen for RFB protocol",0);
-rfb::StringParameter rfbunixpath("rfbunixpath", "Unix socket to listen for RFB protocol", "");
-rfb::IntParameter rfbunixmode("rfbunixmode", "Unix socket access mode", 0600);
-rfb::StringParameter desktopName("desktop", "Name of VNC desktop", defaultDesktopName());
-rfb::BoolParameter localhostOnly("localhost",
+core::IntParameter rfbport("rfbport", "TCP port to listen for RFB protocol",0);
+core::StringParameter rfbunixpath("rfbunixpath", "Unix socket to listen for RFB protocol", "");
+core::IntParameter rfbunixmode("rfbunixmode", "Unix socket access mode", 0600);
+core::StringParameter desktopName("desktop", "Name of VNC desktop", defaultDesktopName());
+core::BoolParameter localhostOnly("localhost",
                                  "Only allow connections from localhost",
                                  false);
-rfb::StringParameter interface("interface",
+core::StringParameter interface("interface",
                                "listen on the specified network address",
                                "all");
-rfb::BoolParameter avoidShiftNumLock("AvoidShiftNumLock",
+core::BoolParameter avoidShiftNumLock("AvoidShiftNumLock",
                                      "Avoid fake Shift presses for keys affected by NumLock.",
                                      true);
-rfb::StringParameter allowOverride("AllowOverride",
+core::StringParameter allowOverride("AllowOverride",
                                    "Comma separated list of parameters that can be modified using VNC extension.",
                                    "desktop,AcceptPointerEvents,SendCutText,AcceptCutText,SendPrimary,SetPrimary");
-rfb::BoolParameter setPrimary("SetPrimary", "Set the PRIMARY as well "
+core::BoolParameter setPrimary("SetPrimary", "Set the PRIMARY as well "
                               "as the CLIPBOARD selection", true);
-rfb::BoolParameter sendPrimary("SendPrimary",
+core::BoolParameter sendPrimary("SendPrimary",
                                "Send the PRIMARY as well as the CLIPBOARD selection",
                                true);
 
@@ -521,5 +521,5 @@ int vncOverrideParam(const char *nameAndValue)
   if (allowOverrideSet.find(key) == allowOverrideSet.end())
     return 0;
 
-  return rfb::Configuration::setParam(nameAndValue);
+  return core::Configuration::setParam(nameAndValue);
 }
