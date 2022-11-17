@@ -26,9 +26,9 @@
 #include <string.h>
 
 #include <core/Exception.h>
+#include <core/LogWriter.h>
 
 #include <rfb/CMsgWriter.h>
-#include <rfb/LogWriter.h>
 #include <rfb/KeysymStr.h>
 #include <rfb/ledStates.h>
 #include <core/util.h>
@@ -104,7 +104,7 @@ extern const unsigned int code_map_osx_to_qnum_len;
 using namespace core;
 using namespace rfb;
 
-static rfb::LogWriter vlog("Viewport");
+static core::LogWriter vlog("Viewport");
 
 // Menu constants
 

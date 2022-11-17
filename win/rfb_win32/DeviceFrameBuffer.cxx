@@ -31,7 +31,7 @@
 #include <rfb_win32/DeviceContext.h>
 #include <rfb_win32/IconInfo.h>
 #include <rfb/VNCServer.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using namespace core;
 using namespace rfb;

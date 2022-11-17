@@ -20,7 +20,7 @@
 
 #include <os/Mutex.h>
 #include <core/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 #include <rfb/H264DecoderContext.h>
 
@@ -34,7 +34,7 @@
 
 using namespace rfb;
 
-static LogWriter vlog("H264DecoderContext");
+static core::LogWriter vlog("H264DecoderContext");
 
 H264DecoderContext *H264DecoderContext::createContext(const core::Rect &r)
 {

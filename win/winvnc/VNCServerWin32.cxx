@@ -35,7 +35,7 @@
 #include <rfb_win32/CurrentUser.h>
 #include <rfb_win32/Service.h>
 
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using namespace core;
 using namespace rfb;

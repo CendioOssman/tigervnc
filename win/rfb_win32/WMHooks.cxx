@@ -29,7 +29,7 @@
 #include <rfb_win32/Service.h>
 #include <rfb_win32/MsgWindow.h>
 #include <rfb_win32/IntervalTimer.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 #include <list>
 

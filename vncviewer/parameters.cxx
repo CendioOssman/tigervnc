@@ -34,7 +34,7 @@
 
 #include <os/os.h>
 #include <core/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <rfb/SecurityClient.h>
 
 #include <FL/fl_utf8.h>

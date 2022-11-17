@@ -21,9 +21,10 @@
 #endif
 
 #include <winvnc/ManagedListener.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using namespace winvnc;
+using namespace core;
 using namespace rfb;
 using namespace win32;
 

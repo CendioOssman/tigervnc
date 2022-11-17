@@ -40,7 +40,7 @@
 #include <network/Socket.h>
 #include <core/Exception.h>
 #include <rfb/VNCServerST.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <core/Configuration.h>
 #include <rfb/ServerCore.h>
 

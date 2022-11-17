@@ -24,8 +24,9 @@
 
 #include <rfb_win32/EventManager.h>
 #include <core/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
+using namespace core;
 using namespace rfb;
 using namespace rfb::win32;
 

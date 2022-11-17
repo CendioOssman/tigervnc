@@ -24,7 +24,7 @@
 
 #include <rfb_win32/WMCursor.h>
 #include <rfb/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using namespace core;
 using namespace rdr;

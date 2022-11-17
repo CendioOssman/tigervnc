@@ -55,13 +55,14 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <core/LogWriter.h>
+
 #include <network/Socket.h>
 
 #include <rfb/ComparingUpdateTracker.h>
 #include <rfb/Exception.h>
 #include <rfb/KeyRemapper.h>
 #include <rfb/KeysymStr.h>
-#include <rfb/LogWriter.h>
 #include <rfb/Security.h>
 #include <rfb/ServerCore.h>
 #include <rfb/VNCServerST.h>
@@ -73,8 +74,8 @@ using core::Exception;
 
 using namespace rfb;
 
-static LogWriter slog("VNCServerST");
-static LogWriter connectionsLog("Connections");
+static core::LogWriter slog("VNCServerST");
+static core::LogWriter connectionsLog("Connections");
 
 //
 // -=- VNCServerST Implementation

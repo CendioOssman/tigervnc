@@ -37,7 +37,7 @@
 
 #include <os/os.h>
 #include <core/Exception.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 #include "fltk/layout.h"
 #include "ServerDialog.h"
@@ -49,7 +49,6 @@
 
 using namespace std;
 using namespace core;
-using namespace rfb;
 
 static LogWriter vlog("ServerDialog");
 

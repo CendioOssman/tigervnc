@@ -35,14 +35,14 @@
 #include <rfb/SMsgHandler.h>
 #include <rfb/SMsgReader.h>
 #include <core/Configuration.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <core/util.h>
 
 using core::Exception;
 
 using namespace rfb;
 
-static LogWriter vlog("SMsgReader");
+static core::LogWriter vlog("SMsgReader");
 
 static core::IntParameter maxCutText("MaxCutText", "Maximum permitted length of an incoming clipboard update", 256*1024);
 

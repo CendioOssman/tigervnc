@@ -26,15 +26,15 @@
 #include <algorithm>
 
 #include <core/Exception.h>
+#include <core/LogWriter.h>
 
-#include <rfb/LogWriter.h>
 #include <rfb/Security.h>
 #include <core/util.h>
 
 using namespace rfb;
 using namespace std;
 
-static LogWriter vlog("Security");
+static core::LogWriter vlog("Security");
 
 #ifdef HAVE_GNUTLS
 core::StringParameter Security::GnuTLSPriority("GnuTLSPriority",

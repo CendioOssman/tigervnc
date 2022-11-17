@@ -26,11 +26,11 @@
 #endif
 
 #include <rfb/UpdateTracker.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using namespace rfb;
 
-static LogWriter vlog("UpdateTracker");
+static core::LogWriter vlog("UpdateTracker");
 
 
 // -=- ClippingUpdateTracker

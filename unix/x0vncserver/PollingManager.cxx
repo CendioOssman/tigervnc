@@ -28,7 +28,7 @@
 #include <string.h>
 #include <time.h>
 #include <X11/Xlib.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <rfb/VNCServer.h>
 #include <core/Configuration.h>
 #include <rfb/ServerCore.h>

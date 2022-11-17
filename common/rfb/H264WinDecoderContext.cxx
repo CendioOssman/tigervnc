@@ -24,13 +24,13 @@
 #define SAFE_RELEASE(obj) if (obj) { obj->Release(); obj = nullptr; }
 
 #include <os/Mutex.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <rfb/PixelBuffer.h>
 #include <rfb/H264WinDecoderContext.h>
 
 using namespace rfb;
 
-static LogWriter vlog("H264WinDecoderContext");
+static core::LogWriter vlog("H264WinDecoderContext");
 
 // Older MinGW lacks this definition
 #ifndef HAVE_VIDEO_PROCESSOR_MFT

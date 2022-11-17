@@ -23,7 +23,7 @@
 #endif
 
 #include <rfb_win32/SDisplayCorePolling.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 
 using namespace core;
 using namespace rfb;

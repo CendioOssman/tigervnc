@@ -34,7 +34,7 @@
 
 #include <core/util.h>
 #include <core/Configuration.h>
-#include <rfb/LogWriter.h>
+#include <core/LogWriter.h>
 #include <core/Exception.h>
 
 #define LOCK_CONFIG os::AutoMutex a(mutex)
@@ -44,7 +44,7 @@
 
 using namespace core;
 
-static rfb::LogWriter vlog("Config");
+static LogWriter vlog("Config");
 
 
 // -=- The Global/server/viewer Configuration objects
