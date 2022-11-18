@@ -29,6 +29,7 @@
 #include <sys/time.h>
 
 #include <core/LogWriter.h>
+#include <core/time.h>
 #include <rfb/CMsgWriter.h>
 #include <core/util.h>
 

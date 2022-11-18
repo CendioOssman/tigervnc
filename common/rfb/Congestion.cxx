@@ -52,6 +52,7 @@
 #include <rfb/Congestion.h>
 #include <core/LogWriter.h>
 #include <core/util.h>
+#include <core/time.h>
 
 // Debug output on what the congestion control is up to
 #undef CONGESTION_DEBUG

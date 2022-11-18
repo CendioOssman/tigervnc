@@ -29,6 +29,7 @@
 #include <algorithm>
 
 #include <core/Timer.h>
+#include <core/time.h>
 #include <core/util.h>
 #include <core/LogWriter.h>
 

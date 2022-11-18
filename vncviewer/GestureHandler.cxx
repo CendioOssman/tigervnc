@@ -24,7 +24,7 @@
 #include <assert.h>
 #include <math.h>
 
-#include <core/util.h>
+#include <core/time.h>
 #include <core/LogWriter.h>
 
 #include "GestureHandler.h"
