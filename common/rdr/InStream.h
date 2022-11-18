@@ -30,6 +30,8 @@
 
 #include <stdexcept>
 
+#include <core/Object.h>
+
 // Check that callers are using InStream properly,
 // useful when writing new protocol handling
 #ifdef _DEBUG
@@ -43,7 +45,7 @@ namespace rdr {
     end_of_stream() noexcept : std::runtime_error("End of stream") {}
   };
 
-  class InStream {
+  class InStream : public core::Object {
 
   public:
 

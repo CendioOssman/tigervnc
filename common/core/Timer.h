@@ -23,6 +23,8 @@
 #include <list>
 #include <sys/time.h>
 
+#include <core/Object.h>
+
 namespace core {
 
   /* Timer
@@ -42,8 +44,8 @@ namespace core {
      when subclassing.
   */
 
-  struct Timer {
-
+  class Timer : public Object {
+  public:
     struct Callback {
       // handleTimeout
       //   Passed a pointer to the Timer that has timed out.  If the
