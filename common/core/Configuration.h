@@ -51,6 +51,8 @@
 #include <string>
 #include <vector>
 
+#include <core/Object.h>
+
 namespace core {
 
   class VoidParameter;
@@ -58,7 +60,7 @@ namespace core {
   // -=- Configuration
   //     Class used to access parameters.
 
-  class Configuration {
+  class Configuration : public Object {
   public:
     // - Create a new Configuration object
     Configuration() {}
@@ -121,7 +123,7 @@ namespace core {
   // -=- VoidParameter
   //     Configuration parameter base-class.
 
-  class VoidParameter {
+  class VoidParameter : public Object {
   public:
     VoidParameter(const char* name_, const char* desc_);
     virtual  ~VoidParameter();
