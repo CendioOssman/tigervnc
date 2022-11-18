@@ -26,7 +26,7 @@
 
 #define XK_MISCELLANY
 #include <rfb/keysymdef.h>
-#include <core/util.h>
+#include <core/time.h>
 
 #include "GestureHandler.h"
 #include "BaseTouchHandler.h"

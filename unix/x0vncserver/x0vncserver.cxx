@@ -36,6 +36,7 @@
 #include <rfb/VNCServerST.h>
 #include <core/Configuration.h>
 #include <core/Timer.h>
+#include <core/time.h>
 #include <network/TcpSocket.h>
 #include <network/UnixSocket.h>
 #ifdef HAVE_LIBSYSTEMD

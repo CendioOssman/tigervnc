@@ -67,7 +67,7 @@
 #include <rfb/ServerCore.h>
 #include <rfb/VNCServerST.h>
 #include <rfb/VNCSConnectionST.h>
-#include <core/util.h>
+#include <core/time.h>
 #include <rfb/ledStates.h>
 
 using core::Exception;

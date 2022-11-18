@@ -22,6 +22,8 @@
 #include <config.h>
 #endif
 
+#include <core/time.h>
+
 #include <network/TcpSocket.h>
 
 #include <core/LogWriter.h>

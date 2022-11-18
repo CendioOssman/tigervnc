@@ -46,7 +46,7 @@
 
 #include <rdr/FdOutStream.h>
 #include <core/Exception.h>
-#include <core/util.h>
+#include <core/time.h>
 
 
 using namespace rdr;

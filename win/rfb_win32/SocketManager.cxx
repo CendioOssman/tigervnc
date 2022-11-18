@@ -27,7 +27,7 @@
 
 #include <core/LogWriter.h>
 #include <core/Timer.h>
-#include <core/util.h>
+#include <core/time.h>
 
 #include <network/Socket.h>
 
