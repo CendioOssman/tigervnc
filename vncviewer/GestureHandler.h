@@ -23,11 +23,13 @@
 #include <set>
 #include <map>
 
+#include <core/Object.h>
 #include <core/Timer.h>
 
 #include "GestureEvent.h"
 
-class GestureHandler : public core::Timer::Callback {
+class GestureHandler : public core::Object,
+                       public core::Timer::Callback {
   public:
     GestureHandler();
     virtual ~GestureHandler();

@@ -24,12 +24,14 @@
 #ifndef __RFB_SMSGREADER_H__
 #define __RFB_SMSGREADER_H__
 
+#include <core/Object.h>
+
 namespace rdr { class InStream; }
 
 namespace rfb {
   class SMsgHandler;
 
-  class SMsgReader {
+  class SMsgReader : core::Object {
   public:
     SMsgReader(SMsgHandler* handler, rdr::InStream* is);
     virtual ~SMsgReader();

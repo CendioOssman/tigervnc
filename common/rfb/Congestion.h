@@ -21,8 +21,10 @@
 
 #include <list>
 
+#include <core/Object.h>
+
 namespace rfb {
-  class Congestion {
+  class Congestion : public core::Object {
   public:
     Congestion();
     ~Congestion();

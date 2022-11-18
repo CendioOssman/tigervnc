@@ -38,9 +38,12 @@
 #ifndef __RFB_CSECURITY_H__
 #define __RFB_CSECURITY_H__
 
+#include <core/Object.h>
+
 namespace rfb {
   class CConnection;
-  class CSecurity {
+
+  class CSecurity : public core::Object {
   public:
     CSecurity(CConnection* cc_) : cc(cc_) {}
     virtual ~CSecurity() {}

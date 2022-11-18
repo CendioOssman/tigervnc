@@ -40,6 +40,8 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
+
 #include <rfb/screenTypes.h>
 
 namespace core { struct Point; }
@@ -51,7 +53,7 @@ namespace rfb {
   struct ScreenSet;
   class VNCServer;
 
-  class SDesktop {
+  class SDesktop : public core::Object {
   protected:
     SDesktop() {};
   public:

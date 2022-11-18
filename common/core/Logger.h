@@ -24,13 +24,15 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include <core/Object.h>
+
 // Each log writer instance has a unique textual name,
 // and is attached to a particular Logger instance and
 // is assigned a particular log level.
 
 namespace core {
 
-  class Logger {
+  class Logger : public Object {
   public:
 
     // -=- Create / Destroy a logger
