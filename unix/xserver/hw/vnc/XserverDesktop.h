@@ -31,6 +31,7 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
 #include <rfb/SDesktop.h>
 #include <rfb/PixelBuffer.h>
 #include <core/Configuration.h>
@@ -44,7 +45,9 @@ namespace rfb {
 
 namespace network { class SocketListener; class Socket; }
 
-class XserverDesktop : public rfb::SDesktop, public rfb::FullFramePixelBuffer,
+class XserverDesktop : public core::Object,
+                       public rfb::SDesktop,
+                       public rfb::FullFramePixelBuffer,
                        public core::Timer::Callback {
 public:
 

@@ -60,7 +60,8 @@ namespace rfb {
                                    const char* userName) = 0;
     };
 
-    class SDisplay : public SDesktop,
+    class SDisplay : public core::Object,
+      public SDesktop,
       WMMonitor::Notifier,
       Clipboard::Notifier,
       public EventHandler

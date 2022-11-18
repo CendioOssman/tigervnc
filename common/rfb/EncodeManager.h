@@ -24,6 +24,7 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
 #include <rfb/PixelBuffer.h>
 #include <core/Region.h>
 #include <core/Timer.h>
@@ -42,7 +43,7 @@ namespace rfb {
 
   struct RectInfo;
 
-  class EncodeManager : public core::Timer::Callback {
+  class EncodeManager : public core::Object, public core::Timer::Callback {
   public:
     EncodeManager(SConnection* conn);
     ~EncodeManager();

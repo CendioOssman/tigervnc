@@ -26,6 +26,7 @@
 #ifndef __RFB_JPEGDECOMPRESSOR_H__
 #define __RFB_JPEGDECOMPRESSOR_H__
 
+#include <core/Object.h>
 #include <rfb/PixelFormat.h>
 #include <core/Rect.h>
 
@@ -36,7 +37,7 @@ struct JPEG_SRC_MGR;
 
 namespace rfb {
 
-  class JpegDecompressor {
+  class JpegDecompressor : public core::Object {
 
   public:
 

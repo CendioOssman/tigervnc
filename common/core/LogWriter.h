@@ -22,6 +22,8 @@
 #define __CORE_LOG_WRITER_H__
 
 #include <stdarg.h>
+
+#include <core/Object.h>
 #include <core/Logger.h>
 #include <core/Configuration.h>
 
@@ -48,7 +50,7 @@
 
 namespace core {
 
-  class LogWriter {
+  class LogWriter : public Object {
   public:
     LogWriter(const char* name);
     ~LogWriter();
