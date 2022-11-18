@@ -21,6 +21,8 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
+
 namespace core {
   class Region;
   struct Rect;
@@ -46,7 +48,7 @@ namespace rfb {
     DecoderPartiallyOrdered = 1 << 1,
   };
 
-  class Decoder {
+  class Decoder : public core::Object {
   public:
     Decoder(enum DecoderFlags flags);
     virtual ~Decoder();
