@@ -38,6 +38,7 @@
 #ifndef __RFB_SDESKTOP_H__
 #define __RFB_SDESKTOP_H__
 
+#include <core/Object.h>
 #include <rfb/PixelBuffer.h>
 #include <rfb/VNCServer.h>
 #include <rfb/screenTypes.h>
@@ -46,7 +47,7 @@ namespace network { class Socket; }
 
 namespace rfb {
 
-  class SDesktop {
+  class SDesktop : public core::Object {
   public:
     // init() is called immediately when the VNCServer gets a reference
     // to the SDesktop, so that a reverse reference can be set up.

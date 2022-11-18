@@ -26,6 +26,7 @@
 
 #include <string>
 
+#include <core/Object.h>
 #include <rfb/CMsgHandler.h>
 #include <rfb/DecodeManager.h>
 #include <rfb/SecurityClient.h>
@@ -36,7 +37,7 @@ namespace rfb {
   class CMsgWriter;
   class CSecurity;
 
-  class CConnection : public CMsgHandler {
+  class CConnection : public core::Object, public CMsgHandler {
   public:
 
     CConnection();

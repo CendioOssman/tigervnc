@@ -21,6 +21,7 @@
 
 #include <core/Rect.h>
 #include <core/Region.h>
+#include <core/Object.h>
 #include <rfb/PixelBuffer.h>
 
 namespace rfb {
@@ -42,7 +43,7 @@ namespace rfb {
     */
   };
 
-  class UpdateTracker {
+  class UpdateTracker : public core::Object {
   public:
     UpdateTracker() {};
     virtual ~UpdateTracker() {};

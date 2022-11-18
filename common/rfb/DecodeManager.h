@@ -23,6 +23,7 @@
 
 #include <os/Thread.h>
 
+#include <core/Object.h>
 #include <core/Region.h>
 #include <rfb/encodings.h>
 
@@ -43,7 +44,7 @@ namespace rfb {
   class Decoder;
   class ModifiablePixelBuffer;
 
-  class DecodeManager {
+  class DecodeManager : public core::Object {
   public:
     DecodeManager(CConnection *conn);
     ~DecodeManager();
