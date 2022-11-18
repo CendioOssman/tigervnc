@@ -23,6 +23,8 @@
 
 #include <pixman.h>
 
+#include <core/Object.h>
+
 #include <rfb/PixelBuffer.h>
 
 namespace rfb { class VNCServer; class PixelFormat; }
@@ -36,7 +38,8 @@ namespace wayland {
   class ImageCopyCaptureManager;
 };
 
-class WaylandPixelBuffer : public rfb::ManagedPixelBuffer {
+class WaylandPixelBuffer : public core::Object,
+                           public rfb::ManagedPixelBuffer {
 public:
   WaylandPixelBuffer(wayland::Display* display, wayland::Output* output,
                      wayland::Seat* seat, rfb::VNCServer* server,

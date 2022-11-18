@@ -23,6 +23,8 @@
 
 #include <FL/Fl_Window.H>
 
+#include <core/Object.h>
+
 class Fl_Widget;
 class Fl_Box;
 class Fl_Group;
@@ -36,7 +38,7 @@ class Fl_Monitor_Arrangement;
 
 typedef void (OptionsCallback)(void*);
 
-class OptionsDialog : public Fl_Window {
+class OptionsDialog : public core::Object, public Fl_Window {
 protected:
   OptionsDialog();
   ~OptionsDialog();

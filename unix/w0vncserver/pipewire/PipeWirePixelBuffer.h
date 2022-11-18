@@ -20,6 +20,7 @@
 #define __PIPEWIRE_PIXEL_BUFFER_H__
 
 #include <rfb/PixelBuffer.h>
+#include <core/Object.h>
 #include <core/Region.h>
 #include <spa/buffer/buffer.h>
 
@@ -29,7 +30,8 @@ namespace rfb { class VNCServer; class PixelFormat;}
 
 struct PipeWireCursor;
 
-class PipeWirePixelBuffer : public rfb::ManagedPixelBuffer,
+class PipeWirePixelBuffer : public core::Object,
+                            public rfb::ManagedPixelBuffer,
                             public PipeWireStream {
 public:
   PipeWirePixelBuffer(int32_t pipewireFd, uint32_t pipewireId,

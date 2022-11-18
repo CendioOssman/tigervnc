@@ -23,6 +23,8 @@
 
 #include <list>
 
+#include <core/Object.h>
+
 class KeyboardHandler
 {
 public:
@@ -31,7 +33,7 @@ public:
   virtual void handleKeyRelease(int systemKeyCode) = 0;
 };
 
-class Keyboard
+class Keyboard : public core::Object
 {
 public:
   Keyboard(KeyboardHandler* handler_) : handler(handler_) {};

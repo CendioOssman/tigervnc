@@ -23,6 +23,8 @@
 #ifndef __XPIXELBUFFER_H__
 #define __XPIXELBUFFER_H__
 
+#include <core/Object.h>
+
 #include <rfb/PixelBuffer.h>
 
 #include <x0vncserver/Image.h>
@@ -34,7 +36,8 @@ namespace rfb { class VNCServer; }
 // XPixelBuffer is an Image-based implementation of FullFramePixelBuffer.
 //
 
-class XPixelBuffer : public rfb::FullFramePixelBuffer
+class XPixelBuffer : public core::Object,
+                     public rfb::FullFramePixelBuffer
 {
 public:
   XPixelBuffer(Display* dpy, ImageFactory& factory, const core::Rect& rect);

@@ -24,6 +24,9 @@
 #define __POLLINGMANAGER_H__
 
 #include <X11/Xlib.h>
+
+#include <core/Object.h>
+
 #include <rfb/VNCServer.h>
 
 #include <x0vncserver/Image.h>
@@ -32,7 +35,7 @@
 #include <x0vncserver/TimeMillis.h>
 #endif
 
-class PollingManager {
+class PollingManager : public core::Object {
 
 public:
 

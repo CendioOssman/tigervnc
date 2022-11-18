@@ -21,9 +21,11 @@
 
 #include <glib.h>
 
+#include <core/Object.h>
+
 namespace wayland { class Display; }
 
-class GWaylandSource {
+class GWaylandSource : public core::Object {
 public:
   GWaylandSource(wayland::Display* display);
   ~GWaylandSource();

@@ -25,6 +25,7 @@
 
 #include <core/Configuration.h>
 #include <core/Logger.h>
+#include <core/Object.h>
 
 // Each log writer instance has a unique textual name,
 // and is attached to a particular Log instance and
@@ -49,7 +50,7 @@
 
 namespace core {
 
-  class LogWriter {
+  class LogWriter : public Object {
   public:
     LogWriter(const char* name);
     ~LogWriter();

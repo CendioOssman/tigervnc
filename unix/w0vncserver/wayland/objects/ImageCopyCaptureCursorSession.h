@@ -21,6 +21,7 @@
 
 #include <functional>
 
+#include <core/Object.h>
 #include <core/Rect.h>
 
 #include "Object.h"
@@ -32,7 +33,7 @@ namespace wayland {
   class Display;
   class ImageCopyCaptureSession;
 
-  class ImageCopyCaptureCursorSession {
+  class ImageCopyCaptureCursorSession : public core::Object {
   public:
     ImageCopyCaptureCursorSession(Display* display,
                                   ext_image_copy_capture_cursor_session_v1* session,

@@ -28,6 +28,8 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
+
 struct jpeg_decompress_struct;
 
 struct JPEG_ERROR_MGR;
@@ -39,7 +41,7 @@ namespace rfb {
 
   class PixelFormat;
 
-  class JpegDecompressor {
+  class JpegDecompressor : public core::Object {
 
   public:
 

@@ -22,6 +22,7 @@
 #include <functional>
 #include <vector>
 
+#include <core/Object.h>
 #include <core/Region.h>
 
 #include "Object.h"
@@ -39,7 +40,7 @@ namespace wayland {
   class Shm;
   class ShmPool;
 
-  class ImageCopyCaptureSession {
+  class ImageCopyCaptureSession : public core::Object {
   public:
     ImageCopyCaptureSession(Display* display,
                             ext_image_copy_capture_session_v1* session,

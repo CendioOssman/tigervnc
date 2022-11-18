@@ -26,13 +26,15 @@
 
 #include <gio/gio.h>
 
+#include <core/Object.h>
+
 namespace rfb { class VNCServer; }
 
 class PortalProxy;
 class Clipboard;
 struct PendingData;
 
-class RemoteDesktop {
+class RemoteDesktop : public core::Object {
 public:
   RemoteDesktop(std::string restoreToken,
                 std::function<void(int fd, uint32_t nodeId)> startPipewireCb,

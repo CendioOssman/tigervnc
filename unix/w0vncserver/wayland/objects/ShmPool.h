@@ -22,13 +22,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <core/Object.h>
+
 struct wl_shm_pool;
 struct wl_buffer;
 
 namespace wayland {
   class Shm;
 
-  class ShmPool {
+  class ShmPool : public core::Object {
   public:
     ShmPool(Shm* shm, int fd, size_t size);
     ~ShmPool();

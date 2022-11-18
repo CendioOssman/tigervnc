@@ -28,7 +28,9 @@
 
 #include <gio/gio.h>
 
-class PortalProxy {
+#include <core/Object.h>
+
+class PortalProxy : public core::Object {
 public:
   PortalProxy(const char* name, const char* objectPath,
               const char* interfaceName);

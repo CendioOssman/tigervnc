@@ -21,7 +21,9 @@
 
 #include <glib.h>
 
-class RFBTimerSource {
+#include <core/Object.h>
+
+class RFBTimerSource : public core::Object {
 public:
   RFBTimerSource();
   ~RFBTimerSource();

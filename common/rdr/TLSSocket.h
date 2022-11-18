@@ -38,7 +38,7 @@ namespace rdr {
   class TLSInStream;
   class TLSOutStream;
 
-  class TLSSocket {
+  class TLSSocket : public core::Object {
   public:
     TLSSocket(InStream* in, OutStream* out, gnutls_session_t session);
     virtual ~TLSSocket();

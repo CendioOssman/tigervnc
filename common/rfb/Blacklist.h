@@ -32,6 +32,8 @@
 #include <map>
 #include <string>
 
+#include <core/Object.h>
+
 namespace rfb {
 
   //
@@ -57,7 +59,7 @@ namespace rfb {
 
   // THIS CLASS IS NOT THREAD-SAFE!
 
-  class Blacklist {
+  class Blacklist : public core::Object {
   public:
     Blacklist();
     ~Blacklist();

@@ -27,9 +27,11 @@
 #ifndef __POLLINGSCHEDULER_H__
 #define __POLLINGSCHEDULER_H__
 
+#include <core/Object.h>
+
 #include <x0vncserver/TimeMillis.h>
 
-class PollingScheduler {
+class PollingScheduler : public core::Object {
 
 public:
 

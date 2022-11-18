@@ -25,6 +25,8 @@
 
 #include <list>
 
+#include <core/Object.h>
+
 #include <rfb/AccessRights.h>
 #include <rfb/UpdateTracker.h>
 
@@ -36,7 +38,7 @@ namespace rfb {
   class SConnection;
   struct ScreenSet;
 
-  class VNCServer : public UpdateTracker {
+  class VNCServer : public core::Object, public UpdateTracker {
   public:
     // addSocket() tells the server to serve the Socket.  The caller
     //   retains ownership of the Socket - the only way for the server

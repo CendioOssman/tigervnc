@@ -28,11 +28,13 @@
 
 #include <gio/gio.h>
 
+#include <core/Object.h>
+
 struct PendingData;
 struct ReadContext;
 class PortalProxy;
 
-class Clipboard {
+class Clipboard : public core::Object {
 public:
   Clipboard(std::string sessionHandle,
             std::function<void(const char* data)> sendClipboardDataCb,

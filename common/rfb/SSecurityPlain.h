@@ -27,7 +27,7 @@ namespace core { class StringListParameter; }
 
 namespace rfb {
 
-  class PasswordValidator {
+  class PasswordValidator : public core::Object {
   public:
     bool validate(SConnection* sc,
                   const char *username,

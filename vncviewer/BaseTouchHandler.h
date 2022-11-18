@@ -20,11 +20,13 @@
 #ifndef __BASETOUCHHANDLER_H__
 #define __BASETOUCHHANDLER_H__
 
+#include <core/Object.h>
+
 #include "GestureEvent.h"
 
 #include <sys/time.h>
 
-class BaseTouchHandler {
+class BaseTouchHandler : public core::Object {
   public:
     virtual ~BaseTouchHandler();
 

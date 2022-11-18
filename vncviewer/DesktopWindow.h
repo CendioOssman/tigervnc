@@ -26,6 +26,8 @@
 
 #include <sys/time.h>
 
+#include <core/Object.h>
+
 #include <FL/Fl_Window.H>
 
 namespace rfb { class ModifiablePixelBuffer; }
@@ -36,7 +38,7 @@ class Viewport;
 
 class Fl_Scrollbar;
 
-class DesktopWindow : public Fl_Window {
+class DesktopWindow : public core::Object, public Fl_Window {
 public:
 
   DesktopWindow(int w, int h, CConn* cc_);

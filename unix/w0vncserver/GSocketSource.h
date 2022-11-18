@@ -24,12 +24,14 @@
 
 #include <glib.h>
 
+#include <core/Object.h>
+
 namespace rfb { class VNCServer; }
 namespace network { class SocketListener; }
 struct SocketState;
 struct ListenerReadyEvent;
 
-class GSocketSource {
+class GSocketSource : public core::Object {
 public:
   GSocketSource(rfb::VNCServer* server,
                  std::list<network::SocketListener*> *listeners);

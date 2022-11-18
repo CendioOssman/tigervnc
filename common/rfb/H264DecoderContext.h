@@ -23,13 +23,14 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
 #include <core/Rect.h>
 
 namespace rfb {
 
   class ModifiablePixelBuffer;
 
-  class H264DecoderContext {
+  class H264DecoderContext : public core::Object {
     public:
       static H264DecoderContext* createContext(const core::Rect& r);
 

@@ -24,13 +24,15 @@
 #include <wayland-client-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 
+#include <core/Object.h>
+
 struct XkbContext;
 
 namespace wayland {
   class Display;
   class Seat;
 
-  class Keyboard {
+  class Keyboard : public core::Object {
   public:
     Keyboard(Display* display, Seat *seat, std::function<void(unsigned int)> setLEDstate);
     ~Keyboard();

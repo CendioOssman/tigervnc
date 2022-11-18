@@ -43,7 +43,7 @@ namespace rfb {
   class SMsgWriter;
   class SSecurity;
 
-  class SConnection : public SMsgHandler {
+  class SConnection : public core::Object, public SMsgHandler {
   public:
 
     SConnection(AccessRights accessRights);

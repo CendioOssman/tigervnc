@@ -25,6 +25,8 @@
 
 #include <limits.h>
 
+#include <core/Object.h>
+
 namespace rdr {
   class FdInStream;
   class FdOutStream;
@@ -36,7 +38,7 @@ namespace network {
 
   bool isSocketListening(int sock);
 
-  class Socket {
+  class Socket : public core::Object {
   public:
     Socket(int fd);
     virtual ~Socket();
@@ -72,13 +74,13 @@ namespace network {
     bool queryConnection;
   };
 
-  class ConnectionFilter {
+  class ConnectionFilter : public core::Object {
   public:
     virtual bool verifyConnection(Socket* s) = 0;
     virtual ~ConnectionFilter() {}
   };
 
-  class SocketListener {
+  class SocketListener : public core::Object {
   public:
     SocketListener(int fd);
     virtual ~SocketListener();

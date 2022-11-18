@@ -24,6 +24,8 @@
 #include <string>
 #include <map>
 
+#include <core/Object.h>
+
 struct wl_display;
 struct wl_registry;
 struct wl_registry_listener;
@@ -34,7 +36,7 @@ namespace wayland {
     uint32_t version;
   };
 
-  class Display {
+  class Display : public core::Object {
   public:
     Display(const char* name = nullptr);
     ~Display();

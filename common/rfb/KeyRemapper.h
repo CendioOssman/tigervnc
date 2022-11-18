@@ -23,9 +23,11 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
+
 namespace rfb {
 
-  class KeyRemapper {
+  class KeyRemapper : public core::Object {
   public:
     KeyRemapper();
     ~KeyRemapper();

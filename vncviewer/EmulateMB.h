@@ -19,6 +19,7 @@
 #ifndef __EMULATEMB__
 #define __EMULATEMB__
 
+#include <core/Object.h>
 #include <core/Rect.h>
 #include <core/Timer.h>
 
@@ -28,7 +29,7 @@ public:
                                 uint16_t buttonMask)=0;
 };
 
-class EmulateMB : public core::Timer::Callback {
+class EmulateMB : public core::Object, public core::Timer::Callback {
 public:
   EmulateMB(EmulateMBHandler* handler);
 
