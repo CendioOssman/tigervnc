@@ -38,7 +38,8 @@ class XPixelBuffer;
 // number of XKb indicator leds to handle
 #define XDESKTOP_N_LEDS 3
 
-class XDesktop : public rfb::SDesktop,
+class XDesktop : public core::Object,
+                 public rfb::SDesktop,
                  public TXGlobalEventHandler,
                  public QueryResultCallback
 {

@@ -43,13 +43,14 @@
 #ifndef __RFB_SSECURITY_H__
 #define __RFB_SSECURITY_H__
 
+#include <core/Object.h>
 #include <rfb/SConnection.h>
 
 #include <list>
 
 namespace rfb {
 
-  class SSecurity {
+  class SSecurity : public core::Object {
   public:
     SSecurity(SConnection* sc_) : sc(sc_) {}
     virtual ~SSecurity() {}

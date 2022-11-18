@@ -27,12 +27,13 @@
 #include <stdint.h>
 #include <string.h> // for memcpy
 
+#include <core/Object.h>
 #include <core/Exception.h>
 #include <rdr/InStream.h>
 
 namespace rdr {
 
-  class OutStream {
+  class OutStream : public core::Object {
 
   protected:
 

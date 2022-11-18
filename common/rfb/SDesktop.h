@@ -38,6 +38,7 @@
 #ifndef __RFB_SDESKTOP_H__
 #define __RFB_SDESKTOP_H__
 
+#include <core/Object.h>
 #include <rfb/PixelBuffer.h>
 #include <rfb/VNCServer.h>
 #include <rfb/InputHandler.h>
@@ -122,7 +123,7 @@ namespace rfb {
   //     Trivial implementation of the SDesktop interface, which provides
   //     dummy input handlers and event processing routine, and exports
   //     a plain black desktop of the specified format.
-  class SStaticDesktop : public SDesktop {
+  class SStaticDesktop : public core::Object, public SDesktop {
   public:
     SStaticDesktop(const core::Point& size)
       : server(nullptr), buffer(nullptr)

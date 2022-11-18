@@ -23,6 +23,7 @@
 #include <stdint.h>
 
 #include <core/Rect.h>
+#include <core/Object.h>
 
 namespace rfb {
   class SConnection;
@@ -40,7 +41,7 @@ namespace rfb {
     EncoderLossy = 1 << 1,
   };
 
-  class Encoder {
+  class Encoder : public core::Object {
   public:
     Encoder(SConnection* conn, int encoding,
             enum EncoderFlags flags, unsigned int maxPaletteSize=-1,

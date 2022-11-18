@@ -25,6 +25,8 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
+
 #include <rfb/encodings.h>
 #include <rfb/ScreenSet.h>
 
@@ -36,7 +38,7 @@ namespace rfb {
   class PixelFormat;
   struct ScreenSet;
 
-  class SMsgWriter {
+  class SMsgWriter : public core::Object {
   public:
     SMsgWriter(ClientParams* client, rdr::OutStream* os);
     virtual ~SMsgWriter();

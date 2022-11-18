@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <string.h> // for memcpy
 
+#include <core/Object.h>
 #include <core/Exception.h>
 
 // Check that callers are using InStream properly,
@@ -42,7 +43,7 @@ namespace rdr {
     EndOfStream() : Exception("End of stream") {}
   };
 
-  class InStream {
+  class InStream : public core::Object {
 
   public:
 
