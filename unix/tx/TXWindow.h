@@ -33,6 +33,7 @@
 #include <X11/Xutil.h>
 #include <map>
 
+#include <core/Object.h>
 
 // TXDeleteWindowCallback's deleteWindow() method is called when a top-level
 // window is "deleted" (closed) by the user using the window manager.
@@ -58,7 +59,7 @@ public:
   virtual bool handleGlobalEvent(XEvent* ev) = 0;
 };
 
-class TXWindow {
+class TXWindow : public core::Object {
 public:
 
   // Constructor - creates a window of the given size, with the default

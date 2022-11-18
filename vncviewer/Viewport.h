@@ -35,7 +35,7 @@ class Keyboard;
 class PlatformPixelBuffer;
 class Surface;
 
-class Viewport : public Fl_Widget,
+class Viewport : public Fl_Widget, public core::Object,
                  protected EmulateMBHandler,
                  protected KeyboardHandler {
 public:

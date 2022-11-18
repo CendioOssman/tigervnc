@@ -40,6 +40,8 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
+
 #include <rfb/screenTypes.h>
 
 namespace core { struct Point; }
@@ -51,7 +53,7 @@ namespace rfb {
   struct ScreenSet;
   class VNCServer;
 
-  class SDesktop {
+  class SDesktop : public core::Object {
   public:
     // init() is called immediately when the VNCServer gets a reference
     // to the SDesktop, so that a reverse reference can be set up.

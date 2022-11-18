@@ -22,6 +22,7 @@
 #include <exception>
 #include <list>
 
+#include <core/Object.h>
 #include <core/Region.h>
 #include <core/Thread.h>
 
@@ -43,7 +44,7 @@ namespace rfb {
   class Decoder;
   class ModifiablePixelBuffer;
 
-  class DecodeManager {
+  class DecodeManager : public core::Object {
   public:
     DecodeManager(CConnection *conn);
     ~DecodeManager();

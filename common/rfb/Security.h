@@ -24,6 +24,8 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
+
 #include <list>
 
 namespace core {
@@ -74,7 +76,7 @@ namespace rfb {
   const uint32_t secResultFailed = 1;
   const uint32_t secResultTooMany = 2; // deprecated
 
-  class Security {
+  class Security : public core::Object {
   public:
     /*
      * Create Security instance.

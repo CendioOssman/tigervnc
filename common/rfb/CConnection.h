@@ -27,6 +27,7 @@
 #include <map>
 #include <string>
 
+#include <core/Object.h>
 #include <rfb/CMsgHandler.h>
 #include <rfb/DecodeManager.h>
 #include <rfb/PixelFormat.h>
@@ -55,7 +56,7 @@ namespace rfb {
       M_DEFBUTTON2 = 0x100
   };
 
-  class CConnection : public CMsgHandler {
+  class CConnection : public core::Object, public CMsgHandler {
   public:
 
     CConnection();
