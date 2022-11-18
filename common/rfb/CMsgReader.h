@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
 #include <core/Rect.h>
 
 namespace rdr { class InStream; }
@@ -34,7 +35,7 @@ namespace rfb {
 
   class CMsgHandler;
 
-  class CMsgReader {
+  class CMsgReader : public core::Object {
   public:
     CMsgReader(CMsgHandler* handler, rdr::InStream* is);
     virtual ~CMsgReader();

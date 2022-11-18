@@ -27,6 +27,8 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
+
 namespace core {
   struct Point;
   struct Rect;
@@ -40,7 +42,7 @@ namespace rfb {
   class ServerParams;
   struct ScreenSet;
 
-  class CMsgWriter {
+  class CMsgWriter : public core::Object {
   public:
     CMsgWriter(ServerParams* server, rdr::OutStream* os);
     virtual ~CMsgWriter();

@@ -29,11 +29,13 @@
 
 #include <stdexcept>
 
+#include <core/Object.h>
+
 #include <rdr/InStream.h>
 
 namespace rdr {
 
-  class OutStream {
+  class OutStream : public core::Object {
 
   protected:
 

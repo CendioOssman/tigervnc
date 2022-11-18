@@ -19,6 +19,7 @@
 #ifndef __RFB_UPDATETRACKER_INCLUDED__
 #define __RFB_UPDATETRACKER_INCLUDED__
 
+#include <core/Object.h>
 #include <core/Rect.h>
 #include <core/Region.h>
 
@@ -41,7 +42,7 @@ namespace rfb {
     */
   };
 
-  class UpdateTracker {
+  class UpdateTracker : public core::Object {
   public:
     UpdateTracker() {};
     virtual ~UpdateTracker() {};
