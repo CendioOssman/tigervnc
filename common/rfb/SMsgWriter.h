@@ -25,6 +25,8 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
+
 namespace core { struct Rect; }
 
 namespace rdr { class OutStream; }
@@ -35,7 +37,7 @@ namespace rfb {
   class PixelFormat;
   struct ScreenSet;
 
-  class SMsgWriter {
+  class SMsgWriter : public core::Object {
   public:
     SMsgWriter(ClientParams* client, rdr::OutStream* os);
     virtual ~SMsgWriter();
