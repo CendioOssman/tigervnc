@@ -6,6 +6,7 @@ add_library(core STATIC
   Logger_stdio.cxx
   LogWriter.cxx
   Mutex.cxx
+  Object.cxx
   Region.cxx
   Timer.cxx
   Thread.cxx
