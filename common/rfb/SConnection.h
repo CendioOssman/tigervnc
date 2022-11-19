@@ -269,7 +269,7 @@ namespace rfb {
     bool processSecurityFailure();
     bool processInitMsg();
 
-    void handleAuthFailureTimeout(core::Timer* t);
+    void authFailureTimeout();
 
     int defaultMajorVersion, defaultMinorVersion;
 
@@ -282,7 +282,7 @@ namespace rfb {
     SecurityServer security;
     SSecurity* ssecurity;
 
-    core::MethodTimer<SConnection> authFailureTimer;
+    core::Timer authFailureTimer;
     std::string authFailureMsg;
 
     stateEnum state_;

@@ -29,14 +29,14 @@ public:
                                 uint16_t buttonMask)=0;
 };
 
-class EmulateMB : public core::Object, public core::Timer::Callback {
+class EmulateMB : public core::Object {
 public:
   EmulateMB(EmulateMBHandler* handler);
 
   void filterPointerEvent(const core::Point& pos, uint16_t buttonMask);
 
 protected:
-  void handleTimeout(core::Timer* t) override;
+  void handleTimeout();
 
 private:
   void sendAction(const core::Point& pos, uint16_t buttonMask,

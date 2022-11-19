@@ -49,7 +49,7 @@ protected:
   // Callback when socket is ready (or broken)
   static void socketEvent(FL_SOCKET fd, void *data);
 
-  void processNextMsg(core::Timer*);
+  void processNextMsg();
 
   // CConnection callback methods
 
@@ -102,7 +102,7 @@ private:
   std::string serverHost;
   int serverPort;
   network::Socket* sock;
-  core::MethodTimer<CConn> msgTimer;
+  core::Timer msgTimer;
 
   DesktopWindow *desktop;
 

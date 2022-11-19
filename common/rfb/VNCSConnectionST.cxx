@@ -67,19 +67,27 @@ static Cursor emptyCursor(0, 0, {0, 0}, nullptr);
 VNCSConnectionST::VNCSConnectionST(VNCServerST* server_, network::Socket *s,
                                    bool reverse, AccessRights ar)
   : SConnection(ar),
-    sock(s), socketTimer(this), reverseConnection(reverse),
+    sock(s), reverseConnection(reverse),
     inProcessMessages(false),
     pendingSyncFence(false), syncFence(false), fenceFlags(0),
-    fenceDataLen(0), fenceData(nullptr), congestionTimer(this),
-    losslessTimer(this), server(server_),
+    fenceDataLen(0), fenceData(nullptr), server(server_),
     updateRenderedCursor(false), removeRenderedCursor(false),
-    continuousUpdates(false), encodeManager(this), idleTimer(this),
+    continuousUpdates(false), encodeManager(this),
     pointerEventTime(0), clientHasCursor(false)
 {
+  socketTimer.connectSignal(&core::Timer::timeout, this,
+                            &VNCSConnectionST::socketTimeout);
   socketTimer.start(core::secsToMillis(LOGIN_GRACE_TIME));
 
   setStreams(&sock->inStream(), &sock->outStream());
   peerEndpoint = sock->getPeerEndpoint();
+
+  congestionTimer.connectSignal(&core::Timer::timeout, this,
+                                &VNCSConnectionST::updateTimeout);
+  losslessTimer.connectSignal(&core::Timer::timeout, this,
+                              &VNCSConnectionST::updateTimeout);
+  idleTimer.connectSignal(&core::Timer::timeout, this,
+                          &VNCSConnectionST::idleTimeout);
 }
 
 
@@ -841,25 +849,26 @@ void VNCSConnectionST::supportsLEDState()
   writer()->writeLEDState();
 }
 
-void VNCSConnectionST::handleTimeout(core::Timer* t)
+void VNCSConnectionST::socketTimeout()
 {
-  if (t == &socketTimer) {
-    if (state() == RFBSTATE_CLOSING)
-      getSock()->shutdownRead();
-    else
-      close(_("Authentication timeout"));
-  }
+  if (state() == RFBSTATE_CLOSING)
+    getSock()->shutdownRead();
+  else
+    close(_("Authentication timeout"));
+}
 
+void VNCSConnectionST::updateTimeout()
+{
   try {
-    if ((t == &congestionTimer) ||
-        (t == &losslessTimer))
-      writeFramebufferUpdate();
+    writeFramebufferUpdate();
   } catch (std::exception& e) {
     close(e.what());
   }
+}
 
-  if (t == &idleTimer)
-    close(_("Idle for too long"));
+void VNCSConnectionST::idleTimeout()
+{
+  close(_("Idle for too long"));
 }
 
 bool VNCSConnectionST::isShiftPressed()

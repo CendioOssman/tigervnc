@@ -48,8 +48,7 @@ namespace rfb {
 namespace network { class SocketListener; class Socket; }
 
 class XserverDesktop : public rfb::SDesktop,
-                       public rfb::FullFramePixelBuffer,
-                       public core::Timer::Callback {
+                       public rfb::FullFramePixelBuffer {
 public:
 
   XserverDesktop(int screenIndex,
@@ -116,7 +115,7 @@ protected:
   bool handleListenerEvent(int fd);
   bool handleSocketReadWrite(int fd, bool read, bool write);
 
-  void handleTimeout(core::Timer* t) override;
+  void queryTimeout();
 
 private:
 

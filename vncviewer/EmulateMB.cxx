@@ -196,8 +196,10 @@ static const signed char stateTab[11][5][3] = {
 };
 
 EmulateMB::EmulateMB(EmulateMBHandler* handler_)
-  : handler(handler_), state(0), emulatedButtonMask(0), timer(this)
+  : handler(handler_), state(0), emulatedButtonMask(0)
 {
+  timer.connectSignal(&core::Timer::timeout, this,
+                      &EmulateMB::handleTimeout);
 }
 
 void EmulateMB::filterPointerEvent(const core::Point& pos,
@@ -279,13 +281,10 @@ void EmulateMB::filterPointerEvent(const core::Point& pos,
   }
 }
 
-void EmulateMB::handleTimeout(core::Timer* t)
+void EmulateMB::handleTimeout()
 {
   int action1, action2;
   uint16_t buttonMask;
-
-  if (&timer != t)
-    return;
 
   if ((state > 10) || (state < 0))
     throw std::runtime_error(_("Invalid state for 3 button emulation"));

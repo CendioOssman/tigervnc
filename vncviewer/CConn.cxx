@@ -92,8 +92,7 @@ static const rfb::PixelFormat mediumColourPF(8, 8, false, true,
 static const unsigned bpsEstimateWindow = 1000;
 
 CConn::CConn()
-  : serverPort(0), sock(nullptr),
-    msgTimer(this, &CConn::processNextMsg), desktop(nullptr),
+  : serverPort(0), sock(nullptr), desktop(nullptr),
     updateCount(0), pixelCount(0),
     lastServerEncoding((unsigned int)-1), bpsEstimate(20000000)
 {
@@ -108,6 +107,9 @@ CConn::CConn()
     setCompressLevel(::compressLevel);
 
   setQualityLevel(::qualityLevel);
+
+  msgTimer.connectSignal(&core::Timer::timeout, this,
+                         &CConn::processNextMsg);
 
   OptionsDialog::addCallback(handleOptions, this);
 }
@@ -273,7 +275,7 @@ void CConn::socketEvent(FL_SOCKET fd, void *data)
   cc->getOutStream()->cork(true);
 }
 
-void CConn::processNextMsg(core::Timer*)
+void CConn::processNextMsg()
 {
   static bool recursing = false;
   bool again;
