@@ -23,7 +23,7 @@
 #include <core/Rect.h>
 #include <core/Timer.h>
 
-class EmulateMB : public core::Object, public core::Timer::Callback {
+class EmulateMB : public core::Object {
 public:
   EmulateMB();
 
@@ -33,7 +33,7 @@ protected:
   virtual void sendPointerEvent(const core::Point& pos,
                                 uint16_t buttonMask)=0;
 
-  void handleTimeout(core::Timer* t) override;
+  void handleTimeout(core::Timer*, const char*);
 
 private:
   void sendAction(const core::Point& pos, uint16_t buttonMask,
