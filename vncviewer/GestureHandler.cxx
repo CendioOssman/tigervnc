@@ -58,9 +58,12 @@ const unsigned GH_LONGPRESS_TIMEOUT = 1000;
 const unsigned GH_TWOTOUCH_TIMEOUT = 50;
 
 GestureHandler::GestureHandler() :
-  state(GH_INITSTATE), waitingRelease(false),
-  longpressTimer(this), twoTouchTimer(this)
+  state(GH_INITSTATE), waitingRelease(false)
 {
+  longpressTimer.connectSignal("timer", this,
+                               &GestureHandler::longpressTimeout);
+  twoTouchTimer.connectSignal("timer", this,
+                              &GestureHandler::twoTouchTimeout);
 }
 
 GestureHandler::~GestureHandler()
@@ -323,15 +326,7 @@ bool GestureHandler::hasDetectedGesture()
   return true;
 }
 
-void GestureHandler::handleTimeout(core::Timer* t)
-{
-  if (t == &longpressTimer)
-    longpressTimeout();
-  else if (t == &twoTouchTimer)
-    twoTouchTimeout();
-}
-
-void GestureHandler::longpressTimeout()
+void GestureHandler::longpressTimeout(core::Timer*, const char*)
 {
   assert(!hasDetectedGesture());
 
@@ -339,7 +334,7 @@ void GestureHandler::longpressTimeout()
   pushEvent(GestureBegin);
 }
 
-void GestureHandler::twoTouchTimeout()
+void GestureHandler::twoTouchTimeout(core::Timer*, const char*)
 {
   double avgMoveH, avgMoveV, fdx, fdy, ldx, ldy, deltaTouchDistance;
 

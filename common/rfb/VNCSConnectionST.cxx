@@ -61,14 +61,20 @@ VNCSConnectionST::VNCSConnectionST(VNCServerST* server_, network::Socket *s,
     sock(s), reverseConnection(reverse),
     inProcessMessages(false),
     pendingSyncFence(false), syncFence(false), fenceFlags(0),
-    fenceDataLen(0), fenceData(nullptr), congestionTimer(this),
-    losslessTimer(this), server(server_),
+    fenceDataLen(0), fenceData(nullptr), server(server_),
     updateRenderedCursor(false), removeRenderedCursor(false),
-    continuousUpdates(false), encodeManager(this), idleTimer(this),
+    continuousUpdates(false), encodeManager(this),
     pointerEventTime(0), clientHasCursor(false)
 {
   setStreams(&sock->inStream(), &sock->outStream());
   peerEndpoint = sock->getPeerEndpoint();
+
+  congestionTimer.connectSignal("timer", this,
+                                &VNCSConnectionST::updateTimeout);
+  losslessTimer.connectSignal("timer", this,
+                              &VNCSConnectionST::updateTimeout);
+  idleTimer.connectSignal("timer", this,
+                          &VNCSConnectionST::idleTimeout);
 
   // Kick off the idle timer
   if (rfb::Server::idleTimeout) {
@@ -807,18 +813,18 @@ void VNCSConnectionST::supportsLEDState()
   writer()->writeLEDState();
 }
 
-void VNCSConnectionST::handleTimeout(core::Timer* t)
+void VNCSConnectionST::updateTimeout(core::Timer*, const char*)
 {
   try {
-    if ((t == &congestionTimer) ||
-        (t == &losslessTimer))
-      writeFramebufferUpdate();
+    writeFramebufferUpdate();
   } catch (Exception& e) {
     close(e.str());
   }
+}
 
-  if (t == &idleTimer)
-    close("Idle timeout");
+void VNCSConnectionST::idleTimeout(core::Timer*, const char*)
+{
+  close("Idle timeout");
 }
 
 bool VNCSConnectionST::isShiftPressed()

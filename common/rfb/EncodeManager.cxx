@@ -138,7 +138,7 @@ static const char *encoderTypeName(EncoderType type)
 }
 
 EncodeManager::EncodeManager(SConnection* conn_)
-  : conn(conn_), recentChangeTimer(this)
+  : conn(conn_)
 {
   StatsVector::iterator iter;
 
@@ -151,6 +151,9 @@ EncodeManager::EncodeManager(SConnection* conn_)
   encoders[encoderTight] = new TightEncoder(conn);
   encoders[encoderTightJPEG] = new TightJPEGEncoder(conn);
   encoders[encoderZRLE] = new ZRLEEncoder(conn);
+
+  recentChangeTimer.connectSignal("timer", this,
+                                  &EncodeManager::refreshTimeout);
 
   updates = 0;
   memset(&copyStats, 0, sizeof(copyStats));
@@ -299,18 +302,16 @@ void EncodeManager::writeLosslessRefresh(const Region& req, const PixelBuffer* p
            Region(), Point(), pb, renderedCursor);
 }
 
-void EncodeManager::handleTimeout(core::Timer* t)
+void EncodeManager::refreshTimeout(core::Timer*, const char*)
 {
-  if (t == &recentChangeTimer) {
-    // Any lossy region that wasn't recently updated can
-    // now be scheduled for a refresh
-    pendingRefreshRegion.assign_union(lossyRegion.subtract(recentlyChangedRegion));
-    recentlyChangedRegion.clear();
+  // Any lossy region that wasn't recently updated can
+  // now be scheduled for a refresh
+  pendingRefreshRegion.assign_union(lossyRegion.subtract(recentlyChangedRegion));
+  recentlyChangedRegion.clear();
 
-    // Will there be more to do? (i.e. do we need another round)
-    if (!lossyRegion.subtract(pendingRefreshRegion).is_empty())
-      t->repeat();
-  }
+  // Will there be more to do? (i.e. do we need another round)
+  if (!lossyRegion.subtract(pendingRefreshRegion).is_empty())
+    recentChangeTimer.repeat();
 }
 
 void EncodeManager::doUpdate(bool allowLossy, const Region& changed_,
