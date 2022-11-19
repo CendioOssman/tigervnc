@@ -92,10 +92,18 @@ VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
     comparer(nullptr), cursor(new Cursor(0, 0, {}, nullptr)),
     renderedCursorInvalid(false),
     keyRemapper(&KeyRemapper::defInstance),
-    idleTimer(this), disconnectTimer(this), connectTimer(this),
-    msc(0), queuedMsc(0), frameTimer(this)
+    msc(0), queuedMsc(0)
 {
   slog.debug("Creating single-threaded server %s", name.c_str());
+
+  idleTimer.connectSignal("timer", this,
+                          &VNCServerST::idleTimeout);
+  disconnectTimer.connectSignal("timer", this,
+                                &VNCServerST::disconnectTimeout);
+  connectTimer.connectSignal("timer", this,
+                             &VNCServerST::connectTimeout);
+  frameTimer.connectSignal("timer", this,
+                           &VNCServerST::frameTimeout);
 
   desktop_->init(this);
 
@@ -660,45 +668,52 @@ SConnection* VNCServerST::getConnection(network::Socket* sock) {
   return nullptr;
 }
 
-void VNCServerST::handleTimeout(core::Timer* t)
+void VNCServerST::frameTimeout()
 {
-  if (t == &frameTimer) {
-    int timeout;
+  int timeout;
 
-    // We keep running until we go a full interval without any updates,
-    // or there are no active clients anymore
-    if (!desktopStarted ||
-        ((comparer != nullptr) && comparer->is_empty())) {
-      // Unless something waits for us to advance the frame count
-      if (queuedMsc < msc)
-        return;
-    }
-
-    // If this is the first iteration then we need to adjust the timeout
-    timeout = 1000/rfb::Server::frameRate;
-
-    // If there are no clients, then slow down the clock
-    if (!desktopStarted)
-      timeout = 1000;
-
-    frameTimer.repeat(timeout);
-
-    if (desktopStarted &&
-        ((comparer != nullptr) && !comparer->is_empty()))
-      writeUpdate();
-
-    msc++;
-    desktop->frameTick(msc);
-  } else if (t == &idleTimer) {
-    slog.info("MaxIdleTime reached, exiting");
-    desktop->terminate();
-  } else if (t == &disconnectTimer) {
-    slog.info("MaxDisconnectionTime reached, exiting");
-    desktop->terminate();
-  } else if (t == &connectTimer) {
-    slog.info("MaxConnectionTime reached, exiting");
-    desktop->terminate();
+  // We keep running until we go a full interval without any updates,
+  // or there are no active clients anymore
+  if (!desktopStarted ||
+      ((comparer != nullptr) && comparer->is_empty())) {
+    // Unless something waits for us to advance the frame count
+    if (queuedMsc < msc)
+      return;
   }
+
+  // If this is the first iteration then we need to adjust the timeout
+  timeout = 1000/rfb::Server::frameRate;
+
+  // If there are no clients, then slow down the clock
+  if (!desktopStarted)
+    timeout = 1000;
+
+  frameTimer.repeat(timeout);
+
+  if (desktopStarted &&
+      ((comparer != nullptr) && !comparer->is_empty()))
+    writeUpdate();
+
+  msc++;
+  desktop->frameTick(msc);
+}
+
+void VNCServerST::idleTimeout()
+{
+  slog.info("MaxIdleTime reached, exiting");
+  desktop->terminate();
+}
+
+void VNCServerST::disconnectTimeout()
+{
+  slog.info("MaxDisconnectionTime reached, exiting");
+  desktop->terminate();
+}
+
+void VNCServerST::connectTimeout()
+{
+  slog.info("MaxConnectionTime reached, exiting");
+  desktop->terminate();
 }
 
 void VNCServerST::queryConnection(VNCSConnectionST* client,

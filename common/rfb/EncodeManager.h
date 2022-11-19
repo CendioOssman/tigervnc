@@ -40,7 +40,7 @@ namespace rfb {
 
   struct RectInfo;
 
-  class EncodeManager : public core::Object, public core::Timer::Callback {
+  class EncodeManager : public core::Object {
   public:
     EncodeManager(SConnection* conn);
     ~EncodeManager();
@@ -66,7 +66,7 @@ namespace rfb {
                               size_t maxUpdateSize);
 
   protected:
-    void handleTimeout(core::Timer* t) override;
+    void refreshTimeout();
 
     void doUpdate(bool allowLossy, const core::Region& changed,
                   const core::Region& copied,

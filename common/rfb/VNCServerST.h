@@ -42,8 +42,7 @@ namespace rfb {
   class KeyRemapper;
   class SDesktop;
 
-  class VNCServerST : public VNCServer,
-                      public core::Timer::Callback {
+  class VNCServerST : public VNCServer {
   public:
     // -=- Constructors
 
@@ -158,7 +157,10 @@ namespace rfb {
   protected:
 
     // Timer callbacks
-    void handleTimeout(core::Timer* t) override;
+    void frameTimeout();
+    void idleTimeout();
+    void disconnectTimeout();
+    void connectTimeout();
 
     // - Internal methods
 
