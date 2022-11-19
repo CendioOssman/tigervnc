@@ -42,7 +42,7 @@ QueryConnectDialog::QueryConnectDialog(Display* dpy_,
     timeout(dpy, "0000000000", this),
     accept(dpy, "Accept", this, this, 60),
     reject(dpy, "Reject", this, this, 60),
-    callback(cb), timeUntilReject(timeout_), timer(this)
+    callback(cb), timeUntilReject(timeout_)
 {
   const int pad = 4;
   int y=pad;
@@ -61,6 +61,8 @@ QueryConnectDialog::QueryConnectDialog(Display* dpy_,
   resize(maxWidth + pad, y+reject.height()+pad);
   setBorderWidth(1);
   refreshTimeout();
+  timer.connectSignal("timer", this,
+                      &QueryConnectDialog::queryTimeout);
   timer.start(1000);
 }
 
@@ -77,13 +79,13 @@ void QueryConnectDialog::buttonActivate(TXButton* b) {
     callback->queryRejected();
 }
   
-void QueryConnectDialog::handleTimeout(core::Timer* t) {
+void QueryConnectDialog::queryTimeout(core::Timer*, const char*) {
   if (timeUntilReject-- == 0) {
     unmap();
     callback->queryTimedOut();
   } else {
     refreshTimeout();
-    t->repeat();
+    timer.repeat();
   }
 }
 

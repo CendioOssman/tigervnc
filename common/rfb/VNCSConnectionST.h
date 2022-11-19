@@ -37,8 +37,7 @@
 namespace rfb {
   class VNCServerST;
 
-  class VNCSConnectionST : public SConnection,
-                           public core::Timer::Callback {
+  class VNCSConnectionST : public SConnection {
   public:
     VNCSConnectionST(VNCServerST* server_, network::Socket* s, bool reverse,
                      AccessRights ar);
@@ -148,7 +147,8 @@ namespace rfb {
     void supportsLEDState() override;
 
     // Timer callbacks
-    void handleTimeout(core::Timer* t) override;
+    void updateTimeout(core::Timer*, const char*);
+    void idleTimeout(core::Timer*, const char*);
 
     // Internal methods
 
