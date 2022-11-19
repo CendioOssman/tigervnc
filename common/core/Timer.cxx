@@ -54,7 +54,7 @@ int Timer::checkTimeouts() {
     pending.pop_front();
 
     timer->lastDueTime = timer->dueTime;
-    timer->cb->handleTimeout(timer);
+    timer->emitSignal(&timer->timer);
 
     if (pending.empty())
       return -1;
@@ -94,6 +94,15 @@ void Timer::insertTimer(Timer* t) {
     }
   }
   pending.push_back(t);
+}
+
+Timer::Timer()
+{
+}
+
+Timer::~Timer()
+{
+  stop();
 }
 
 void Timer::start(int timeoutMs_) {
