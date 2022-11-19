@@ -51,12 +51,14 @@ static core::LogWriter vlog("SConnection");
 SConnection::SConnection(AccessRights accessRights_)
   : readyForSetColourMapEntries(false), is(nullptr), os(nullptr),
     reader_(nullptr), writer_(nullptr), ssecurity(nullptr),
-    authFailureTimer(this, &SConnection::handleAuthFailureTimeout),
     state_(RFBSTATE_UNINITIALISED), preferredEncoding(encodingRaw),
     accessRights(accessRights_), hasRemoteClipboard(false),
     hasLocalClipboard(false),
     unsolicitedClipboardAttempt(false)
 {
+  authFailureTimer.connectSignal("timer", this,
+                                 &SConnection::authFailureTimeout);
+
   defaultMajorVersion = 3;
   defaultMinorVersion = 8;
   if (rfb::Server::protocol3_3)
@@ -280,10 +282,10 @@ bool SConnection::processInitMsg()
   return reader_->readClientInit();
 }
 
-void SConnection::handleAuthFailureTimeout(core::Timer* /*t*/)
+void SConnection::authFailureTimeout(core::Timer*, const char*)
 {
   if (state_ != RFBSTATE_SECURITY_FAILURE) {
-    close("SConnection::handleAuthFailureTimeout: Invalid state");
+    close("SConnection::authFailureTimeout: Invalid state");
     return;
   }
 
