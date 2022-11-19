@@ -82,12 +82,15 @@ XserverDesktop::XserverDesktop(int screenIndex_,
   : screenIndex(screenIndex_),
     server(0), listeners(listeners_),
     shadowFramebuffer(nullptr),
-    queryConnectId(0), queryConnectTimer(this)
+    queryConnectId(0)
 {
   format = pf;
 
   server = new VNCServerST(name, this);
   setFramebuffer(width, height, fbptr, stride_);
+
+  queryConnectTimer.connectSignal("timer", this,
+                                  &XserverDesktop::queryTimeout);
 
   for (SocketListener* listener : listeners)
     vncSetNotifyFd(listener->getFd(), screenIndex, true, false);
@@ -544,11 +547,9 @@ void XserverDesktop::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
   vncKeyboardEvent(keysym, keycode, down);
 }
 
-void XserverDesktop::handleTimeout(Timer* t)
+void XserverDesktop::queryTimeout(Timer*, const char*)
 {
-  if (t == &queryConnectTimer) {
-    server->approveConnection(queryConnectSocket, false,
-                              "The attempt to prompt the user to "
-                              "accept the connection failed");
-  }
+  server->approveConnection(queryConnectSocket, false,
+                            "The attempt to prompt the user to "
+                            "accept the connection failed");
 }
