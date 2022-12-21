@@ -86,6 +86,15 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security")
 endif()
 
+# Find even more issues if we can, using clang-tidy
+IF(CMAKE_BUILD_TYPE MATCHES Debug)
+  find_program(CLANG_TIDY clang-tidy)
+  if(CLANG_TIDY)
+    set(CMAKE_C_CLANG_TIDY ${CLANG_TIDY} -header-filter=. -warnings-as-errors=*)
+    set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY} -header-filter=. -warnings-as-errors=*)
+  endif()
+endif()
+
 option(ENABLE_ASAN "Enable address sanitizer support" OFF)
 if(ENABLE_ASAN AND NOT WIN32 AND NOT APPLE)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
