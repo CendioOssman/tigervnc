@@ -92,6 +92,8 @@ IF(CMAKE_BUILD_TYPE MATCHES Debug)
   if(CLANG_TIDY)
     set(CMAKE_C_CLANG_TIDY ${CLANG_TIDY} -header-filter=. -warnings-as-errors=*)
     set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY} -header-filter=. -warnings-as-errors=*)
+  else()
+    message(WARNING "clang-tidy could not be found")
   endif()
 endif()
 
