@@ -21,6 +21,9 @@
 #endif
 
 #include <stdio.h>
+
+#include <algorithm>
+
 #include <core/Exception.h>
 #include "QueryConnectDialog.h"
 #include "vncExt.h"
@@ -43,7 +46,7 @@ QueryConnectDialog::QueryConnectDialog(Display* dpy_,
 {
   const int pad = 4;
   int y=pad;
-  int lblWidth = __rfbmax(addressLbl.width(), userLbl.width());
+  int lblWidth = std::max(addressLbl.width(), userLbl.width());
   userLbl.move(pad+lblWidth-userLbl.width(), y);
   user.move(pad+lblWidth, y);
   addressLbl.move(pad+lblWidth-addressLbl.width(), y+=userLbl.height());
@@ -51,9 +54,9 @@ QueryConnectDialog::QueryConnectDialog(Display* dpy_,
   timeoutLbl.move(pad, y+=addressLbl.height());
   timeout.move(pad+timeoutLbl.width(), y);
   accept.move(pad, y+=addressLbl.height());
-  int maxWidth = __rfbmax(user.width(), address.width()+pad+lblWidth);
-  maxWidth = __rfbmax(maxWidth, accept.width()*3);
-  maxWidth = __rfbmax(maxWidth, timeoutLbl.width()+timeout.width()+pad);
+  int maxWidth = std::max(user.width(), address.width()+pad+lblWidth);
+  maxWidth = std::max(maxWidth, accept.width()*3);
+  maxWidth = std::max(maxWidth, timeoutLbl.width()+timeout.width()+pad);
   reject.move(maxWidth-reject.width(), y);
   resize(maxWidth + pad, y+reject.height()+pad);
   setBorderWidth(1);
