@@ -53,6 +53,15 @@ namespace core {
     return msBetween(then, &now);
   }
 
+  unsigned msUntil(const struct timeval *then)
+  {
+    struct timeval now;
+
+    gettimeofday(&now, nullptr);
+
+    return msBetween(&now, then);
+  }
+
   bool isBefore(const struct timeval *first,
                 const struct timeval *second)
   {
@@ -63,6 +72,19 @@ namespace core {
     if (first->tv_usec < second->tv_usec)
       return true;
     return false;
+  }
+
+  struct timeval addMillis(struct timeval inTime, int millis)
+  {
+    int secs = millis / 1000;
+    millis = millis % 1000;
+    inTime.tv_sec += secs;
+    inTime.tv_usec += millis * 1000;
+    if (inTime.tv_usec >= 1000000) {
+      inTime.tv_sec++;
+      inTime.tv_usec -= 1000000;
+    }
+    return inTime;
   }
 
 }

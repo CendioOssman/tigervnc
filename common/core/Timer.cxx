@@ -30,7 +30,6 @@
 
 #include <core/Timer.h>
 #include <core/time.h>
-#include <core/util.h>
 #include <core/LogWriter.h>
 
 using namespace core;
@@ -38,25 +37,6 @@ using namespace core;
 #ifndef __NO_DEFINE_VLOG__
 static LogWriter vlog("Timer");
 #endif
-
-
-// Millisecond timeout processing helper functions
-
-inline static timeval addMillis(timeval inTime, int millis) {
-  int secs = millis / 1000;
-  millis = millis % 1000;
-  inTime.tv_sec += secs;
-  inTime.tv_usec += millis * 1000;
-  if (inTime.tv_usec >= 1000000) {
-    inTime.tv_sec++;
-    inTime.tv_usec -= 1000000;
-  }
-  return inTime;
-}
-
-inline static int diffTimeMillis(timeval later, timeval earlier) {
-  return ((later.tv_sec - earlier.tv_sec) * 1000) + ((later.tv_usec - earlier.tv_usec) / 1000);
-}
 
 std::list<Timer*> Timer::pending;
 
@@ -165,9 +145,7 @@ int Timer::getTimeoutMs() {
 }
 
 int Timer::getRemainingMs() {
-  timeval now;
-  gettimeofday(&now, nullptr);
-  return __rfbmax(0, diffTimeMillis(dueTime, now));
+  return msUntil(&dueTime);
 }
 
 bool Timer::isBefore(timeval other) {
