@@ -204,6 +204,8 @@ VoidParameter::VoidParameter(const char* name_, const char* desc_)
   conf->params.sort([](const VoidParameter* a, const VoidParameter* b) {
     return strcasecmp(a->getName(), b->getName()) < 0;
   });
+
+  registerSignal("config");
 }
 
 VoidParameter::~VoidParameter() {
@@ -301,6 +303,7 @@ void BoolParameter::setParam(bool b) {
   if (immutable) return;
   value = b;
   vlog.debug("Set %s(Bool) to %s", getName(), getValueStr().c_str());
+  emitSignal("config");
 }
 
 std::string BoolParameter::getDefaultStr() const {
@@ -337,6 +340,7 @@ IntParameter::setParam(int v) {
   if (v < minValue || v > maxValue)
     return false;
   value = v;
+  emitSignal("config");
   return true;
 }
 
@@ -374,6 +378,7 @@ bool StringParameter::setParam(const char* v) {
     throw std::invalid_argument("setParam(<null>) not allowed");
   vlog.debug("Set %s(String) to %s", getName(), v);
   value = v;
+  emitSignal("config");
   return true;
 }
 
@@ -431,6 +436,7 @@ void BinaryParameter::setParam(const uint8_t* v, size_t len) {
     length = len;
     memcpy(value, v, len);
   }
+  emitSignal("config");
 }
 
 std::string BinaryParameter::getDefaultStr() const {
