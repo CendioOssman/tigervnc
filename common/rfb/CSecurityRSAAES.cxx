@@ -39,7 +39,7 @@
 #include <core/LogWriter.h>
 #include <rfb/Exception.h>
 #include <rfb/UserMsgBox.h>
-#include <core/util.h>
+#include <core/string.h>
 #include <rdr/AESInStream.h>
 #include <rdr/AESOutStream.h>
 #include <os/os.h>

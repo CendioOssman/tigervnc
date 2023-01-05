@@ -32,7 +32,7 @@
 
 #include <os/Mutex.h>
 
-#include <core/util.h>
+#include <core/string.h>
 #include <core/Configuration.h>
 #include <core/LogWriter.h>
 #include <core/Exception.h>

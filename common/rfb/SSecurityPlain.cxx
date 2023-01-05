@@ -24,7 +24,7 @@
 #include <rfb/SSecurityPlain.h>
 #include <rfb/SConnection.h>
 #include <rfb/Exception.h>
-#include <core/util.h>
+#include <core/string.h>
 #include <rdr/InStream.h>
 #if !defined(WIN32) && !defined(__APPLE__)
 #include <rfb/UnixPasswordValidator.h>

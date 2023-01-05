@@ -28,7 +28,7 @@
 #include <rfb/CMsgHandler.h>
 #include <rfb/clipboardTypes.h>
 #include <rfb/screenTypes.h>
-#include <core/util.h>
+#include <core/string.h>
 
 static core::LogWriter vlog("CMsgHandler");
 

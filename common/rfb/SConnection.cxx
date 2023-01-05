@@ -38,7 +38,7 @@
 #include <rfb/encodings.h>
 #include <rfb/EncodeManager.h>
 #include <rfb/SSecurity.h>
-#include <core/util.h>
+#include <core/string.h>
 
 #include <core/LogWriter.h>
 

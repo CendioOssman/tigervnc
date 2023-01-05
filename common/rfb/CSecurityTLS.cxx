@@ -34,7 +34,7 @@
 #include <unistd.h>
 #endif
 
-#include <core/util.h>
+#include <core/string.h>
 
 #include <rfb/CSecurityTLS.h>
 #include <rfb/CConnection.h>
