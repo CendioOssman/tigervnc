@@ -135,6 +135,19 @@ TEST(BoolParameter, immutable)
   EXPECT_FALSE(immutable);
 }
 
+TEST(BoolParameter, signals)
+{
+  core::BoolParameter signals("boolparam", "", false);
+  bool emitted;
+
+  signals.connectSignal("config", &signals,
+                        [&emitted] { emitted = true; });
+
+  emitted = false;
+  signals.setParam(true);
+  EXPECT_TRUE(emitted);
+}
+
 TEST(IntParameter, values)
 {
   core::IntParameter ints("intparam", "", 0);
@@ -229,6 +242,19 @@ TEST(IntParameter, immutable)
   EXPECT_EQ(immutable, 0);
 }
 
+TEST(IntParameter, signals)
+{
+  core::IntParameter signals("intparam", "", 0);
+  bool emitted;
+
+  signals.connectSignal("config", &signals,
+                        [&emitted] { emitted = true; });
+
+  emitted = false;
+  signals.setParam(123);
+  EXPECT_TRUE(emitted);
+}
+
 TEST(StringParameter, values)
 {
   core::StringParameter strings("stringparam", "", "");
@@ -286,6 +312,19 @@ TEST(StringParameter, immutable)
   immutable.setParam("foo");
   immutable.setParam("bar");
   EXPECT_STREQ(immutable, "");
+}
+
+TEST(StringParameter, signals)
+{
+  core::StringParameter signals("stringparam", "", "");
+  bool emitted;
+
+  signals.connectSignal("config", &signals,
+                        [&emitted] { emitted = true; });
+
+  emitted = false;
+  signals.setParam("foo");
+  EXPECT_TRUE(emitted);
 }
 
 TEST(EnumParameter, values)
@@ -388,6 +427,19 @@ TEST(EnumParameter, immutable)
   immutable.setParam("b");
   immutable.setParam("c");
   EXPECT_EQ(immutable.getValueStr(), "a");
+}
+
+TEST(EnumParameter, signals)
+{
+  core::EnumParameter signals("enumparam", "", {"a", "b", "c"}, "a");
+  bool emitted;
+
+  signals.connectSignal("config", &signals,
+                        [&emitted] { emitted = true; });
+
+  emitted = false;
+  signals.setParam("b");
+  EXPECT_TRUE(emitted);
 }
 
 TEST(BinaryParameter, values)
@@ -500,6 +552,21 @@ TEST(BinaryParameter, immutable)
   immutable.setParam(data.data(), data.size());
   immutable.setParam("deadbeef");
   EXPECT_EQ(immutable.getData().size(), 0);
+}
+
+TEST(BinaryParameter, signals)
+{
+  std::vector<uint8_t> data;
+  core::BinaryParameter signals("binaryparam", "", nullptr, 0);
+  bool emitted;
+
+  signals.connectSignal("config", &signals,
+                        [&emitted] { emitted = true; });
+
+  emitted = false;
+  data = {4, 5, 6};
+  signals.setParam(data.data(), data.size());
+  EXPECT_TRUE(emitted);
 }
 
 TEST(IntListParameter, values)
@@ -622,6 +689,19 @@ TEST(IntListParameter, immutable)
   EXPECT_TRUE(immutable.begin() == immutable.end());
 }
 
+TEST(IntListParameter, signals)
+{
+  core::IntListParameter signals("listparam", "", {});
+  bool emitted;
+
+  signals.connectSignal("config", &signals,
+                        [&emitted] { emitted = true; });
+
+  emitted = false;
+  signals.setParam({1, 2, 3, 4});
+  EXPECT_TRUE(emitted);
+}
+
 TEST(StringListParameter, values)
 {
   std::list<std::string> data;
@@ -692,6 +772,19 @@ TEST(StringListParameter, immutable)
   immutable.setParam("1,2,3,4");
   data = {"a", "b"};
   EXPECT_EQ(immutable, data);
+}
+
+TEST(StringListParameter, signals)
+{
+  core::StringListParameter signals("listparam", "", {});
+  bool emitted;
+
+  signals.connectSignal("config", &signals,
+                        [&emitted] { emitted = true; });
+
+  emitted = false;
+  signals.setParam({"1", "2", "3", "4"});
+  EXPECT_TRUE(emitted);
 }
 
 TEST(EnumListParameter, values)
@@ -802,6 +895,19 @@ TEST(EnumListParameter, immutable)
   immutable.setParam("a,b,c");
   data = {"a"};
   EXPECT_EQ(immutable, data);
+}
+
+TEST(EnumListParameter, signals)
+{
+  core::EnumListParameter signals("listparam", "", {"a", "b", "c"}, {"a"});
+  bool emitted;
+
+  signals.connectSignal("config", &signals,
+                        [&emitted] { emitted = true; });
+
+  emitted = false;
+  signals.setParam({"a", "b", "c"});
+  EXPECT_TRUE(emitted);
 }
 
 int main(int argc, char** argv)
