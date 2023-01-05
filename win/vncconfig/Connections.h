@@ -25,7 +25,7 @@
 #include <rfb_win32/ModuleFileName.h>
 #include <core/Configuration.h>
 #include <rfb/Blacklist.h>
-#include <core/util.h>
+#include <core/string.h>
 #include <network/TcpSocket.h>
 
 static core::IntParameter port_number("PortNumber",

@@ -36,7 +36,7 @@
 #include <rfb/SMsgReader.h>
 #include <core/Configuration.h>
 #include <core/LogWriter.h>
-#include <core/util.h>
+#include <core/string.h>
 
 using core::Exception;
 

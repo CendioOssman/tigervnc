@@ -29,7 +29,7 @@
 #include <rdr/HexInStream.h>
 #include <stdlib.h>
 #include <core/LogWriter.h>
-#include <core/util.h>
+#include <core/string.h>
 
 // These flags are required to control access control inheritance,
 // but are not defined by VC6's headers.  These definitions comes

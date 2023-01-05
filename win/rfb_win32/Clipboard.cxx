@@ -25,7 +25,7 @@
 
 #include <rfb_win32/Clipboard.h>
 #include <rfb_win32/WMShatter.h>
-#include <core/util.h>
+#include <core/string.h>
 
 #include <core/LogWriter.h>
 

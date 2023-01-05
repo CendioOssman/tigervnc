@@ -27,9 +27,9 @@
 
 #include <core/Exception.h>
 #include <core/LogWriter.h>
+#include <core/string.h>
 
 #include <rfb/Security.h>
-#include <core/util.h>
 
 using namespace rfb;
 using namespace std;

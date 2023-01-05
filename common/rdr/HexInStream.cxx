@@ -23,7 +23,7 @@
 
 #include <rdr/HexInStream.h>
 #include <core/Exception.h>
-#include <core/util.h>
+#include <core/string.h>
 
 using namespace rdr;
 
