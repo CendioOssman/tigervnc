@@ -31,7 +31,7 @@
 #include <core/LogWriter.h>
 #include <core/time.h>
 #include <rfb/CMsgWriter.h>
-#include <core/util.h>
+#include <core/string.h>
 
 #include "DesktopWindow.h"
 #include "OptionsDialog.h"

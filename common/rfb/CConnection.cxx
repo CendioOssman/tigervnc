@@ -38,7 +38,7 @@
 #include <rfb/Security.h>
 #include <rfb/SecurityClient.h>
 #include <rfb/CConnection.h>
-#include <core/util.h>
+#include <core/string.h>
 
 #include <core/LogWriter.h>
 

@@ -28,7 +28,7 @@
 #include <rfb_win32/Handle.h>
 #include <rdr/HexOutStream.h>
 #include <core/Exception.h>
-#include <core/util.h>
+#include <core/string.h>
 #include <stdio.h>
 
 using namespace core;

@@ -33,7 +33,7 @@
 #include <unistd.h>
 #include <os/os.h>
 
-#include <core/util.h>
+#include <core/string.h>
 #include <rfb/obfuscate.h>
 
 #include <termios.h>

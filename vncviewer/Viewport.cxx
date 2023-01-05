@@ -31,7 +31,7 @@
 #include <rfb/CMsgWriter.h>
 #include <rfb/KeysymStr.h>
 #include <rfb/ledStates.h>
-#include <core/util.h>
+#include <core/string.h>
 
 // FLTK can pull in the X11 headers on some systems
 #ifndef XK_VoidSymbol

@@ -30,7 +30,7 @@
 #include <rfb/DecodeManager.h>
 #include <rfb/Decoder.h>
 #include <core/LogWriter.h>
-#include <core/util.h>
+#include <core/string.h>
 
 #include <rdr/MemOutStream.h>
 

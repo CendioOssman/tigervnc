@@ -26,7 +26,7 @@
 
 #include <core/LogWriter.h>
 #include <core/Configuration.h>
-#include <core/util.h>
+#include <core/string.h>
 #include <stdlib.h>
 
 using namespace core;

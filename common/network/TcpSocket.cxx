@@ -43,7 +43,7 @@
 #include <network/TcpSocket.h>
 #include <core/LogWriter.h>
 #include <core/Configuration.h>
-#include <core/util.h>
+#include <core/string.h>
 
 #ifdef WIN32
 #include <os/winerrno.h>

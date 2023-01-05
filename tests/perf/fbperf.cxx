@@ -30,7 +30,7 @@
 
 #include <core/Exception.h>
 #include <core/time.h>
-#include <core/util.h>
+#include <core/string.h>
 
 #include "../vncviewer/PlatformPixelBuffer.h"
 

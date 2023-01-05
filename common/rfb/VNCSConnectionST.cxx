@@ -45,7 +45,7 @@
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
 #include <rfb/keysymdef.h>
-#include <core/util.h>
+#include <core/string.h>
 
 using core::Exception;
 
