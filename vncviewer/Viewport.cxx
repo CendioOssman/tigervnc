@@ -124,8 +124,8 @@ Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc
   window()->add(contextMenu);
 
   setMenuKey();
-
-  OptionsDialog::addCallback(handleOptions, this);
+  menuKey.connectSignal("config", this, &Viewport::setMenuKey);
+  // FIXME: Need to recheck cursor for dotWhenNoCursor
 
   // Make sure we have an initial blank cursor set
   setCursor(0, 0, {0, 0}, nullptr);
@@ -141,8 +141,6 @@ Viewport::~Viewport()
   Fl::remove_system_handler(handleSystemEvent);
 
   Fl::remove_clipboard_notify(handleClipboardChange);
-
-  OptionsDialog::removeCallback(handleOptions);
 
   if (cursor) {
     if (!cursor->alloc_array)
@@ -848,13 +846,4 @@ void Viewport::popupContextMenu()
 void Viewport::setMenuKey()
 {
   getMenuKey(&menuKeyFLTK, &menuKeyCode, &menuKeySym);
-}
-
-
-void Viewport::handleOptions(void *data)
-{
-  Viewport *self = (Viewport*)data;
-
-  self->setMenuKey();
-  // FIXME: Need to recheck cursor for dotWhenNoCursor
 }

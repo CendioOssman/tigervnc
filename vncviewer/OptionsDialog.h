@@ -19,8 +19,6 @@
 #ifndef __OPTIONSDIALOG_H__
 #define __OPTIONSDIALOG_H__
 
-#include <map>
-
 #include <FL/Fl_Window.H>
 
 class Fl_Widget;
@@ -32,8 +30,6 @@ class Fl_Int_Input;
 class Fl_Choice;
 class Fl_Monitor_Arrangement;
 
-typedef void (OptionsCallback)(void*);
-
 class OptionsDialog : public Fl_Window {
 protected:
   OptionsDialog();
@@ -41,9 +37,6 @@ protected:
 
 public:
   static void showDialog(void);
-
-  static void addCallback(OptionsCallback *cb, void *data = nullptr);
-  static void removeCallback(OptionsCallback *cb);
 
   void show(void) override;
 
@@ -73,8 +66,6 @@ protected:
   static void handleOK(Fl_Widget *widget, void *data);
 
 protected:
-  static std::map<OptionsCallback*, void*> callbacks;
-
   /* Compression */
   Fl_Check_Button *autoselectCheckbox;
 
