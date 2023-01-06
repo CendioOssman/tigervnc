@@ -814,6 +814,11 @@ void CConnection::setCompressLevel(int level)
   encodingChange = true;
 }
 
+int CConnection::getCompressLevel()
+{
+  return compressLevel;
+}
+
 void CConnection::setQualityLevel(int level)
 {
   if (qualityLevel == level)
@@ -821,6 +826,11 @@ void CConnection::setQualityLevel(int level)
 
   qualityLevel = level;
   encodingChange = true;
+}
+
+int CConnection::getQualityLevel()
+{
+  return qualityLevel;
 }
 
 void CConnection::setPF(const PixelFormat& pf)
