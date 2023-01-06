@@ -92,8 +92,6 @@ private:
   void updateQualityLevel();
   void updatePixelFormat();
 
-  static void handleOptions(void *data);
-
   static void handleUpdateTimeout(void *data);
 
 private:
