@@ -115,7 +115,12 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
 
   updateCaption();
 
-  OptionsDialog::addCallback(handleOptions, this);
+  fullScreen.connectSignal(&core::Parameter::valueChanged, this,
+                           &DesktopWindow::handleFullScreenConfig);
+  fullScreenMode.connectSignal(&core::Parameter::valueChanged, this,
+                               &DesktopWindow::handleFullScreenConfig);
+  fullScreenSelectedMonitors.connectSignal(&core::Parameter::valueChanged, this,
+                                           &DesktopWindow::handleFullScreenConfig);
 
   // Some events need to be caught globally
   if (instances.size() == 0)
@@ -268,8 +273,6 @@ DesktopWindow::~DesktopWindow()
   Fl::remove_timeout(handleStatsTimeout, this);
   Fl::remove_timeout(updateOverlay, this);
   Fl::remove_idle(checkFocus, this);
-
-  OptionsDialog::removeCallback(handleOptions);
 
   while (!overlays.empty()) {
     delete overlays.front().surface;
@@ -1542,17 +1545,14 @@ void DesktopWindow::handleClose(Fl_Widget* /*wnd*/, void* /*data*/)
   disconnect();
 }
 
-
-void DesktopWindow::handleOptions(void *data)
+void DesktopWindow::handleFullScreenConfig()
 {
-  DesktopWindow *self = (DesktopWindow*)data;
-
   // Call fullscreen_on even if active since it handles
   // fullScreenMode
   if (fullScreen)
-    self->fullscreen_on();
-  else if (!fullScreen && self->fullscreen_active())
-    self->fullscreen_off();
+    fullscreen_on();
+  else if (!fullScreen && fullscreen_active())
+    fullscreen_off();
 }
 
 void DesktopWindow::handleFullscreenTimeout(void *data)

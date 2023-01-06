@@ -135,16 +135,22 @@ Viewport::Viewport(int w, int h, CConn* cc_)
   // reparenting to the current window works for most cases.
   window()->add(contextMenu);
 
-  unsigned modifierMask = 0;
-  for (core::EnumListEntry key : shortcutModifiers)
-    modifierMask |= ShortcutHandler::parseModifier(key.getValueStr().c_str());
-
-  shortcutHandler.setModifiers(modifierMask);
-
-  OptionsDialog::addCallback(handleOptions, this);
+  setShortcutModifiers();
+  shortcutModifiers.connectSignal(&core::Parameter::valueChanged, this,
+                                  &Viewport::setShortcutModifiers);
 
   // Make sure we have an initial blank cursor set
   setCursor();
+  auto cursorCallback = [this]() {
+    if (Fl::belowmouse() == this)
+      showCursor();
+  };
+  viewOnly.connectSignal(&core::Parameter::valueChanged,
+                         this, cursorCallback);
+  alwaysCursor.connectSignal(&core::Parameter::valueChanged,
+                             this, cursorCallback);
+  cursorType.connectSignal(&core::Parameter::valueChanged,
+                           this, cursorCallback);
 }
 
 
@@ -157,8 +163,6 @@ Viewport::~Viewport()
   Fl::remove_system_handler(handleSystemEvent);
 
   Fl::remove_clipboard_notify(handleClipboardChange);
-
-  OptionsDialog::removeCallback(handleOptions);
 
   if (cursor) {
     if (!cursor->alloc_array)
@@ -1055,17 +1059,12 @@ void Viewport::popupContextMenu()
   }
 }
 
-void Viewport::handleOptions(void *data)
-{
-  Viewport *self = (Viewport*)data;
-  unsigned modifierMask;
 
-  modifierMask = 0;
+void Viewport::setShortcutModifiers()
+{
+  unsigned modifierMask = 0;
   for (core::EnumListEntry key : shortcutModifiers)
     modifierMask |= ShortcutHandler::parseModifier(key.getValueStr().c_str());
 
-  self->shortcutHandler.setModifiers(modifierMask);
-
-  if (Fl::belowmouse() == self)
-    self->showCursor();
+  shortcutHandler.setModifiers(modifierMask);
 }

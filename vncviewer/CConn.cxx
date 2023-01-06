@@ -63,7 +63,6 @@
 #include "fltk/util.h"
 #include "AuthDialog.h"
 #include "CConn.h"
-#include "OptionsDialog.h"
 #include "DesktopWindow.h"
 #include "PlatformPixelBuffer.h"
 #include "parameters.h"
@@ -110,15 +109,12 @@ CConn::CConn()
 
   msgTimer.connectSignal(&core::Timer::timeout, this,
                          &CConn::processNextMsg);
-
-  OptionsDialog::addCallback(handleOptions, this);
 }
 
 CConn::~CConn()
 {
   close();
 
-  OptionsDialog::removeCallback(handleOptions);
   Fl::remove_timeout(handleUpdateTimeout, this);
 
   if (desktop)
@@ -1027,16 +1023,6 @@ void CConn::updatePixelFormat()
     vlog.info(_("Using pixel format %s"),str);
     setPF(pf);
   }
-}
-
-void CConn::handleOptions(void *data)
-{
-  CConn *self = (CConn*)data;
-
-  self->updateEncoding();
-  self->updateCompressLevel();
-  self->updateQualityLevel();
-  self->updatePixelFormat();
 }
 
 void CConn::handleUpdateTimeout(void *data)
