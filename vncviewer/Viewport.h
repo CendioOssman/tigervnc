@@ -100,8 +100,6 @@ private:
 
   void setMenuKey();
 
-  static void handleOptions(void *data);
-
 private:
   CConn* cc;
 
