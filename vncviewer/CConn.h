@@ -80,12 +80,10 @@ private:
 
   void resizeFramebuffer() override;
 
-  void updateEncoding();
-  void updateCompressLevel();
-  void updateQualityLevel();
-  void updatePixelFormat();
-
-  static void handleOptions(void *data);
+  void updateEncoding(core::VoidParameter* =nullptr, const char* ="");
+  void updateCompressLevel(core::VoidParameter* =nullptr, const char* ="");
+  void updateQualityLevel(core::VoidParameter* =nullptr, const char* ="");
+  void updatePixelFormat(core::VoidParameter* =nullptr, const char* ="");
 
   static void handleUpdateTimeout(void *data);
 
