@@ -45,7 +45,6 @@
 #include <FL/fl_ask.H>
 
 #include "CConn.h"
-#include "OptionsDialog.h"
 #include "DesktopWindow.h"
 #include "PlatformPixelBuffer.h"
 #include "i18n.h"
@@ -93,6 +92,25 @@ CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
   if (!noJpeg)
     setQualityLevel(::qualityLevel);
 
+  autoSelect.connectSignal("config", this, &CConn::updateEncoding);
+  ::preferredEncoding.connectSignal("config", this,
+                                    &CConn::updateEncoding);
+
+  customCompressLevel.connectSignal("config", this,
+                                    &CConn::updateCompressLevel);
+  ::compressLevel.connectSignal("config", this,
+                                &CConn::updateCompressLevel);
+
+  autoSelect.connectSignal("config", this, &CConn::updateQualityLevel);
+  noJpeg.connectSignal("config", this, &CConn::updateQualityLevel);
+  ::qualityLevel.connectSignal("config", this,
+                               &CConn::updateQualityLevel);
+
+  autoSelect.connectSignal("config", this, &CConn::updatePixelFormat);
+  fullColour.connectSignal("config", this, &CConn::updatePixelFormat);
+  lowColourLevel.connectSignal("config", this,
+                               &CConn::updatePixelFormat);
+
   if(sock == nullptr) {
     try {
 #ifndef WIN32
@@ -123,15 +141,12 @@ CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
   setStreams(&sock->inStream(), &sock->outStream());
 
   initialiseProtocol();
-
-  OptionsDialog::addCallback(handleOptions, this);
 }
 
 CConn::~CConn()
 {
   close();
 
-  OptionsDialog::removeCallback(handleOptions);
   Fl::remove_timeout(handleUpdateTimeout, this);
 
   if (desktop)
@@ -485,7 +500,7 @@ void CConn::resizeFramebuffer()
   desktop->resizeFramebuffer(server.width(), server.height());
 }
 
-void CConn::updateEncoding()
+void CConn::updateEncoding(VoidParameter*, const char*)
 {
   int encNum;
 
@@ -498,7 +513,7 @@ void CConn::updateEncoding()
     setPreferredEncoding(encNum);
 }
 
-void CConn::updateCompressLevel()
+void CConn::updateCompressLevel(VoidParameter*, const char*)
 {
   if (customCompressLevel)
     setCompressLevel(::compressLevel);
@@ -506,7 +521,7 @@ void CConn::updateCompressLevel()
     setCompressLevel(-1);
 }
 
-void CConn::updateQualityLevel()
+void CConn::updateQualityLevel(VoidParameter*, const char*)
 {
   int newQualityLevel;
 
@@ -533,7 +548,7 @@ void CConn::updateQualityLevel()
   setQualityLevel(newQualityLevel);
 }
 
-void CConn::updatePixelFormat()
+void CConn::updatePixelFormat(VoidParameter*, const char*)
 {
   bool useFullColour;
   PixelFormat pf;
@@ -581,16 +596,6 @@ void CConn::updatePixelFormat()
     vlog.info(_("Using pixel format %s"),str);
     setPF(pf);
   }
-}
-
-void CConn::handleOptions(void *data)
-{
-  CConn *self = (CConn*)data;
-
-  self->updateEncoding();
-  self->updateCompressLevel();
-  self->updateQualityLevel();
-  self->updatePixelFormat();
 }
 
 void CConn::handleUpdateTimeout(void *data)
