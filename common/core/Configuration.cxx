@@ -309,6 +309,7 @@ bool BoolParameter::setParam() {
 
 void BoolParameter::setParam(bool b) {
   if (immutable) return;
+  if (value == b) return;
   value = b;
   vlog.debug("set %s(Bool) to %d", getName(), value);
   emitSignal("config");
@@ -348,6 +349,7 @@ IntParameter::setParam(const char* v) {
 bool
 IntParameter::setParam(int v) {
   if (immutable) return true;
+  if (value == v) return true;
   vlog.debug("set %s(Int) to %d", getName(), v);
   if (v < minValue || v > maxValue)
     return false;
@@ -391,6 +393,7 @@ bool StringParameter::setParam(const char* v) {
   if (immutable) return true;
   if (!v)
     throw Exception("setParam(<null>) not allowed");
+  if (value == v) return true;
   vlog.debug("set %s(String) to %s", getName(), v);
   {
     LOCK_CONFIG;
@@ -445,6 +448,7 @@ bool BinaryParameter::setParam(const char* v) {
 
 void BinaryParameter::setParam(const uint8_t* v, size_t len) {
   if (immutable) return; 
+  if ((length == len) && (memcmp(value, v, len) == 0)) return;
   vlog.debug("set %s(Binary)", getName());
   {
     LOCK_CONFIG;
