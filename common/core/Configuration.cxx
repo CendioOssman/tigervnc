@@ -306,6 +306,7 @@ bool BoolParameter::setParam() {
 
 void BoolParameter::setParam(bool b) {
   if (immutable) return;
+  if (value == b) return;
   value = b;
   vlog.debug("Set %s(Bool) to %s", getName(), getValueStr().c_str());
   emitSignal("config");
@@ -352,6 +353,7 @@ IntParameter::setParam(const char* v) {
 bool
 IntParameter::setParam(int v) {
   if (immutable) return true;
+  if (value == v) return true;
   if (v < minValue || v > maxValue) {
     vlog.error("Int parameter %s: Invalid value '%d'", getName(), v);
     return false;
@@ -394,6 +396,7 @@ bool StringParameter::setParam(const char* v) {
   if (immutable) return true;
   if (!v)
     throw std::invalid_argument("setParam(<null>) not allowed");
+  if (value == v) return true;
   vlog.debug("Set %s(String) to %s", getName(), v);
   value = v;
   emitSignal("config");
@@ -453,6 +456,7 @@ bool EnumParameter::setParam(const char* v)
     vlog.error("Enum parameter %s: Invalid value '%s'", getName(), v);
     return false;
   }
+  if (value == *iter) return true;
   vlog.debug("Set %s(Enum) to %s", getName(), iter->c_str());
   value = *iter;
   emitSignal("config");
@@ -521,6 +525,7 @@ bool BinaryParameter::setParam(const char* v) {
 
 void BinaryParameter::setParam(const uint8_t* v, size_t len) {
   if (immutable) return; 
+  if ((length == len) && (memcmp(value, v, len) == 0)) return;
   vlog.debug("Set %s(Binary)", getName());
   delete [] value;
   value = nullptr;
@@ -603,6 +608,7 @@ bool ListParameter<ValueType>::setParam(const ListType& v)
     }
     vnorm.push_back(normaliseEntry(entry));
   }
+  if (value == vnorm) return true;
   value = vnorm;
   vlog.debug("set %s(List) to %s", getName(), getValueStr().c_str());
   emitSignal("config");
