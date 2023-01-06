@@ -97,9 +97,7 @@ private:
   void initContextMenu();
   void popupContextMenu();
 
-  void setMenuKey();
-
-  static void handleOptions(void *data);
+  void setMenuKey(core::VoidParameter* =nullptr, const char* ="");
 
 private:
   CConn* cc;
