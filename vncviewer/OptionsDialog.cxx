@@ -53,8 +53,6 @@
 #include <FL/Fl_Int_Input.H>
 #include <FL/Fl_Choice.H>
 
-std::map<OptionsCallback*, void*> OptionsDialog::callbacks;
-
 static std::set<OptionsDialog *> instances;
 
 OptionsDialog::OptionsDialog()
@@ -129,18 +127,6 @@ void OptionsDialog::showDialog(void)
     return;
 
   dialog->show();
-}
-
-
-void OptionsDialog::addCallback(OptionsCallback *cb, void *data)
-{
-  callbacks[cb] = data;
-}
-
-
-void OptionsDialog::removeCallback(OptionsCallback *cb)
-{
-  callbacks.erase(cb);
 }
 
 
@@ -462,8 +448,6 @@ void OptionsDialog::storeOptions(void)
   if (windowedButton->value()) {
     fullScreen.setParam(false);
   } else {
-    fullScreen.setParam(true);
-
     if (allMonitorsButton->value()) {
       fullScreenMode.setParam("All");
     } else if (selectedMonitorsButton->value()) {
@@ -471,6 +455,8 @@ void OptionsDialog::storeOptions(void)
     } else {
       fullScreenMode.setParam("Current");
     }
+
+    fullScreen.setParam(true);
   }
 
   fullScreenSelectedMonitors.setMonitors(monitorArrangement->value());
@@ -486,11 +472,6 @@ void OptionsDialog::storeOptions(void)
     // Default
     cursorType.setParam("Dot");
   }
-
-  std::map<OptionsCallback*, void*>::const_iterator iter;
-
-  for (iter = callbacks.begin();iter != callbacks.end();++iter)
-    iter->first(iter->second);
 }
 
 
