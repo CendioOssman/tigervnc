@@ -146,6 +146,10 @@ TEST(BoolParameter, signals)
   emitted = false;
   signals.setParam(true);
   EXPECT_TRUE(emitted);
+
+  emitted = false;
+  signals.setParam(true);
+  EXPECT_FALSE(emitted);
 }
 
 TEST(IntParameter, values)
@@ -253,6 +257,10 @@ TEST(IntParameter, signals)
   emitted = false;
   signals.setParam(123);
   EXPECT_TRUE(emitted);
+
+  emitted = false;
+  signals.setParam(123);
+  EXPECT_FALSE(emitted);
 }
 
 TEST(StringParameter, values)
@@ -325,6 +333,10 @@ TEST(StringParameter, signals)
   emitted = false;
   signals.setParam("foo");
   EXPECT_TRUE(emitted);
+
+  emitted = false;
+  signals.setParam("foo");
+  EXPECT_FALSE(emitted);
 }
 
 TEST(EnumParameter, values)
@@ -440,6 +452,14 @@ TEST(EnumParameter, signals)
   emitted = false;
   signals.setParam("b");
   EXPECT_TRUE(emitted);
+
+  emitted = false;
+  signals.setParam("b");
+  EXPECT_FALSE(emitted);
+
+  emitted = false;
+  signals.setParam("B");
+  EXPECT_FALSE(emitted);
 }
 
 TEST(BinaryParameter, values)
@@ -567,6 +587,11 @@ TEST(BinaryParameter, signals)
   data = {4, 5, 6};
   signals.setParam(data.data(), data.size());
   EXPECT_TRUE(emitted);
+
+  emitted = false;
+  data = {4, 5, 6};
+  signals.setParam(data.data(), data.size());
+  EXPECT_FALSE(emitted);
 }
 
 TEST(IntListParameter, values)
@@ -700,6 +725,10 @@ TEST(IntListParameter, signals)
   emitted = false;
   signals.setParam({1, 2, 3, 4});
   EXPECT_TRUE(emitted);
+
+  emitted = false;
+  signals.setParam({1, 2, 3, 4});
+  EXPECT_FALSE(emitted);
 }
 
 TEST(StringListParameter, values)
@@ -785,6 +814,10 @@ TEST(StringListParameter, signals)
   emitted = false;
   signals.setParam({"1", "2", "3", "4"});
   EXPECT_TRUE(emitted);
+
+  emitted = false;
+  signals.setParam({"1", "2", "3", "4"});
+  EXPECT_FALSE(emitted);
 }
 
 TEST(EnumListParameter, values)
@@ -908,6 +941,14 @@ TEST(EnumListParameter, signals)
   emitted = false;
   signals.setParam({"a", "b", "c"});
   EXPECT_TRUE(emitted);
+
+  emitted = false;
+  signals.setParam({"a", "b", "c"});
+  EXPECT_FALSE(emitted);
+
+  emitted = false;
+  signals.setParam({"A", "b", "C"});
+  EXPECT_FALSE(emitted);
 }
 
 int main(int argc, char** argv)
