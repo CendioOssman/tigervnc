@@ -34,7 +34,7 @@ class Viewport;
 
 class Fl_Scrollbar;
 
-class DesktopWindow : public Fl_Window {
+class DesktopWindow : public core::Object, public Fl_Window {
 public:
 
   DesktopWindow(int w, int h, const char *name,
@@ -108,7 +108,8 @@ private:
 
   static void handleClose(Fl_Widget *wnd, void *data);
 
-  static void handleOptions(void *data);
+  void handleGrabConfig(core::VoidParameter*, const char*);
+  void handleFullScreenConfig(core::VoidParameter*, const char*);
 
   static void handleFullscreenTimeout(void *data);
 
