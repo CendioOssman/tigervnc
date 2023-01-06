@@ -51,7 +51,6 @@
 #include <FL/fl_ask.H>
 
 #include "CConn.h"
-#include "OptionsDialog.h"
 #include "DesktopWindow.h"
 #include "PlatformPixelBuffer.h"
 #include "i18n.h"
@@ -93,15 +92,12 @@ CConn::CConn()
     setCompressLevel(::compressLevel);
 
   setQualityLevel(::qualityLevel);
-
-  OptionsDialog::addCallback(handleOptions, this);
 }
 
 CConn::~CConn()
 {
   close();
 
-  OptionsDialog::removeCallback(handleOptions);
   Fl::remove_timeout(handleUpdateTimeout, this);
 
   if (desktop)
@@ -579,16 +575,6 @@ void CConn::updatePixelFormat()
     vlog.info(_("Using pixel format %s"),str);
     setPF(pf);
   }
-}
-
-void CConn::handleOptions(void *data)
-{
-  CConn *self = (CConn*)data;
-
-  self->updateEncoding();
-  self->updateCompressLevel();
-  self->updateQualityLevel();
-  self->updatePixelFormat();
 }
 
 void CConn::handleUpdateTimeout(void *data)

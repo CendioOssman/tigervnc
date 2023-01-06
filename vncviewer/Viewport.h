@@ -104,7 +104,7 @@ private:
   void initContextMenu();
   void popupContextMenu();
 
-  static void handleOptions(void *data);
+  void setShortcutModifiers();
 
 private:
   CConn* cc;
