@@ -42,7 +42,6 @@ public:
 
 protected:
   void loadOptions(void);
-  void storeOptions(void);
 
   void createCompressionPage(int tx, int ty, int tw, int th);
   void createSecurityPage(int tx, int ty, int tw, int th);
@@ -50,19 +49,24 @@ protected:
   void createDisplayPage(int tx, int ty, int tw, int th);
   void createMiscPage(int tx, int ty, int tw, int th);
 
+  static void handleBoolParam(Fl_Widget *widget, void *data);
+  static void handleIntParam(Fl_Widget *widget, void *data);
+  static void handleStringParam(Fl_Widget *widget, void *data);
+
   static void handleAutoselect(Fl_Widget *widget, void *data);
+  static void handleEncoding(Fl_Widget *widget, void *data);
+  static void handleColor(Fl_Widget *widget, void *data);
   static void handleCompression(Fl_Widget *widget, void *data);
   static void handleJpeg(Fl_Widget *widget, void *data);
 
+  static void handleAuth(Fl_Widget *widget, void *data);
   static void handleX509(Fl_Widget *widget, void *data);
   static void handleRSAAES(Fl_Widget *widget, void *data);
 
+  static void handleMenuKey(Fl_Widget *widget, void *data);
   static void handleClipboard(Fl_Widget *widget, void *data);
 
   static void handleFullScreenMode(Fl_Widget *widget, void *data);
-
-  static void handleCancel(Fl_Widget *widget, void *data);
-  static void handleOK(Fl_Widget *widget, void *data);
 
 protected:
   /* Compression */
