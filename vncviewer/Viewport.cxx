@@ -1,5 +1,5 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
- * Copyright 2011-2019 Pierre Ossman for Cendio AB
+ * Copyright 2011-2023 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -174,6 +174,13 @@ Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc
   assert(frameBuffer);
   cc->setFramebuffer(frameBuffer);
 
+  cc->connectSignal("clipboardrequest", this,
+                    &Viewport::handleClipboardRequest);
+  cc->connectSignal("clipboardannounce", this,
+                    &Viewport::handleClipboardAnnounce);
+  cc->connectSignal("clipboarddata", this,
+                    &Viewport::handleClipboardData);
+
   contextMenu = new Fl_Menu_Button(0, 0, 0, 0);
   // Setting box type to FL_NO_BOX prevents it from trying to draw the
   // button component (which we don't want)
@@ -282,12 +289,13 @@ void Viewport::setCursor(int width, int height, const Point& hotspot,
     window()->cursor(cursor, cursorHotspot.x, cursorHotspot.y);
 }
 
-void Viewport::handleClipboardRequest()
+void Viewport::handleClipboardRequest(CConn*, const char*)
 {
   Fl::paste(*this, clipboardSource);
 }
 
-void Viewport::handleClipboardAnnounce(bool available)
+void Viewport::handleClipboardAnnounce(CConn*, const char*,
+                                       bool available)
 {
   if (!acceptClipboard)
     return;
@@ -308,7 +316,8 @@ void Viewport::handleClipboardAnnounce(bool available)
   cc->requestClipboard();
 }
 
-void Viewport::handleClipboardData(const char* data)
+void Viewport::handleClipboardData(CConn*, const char*,
+                                   const char *data)
 {
   size_t len;
 

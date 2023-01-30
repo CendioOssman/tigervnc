@@ -1,5 +1,5 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
- * Copyright 2011-2019 Pierre Ossman for Cendio AB
+ * Copyright 2011-2023 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,6 +67,9 @@ CConnection::CConnection()
     framebuffer(nullptr), decoder(this),
     hasRemoteClipboard(false), hasLocalClipboard(false)
 {
+  registerSignal("clipboardrequest");
+  registerSignal<bool>("clipboardannounce");
+  registerSignal<const char*>("clipboarddata");
 }
 
 CConnection::~CConnection()
@@ -567,7 +570,7 @@ void CConnection::serverCutText(const char* str)
   serverClipboard = str;
   hasRemoteClipboard = true;
 
-  handleClipboardAnnounce(true);
+  emitSignal("clipboardannounce", true);
 }
 
 void CConnection::setLEDState(unsigned int state)
@@ -636,7 +639,7 @@ void CConnection::handleClipboardRequest(uint32_t flags)
     vlog.debug("Ignoring unexpected clipboard request");
     return;
   }
-  handleClipboardRequest();
+  emitSignal("clipboardrequest");
 }
 
 void CConnection::handleClipboardPeek()
@@ -651,9 +654,9 @@ void CConnection::handleClipboardNotify(uint32_t flags)
 
   if (flags & rfb::clipboardUTF8) {
     hasLocalClipboard = false;
-    handleClipboardAnnounce(true);
+    emitSignal("clipboardannounce", true);
   } else {
-    handleClipboardAnnounce(false);
+    emitSignal("clipboardannounce", false);
   }
 }
 
@@ -675,7 +678,7 @@ void CConnection::handleClipboardProvide(uint32_t flags,
   hasRemoteClipboard = true;
 
   // FIXME: Should probably verify that this data was actually requested
-  handleClipboardData(serverClipboard.c_str());
+  emitSignal("clipboarddata", serverClipboard.c_str());
 }
 
 void CConnection::authSuccess()
@@ -691,22 +694,10 @@ void CConnection::resizeFramebuffer()
   assert(false);
 }
 
-void CConnection::handleClipboardRequest()
-{
-}
-
-void CConnection::handleClipboardAnnounce(bool /*available*/)
-{
-}
-
-void CConnection::handleClipboardData(const char* /*data*/)
-{
-}
-
 void CConnection::requestClipboard()
 {
   if (hasRemoteClipboard) {
-    handleClipboardData(serverClipboard.c_str());
+    emitSignal("clipboarddata", serverClipboard.c_str());
     return;
   }
 
@@ -725,7 +716,7 @@ void CConnection::announceClipboard(bool available)
       (server.clipboardFlags() & rfb::clipboardProvide)) {
     vlog.debug("Attempting unsolicited clipboard transfer...");
     unsolicitedClipboardAttempt = true;
-    handleClipboardRequest();
+    emitSignal("clipboardrequest");
     return;
   }
 
@@ -735,7 +726,7 @@ void CConnection::announceClipboard(bool available)
   }
 
   if (available)
-    handleClipboardRequest();
+    emitSignal("clipboardrequest");
 }
 
 void CConnection::sendClipboardData(const char* data)

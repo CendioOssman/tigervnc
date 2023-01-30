@@ -87,6 +87,14 @@ XserverDesktop::XserverDesktop(int screenIndex_,
   format = pf;
 
   server = new VNCServerST(name, this);
+
+  server->connectSignal("clipboardrequest", this,
+                        &XserverDesktop::handleClipboardRequest);
+  server->connectSignal("clipboardannounce", this,
+                        &XserverDesktop::handleClipboardAnnounce);
+  server->connectSignal("clipboarddata", this,
+                        &XserverDesktop::handleClipboardData);
+
   setFramebuffer(width, height, fbptr, stride_);
 
   queryConnectTimer.connectSignal("timer", this,
@@ -505,19 +513,21 @@ void XserverDesktop::frameTick(uint64_t msc)
   }
 }
 
-void XserverDesktop::handleClipboardRequest()
+void XserverDesktop::handleClipboardRequest(VNCServerST*, const char*)
 {
   vncHandleClipboardRequest();
 }
 
-void XserverDesktop::handleClipboardAnnounce(bool available)
+void XserverDesktop::handleClipboardAnnounce(VNCServerST*, const char*,
+                                             bool available)
 {
   vncHandleClipboardAnnounce(available);
 }
 
-void XserverDesktop::handleClipboardData(const char* data_)
+void XserverDesktop::handleClipboardData(VNCServerST*, const char*,
+                                         const char* data)
 {
-  vncHandleClipboardData(data_);
+  vncHandleClipboardData(data);
 }
 
 void XserverDesktop::grabRegion(const core::Region& region)

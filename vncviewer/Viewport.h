@@ -1,5 +1,5 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
- * Copyright 2011-2019 Pierre Ossman <ossman@cendio.se> for Cendio AB
+ * Copyright 2011-2023 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,11 +56,6 @@ public:
 
   void draw(Surface* dst);
 
-  // Clipboard events
-  void handleClipboardRequest();
-  void handleClipboardAnnounce(bool available);
-  void handleClipboardData(const char* data);
-
   // Fl_Widget callback methods
 
   void draw() override;
@@ -78,6 +73,9 @@ private:
   unsigned int getModifierMask(unsigned int keysym);
 
   static void handleClipboardChange(int source, void *data);
+  void handleClipboardRequest(CConn*, const char*);
+  void handleClipboardAnnounce(CConn*, const char*, bool available);
+  void handleClipboardData(CConn*, const char*, const char *data);
 
   void flushPendingClipboard();
 
