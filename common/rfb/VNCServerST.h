@@ -119,10 +119,6 @@ namespace rfb {
     void keyEvent(uint32_t keysym, uint32_t keycode, bool down);
     void pointerEvent(VNCSConnectionST* client, const core::Point& pos, int buttonMask);
 
-    void handleClipboardRequest(VNCSConnectionST* client);
-    void handleClipboardAnnounce(VNCSConnectionST* client, bool available);
-    void handleClipboardData(VNCSConnectionST* client, const char* data);
-
     unsigned int setDesktopSize(VNCSConnectionST* requester,
                                 int fb_width, int fb_height,
                                 const ScreenSet& layout);
@@ -152,7 +148,36 @@ namespace rfb {
     // side rendered cursor buffer
     const RenderedCursor* getRenderedCursor();
 
+
+    // Signals
+
+    // "clipboardrequest" is emitted whenever the client requests
+    // the server to send over its clipboard data. It will only be
+    // sent after the server has first announced a clipboard change
+    // via announceClipboard().
+
+    // "clipboardannounce" is emitted to indicate a change in the
+    // clipboard on the client. Call requestClipboard() to access the
+    // actual data. A boolean is included to indicate if the clipboard
+    // is available or not.
+
+    // "clipboardData" is emitted when the client has sent over
+    // the clipboard data as a result of a previous call to
+    // requestClipboard(). Note that this function might never be
+    // called if the clipboard data was no longer available when the
+    // client received the request. A const char* string is included
+    // that contains the actual clipboard contents.
+
+
   protected:
+
+    // Signal handlers
+    void handleClipboardRequest(VNCSConnectionST* client,
+                                const char*);
+    void handleClipboardAnnounce(VNCSConnectionST* client,
+                                 const char*, bool available);
+    void handleClipboardData(VNCSConnectionST* client,
+                             const char*, const char* data);
 
     // Timer callbacks
     void frameTimeout(core::Timer*, const char*);

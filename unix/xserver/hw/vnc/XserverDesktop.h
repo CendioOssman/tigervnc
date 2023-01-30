@@ -102,14 +102,17 @@ public:
   unsigned int setScreenLayout(int fb_width, int fb_height,
                                const rfb::ScreenSet& layout) override;
   void frameTick(uint64_t msc) override;
-  void handleClipboardRequest() override;
-  void handleClipboardAnnounce(bool available) override;
-  void handleClipboardData(const char* data) override;
 
   // rfb::PixelBuffer callbacks
   void grabRegion(const core::Region& r) override;
 
 protected:
+  void handleClipboardRequest(rfb::VNCServerST*, const char*);
+  void handleClipboardAnnounce(rfb::VNCServerST*, const char*,
+                               bool available);
+  void handleClipboardData(rfb::VNCServerST*, const char*,
+                           const char* data);
+
   bool handleListenerEvent(int fd,
                            std::list<network::SocketListener*>* sockets,
                            rfb::VNCServer* sockserv);
