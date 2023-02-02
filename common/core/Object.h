@@ -1,4 +1,4 @@
-/* Copyright 2022 Pierre Ossman for Cendio AB
+/* Copyright 2022-2023 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,6 +81,14 @@ namespace core {
     template<typename I>
     void registerSignal(const char *name);
 
+    // delegateSignal() connects the signal from another object to this
+    // object. When the signal is emitted on the other object, it is
+    // also emitted from this object. The sender is replaced so that
+    // things behave like this object emitted the signal. This signal
+    // must be registered in both objects, and the signal information
+    // type must be identical.
+    void delegateSignal(const char *name, Object *from);
+
     // emitSignal() calls all the registered object methods for the
     // specified name. Inclusion of signal information must match the
     // type from registerSignal() or an exception will be thrown.
@@ -100,6 +108,8 @@ namespace core {
 
     void registerSignal(const char *name, const InfoChecker *checker);
 
+    void undelegateSignals(Object *obj);
+
     struct SignalInfo;
     template<typename I> struct TypedInfo;
 
@@ -113,11 +123,15 @@ namespace core {
 
   private:
     typedef std::list<const SignalReceiver*> ReceiverList;
+    typedef std::list<Object*> DelegationList;
 
     // Mapping between signal names and the methods receiving them
     std::map<std::string, ReceiverList> signalReceivers;
     // Signal information type checkers for each signal name
     std::map<std::string, const InfoChecker*> signalCheckers;
+
+    // Mapping between signal names and delegated objects
+    std::map<std::string, DelegationList> signalDelegations;
 
     // Other objects that we have connected to signals on
     std::set<Object*> connectedObjects;
@@ -201,6 +215,9 @@ namespace core {
 
     virtual bool isInstanceOf(const SignalInfo&) const = 0;
     virtual bool isType(const std::type_info&) const = 0;
+    virtual bool operator==(const InfoChecker&) const = 0;
+    bool operator!=(const InfoChecker &_other) const
+      { return !(*this == _other); }
   };
 
   template<class I>
@@ -211,6 +228,7 @@ namespace core {
 
     bool isInstanceOf(const SignalInfo&) const override;
     bool isType(const std::type_info&) const override;
+    bool operator==(const InfoChecker&) const override;
   };
 
   // Object - Inline methods definitions
@@ -392,6 +410,12 @@ namespace core {
   bool Object::InfoCheckerI<I>::isType(const std::type_info &info) const
   {
     return info == typeid(I);
+  }
+
+  template<class I>
+  bool Object::InfoCheckerI<I>::operator==(const InfoChecker &_other) const
+  {
+    return _other.isType(typeid(I));
   }
 
 }
