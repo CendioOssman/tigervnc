@@ -1,4 +1,4 @@
-/* Copyright 2022 Pierre Ossman for Cendio AB
+/* Copyright 2022-2023 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,10 +35,14 @@ Object::Object()
 Object::~Object()
 {
   std::map<std::string, ReceiverList>::iterator sigiter;
+  std::map<std::string, DelegationList>::iterator diter;
 
   // Disconnect from any signals we might have subscribed to
-  while (!connectedObjects.empty())
-    (*connectedObjects.begin())->disconnectSignals(this);
+  while (!connectedObjects.empty()) {
+    Object *obj = *connectedObjects.begin();
+    obj->disconnectSignals(this);
+    obj->undelegateSignals(this);
+  }
 
   // And prevent other objects from trying to disconnect from us as we
   // are going away
@@ -55,6 +59,15 @@ Object::~Object()
         siglist->erase(siglist->begin());
       }
     }
+  }
+
+  for (diter = signalDelegations.begin();
+       diter != signalDelegations.end(); ++diter) {
+    DelegationList *dlist;
+
+    dlist = &diter->second;
+    while (!dlist->empty())
+      undelegateSignals(*dlist->begin());
   }
 
   while (!signalCheckers.empty()) {
@@ -77,10 +90,42 @@ void Object::registerSignal(const char *name,
   signalCheckers[name] = checker;
 }
 
+void Object::delegateSignal(const char *name, Object *from)
+{
+  assert(name);
+  assert(from);
+
+  if (signalReceivers.count(name) == 0)
+    throw std::logic_error(format("Cannot delegate unknown signal %s", name));
+  if (from->signalReceivers.count(name) == 0)
+    throw std::logic_error(format("Cannot delegate unknown signal %s", name));
+
+  if (std::find(from->signalDelegations[name].begin(),
+                from->signalDelegations[name].end(),
+                from) != from->signalDelegations[name].end())
+    throw std::logic_error(format("Signal %s is already delegated", name));
+
+  if (signalCheckers[name] == nullptr) {
+    if (from->signalCheckers[name] != nullptr)
+      throw std::logic_error(format("Incompatible delegation for signal %s", name));
+  } else {
+    if (from->signalCheckers[name] == nullptr)
+      throw std::logic_error(format("Incompatible delegation for signal %s", name));
+    if (*signalCheckers[name] != *from->signalCheckers[name])
+      throw std::logic_error(format("Incompatible delegation for signal %s", name));
+  }
+
+  from->signalDelegations[name].push_back(this);
+  connectedObjects.insert(from);
+}
+
 void Object::emitSignal(const char *name)
 {
-  ReceiverList siglist;
-  ReceiverList::iterator iter;
+  ReceiverList rlist;
+  ReceiverList::iterator riter;
+
+  DelegationList dlist;
+  DelegationList::iterator diter;
 
   assert(name);
 
@@ -91,21 +136,34 @@ void Object::emitSignal(const char *name)
     throw std::logic_error(format("Missing data when emitting signal %s", name));
 
   // Convoluted iteration so that we safely handle changes to
-  // the list
-  siglist = signalReceivers[name];
-  for (iter = siglist.begin(); iter != siglist.end(); ++iter) {
+  // the lists
+
+  rlist = signalReceivers[name];
+  for (riter = rlist.begin(); riter != rlist.end(); ++riter) {
     if (std::find(signalReceivers[name].begin(),
                   signalReceivers[name].end(),
-                  *iter) == signalReceivers[name].end())
+                  *riter) == signalReceivers[name].end())
       continue;
-    (*iter)->emit(this, name);
+    (*riter)->emit(this, name);
+  }
+
+  dlist = signalDelegations[name];
+  for (diter = dlist.begin(); diter != dlist.end(); ++diter) {
+    if (std::find(signalDelegations[name].begin(),
+                  signalDelegations[name].end(),
+                  *diter) == signalDelegations[name].end())
+      continue;
+    (*diter)->emitSignal(name);
   }
 }
 
 void Object::emitSignal(const char *name, SignalInfo &info)
 {
-  ReceiverList siglist;
-  ReceiverList::iterator iter;
+  ReceiverList rlist;
+  ReceiverList::iterator riter;
+
+  DelegationList dlist;
+  DelegationList::iterator diter;
 
   assert(name);
 
@@ -119,14 +177,24 @@ void Object::emitSignal(const char *name, SignalInfo &info)
     throw std::logic_error(format("Incompatible signal data for signal %s", name));
 
   // Convoluted iteration so that we safely handle changes to
-  // the list
-  siglist = signalReceivers[name];
-  for (iter = siglist.begin(); iter != siglist.end(); ++iter) {
+  // the lists
+
+  rlist = signalReceivers[name];
+  for (riter = rlist.begin(); riter != rlist.end(); ++riter) {
     if (std::find(signalReceivers[name].begin(),
                   signalReceivers[name].end(),
-                  *iter) == signalReceivers[name].end())
+                  *riter) == signalReceivers[name].end())
       continue;
-    (*iter)->emit(this, name, info);
+    (*riter)->emit(this, name, info);
+  }
+
+  dlist = signalDelegations[name];
+  for (diter = dlist.begin(); diter != dlist.end(); ++diter) {
+    if (std::find(signalDelegations[name].begin(),
+                  signalDelegations[name].end(),
+                  *diter) == signalDelegations[name].end())
+      continue;
+    (*diter)->emitSignal(name, info);
   }
 }
 
@@ -185,6 +253,8 @@ void Object::disconnectSignal(const char *name, Object *obj,
 {
   std::map<std::string, ReceiverList>::iterator sigiter;
   ReceiverList::iterator iter;
+  std::map<std::string, DelegationList>::iterator diter;
+
   bool hasOthers;
 
   assert(name);
@@ -220,6 +290,17 @@ void Object::disconnectSignal(const char *name, Object *obj,
       break;
   }
 
+  // Then check if there is a delegation from any signal to the
+  // object
+  for (diter = signalDelegations.begin();
+       diter != signalDelegations.end(); ++diter) {
+    if (std::find(diter->second.begin(), diter->second.end(),
+                  obj) != diter->second.end()) {
+      hasOthers = true;
+      break;
+    }
+  }
+
   if (!hasOthers)
     obj->connectedObjects.erase(this);
 }
@@ -228,6 +309,7 @@ void Object::disconnectSignal(const char *name, Object *obj)
 {
   std::map<std::string, ReceiverList>::iterator sigiter;
   ReceiverList::iterator iter;
+  std::map<std::string, DelegationList>::iterator diter;
 
   bool hasOthers;
 
@@ -265,6 +347,17 @@ void Object::disconnectSignal(const char *name, Object *obj)
       break;
   }
 
+  // Then check if there is a delegation from any signal to the
+  // object
+  for (diter = signalDelegations.begin();
+       diter != signalDelegations.end(); ++diter) {
+    if (std::find(diter->second.begin(), diter->second.end(),
+                  obj) != diter->second.end()) {
+      hasOthers = true;
+      break;
+    }
+  }
+
   if (!hasOthers)
     obj->connectedObjects.erase(this);
 }
@@ -275,9 +368,44 @@ void Object::disconnectSignals(Object *obj)
 
   assert(obj);
 
+  // Remove every reference to this object across every signal
   for (sigiter = signalReceivers.begin();
        sigiter != signalReceivers.end(); ++sigiter)
     disconnectSignal(sigiter->first.c_str(), obj);
+}
+
+void Object::undelegateSignals(Object *obj)
+{
+  std::map<std::string, DelegationList>::iterator diter;
+
+  std::map<std::string, ReceiverList>::iterator sigiter;
+  bool hasReceivers;
+
+  assert(obj);
+
+  // Remove every reference to this object across every signal
+  for (diter = signalDelegations.begin();
+       diter != signalDelegations.end(); ++diter)
+    diter->second.remove(obj);
+
+  // Might still be regular signals connected though
+  hasReceivers = false;
+  for (sigiter = signalReceivers.begin();
+       sigiter != signalReceivers.end(); ++sigiter) {
+    ReceiverList::iterator iter;
+    for (iter = sigiter->second.begin();
+         iter != sigiter->second.end(); ++iter) {
+      if ((*iter)->getObject() == obj) {
+        hasReceivers = true;
+        break;
+      }
+    }
+    if (hasReceivers)
+      break;
+  }
+
+  if (!hasReceivers)
+    obj->connectedObjects.erase(this);
 }
 
 Object::SignalReceiverFunctor::SignalReceiverFunctor(Object *obj_, std::function<void()> callback_)
