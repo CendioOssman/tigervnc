@@ -30,35 +30,27 @@
 #include <core/Rect.h>
 #include <rfb/ScreenSet.h>
 
-namespace rdr { class InStream; }
-
 namespace rfb {
 
   class CMsgHandler {
   public:
-    CMsgHandler();
-    virtual ~CMsgHandler();
+    // The following methods are called as corresponding messages are
+    // read. A derived class must override these methods.
 
-    // The following methods are called as corresponding messages are read.  A
-    // derived class should override these methods as desired.  Note that for
-    // the setDesktopSize(), setExtendedDesktopSize(), setPixelFormat(),
-    // setName(), serverInit() and clipboardCaps methods, a derived class
-    // should call on to CMsgHandler's methods to set the members of "server"
-    // appropriately.
-
-    virtual void setDesktopSize(int w, int h);
+    virtual void setDesktopSize(int w, int h) = 0;
     virtual void setExtendedDesktopSize(unsigned reason, unsigned result,
                                         int w, int h,
-                                        const ScreenSet& layout);
+                                        const ScreenSet& layout) = 0;
     virtual void setCursor(int width, int height, const
                            core::Point& hotspot,
                            const uint8_t* data) = 0;
     virtual void setCursorPos(const core::Point& pos) = 0;
-    virtual void setPixelFormat(const PixelFormat& pf);
-    virtual void setName(const char* name);
-    virtual void fence(uint32_t flags, unsigned len, const uint8_t data[]);
-    virtual void endOfContinuousUpdates();
-    virtual void supportsQEMUKeyEvent();
+    virtual void setPixelFormat(const PixelFormat& pf) = 0;
+    virtual void setName(const char* name) = 0;
+    virtual void fence(uint32_t flags, unsigned len,
+                       const uint8_t data[]) = 0;
+    virtual void endOfContinuousUpdates() = 0;
+    virtual void supportsQEMUKeyEvent() = 0;
     virtual void serverInit(int width, int height,
                             const PixelFormat& pf,
                             const char* name) = 0;
@@ -66,8 +58,8 @@ namespace rfb {
     virtual bool readAndDecodeRect(const core::Rect& r, int encoding,
                                    ModifiablePixelBuffer* pb) = 0;
 
-    virtual void framebufferUpdateStart();
-    virtual void framebufferUpdateEnd();
+    virtual void framebufferUpdateStart() = 0;
+    virtual void framebufferUpdateEnd() = 0;
     virtual bool dataRect(const core::Rect& r, int encoding) = 0;
 
     virtual void setColourMapEntries(int firstColour, int nColours,
@@ -75,16 +67,16 @@ namespace rfb {
     virtual void bell() = 0;
     virtual void serverCutText(const char* str) = 0;
 
-    virtual void setLEDState(unsigned int state);
+    virtual void setLEDState(unsigned int state) = 0;
 
     virtual void handleClipboardCaps(uint32_t flags,
-                                     const uint32_t* lengths);
-    virtual void handleClipboardRequest(uint32_t flags);
-    virtual void handleClipboardPeek();
-    virtual void handleClipboardNotify(uint32_t flags);
+                                     const uint32_t* lengths) = 0;
+    virtual void handleClipboardRequest(uint32_t flags) = 0;
+    virtual void handleClipboardPeek() = 0;
+    virtual void handleClipboardNotify(uint32_t flags) = 0;
     virtual void handleClipboardProvide(uint32_t flags,
                                         const size_t* lengths,
-                                        const uint8_t* const* data);
+                                        const uint8_t* const* data) = 0;
 
     ServerParams server;
   };
