@@ -126,6 +126,8 @@ namespace rfb {
     void queryConnection(const char* userName) override;
     void clientInit(bool shared) override;
     void setPixelFormat(const PixelFormat& pf) override;
+    void setEncodings(int nEncodings,
+                      const int32_t* encodings) override;
     void pointerEvent(const core::Point& pos,
                       uint16_t buttonMask) override;
     void keyEvent(uint32_t keysym, uint32_t keycode,
@@ -142,9 +144,6 @@ namespace rfb {
     void handleClipboardAnnounce(bool available) override;
     void handleClipboardData(const char* data) override;
     void supportsLocalCursor() override;
-    void supportsFence() override;
-    void supportsContinuousUpdates() override;
-    void supportsLEDState() override;
 
     // Timer callbacks
     void updateTimeout();
