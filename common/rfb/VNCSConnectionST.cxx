@@ -470,6 +470,30 @@ void VNCSConnectionST::setPixelFormat(const PixelFormat& pf)
   encodeManager.forceRefresh(server->getPixelBuffer()->getRect());
 }
 
+void VNCSConnectionST::setEncodings(int nEncodings,
+                                    const int32_t* encodings)
+{
+  std::vector<int32_t> newEncodings(encodings,
+                                    encodings + nEncodings);
+
+  // We refuse to use continuous updates if we cannot monitor the buffer
+  // usage using fences.
+  if (std::find(newEncodings.begin(), newEncodings.end(),
+                pseudoEncodingFence) == newEncodings.end()) {
+    while (true) {
+      std::vector<int32_t>::iterator iter;
+
+      iter = std::find(newEncodings.begin(), newEncodings.end(),
+                       pseudoEncodingContinuousUpdates);
+      if (iter == newEncodings.end())
+        break;
+      newEncodings.erase(iter);
+    }
+  }
+
+  SConnection::setEncodings(newEncodings.size(), newEncodings.data());
+}
+
 void VNCSConnectionST::pointerEvent(const core::Point& pos,
                                     uint16_t buttonMask)
 {
@@ -640,16 +664,6 @@ void VNCSConnectionST::framebufferUpdateRequest(const core::Rect& r,
   if (!incremental) {
     // Non-incremental update - treat as if area requested has changed
     updates.add_changed(reqRgn);
-
-    // And send the screen layout to the client (which, unlike the
-    // framebuffer dimensions, the client doesn't get during init)
-    if (client.supportsEncoding(pseudoEncodingExtendedDesktopSize))
-      writer()->writeDesktopSize(reasonServer);
-
-    // We do not send a DesktopSize since it only contains the
-    // framebuffer size (which the client already should know) and
-    // because some clients don't handle extra DesktopSize events
-    // very well.
   }
 }
 
@@ -769,30 +783,6 @@ void VNCSConnectionST::supportsLocalCursor()
   if (hasRenderedCursor && !needRenderedCursor())
     removeRenderedCursor = true;
   setCursor();
-}
-
-void VNCSConnectionST::supportsFence()
-{
-  uint8_t type = 0;
-  writer()->writeFence(fenceFlagRequest, sizeof(type), &type);
-}
-
-void VNCSConnectionST::supportsContinuousUpdates()
-{
-  // We refuse to use continuous updates if we cannot monitor the buffer
-  // usage using fences.
-  if (!client.supportsFence())
-    return;
-
-  writer()->writeEndOfContinuousUpdates();
-}
-
-void VNCSConnectionST::supportsLEDState()
-{
-  if (client.ledState() == ledUnknown)
-    return;
-
-  writer()->writeLEDState();
 }
 
 void VNCSConnectionST::updateTimeout()
