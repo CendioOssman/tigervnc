@@ -31,6 +31,8 @@
 #include <rfb/clipboardTypes.h>
 #include <rfb/msgTypes.h>
 #include <rfb/fenceTypes.h>
+#include <rfb/ledStates.h>
+#include <rfb/screenTypes.h>
 #include <rfb/SMsgReader.h>
 #include <rfb/SMsgWriter.h>
 #include <rfb/SConnection.h>
@@ -368,12 +370,20 @@ void SConnection::setEncodings(int nEncodings, const int32_t* encodings)
 
   supportsLocalCursor();
 
-  if (client.supportsFence() && firstFence)
+  if (client.supportsFence() && firstFence) {
+    uint8_t type = 0;
+    writer()->writeFence(fenceFlagRequest, sizeof(type), &type);
     supportsFence();
-  if (client.supportsContinuousUpdates() && firstContinuousUpdates)
+  }
+  if (client.supportsContinuousUpdates() && firstContinuousUpdates) {
+    writer()->writeEndOfContinuousUpdates();
     supportsContinuousUpdates();
-  if (client.supportsLEDState() && firstLEDState)
+  }
+  if (client.supportsLEDState() && firstLEDState) {
+    if (client.ledState() != ledUnknown)
+      writer()->writeLEDState();
     supportsLEDState();
+  }
   if (client.supportsEncoding(pseudoEncodingQEMUKeyEvent) && firstQEMUKeyEvent) {
     writer()->writeQEMUKeyEvent();
     supportsQEMUKeyEvent();
@@ -583,13 +593,25 @@ void SConnection::setPixelFormat(const PixelFormat& pf)
 }
 
 void SConnection::framebufferUpdateRequest(const core::Rect& /*r*/,
-                                           bool /*incremental*/)
+                                           bool incremental)
 {
   if (!readyForSetColourMapEntries) {
     readyForSetColourMapEntries = true;
     if (!client.pf().trueColour) {
       writeFakeColourMap();
     }
+  }
+
+  if (!incremental) {
+    // Send the screen layout to the client (which, unlike the
+    // framebuffer dimensions, the client doesn't get during init)
+    if (client.supportsEncoding(pseudoEncodingExtendedDesktopSize))
+      writer()->writeDesktopSize(reasonServer);
+
+    // We do not send a DesktopSize since it only contains the
+    // framebuffer size (which the client already should know) and
+    // because some clients don't handle extra DesktopSize events
+    // very well.
   }
 }
 
