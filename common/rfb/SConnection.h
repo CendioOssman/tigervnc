@@ -163,23 +163,6 @@ namespace rfb {
     // specially for this purpose.
     virtual void supportsLocalCursor();
 
-    // supportsFence() is called the first time we detect support for fences
-    // in the client. A fence message should be sent at this point to notify
-    // the client of server support.
-    virtual void supportsFence();
-
-    // supportsContinuousUpdates() is called the first time we detect that
-    // the client wants the continuous updates extension. A
-    // EndOfContinuousUpdates message should be sent back to the client at
-    // this point if it is supported.
-    virtual void supportsContinuousUpdates();
-
-    // supportsLEDState() is called the first time we detect that the
-    // client supports the LED state extension. A LEDState message
-    // should be sent back to the client to inform it of the current
-    // server state.
-    virtual void supportsLEDState();
-
     // authSuccess() is called when authentication has succeeded.
     virtual void authSuccess();
 
