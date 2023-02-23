@@ -162,8 +162,6 @@ bool SConnection::processVersionMsg()
                client.majorVersion,client.minorVersion);
   }
 
-  versionReceived();
-
   std::list<uint8_t> secTypes;
   std::list<uint8_t>::iterator i;
   secTypes = security.GetEnabledSecTypes();
@@ -378,25 +376,17 @@ void SConnection::setEncodings(int nEncodings, const int32_t* encodings)
   if (client.supportsFence() && firstFence) {
     uint8_t type = 0;
     writer()->writeFence(fenceFlagRequest, sizeof(type), &type);
-    supportsFence();
   }
-  if (client.supportsContinuousUpdates() && firstContinuousUpdates) {
+  if (client.supportsContinuousUpdates() && firstContinuousUpdates)
     writer()->writeEndOfContinuousUpdates();
-    supportsContinuousUpdates();
-  }
   if (client.supportsLEDState() && firstLEDState) {
     if (client.ledState() != ledUnknown)
       writer()->writeLEDState();
-    supportsLEDState();
   }
-  if (client.supportsEncoding(pseudoEncodingQEMUKeyEvent) && firstQEMUKeyEvent) {
+  if (client.supportsEncoding(pseudoEncodingQEMUKeyEvent) && firstQEMUKeyEvent)
     writer()->writeQEMUKeyEvent();
-    supportsQEMUKeyEvent();
-  }
-  if (client.supportsEncoding(pseudoEncodingExtendedMouseButtons) && firstExtMouseButtonsEvent) {
+  if (client.supportsEncoding(pseudoEncodingExtendedMouseButtons) && firstExtMouseButtonsEvent)
     writer()->writeExtendedMouseButtonsSupport();
-    supportsExtendedMouseButtons();
-  }
 
   if (client.supportsEncoding(pseudoEncodingExtendedClipboard)) {
     uint32_t sizes[] = { 0 };
@@ -526,30 +516,6 @@ void SConnection::handleClipboardProvide(uint32_t flags,
 }
 
 void SConnection::supportsLocalCursor()
-{
-}
-
-void SConnection::supportsFence()
-{
-}
-
-void SConnection::supportsContinuousUpdates()
-{
-}
-
-void SConnection::supportsLEDState()
-{
-}
-
-void SConnection::supportsQEMUKeyEvent()
-{
-}
-
-void SConnection::supportsExtendedMouseButtons()
-{
-}
-
-void SConnection::versionReceived()
 {
 }
 
