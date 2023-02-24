@@ -514,7 +514,6 @@ void VNCSConnectionST::pointerEvent(const core::Point& pos,
     idleTimer.start(core::secsToMillis(rfb::Server::idleTimeout));
   pointerEventTime = time(nullptr);
   if (!accessCheck(AccessPtrEvents)) return;
-  if (!rfb::Server::acceptPointerEvents) return;
   pointerEventPos = pos;
   server->pointerEvent(this, pointerEventPos, buttonMask);
 }
@@ -547,7 +546,6 @@ void VNCSConnectionST::keyEvent(uint32_t keysym, uint32_t keycode, bool down) {
   if (rfb::Server::idleTimeout)
     idleTimer.start(core::secsToMillis(rfb::Server::idleTimeout));
   if (!accessCheck(AccessKeyEvents)) return;
-  if (!rfb::Server::acceptKeyEvents) return;
 
   if (down)
     vlog.debug("Key pressed: 0x%04x / XK_%s (0x%04x)",
@@ -690,8 +688,7 @@ void VNCSConnectionST::setDesktopSize(int fb_width, int fb_height,
   layout.print(buffer, sizeof(buffer));
   vlog.debug("%s", buffer);
 
-  if (!accessCheck(AccessSetDesktopSize) ||
-      !rfb::Server::acceptSetDesktopSize) {
+  if (!accessCheck(AccessSetDesktopSize)) {
     vlog.debug("Rejecting unauthorized framebuffer resize request");
     result = resultProhibited;
   } else {
@@ -774,13 +771,11 @@ void VNCSConnectionST::handleClipboardRequest()
 
 void VNCSConnectionST::handleClipboardAnnounce(bool available)
 {
-  if (!rfb::Server::acceptCutText) return;
   server->handleClipboardAnnounce(this, available);
 }
 
 void VNCSConnectionST::handleClipboardData(const char* data)
 {
-  if (!rfb::Server::acceptCutText) return;
   server->handleClipboardData(this, data);
 }
 
