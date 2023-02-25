@@ -91,16 +91,6 @@ namespace rfb {
     // signalling that a good time to render new data
     virtual void frameTick(uint64_t msc) { (void)msc; }
 
-    // keyEvent() is called whenever a client sends an event that a
-    // key was pressed or released.
-    virtual void keyEvent(uint32_t /*keysym*/, uint32_t /*keycode*/,
-                          bool /*down*/) {};
-
-    // pointerEvent() is called whenever a client sends an event that
-    // the pointer moved, or a button was pressed or released.
-    virtual void pointerEvent(const core::Point& /*pos*/,
-                              uint8_t /*buttonMask*/) {};
-
   protected:
     virtual ~SDesktop() {}
   };

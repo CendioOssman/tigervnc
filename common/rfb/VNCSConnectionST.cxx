@@ -94,7 +94,7 @@ VNCSConnectionST::~VNCSConnectionST()
               closeReason.c_str());
 
   // Release any mouse buttons
-  server->pointerEvent(this, server->getCursorPos(), 0);
+  SConnection::pointerEvent(server->getCursorPos(), 0);
 
   // Release any keys the client still had pressed
   while (!pressedKeys.empty()) {
@@ -106,7 +106,7 @@ VNCSConnectionST::~VNCSConnectionST()
 
     vlog.debug("Releasing key 0x%04x / XK_%s (0x%04x) on client disconnect",
                keycode, KeySymName(keysym), keysym);
-    server->keyEvent(keysym, keycode, false);
+    SConnection::keyEvent(keysym, keycode, false);
   }
 
   delete [] fenceData;
@@ -515,28 +515,8 @@ void VNCSConnectionST::pointerEvent(const core::Point& pos, uint8_t buttonMask)
   pointerEventTime = time(nullptr);
   if (!accessCheck(AccessPtrEvents)) return;
   pointerEventPos = pos;
-  server->pointerEvent(this, pointerEventPos, buttonMask);
+  SConnection::pointerEvent(pos, buttonMask);
 }
-
-
-class VNCSConnectionSTShiftPresser {
-public:
-  VNCSConnectionSTShiftPresser(VNCServerST* server_)
-    : server(server_), pressed(false) {}
-  ~VNCSConnectionSTShiftPresser() {
-    if (pressed) {
-      vlog.debug("Releasing fake Shift_L");
-      server->keyEvent(XK_Shift_L, 0x2a, false);
-    }
-  }
-  void press() {
-    vlog.debug("Pressing fake Shift_L");
-    server->keyEvent(XK_Shift_L, 0x2a, true);
-    pressed = true;
-  }
-  VNCServerST* server;
-  bool pressed;
-};
 
 // keyEvent() - record in the pressedKeys which keys were pressed.  Allow
 // multiple down events (for autorepeat), but only allow a single up event.
@@ -579,8 +559,8 @@ void VNCSConnectionST::keyEvent(uint32_t keysym, uint32_t keycode, bool down) {
 
         if (lock == (uppercase == shift)) {
           vlog.debug("Inserting fake CapsLock to get in sync with client");
-          server->keyEvent(XK_Caps_Lock, 0x3a, true);
-          server->keyEvent(XK_Caps_Lock, 0x3a, false);
+          SConnection::keyEvent(XK_Caps_Lock, 0x3a, true);
+          SConnection::keyEvent(XK_Caps_Lock, 0x3a, false);
         }
       }
 
@@ -609,18 +589,18 @@ void VNCSConnectionST::keyEvent(uint32_t keysym, uint32_t keycode, bool down) {
           //
         } else if (lock == (number == shift)) {
           vlog.debug("Inserting fake NumLock to get in sync with client");
-          server->keyEvent(XK_Num_Lock, 0x45, true);
-          server->keyEvent(XK_Num_Lock, 0x45, false);
+          SConnection::keyEvent(XK_Num_Lock, 0x45, true);
+          SConnection::keyEvent(XK_Num_Lock, 0x45, false);
         }
       }
     }
   }
 
   // Turn ISO_Left_Tab into shifted Tab.
-  VNCSConnectionSTShiftPresser shiftPresser(server);
+  bool fakeShift = false;
   if (keysym == XK_ISO_Left_Tab) {
     if (!isShiftPressed())
-      shiftPresser.press();
+      fakeShift = true;
     keysym = XK_Tab;
   }
 
@@ -643,7 +623,13 @@ void VNCSConnectionST::keyEvent(uint32_t keysym, uint32_t keycode, bool down) {
       return;
   }
 
-  server->keyEvent(keysym, keycode, down);
+  if (fakeShift)
+    SConnection::keyEvent(XK_Shift_L, 0x2a, true);
+
+  SConnection::keyEvent(keysym, keycode, down);
+
+  if (fakeShift)
+    SConnection::keyEvent(XK_Shift_L, 0x2a, false);
 }
 
 void VNCSConnectionST::framebufferUpdateRequest(const core::Rect& r,bool incremental)

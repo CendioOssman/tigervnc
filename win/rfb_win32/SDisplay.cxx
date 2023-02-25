@@ -113,6 +113,10 @@ void SDisplay::start()
   // Start the SDisplay core
   startCore();
 
+  server->connectSignal("keydown", this, &SDisplay::keyEvent);
+  server->connectSignal("keyup", this, &SDisplay::keyEvent);
+  server->connectSignal("pointer", this, &SDisplay::pointerEvent);
+
   server->connectSignal("clipboardrequest", this,
                         &SDisplay::handleClipboardRequest);
   server->connectSignal("clipboardannounce", this,
@@ -323,23 +327,25 @@ void SDisplay::handleClipboardData(VNCServer*, const char*,
 }
 
 
-void SDisplay::pointerEvent(const Point& pos, uint8_t buttonmask) {
-  if (pb->getRect().contains(pos)) {
-    Point screenPos = pos.translate(screenRect.tl);
+void SDisplay::pointerEvent(VNCServer*, const char*,
+                            PointerEvent event) {
+  if (pb->getRect().contains(event.pos)) {
+    Point screenPos = event.pos.translate(screenRect.tl);
     // - Check that the SDesktop doesn't need restarting
     if (isRestartRequired())
       restartCore();
     if (ptr)
-      ptr->pointerEvent(screenPos, buttonmask);
+      ptr->pointerEvent(screenPos, event.buttonMask);
   }
 }
 
-void SDisplay::keyEvent(uint32_t keysym, uint32_t keycode, bool down) {
+void SDisplay::keyEvent(VNCServer*, const char* name,
+                        KeyEvent event) {
   // - Check that the SDesktop doesn't need restarting
   if (isRestartRequired())
     restartCore();
   if (kbd)
-    kbd->keyEvent(keysym, keycode, down);
+    kbd->keyEvent(event.keysym, event.keycode, strcmp(name, "keydown") == 0);
 }
 
 bool SDisplay::checkLedState() {
