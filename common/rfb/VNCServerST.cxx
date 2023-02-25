@@ -516,7 +516,8 @@ void VNCServerST::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
 }
 
 void VNCServerST::pointerEvent(VNCSConnectionST* client,
-                               const core::Point& pos, int buttonMask)
+                               const core::Point& pos,
+                               uint8_t buttonMask)
 {
   time_t now = time(nullptr);
 

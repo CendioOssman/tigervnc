@@ -508,7 +508,8 @@ void VNCSConnectionST::setEncodings(int nEncodings,
   SConnection::setEncodings(newEncodings.size(), newEncodings.data());
 }
 
-void VNCSConnectionST::pointerEvent(const core::Point& pos, int buttonMask)
+void VNCSConnectionST::pointerEvent(const core::Point& pos,
+                                    uint8_t buttonMask)
 {
   if (rfb::Server::idleTimeout)
     idleTimer.start(core::secsToMillis(rfb::Server::idleTimeout));
