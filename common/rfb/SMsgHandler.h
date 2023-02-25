@@ -56,7 +56,7 @@ namespace rfb {
     virtual void keyEvent(uint32_t keysym, uint32_t keycode,
                           bool down) = 0;
     virtual void pointerEvent(const core::Point& pos,
-                              int buttonMask) = 0;
+                              uint8_t buttonMask) = 0;
 
     virtual void clientCutText(const char* str) = 0;
 

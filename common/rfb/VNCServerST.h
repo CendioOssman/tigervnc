@@ -117,7 +117,7 @@ namespace rfb {
 
     // Event handlers
     void keyEvent(uint32_t keysym, uint32_t keycode, bool down);
-    void pointerEvent(VNCSConnectionST* client, const core::Point& pos, int buttonMask);
+    void pointerEvent(VNCSConnectionST* client, const core::Point& pos, uint8_t buttonMask);
 
     unsigned int setDesktopSize(VNCSConnectionST* requester,
                                 int fb_width, int fb_height,

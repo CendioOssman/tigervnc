@@ -142,7 +142,7 @@ public:
                       const rfb::ScreenSet& layout) override;
 
   void keyEvent(uint32_t keysym, uint32_t keycode, bool down) override;
-  void pointerEvent(const core::Point& pos, int buttonMask) override;
+  void pointerEvent(const core::Point& pos, uint8_t buttonMask) override;
 
 protected:
   DummyOutStream *out;
@@ -347,7 +347,7 @@ void SConn::keyEvent(uint32_t, uint32_t, bool)
 {
 }
 
-void SConn::pointerEvent(const core::Point&, int)
+void SConn::pointerEvent(const core::Point&, uint8_t)
 {
 }
 

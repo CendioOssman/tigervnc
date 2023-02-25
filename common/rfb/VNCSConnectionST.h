@@ -129,7 +129,8 @@ namespace rfb {
     void setPixelFormat(const PixelFormat& pf) override;
     void setEncodings(int nEncodings,
                       const int32_t* encodings) override;
-    void pointerEvent(const core::Point& pos, int buttonMask) override;
+    void pointerEvent(const core::Point& pos,
+                      uint8_t buttonMask) override;
     void keyEvent(uint32_t keysym, uint32_t keycode,
                   bool down) override;
     void framebufferUpdateRequest(const core::Rect& r,
