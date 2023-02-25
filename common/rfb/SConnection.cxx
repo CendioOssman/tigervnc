@@ -61,6 +61,10 @@ SConnection::SConnection(AccessRights accessRights_)
   authFailureTimer.connectSignal("timer", this,
                                  &SConnection::authFailureTimeout);
 
+  registerSignal<KeyEvent>("keydown");
+  registerSignal<KeyEvent>("keyup");
+  registerSignal<PointerEvent>("pointer");
+
   registerSignal("clipboardrequest");
   registerSignal<bool>("clipboardannounce");
   registerSignal<const char*>("clipboarddata");
@@ -394,6 +398,27 @@ void SConnection::setEncodings(int nEncodings, const int32_t* encodings)
                                  rfb::clipboardProvide,
                                  sizes);
   }
+}
+
+void SConnection::keyEvent(uint32_t keysym, uint32_t keycode,
+                           bool down)
+{
+  KeyEvent event = { keysym, keycode };
+  if (!accessCheck(AccessKeyEvents))
+    return;
+  if (down)
+    emitSignal("keydown", event);
+  else
+    emitSignal("keyup", event);
+}
+
+void SConnection::pointerEvent(const core::Point& pos,
+                               uint8_t buttonMask)
+{
+  PointerEvent event = { pos, buttonMask };
+  if (!accessCheck(AccessPtrEvents))
+    return;
+  emitSignal("pointer", event);
 }
 
 void SConnection::clientCutText(const char* str)

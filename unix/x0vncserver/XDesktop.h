@@ -55,8 +55,6 @@ public:
   bool isRunning();
   void queryConnection(network::Socket* sock,
                        const char* userName) override;
-  void pointerEvent(const core::Point& pos, int buttonMask) override;
-  void keyEvent(uint32_t keysym, uint32_t xtcode, bool down) override;
   unsigned int setScreenLayout(int fb_width, int fb_height,
                                const rfb::ScreenSet& layout) override;
 
@@ -66,6 +64,13 @@ public:
   // -=- QueryResultCallback interface
   void queryApproved() override;
   void queryRejected() override;
+
+protected:
+  // -=- Signal handlers
+  void pointerEvent(rfb::VNCServer*, const char*,
+                    rfb::PointerEvent event);
+  void keyEvent(rfb::VNCServer*, const char* name,
+                rfb::KeyEvent event);
 
 protected:
   Display* dpy;

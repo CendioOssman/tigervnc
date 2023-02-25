@@ -116,9 +116,6 @@ namespace rfb {
     unsigned getLEDState() const { return ledState; }
 
     // Event handlers
-    void keyEvent(uint32_t keysym, uint32_t keycode, bool down);
-    void pointerEvent(VNCSConnectionST* client, const core::Point& pos, uint8_t buttonMask);
-
     unsigned int setDesktopSize(VNCSConnectionST* requester,
                                 int fb_width, int fb_height,
                                 const ScreenSet& layout);
@@ -151,6 +148,18 @@ namespace rfb {
 
     // Signals
 
+    // "keydown" is emitted whenever the client sends a key press
+    // message. A KeyEvent structure is included with the KeySym and key
+    // code.
+
+    // "keyup" is emitted whenever the client sends a key release
+    // message. A KeyEvent structure is included with the KeySym and key
+    // code.
+
+    // "pointer" is emitted whenever the client sends a pointer message.
+    // A PointerEvent structure is included with the cursor position and
+    // button state.
+
     // "clipboardrequest" is emitted whenever the client requests
     // the server to send over its clipboard data. It will only be
     // sent after the server has first announced a clipboard change
@@ -172,6 +181,11 @@ namespace rfb {
   protected:
 
     // Signal handlers
+    void keyEvent(VNCSConnectionST* client, const char* name,
+                  KeyEvent event);
+    void pointerEvent(VNCSConnectionST* client, const char* name,
+                      PointerEvent event);
+
     void handleClipboardRequest(VNCSConnectionST* client,
                                 const char*);
     void handleClipboardAnnounce(VNCSConnectionST* client,
