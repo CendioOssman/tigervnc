@@ -54,7 +54,7 @@ std::set<int> MonitorIndicesParameter::getParam()
         return indices;
     }
 
-    valid = parseIndices(value.c_str(), &configIndices);
+    valid = parseIndices(value, &configIndices);
     if (!valid) {
         return indices;
     }
@@ -75,6 +75,9 @@ std::set<int> MonitorIndicesParameter::getParam()
 bool MonitorIndicesParameter::setParam(const char* v)
 {
     std::set<int> indices;
+
+    if (strlen(v) < 0)
+        return false;
 
     if (!parseIndices(v, &indices, true)) {
         vlog.error(_("Invalid configuration specified for %s"), name);
