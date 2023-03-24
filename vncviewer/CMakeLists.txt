@@ -130,7 +130,7 @@ else()
   set(OS_DEPENDENT_LIBRARIES ${X11_XiLIB} "-lXi" "-lXrender" "-lXcursor" "-lXext" "-lX11")
   if(X11_Xrandr_LIB)
     add_definitions(-DHAVE_XRANDR)
-    set(OS_DEPENDENT_LIBRARIES "${OS_DEPENDENT_LIBRARIES} ${X11_Xrandr_LIB}")
+    set(OS_DEPENDENT_LIBRARIES ${OS_DEPENDENT_LIBRARIES} ${X11_Xrandr_LIB})
   endif()
 endif()
 
