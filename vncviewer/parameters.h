@@ -20,6 +20,7 @@
 #ifndef __PARAMETERS_H__
 #define __PARAMETERS_H__
 
+#include <QStringList>
 #include <rfb/Configuration.h>
 #include "MonitorIndicesParameter.h"
 
@@ -84,8 +85,8 @@ void saveViewerParameters(const char *filename, const char *servername=nullptr);
 char* loadViewerParameters(const char *filename);
 
 #ifdef _WIN32
-std::list<std::string> loadHistoryFromRegKey();
-void saveHistoryToRegKey(const std::list<std::string>& serverHistory);
+void loadHistoryFromRegKey(QStringList& serverHistory);
+void saveHistoryToRegKey(const QStringList& serverHistory);
 #endif
 
 #endif

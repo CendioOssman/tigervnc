@@ -41,12 +41,17 @@
 #include <network/UnixSocket.h>
 #endif
 
-#include <FL/Fl.H>
-#include <FL/fl_ask.H>
+//#include <FL/Fl.H>
+//#include <FL/fl_ask.H>
+#include <network/TcpSocket.h>
+#include <QtMath>
+#include <QAudioOutput>
+#include <QBuffer>
+#include "appmanager.h"
 
 #include "CConn.h"
-#include "OptionsDialog.h"
-#include "DesktopWindow.h"
+//#include "OptionsDialog.h"
+//#include "DesktopWindow.h"
 #include "PlatformPixelBuffer.h"
 #include "i18n.h"
 #include "parameters.h"
@@ -74,7 +79,7 @@ static const PixelFormat mediumColourPF(8, 8, false, true,
 static const unsigned bpsEstimateWindow = 1000;
 
 CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
-  : serverPort(0), desktop(nullptr), updateCount(0), pixelCount(0),
+  : serverPort(0), /*desktop(nullptr)*/, updateCount(0), pixelCount(0),
     lastServerEncoding((unsigned int)-1), bpsEstimate(20000000)
 {
   setShared(::shared);
@@ -109,34 +114,32 @@ CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
       }
     } catch (rdr::Exception& e) {
       vlog.error("%s", e.str());
-      abort_connection(_("Failed to connect to \"%s\":\n\n%s"),
-                       vncServerName, e.str());
+//      abort_connection(_("Failed to connect to \"%s\":\n\n%s"),
+//                       vncServerName, e.str());
       return;
     }
   }
 
-  Fl::add_fd(sock->getFd(), FL_READ | FL_EXCEPT, socketEvent, this);
+  //Fl::add_fd(sock->getFd(), FL_READ | FL_EXCEPT, socketEvent, this);
+  AppManager::instance()->bind(sock->getFd());
 
   setServerName(serverHost.c_str());
   setStreams(&sock->inStream(), &sock->outStream());
 
   initialiseProtocol();
 
-  OptionsDialog::addCallback(handleOptions, this);
+//  OptionsDialog::addCallback(handleOptions, this);
 }
 
 CConn::~CConn()
 {
   close();
 
-  OptionsDialog::removeCallback(handleOptions);
-  Fl::remove_timeout(handleUpdateTimeout, this);
-
-  if (desktop)
-    delete desktop;
+//  OptionsDialog::removeCallback(handleOptions);
+//  Fl::remove_timeout(handleUpdateTimeout, this);
 
   if (sock)
-    Fl::remove_fd(sock->getFd());
+    AppManager::instance()->unbind(sock->getFd()); // Fl::remove_fd(sock->getFd());
   delete sock;
 }
 
@@ -225,11 +228,11 @@ unsigned CConn::getPosition()
   return sock->inStream().pos();
 }
 
-void CConn::socketEvent(FL_SOCKET fd, void *data)
+void CConn::socketEvent(int fd, void *data) // FL_SOCKET --> int
 {
   CConn *cc;
   static bool recursing = false;
-  int when;
+//  int when;
 
   assert(data);
   cc = (CConn*)data;
@@ -238,7 +241,7 @@ void CConn::socketEvent(FL_SOCKET fd, void *data)
   assert(!recursing);
 
   recursing = true;
-  Fl::remove_fd(fd);
+  AppManager::instance()->unbind(fd); // Fl::remove_fd(fd);
 
   try {
     // We might have been called to flush unwritten socket data
@@ -252,25 +255,25 @@ void CConn::socketEvent(FL_SOCKET fd, void *data)
 
       // Make sure that the FLTK handling and the timers gets some CPU
       // time in case of back to back messages
-      Fl::check();
+//      Fl::check();
       Timer::checkTimeouts();
 
       // Also check if we need to stop reading and terminate
-      if (should_disconnect())
-        break;
+//      if (should_disconnect())
+//        break;
     }
 
     cc->getOutStream()->cork(false);
   } catch (rdr::EndOfStream& e) {
     vlog.info("%s", e.str());
-    if (!cc->desktop) {
-      vlog.error(_("The connection was dropped by the server before "
-                   "the session could be established."));
-      abort_connection(_("The connection was dropped by the server "
-                       "before the session could be established."));
-    } else {
-      disconnect();
-    }
+//    if (!cc->desktop) {
+//      vlog.error(_("The connection was dropped by the server before "
+//                   "the session could be established."));
+//      abort_connection(_("The connection was dropped by the server "
+//                       "before the session could be established."));
+//    } else {
+//      disconnect();
+//    }
   } catch (rfb::AuthCancelledException& e) {
     vlog.info("%s", e.str());
     disconnect();
@@ -281,15 +284,16 @@ void CConn::socketEvent(FL_SOCKET fd, void *data)
                        "given by the server:\n\n%s"), e.str());
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    abort_connection_with_unexpected_error(e);
+//    abort_connection_with_unexpected_error(e);
   }
 
-  when = FL_READ | FL_EXCEPT;
-  if (cc->sock->outStream().hasBufferedData())
-    when |= FL_WRITE;
+//  when = FL_READ | FL_EXCEPT;
+//  if (cc->sock->outStream().hasBufferedData())
+//    when |= FL_WRITE;
 
-  Fl::add_fd(fd, when, socketEvent, data);
+//  Fl::add_fd(fd, when, socketEvent, data);
   recursing = false;
+  AppManager::instance()->bind(fd);
 }
 
 void CConn::resetPassword()
@@ -323,9 +327,9 @@ void CConn::initDone()
 
   serverPF = server.pf();
 
-  desktop = new DesktopWindow(server.width(), server.height(),
-                              server.name(), serverPF, this);
-  fullColourPF = desktop->getPreferredPF();
+//  desktop = new DesktopWindow(server.width(), server.height(),
+//                              server.name(), serverPF, this);
+//  fullColourPF = desktop->getPreferredPF();
 
   // Force a switch to the format and encoding we'd like
   updatePixelFormat();
@@ -360,7 +364,7 @@ void CConn::setExtendedDesktopSize(unsigned reason, unsigned result,
 void CConn::setName(const char* name)
 {
   CConnection::setName(name);
-  desktop->setName(name);
+//  desktop->setName(name);  // TODO: HIRONORI
 }
 
 // framebufferUpdateStart() is called at the beginning of an update.
@@ -376,7 +380,7 @@ void CConn::framebufferUpdateStart()
   updateStartPos = sock->inStream().pos();
 
   // Update the screen prematurely for very slow updates
-  Fl::add_timeout(1.0, handleUpdateTimeout, this);
+//  Fl::add_timeout(1.0, handleUpdateTimeout, this);
 }
 
 // framebufferUpdateEnd() is called at the end of an update.
@@ -409,8 +413,8 @@ void CConn::framebufferUpdateEnd()
   bpsEstimate = ((bpsEstimate * (1000000 - weight)) +
                  (bps * weight)) / 1000000;
 
-  Fl::remove_timeout(handleUpdateTimeout, this);
-  desktop->updateWindow();
+//  Fl::remove_timeout(handleUpdateTimeout, this);
+//  desktop->updateWindow(); TODO: HIRONORI
 
   // Compute new settings based on updated bandwidth values
   if (autoSelect)
@@ -427,7 +431,29 @@ void CConn::setColourMapEntries(int /*firstColour*/, int /*nColours*/,
 
 void CConn::bell()
 {
-  fl_beep();
+  //fl_beep();
+  const double seconds = 0.2;
+  const double freq = 440;
+  const double SAMPLE_RATE = 44100;
+  const double FREQ_CONST = (2.0 * M_PI) / SAMPLE_RATE;
+  const quint8 AMP = 127;
+  QByteArray *sounddata = new QByteArray(seconds * SAMPLE_RATE, 0);
+
+  for (int i = 0; i < seconds * SAMPLE_RATE; i++) {
+      double t = freq * i;
+      t = qSin(t * FREQ_CONST);
+      // now we normalize t
+      t *= AMP;
+      (*sounddata)[i] = (quint8)t + AMP;
+    }
+  // Make a QBuffer from our QByteArray
+  QBuffer* input = new QBuffer(sounddata);
+  input->open(QIODevice::ReadOnly);
+
+  // Create an output with our premade QAudioFormat (See example in QAudioOutput)
+  QAudioFormat format = QAudioDeviceInfo::defaultOutputDevice().preferredFormat();
+  QAudioOutput* audio = new QAudioOutput(format);
+  audio->start(input);
 }
 
 bool CConn::dataRect(const Rect& r, int encoding)
@@ -448,12 +474,12 @@ bool CConn::dataRect(const Rect& r, int encoding)
 void CConn::setCursor(int width, int height, const Point& hotspot,
                       const uint8_t* data)
 {
-  desktop->setCursor(width, height, hotspot, data);
+//  desktop->setCursor(width, height, hotspot, data);
 }
 
 void CConn::setCursorPos(const Point& pos)
 {
-  desktop->setCursorPos(pos);
+//  desktop->setCursorPos(pos);
 }
 
 void CConn::fence(uint32_t flags, unsigned len, const uint8_t data[])
@@ -473,22 +499,22 @@ void CConn::setLEDState(unsigned int state)
 {
   CConnection::setLEDState(state);
 
-  desktop->setLEDState(state);
+//  desktop->setLEDState(state);
 }
 
 void CConn::handleClipboardRequest()
 {
-  desktop->handleClipboardRequest();
+//  desktop->handleClipboardRequest();
 }
 
 void CConn::handleClipboardAnnounce(bool available)
 {
-  desktop->handleClipboardAnnounce(available);
+//  desktop->handleClipboardAnnounce(available);
 }
 
 void CConn::handleClipboardData(const char* data)
 {
-  desktop->handleClipboardData(data);
+//  desktop->handleClipboardData(data);
 }
 
 
@@ -496,7 +522,7 @@ void CConn::handleClipboardData(const char* data)
 
 void CConn::resizeFramebuffer()
 {
-  desktop->resizeFramebuffer(server.width(), server.height());
+//  desktop->resizeFramebuffer(server.width(), server.height());
 }
 
 // autoSelectFormatAndEncoding() chooses the format and encoding appropriate
@@ -619,7 +645,7 @@ void CConn::handleUpdateTimeout(void *data)
 
   assert(self);
 
-  self->desktop->updateWindow();
+//  self->desktop->updateWindow();  // TODO: HIRONORI
 
-  Fl::repeat_timeout(1.0, handleUpdateTimeout, data);
+//  Fl::repeat_timeout(1.0, handleUpdateTimeout, data);
 }

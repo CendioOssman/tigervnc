@@ -30,6 +30,8 @@
 #include <windows.h>
 #endif
 
+#include <QtGlobal>
+
 #include "parameters.h"
 
 #include <os/os.h>
@@ -38,7 +40,7 @@
 #include <rfb/SecurityClient.h>
 #include <rfb/util.h>
 
-#include <FL/fl_utf8.h>
+#include <QStringList>
 
 #include <stdio.h>
 #include <string.h>
@@ -47,6 +49,7 @@
 #include <assert.h>
 
 #include "i18n.h"
+#include "MonitorIndicesParameter.h"
 
 using namespace rfb;
 using namespace std;
@@ -299,11 +302,12 @@ static bool decodeValue(const char* val, char* dest, size_t destSize) {
 
 #ifdef _WIN32
 static void setKeyString(const char *_name, const char *_value, HKEY* hKey) {
-  
+
   const DWORD buffersize = 256;
 
   wchar_t name[buffersize];
-  unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
+  unsigned size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, _name, strlen(_name)+1, name, buffersize); // QT
+  //unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
   if (size >= buffersize)
     throw Exception(_("The name of the parameter is too large"));
 
@@ -312,7 +316,8 @@ static void setKeyString(const char *_name, const char *_value, HKEY* hKey) {
     throw Exception(_("The parameter is too large"));
 
   wchar_t value[buffersize];
-  size = fl_utf8towc(encodingBuffer, strlen(encodingBuffer)+1, value, buffersize);
+  size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, encodingBuffer, strlen(encodingBuffer)+1, value, buffersize); // QT
+  //size = fl_utf8towc(encodingBuffer, strlen(encodingBuffer)+1, value, buffersize);
   if (size >= buffersize)
     throw Exception(_("The parameter is too large"));
 
@@ -328,7 +333,8 @@ static void setKeyInt(const char *_name, const int _value, HKEY* hKey) {
   wchar_t name[buffersize];
   DWORD value = _value;
 
-  unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
+  unsigned size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, _name, strlen(_name)+1, name, buffersize); // QT
+  //unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
   if (size >= buffersize)
     throw Exception(_("The name of the parameter is too large"));
 
@@ -339,13 +345,14 @@ static void setKeyInt(const char *_name, const int _value, HKEY* hKey) {
 
 
 static bool getKeyString(const char* _name, char* dest, size_t destSize, HKEY* hKey) {
-  
+
   const DWORD buffersize = 256;
   wchar_t name[buffersize];
   WCHAR* value;
   DWORD valuesize;
 
-  unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
+  unsigned size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, _name, strlen(_name)+1, name, buffersize); // QT
+  //unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
   if (size >= buffersize)
     throw Exception(_("The name of the parameter is too large"));
 
@@ -361,7 +368,8 @@ static bool getKeyString(const char* _name, char* dest, size_t destSize, HKEY* h
   }
 
   char* utf8val = new char[destSize];
-  size = fl_utf8fromwc(utf8val, destSize, value, wcslen(value)+1);
+  size = WideCharToMultiByte(CP_ACP, 0, value, wcslen(value)+1, utf8val, destSize, nullptr, FALSE); // QT
+  //size = fl_utf8fromwc(utf8val, destSize, value, wcslen(value)+1);
   delete [] value;
   if (size >= destSize) {
     delete [] utf8val;
@@ -379,13 +387,14 @@ static bool getKeyString(const char* _name, char* dest, size_t destSize, HKEY* h
 
 
 static bool getKeyInt(const char* _name, int* dest, HKEY* hKey) {
-  
+
   const DWORD buffersize = 256;
   DWORD dwordsize = sizeof(DWORD);
   DWORD value = 0;
   wchar_t name[buffersize];
 
-  unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
+  unsigned size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, _name, strlen(_name)+1, name, buffersize); // QT
+  //unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
   if (size >= buffersize)
     throw Exception(_("The name of the parameter is too large"));
 
@@ -398,6 +407,7 @@ static bool getKeyInt(const char* _name, int* dest, HKEY* hKey) {
   }
 
   *dest = (int)value;
+
   return true;
 }
 
@@ -405,7 +415,8 @@ static void removeValue(const char* _name, HKEY* hKey) {
   const DWORD buffersize = 256;
   wchar_t name[buffersize];
 
-  unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
+  unsigned size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, _name, strlen(_name)+1, name, buffersize); // QT
+  //unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
   if (size >= buffersize)
     throw Exception(_("The name of the parameter is too large"));
 
@@ -418,7 +429,7 @@ static void removeValue(const char* _name, HKEY* hKey) {
   }
 }
 
-void saveHistoryToRegKey(const list<string>& serverHistory) {
+void saveHistoryToRegKey(const QStringList &serverHistory) {
   HKEY hKey;
   LONG res = RegCreateKeyExW(HKEY_CURRENT_USER,
                              L"Software\\TigerVNC\\vncviewer\\history", 0, nullptr,
@@ -428,16 +439,14 @@ void saveHistoryToRegKey(const list<string>& serverHistory) {
   if (res != ERROR_SUCCESS)
     throw rdr::SystemException(_("Failed to create registry key"), res);
 
-  unsigned index = 0;
+  int index = 0;
   assert(SERVER_HISTORY_SIZE < 100);
   char indexString[3];
 
   try {
-    for (const string& entry : serverHistory) {
-      if (index > SERVER_HISTORY_SIZE)
-        break;
-      snprintf(indexString, 3, "%d", index);
-      setKeyString(indexString, entry.c_str(), &hKey);
+    while(index < serverHistory.size() && index <= SERVER_HISTORY_SIZE) {
+      snprintf(indexString, 3, "%d", (int)index);
+      setKeyString(indexString, serverHistory[index].toUtf8(), &hKey);
       index++;
     }
   } catch (Exception& e) {
@@ -451,7 +460,6 @@ void saveHistoryToRegKey(const list<string>& serverHistory) {
 }
 
 static void saveToReg(const char* servername) {
-  
   HKEY hKey;
     
   LONG res = RegCreateKeyExW(HKEY_CURRENT_USER,
@@ -505,7 +513,7 @@ static void saveToReg(const char* servername) {
     throw rdr::SystemException(_("Failed to close registry key"), res);
 }
 
-list<string> loadHistoryFromRegKey() {
+void loadHistoryFromRegKey(QStringList& serverHistory) {
   HKEY hKey;
   list<string> serverHistory;
 
@@ -526,7 +534,7 @@ list<string> loadHistoryFromRegKey() {
   char indexString[3];
 
   for (index = 0;;index++) {
-    snprintf(indexString, 3, "%d", index);
+    snprintf(indexString, 3, "%d", (int)index);
     char servernameBuffer[buffersize];
 
     try {
@@ -580,7 +588,6 @@ static void getParametersFromReg(VoidParameter* parameters[],
 }
 
 static char* loadFromReg() {
-
   HKEY hKey;
 
   LONG res = RegOpenKeyExW(HKEY_CURRENT_USER,
@@ -689,6 +696,7 @@ static bool findAndSetViewerParameterFromValue(
   VoidParameter* parameters[], size_t parameters_len,
   char* value, char* line)
 {
+  Q_UNUSED(filepath)
   const size_t buffersize = 256;
   char decodingBuffer[buffersize];
 
@@ -719,7 +727,6 @@ static bool findAndSetViewerParameterFromValue(
       throw Exception(_("Unknown parameter type"));
     }
   }
-
   return true;
 }
 

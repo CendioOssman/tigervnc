@@ -1,6 +1,4 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
- * Copyright (C) 2004 Red Hat Inc.
- * Copyright (C) 2010 TigerVNC Team
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,37 +16,38 @@
  * USA.
  */
 
-#ifndef __RDR_EXCEPTION_H__
-#define __RDR_EXCEPTION_H__
+//
+// ZlibInStream streams from a compressed data stream ("underlying"),
+// decompressing with zlib on the fly.
+//
 
-#include <QString>
+#ifndef ZLIBINSTREAM_H
+#define ZLIBINSTREAM_H
 
-namespace rdr {
+#include "vncstream.h"
 
-  struct Exception {
-    enum { len = 256 };
-    char str_[len];
-    Exception(QString);
-    Exception(const char *format=nullptr, ...)
-      __attribute__((__format__ (__printf__, 2, 3)));
-    virtual ~Exception() {}
-    virtual const char* str() const { return str_; }
-  };
+struct z_stream_s;
 
-  struct SystemException : public Exception {
-    int err;
-    SystemException(const char* s, int err_);
-  };
+class ZlibInStream : public QVNCStream {
 
-  struct GAIException : public Exception {
-    int err;
-    GAIException(const char* s, int err_);
-  };
+public:
+    ZlibInStream();
+    virtual ~ZlibInStream();
 
-  struct EndOfStream : public Exception {
-    EndOfStream() : Exception("End of stream") {}
-  };
+    void setUnderlying(QVNCStream *is, size_t bytesIn);
+    void flushUnderlying();
+    void reset();
 
-}
+private:
+    void init();
+    void deinit();
 
-#endif
+    virtual bool fillBuffer();
+
+private:
+    QVNCStream *underlying;
+    z_stream_s *zs;
+    size_t bytesIn;
+};
+
+#endif // ZLIBINSTREAM_H

@@ -1,0 +1,22 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/alert_48px.png</file>
+        <file>images/dropdown_24px.png</file>
+        <file>images/help_48px.png</file>
+        <file>images/info_48px.png</file>
+        <file>images/lock_48px.png</file>
+        <file>qml/AboutDialog.qml</file>
+        <file>qml/AlertDialog.qml</file>
+        <file>qml/AuthDialog.qml</file>
+        <file>qml/CButton.qml</file>
+        <file>qml/CCheckBox.qml</file>
+        <file>qml/CComboBox.qml</file>
+        <file>qml/CRadioButton.qml</file>
+        <file>qml/ConfigLoadDialog.qml</file>
+        <file>qml/ConfigSaveDialog.qml</file>
+        <file>qml/OptionDialog.qml</file>
+        <file>qml/main.qml</file>
+        <file>qml/VncWindow.qml</file>
+        <file>qml/ServerDialog.qml</file>
+    </qresource>
+</RCC>

@@ -2,72 +2,168 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(FATAL_ERROR "cmake must be invoked with the top level directory")
 endif()
 
-add_executable(vncviewer
-  fltk/Fl_Monitor_Arrangement.cxx
-  fltk/Fl_Navigation.cxx
-  fltk/theme.cxx
-  menukey.cxx
-  BaseTouchHandler.cxx
-  CConn.cxx
-  DesktopWindow.cxx
-  EmulateMB.cxx
-  UserDialog.cxx
-  ServerDialog.cxx
-  Surface.cxx
-  OptionsDialog.cxx
-  PlatformPixelBuffer.cxx
-  Viewport.cxx
-  parameters.cxx
-  keysym2ucs.c
-  touch.cxx
-  MonitorIndicesParameter.cxx
-  vncviewer.cxx)
+include_directories(${GETTEXT_INCLUDE_DIR})
+
+include_directories(${CMAKE_SOURCE_DIR}/common)
+
+#set(TS_FILES
+#        bg.ts
+#        cs.ts
+#        da.ts
+#        de.ts
+#        el.ts
+#        eo.ts
+#        es.ts
+#        fi.ts
+#        fr.ts
+#        fur.ts
+#        he.ts
+#        hu.ts
+#        id.ts
+#        it.ts
+#        ka.ts
+#        ko.ts
+#        nl.ts
+#        pl.ts
+#        pt_BR.ts
+#        ro.ts
+#        ru.ts
+#        sk.ts
+#        sr.ts
+#        sv.ts
+#        tr.ts
+#        uk.ts
+#        vi.ts
+#        zh_CN.ts
+#        zh_TW.ts
+#)
+
+if (WIN32)
+ set(APP_ICONS
+  "${CMAKE_CURRENT_SOURCE_DIR}/winvnc.ico"
+  )
+endif()
+#if (MACOS)
+#    set(APP_ICONS "${CMAKE_CURRENT_SOURCE_DIR}/media/icons/tigervnc.icns")
+#endif()
+
+set(PROJECT_SOURCES
+        main.cxx
+        appmanager.h
+        appmanager.cxx
+        eventfilter.h
+        eventfilter.cxx
+        msgreader.h
+        msgreader.cxx
+        msgwriter.h
+        msgwriter.cxx
+        viewerconfig.h
+        viewerconfig.cxx
+        vnccanvas.h
+        vnccanvas.cxx
+        vncconnection.h
+        vncconnection.cxx
+        vncpackethandler.h
+        vncstream.h
+        vncstream.cxx
+        #
+        gettext.h
+        parameters.h
+        parameters.cxx
+        i18n.h
+        menukey.h
+        menukey.cxx
+        MonitorIndicesParameter.cxx
+        MonitorIndicesParameter.h
+        qml.qrc
+        ${APP_ICONS}
+        ${TS_FILES}
+)
 
 if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
   set_target_properties(vncviewer PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
-if(WIN32)
-  # Since vncviewer.rc is generated, local includes will be looking
-  # in the wrong directory. We need to help it out.
-  target_include_directories(vncviewer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-  configure_file(vncviewer.rc.in vncviewer.rc)
-  target_sources(vncviewer PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc)
-endif()
+###if(WIN32)
+###  # Since vncviewer.rc is generated, local includes will be looking
+###  # in the wrong directory. We need to help it out.
+###  include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+###  configure_file(vncviewer.rc.in vncviewer.rc)
+###  target_sources(vncviewer PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc)
+###endif()
+
+###if(WIN32)
+###  target_sources(vncviewer PRIVATE Win32TouchHandler.cxx win32.c)
+###elseif(APPLE)
+###  target_sources(vncviewer PRIVATE cocoa.mm osx_to_qnum.c)
+###else()
+###  target_sources(vncviewer PRIVATE GestureHandler.cxx XInputTouchHandler.cxx xkb_to_qnum.c)
+###endif()
+
+###if(WIN32)
+###  target_sources(vncviewer PRIVATE Surface_Win32.cxx)
+###elseif(APPLE)
+###  target_sources(vncviewer PRIVATE Surface_OSX.cxx)
+###else()
+###  target_sources(vncviewer PRIVATE Surface_X11.cxx)
+###endif()
 
 if(WIN32)
-  target_sources(vncviewer PRIVATE Win32TouchHandler.cxx win32.c)
+  set(OS_DEPENDENT_LIBRARIES msimg32)
 elseif(APPLE)
-  target_sources(vncviewer PRIVATE cocoa.mm osx_to_qnum.c)
+  set(OS_DEPENDENT_LIBRARIES "-framework Cocoa -framework Carbon -framework IOKit")
 else()
-  target_sources(vncviewer PRIVATE GestureHandler.cxx XInputTouchHandler.cxx xkb_to_qnum.c)
-endif()
-
-if(WIN32)
-  target_sources(vncviewer PRIVATE Surface_Win32.cxx)
-elseif(APPLE)
-  target_sources(vncviewer PRIVATE Surface_OSX.cxx)
-else()
-  target_sources(vncviewer PRIVATE Surface_X11.cxx)
-endif()
-
-target_include_directories(vncviewer SYSTEM PUBLIC ${FLTK_INCLUDE_DIR})
-target_include_directories(vncviewer SYSTEM PUBLIC ${GETTEXT_INCLUDE_DIR})
-target_include_directories(vncviewer PUBLIC ${CMAKE_SOURCE_DIR}/common)
-target_link_libraries(vncviewer rfb network rdr os ${FLTK_LIBRARIES} ${GETTEXT_LIBRARIES})
-
-if(WIN32)
-  target_link_libraries(vncviewer msimg32)
-elseif(APPLE)
-  target_link_libraries(vncviewer "-framework Cocoa")
-  target_link_libraries(vncviewer "-framework Carbon")
-  target_link_libraries(vncviewer "-framework IOKit")
-else()
-  target_link_libraries(vncviewer ${X11_Xi_LIB})
+  set(OS_DEPENDENT_LIBRARIES ${X11_Xi_LIB})
 
   if(X11_Xrandr_LIB)
-    target_link_libraries(vncviewer ${X11_Xrandr_LIB})
+    add_definitions(-DHAVE_XRANDR)
+    set(OS_DEPENDENT_LIBRARIES "${OS_DEPENDENT_LIBRARIES} ${X11_Xrandr_LIB}")
   endif()
+endif()
+
+if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
+    set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/vncviewer.rc")
+    qt_add_executable(vncviewer
+        MANUAL_FINALIZATION
+        ${PROJECT_SOURCES}
+        ${app_icon_resource_windows}
+    )
+# Define target properties for Android with Qt 6 as:
+#    set_property(TARGET vncviewer APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
+#                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
+# For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
+
+    qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+else()
+    if(ANDROID)
+        add_library(vncviewer SHARED
+            ${PROJECT_SOURCES}
+        )
+# Define properties for Android with Qt 5 after find_package() calls as:
+#    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
+    else()
+        if (WIN32)
+          set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/vncviewer.rc")
+        endif()
+        add_executable(vncviewer
+          ${PROJECT_SOURCES}
+          ${APP_ICON_RESOURCE_WINDOWS}
+        )
+    endif()
+
+    qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+endif()
+
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Multimedia)
+
+target_compile_definitions(vncviewer
+  PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
+target_link_libraries(vncviewer
+  PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::Multimedia Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
+
+if(QT_VERSION_MAJOR EQUAL 6)
+    qt_import_qml_plugins(vncviewer)
+    qt_finalize_executable(vncviewer)
 endif()
 
 install(TARGETS vncviewer DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})

@@ -30,7 +30,8 @@
 #include <stdexcept>
 
 #include "i18n.h"
-#include <FL/Fl.H>
+#include <QApplication>
+#include <QScreen>
 #include <rfb/LogWriter.h>
 
 #include "MonitorIndicesParameter.h"
@@ -80,9 +81,11 @@ bool MonitorIndicesParameter::setParam(const char* v)
         return false;
     }
 
-    for (int index : indices) {
-        index += 1;
-        if (index <= 0 || index > Fl::screen_count())
+    QList<QScreen*> screens = QApplication::screens();
+    for (std::set<int>::iterator it = indices.begin(); it != indices.end(); it++) {
+        index = *it + 1;
+
+        if (index <= 0 || index > screens.count())
             vlog.error(_("Monitor index %d does not exist"), index);
     }
 
@@ -192,18 +195,12 @@ std::vector<MonitorIndicesParameter::Monitor> MonitorIndicesParameter::fetchMoni
     std::vector<Monitor> monitors;
 
     // Start by creating a struct for every monitor.
-    for (int i = 0; i < Fl::screen_count(); i++) {
-        Monitor monitor;
-        bool match;
-
+    QList<QScreen*> screens = QApplication::screens();
+    for (int i = 0; i < screens.count(); i++) {
         // Get the properties of the monitor at the current index;
-        Fl::screen_xywh(
-            monitor.x,
-            monitor.y,
-            monitor.w,
-            monitor.h,
-            i
-        );
+        QRect g = screens[i]->geometry();
+        Monitor monitor = { g.x(), g.y(), g.width(), g.height(), i+1 };
+        bool match;
 
         // Only keep a single entry for mirrored screens
         match = false;
@@ -223,7 +220,6 @@ std::vector<MonitorIndicesParameter::Monitor> MonitorIndicesParameter::fetchMoni
         if (match)
             continue;
 
-        monitor.fltkIndex = i;
         monitors.push_back(monitor);
     }
 
