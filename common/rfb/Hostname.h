@@ -19,6 +19,7 @@
 #ifndef __RFB_HOSTNAME_H__
 #define __RFB_HOSTNAME_H__
 
+#include <string>
 #include <assert.h>
 #include <ctype.h>
 #include <stdlib.h>
