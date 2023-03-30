@@ -2,7 +2,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(FATAL_ERROR "cmake must be invoked with the top level directory")
 endif()
 
-include_directories(${GETTEXT_INCLUDE_DIR})
+include_directories(SYSTEM ${GETTEXT_INCLUDE_DIR})
 
 include_directories(${CMAKE_SOURCE_DIR}/common)
 
