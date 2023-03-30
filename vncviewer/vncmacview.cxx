@@ -104,7 +104,7 @@ bool QVNCMacView::MacEventFilter::nativeEventFilter(const QByteArray &eventType,
     }
     if (cocoa_is_keyboard_event(message)) {
       int keyCode = cocoa_event_keycode(message);
-      //qDebug() << "nativeEvent: keyEvent: keyCode=" << keyCode << ", hexKeyCode=" << Qt::hex << keyCode;
+      //qDebug() << "nativeEvent: keyEvent: keyCode=" << keyCode << ", hexKeyCode=" << hex << keyCode;
       if ((unsigned)keyCode >= code_map_osx_to_qnum_len) {
         keyCode = 0;
       }

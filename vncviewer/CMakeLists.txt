@@ -29,6 +29,7 @@ if(QT_VERSION_MAJOR LESS_EQUAL 5 AND BUILD_STATIC)
                ThemeSupport
                REQUIRED)
 endif()
+add_definitions("-DQT_DISABLE_DEPRECATED_BEFORE=0x050c00")
 
 if (WIN32)
   set(OS_DEP_SOURCES

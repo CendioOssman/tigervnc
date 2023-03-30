@@ -199,7 +199,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       int x, y, buttonMask, wheelMask;
       getMouseProperties(window, message, wParam, lParam, x, y, buttonMask, wheelMask);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-      //qDebug() << "QVNCWinView::eventHandler (button up/down): x=" << x << ", y=" << y << ", btn=" << Qt::hex << (buttonMask | wheelMask);
+      //qDebug() << "QVNCWinView::eventHandler (button up/down): x=" << x << ", y=" << y << ", btn=" << hex << (buttonMask | wheelMask);
 #endif
       if (wheelMask) {
         window->filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);

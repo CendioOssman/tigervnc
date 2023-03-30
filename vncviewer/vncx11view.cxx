@@ -426,7 +426,7 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, qintpt
     //qDebug() << "QVNCX11View::nativeEvent: xcbEventType=" << xcbEventType << ",eventType=" << eventType;
     if (xcbEventType == XCB_KEY_PRESS) {
       xcb_key_press_event_t* xevent = reinterpret_cast<xcb_key_press_event_t*>(message);
-      qDebug() << "QVNCX11View::nativeEvent: XCB_KEY_PRESS: keycode=0x" << Qt::hex << xevent->detail << ", state=0x" << xevent->state << ", mapped_keycode=0x" << code_map_keycode_to_qnum[xevent->detail];
+      qDebug() << "QVNCX11View::nativeEvent: XCB_KEY_PRESS: keycode=0x" << hex << xevent->detail << ", state=0x" << xevent->state << ", mapped_keycode=0x" << code_map_keycode_to_qnum[xevent->detail];
 
       int keycode = code_map_keycode_to_qnum[xevent->detail]; // TODO: what's this table???
 #if 0
@@ -641,10 +641,10 @@ void QVNCX11View::handleMouseWheelEvent(QWheelEvent *e)
 #endif
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     filterPointerEvent(rfb::Point(e->position().x(), e->position().y()), buttonMask);
-    qDebug() << "QVNCX11View::handleMouseWheelEvent (button up/down): x=" << e->position().x() << ", y=" << e->position().y() << ", btn=" << Qt::hex << (buttonMask | wheelMask);
+    qDebug() << "QVNCX11View::handleMouseWheelEvent (button up/down): x=" << e->position().x() << ", y=" << e->position().y() << ", btn=" << hex << (buttonMask | wheelMask);
 #else
     filterPointerEvent(rfb::Point(e->x(), e->y()), buttonMask);
-    qDebug() << "QVNCX11View::handleMouseWheelEvent (button up/down): x=" << e->x() << ", y=" << e->y() << ", btn=" << Qt::hex << (buttonMask | wheelMask);
+    qDebug() << "QVNCX11View::handleMouseWheelEvent (button up/down): x=" << e->x() << ", y=" << e->y() << ", btn=" << hex << (buttonMask | wheelMask);
 #endif
 }
 
