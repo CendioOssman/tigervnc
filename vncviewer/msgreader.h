@@ -6,7 +6,7 @@
 #include "rfb/Rect.h"
 
 namespace rdr {
-  class FdInStream;
+  class InStream;
 }
 
 class QMsgReader : public QObject
@@ -14,7 +14,7 @@ class QMsgReader : public QObject
     Q_OBJECT
 
 public:
-    QMsgReader(QVNCConnection* handler, rdr::FdInStream *is);
+    QMsgReader(QVNCConnection* handler, rdr::InStream *is);
     virtual ~QMsgReader();
 
     bool readServerInit();
@@ -22,7 +22,7 @@ public:
     // readMsg() reads a message, calling the handler as appropriate.
     bool readMsg();
 
-    rdr::FdInStream *getInStream() { return is; }
+    rdr::InStream *getInStream() { return is; }
 
     int imageBufIdealSize;
 
@@ -49,7 +49,7 @@ protected:
 
 private:
     QVNCConnection *handler;
-    rdr::FdInStream *is;
+    rdr::InStream *is;
 
     enum stateEnum {
         MSGSTATE_IDLE,

@@ -20,6 +20,7 @@ Window {
     color: "#ffdcdcdc"
 
     signal commit(string user, string password)
+    signal abort()
 
     function open() {
         visible = true
@@ -29,10 +30,26 @@ Window {
         visible = false
     }
 
+    function cancel() {
+        close()
+        abort()
+    }
+
     function accept() {
         close()
         commit(userText.text, passwordText.text)
         passwordText.text = ""
+    }
+
+    onVisibleChanged: {
+        if (visible) {
+            if (userNeeded) {
+                userText.forceActiveFocus()
+            }
+            else if (passwordNeeded) {
+                passwordText.forceActiveFocus()
+            }
+        }
     }
 
     Rectangle {
@@ -157,7 +174,7 @@ Window {
         width: 110
         font.pixelSize: buttonFontPixelSize
         text: qsTr("Cancel")
-        onClicked: close()
+        onClicked: cancel()
     }
     CButton {
         id: okButton

@@ -22,12 +22,18 @@
 
 #include <assert.h>
 
-#include <FL/Fl_RGB_Image.H>
-#include <FL/x.H>
+//#include <FL/Fl_RGB_Image.H>
+//#include <FL/x.H>
+#include <QImage>
 
 #include <rdr/Exception.h>
 
+#include <QQuickWindow>
 #include "Surface.h"
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
 
 void Surface::clear(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
@@ -55,15 +61,16 @@ void Surface::draw(int src_x, int src_y, int dst_x, int dst_y,
 {
   HDC dc;
 
-  dc = CreateCompatibleDC(fl_gc);
+  //dc = CreateCompatibleDC(fl_gc);
+  HDC hdc = GetDC(NULL);
+  dc = CreateCompatibleDC(hdc);
   if (!dc)
     throw rdr::SystemException("CreateCompatibleDC", GetLastError());
 
   if (!SelectObject(dc, bitmap))
     throw rdr::SystemException("SelectObject", GetLastError());
 
-  if (!BitBlt(fl_gc, dst_x, dst_y, dst_w, dst_h,
-              dc, src_x, src_y, SRCCOPY)) {
+  if (!BitBlt(hdc, x, y, w, h, dc, src_x, src_y, SRCCOPY)) {
     // If the desktop we're rendering to is inactive (like when the screen
     // is locked or the UAC is active), then GDI calls will randomly fail.
     // This is completely undocumented so we have no idea how best to deal
@@ -88,10 +95,12 @@ void Surface::draw(Surface* dst, int src_x, int src_y,
   if (!SelectObject(dstdc, dst->bitmap))
     throw rdr::SystemException("SelectObject", GetLastError());
 
-  origdc = fl_gc;
-  fl_gc = dstdc;
-  draw(src_x, src_y, dst_x, dst_y, dst_w, dst_h);
-  fl_gc = origdc;
+  HWND hWnd = reinterpret_cast<HWND>(m_window->winId());
+  HDC hdc = GetDC(hWnd);
+  origdc = hdc;
+  hdc = dstdc;
+  draw(src_x, src_y, x, y, w, h);
+  hdc = origdc;
 
   DeleteDC(dstdc);
 }
@@ -102,6 +111,13 @@ void Surface::blend(int /*src_x*/, int /*src_y*/,
                     int /*a*/)
 {
   // Compositing doesn't work properly for window DC:s
+  Q_UNUSED(src_x)
+  Q_UNUSED(src_y)
+  Q_UNUSED(x)
+  Q_UNUSED(y)
+  Q_UNUSED(w)
+  Q_UNUSED(h)
+  Q_UNUSED(a)
   assert(false);
 }
 
@@ -147,7 +163,7 @@ void Surface::alloc()
 {
   BITMAPINFOHEADER bih;
 
-  data = new RGBQUAD[width() * height()];
+//  data = new RGBQUAD[width() * height()];
 
   memset(&bih, 0, sizeof(bih));
 
@@ -169,51 +185,55 @@ void Surface::dealloc()
   DeleteObject(bitmap);
 }
 
-void Surface::update(const Fl_RGB_Image* image)
+void Surface::update(const QImage *image)
 {
+  qDebug() << "Surface::update()";
+#if 0
   const unsigned char* in;
   RGBQUAD* out;
   int x, y;
 
-  assert(image->w() == width());
-  assert(image->h() == height());
+  assert(image->width() == width());
+  assert(image->height() == height());
 
   // Convert data and pre-multiply alpha
-  in = (const unsigned char*)image->data()[0];
-  out = data;
-  for (y = 0;y < image->w();y++) {
-    for (x = 0;x < image->h();x++) {
-      switch (image->d()) {
-      case 1:
-        out->rgbBlue = in[0];
+//  in = (const unsigned char*)image->data()[0];
+//  out = data;
+  for (y = 0;y < image->width();y++) {
+    for (x = 0;x < image->height();x++) {
+      QRgb src = image->pixel(x, y);
+      switch (image->depth()) {
+      case 8: // 1:
+        out->rgbBlue = src. // in[0];
         out->rgbGreen = in[0];
         out->rgbRed = in[0];
         out->rgbReserved = 0xff;
         break;
-      case 2:
+      case 16: // 2:
         out->rgbBlue = (unsigned)in[0] * in[1] / 255;
         out->rgbGreen = (unsigned)in[0] * in[1] / 255;
         out->rgbRed = (unsigned)in[0] * in[1] / 255;
         out->rgbReserved = in[1];
         break;
-      case 3:
+      case 24: // 3:
         out->rgbBlue = in[2];
         out->rgbGreen = in[1];
         out->rgbRed = in[0];
         out->rgbReserved = 0xff;
         break;
-      case 4:
+      case 32: // 4:
         out->rgbBlue = (unsigned)in[2] * in[3] / 255;
         out->rgbGreen = (unsigned)in[1] * in[3] / 255;
         out->rgbRed = (unsigned)in[0] * in[3] / 255;
         out->rgbReserved = in[3];
         break;
       }
-      in += image->d();
+      in += image->depth();
       out++;
     }
     if (image->ld() != 0)
       in += image->ld() - image->w() * image->d();
   }
+#endif
 }
 

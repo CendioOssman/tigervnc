@@ -3,12 +3,14 @@
 #include <QQmlContext>
 #include <QLocale>
 #include <QTranslator>
+#include <QMainWindow>
 #include "eventfilter.h"
 #include "config.h"
 #include "viewerconfig.h"
 #include "appmanager.h"
 #include "vncconnection.h"
 #include "vnccanvas.h"
+#include "vncrenderer.h"
 
 int main(int argc, char *argv[])
 {
@@ -17,7 +19,7 @@ int main(int argc, char *argv[])
         qputenv("QT_QPA_EGLFS_PHYSICAL_HEIGHT", QByteArray("120"));
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+        QCoreApplication::setAttribute(Qt::AA_DisableHighDpiScaling);
 #endif
     }
 
@@ -36,6 +38,7 @@ int main(int argc, char *argv[])
     ViewerConfig::initialize();
     AppManager::initialize();
     qmlRegisterType<VncCanvas>("Qt.TigerVNC", 1, 0, "VncCanvas");
+    qmlRegisterType<VNCFramebuffer>("Qt.TigerVNC", 1, 0, "VNCFramebuffer");
 
     QQmlApplicationEngine engine;
 

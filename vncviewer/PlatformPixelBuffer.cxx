@@ -28,13 +28,16 @@
 #include <sys/shm.h>
 #endif
 
-#include <FL/Fl.H>
-#include <FL/x.H>
+//#include <FL/Fl.H>
+//#include <FL/x.H>
 
 #include <rfb/LogWriter.h>
 #include <rdr/Exception.h>
-
+#include "Surface.h"
 #include "PlatformPixelBuffer.h"
+#include "appmanager.h"
+
+#include <QDebug>
 
 static rfb::LogWriter vlog("PlatformPixelBuffer");
 
@@ -96,6 +99,9 @@ void PlatformPixelBuffer::commitBufferRW(const rfb::Rect& r)
   mutex.lock();
   damage.assign_union(rfb::Region(r));
   mutex.unlock();
+
+  AppManager::instance()->update(r.tl.x, r.tl.y, r.br.x, r.br.y);
+  qDebug() << "PlatformPixelBuffer::commitBufferRW(): Rect=(" << r.tl.x << "," << r.tl.y << ")-(" << r.br.x << "," << r.br.y << ")";
 }
 
 rfb::Rect PlatformPixelBuffer::getDamage(void)
@@ -128,6 +134,7 @@ rfb::Rect PlatformPixelBuffer::getDamage(void)
   XFreeGC(fl_display, gc);
 #endif
 
+  qDebug() << "PlatformPixelBuffer::getDamage(): Rect=(" << r.tl.x << "," << r.tl.y << ")-(" << r.br.x << "," << r.br.y << ")";
   return r;
 }
 

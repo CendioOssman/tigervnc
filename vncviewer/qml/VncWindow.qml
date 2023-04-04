@@ -4,7 +4,11 @@ import Qt.TigerVNC 1.0
 Window {
     id: vncWindow
 
-    VncCanvas {
+//    VncCanvas {
+//        anchors.fill: parent
+//    }
+
+    VNCFramebuffer {
         anchors.fill: parent
     }
 }

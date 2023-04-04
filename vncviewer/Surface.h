@@ -28,16 +28,21 @@ typedef struct CGImage* CGImageRef;
 #include <X11/extensions/Xrender.h>
 #endif
 
-class Fl_RGB_Image;
+//class Fl_RGB_Image;
+class QImage;
+class QQuickWindow;
 
 class Surface {
 public:
   Surface(int width, int height);
-  Surface(const Fl_RGB_Image* image);
+  Surface(const QImage *image);
   ~Surface();
 
   int width() { return w; }
   int height() { return h; }
+#if defined(WIN32)
+  HBITMAP hbitmap() { return bitmap; }
+#endif
 
   void clear(unsigned char r, unsigned char g, unsigned char b, unsigned char a=255);
 
@@ -54,10 +59,11 @@ public:
 protected:
   void alloc();
   void dealloc();
-  void update(const Fl_RGB_Image* image);
+  void update(const QImage *image);
 
 protected:
   int w, h;
+  QQuickWindow *m_window;
 
 #if defined(WIN32)
   RGBQUAD* data;

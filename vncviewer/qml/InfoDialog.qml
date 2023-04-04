@@ -1,11 +1,11 @@
 import QtQuick 2.15
 import QtQuick.Window 2.15
 import QtQuick.Layouts 1.12
+import Qt.TigerVNC 1.0
 
 Window {
     id: root
 
-    property alias text: messageText.text
     property real labelFontPixelSize: 12
     property real buttonFontPixelSize: 14
 
@@ -13,10 +13,11 @@ Window {
     height: container.implicitHeight
     flags: Qt.SubWindow
     modality: Qt.ApplicationModal
-    title: qsTr("TigerVNC Viewer")
+    title: qsTr("VNC connection info")
     color: "#ffdcdcdc"
 
     function open() {
+        infoText.text = AppManager.connection.infoText()
         visible = true
     }
 
@@ -32,15 +33,15 @@ Window {
         columnSpacing: 0
 
         Image {
-            id: alertIcon
+            id: infoIcon
             Layout.row: 0
             Layout.column: 0
             Layout.leftMargin: 10
             Layout.topMargin: 15
-            source: "qrc:/images/alert_48px.png"
+            source: "qrc:/images/info_48px.png"
         }
         Text {
-            id: messageText
+            id: infoText
             Layout.row: 0
             Layout.column: 1
             Layout.fillWidth: true
@@ -48,6 +49,7 @@ Window {
             Layout.minimumWidth: 300
             Layout.leftMargin: 10
             Layout.rightMargin: 15
+            Layout.topMargin: 18
             verticalAlignment: Text.AlignVCenter
             font.pixelSize: labelFontPixelSize
         }

@@ -6,46 +6,31 @@ include_directories(${GETTEXT_INCLUDE_DIR})
 
 include_directories(${CMAKE_SOURCE_DIR}/common)
 
-#set(TS_FILES
-#        bg.ts
-#        cs.ts
-#        da.ts
-#        de.ts
-#        el.ts
-#        eo.ts
-#        es.ts
-#        fi.ts
-#        fr.ts
-#        fur.ts
-#        he.ts
-#        hu.ts
-#        id.ts
-#        it.ts
-#        ka.ts
-#        ko.ts
-#        nl.ts
-#        pl.ts
-#        pt_BR.ts
-#        ro.ts
-#        ru.ts
-#        sk.ts
-#        sr.ts
-#        sv.ts
-#        tr.ts
-#        uk.ts
-#        vi.ts
-#        zh_CN.ts
-#        zh_TW.ts
-#)
-
 if (WIN32)
- set(APP_ICONS
-  "${CMAKE_CURRENT_SOURCE_DIR}/winvnc.ico"
+  set(APP_ICONS "${CMAKE_CURRENT_SOURCE_DIR}/winvnc.ico")
+  set(OS_DEP_SOURCES
+      vncwinview.cxx
+      vncwinview.h
+      Surface_Win32.cxx
+      win32.c
+      win32.h
+  )
+elseif(APPLE)
+#  set(APP_ICONS "${CMAKE_CURRENT_SOURCE_DIR}/media/icons/tigervnc.icns")
+  set(OS_DEP_SOURCES
+      #vncosxview.cxx
+      #vncosxview.h
+      Surface_OSX.cxx
+  )
+else()
+  set(OS_DEP_SOURCES
+      vncx11view.cxx
+      vncx11view.h
+      Surface_X11.cxx
+      #vncwaylandview.cxx
+      #vncwaylandview.h
   )
 endif()
-#if (MACOS)
-#    set(APP_ICONS "${CMAKE_CURRENT_SOURCE_DIR}/media/icons/tigervnc.icns")
-#endif()
 
 set(PROJECT_SOURCES
         main.cxx
@@ -57,15 +42,27 @@ set(PROJECT_SOURCES
         msgreader.cxx
         msgwriter.h
         msgwriter.cxx
+        qdesktopwindow.h
+        qdesktopwindow.cxx
         viewerconfig.h
         viewerconfig.cxx
         vnccanvas.h
         vnccanvas.cxx
         vncconnection.h
+        vncrenderer.cxx
+        vncrenderer.h
+        logorenderer.cxx
+        logorenderer.h
         vncconnection.cxx
         vncpackethandler.h
         vncstream.h
         vncstream.cxx
+        abstractvncview.h
+        abstractvncview.cxx
+        vncwinview.h
+        vncwinview.cxx
+        keysym2ucs.c
+        keysym2ucs.h
         #
         gettext.h
         parameters.h
@@ -75,9 +72,19 @@ set(PROJECT_SOURCES
         menukey.cxx
         MonitorIndicesParameter.cxx
         MonitorIndicesParameter.h
+        PlatformPixelBuffer.h
+        PlatformPixelBuffer.cxx
+        PixelBuffer.cxx
+        Surface.h
+        Surface.cxx
+        DecodeManager.h
+        DecodeManager.cxx
+        #
+        ##CConn.h
+        ##CConn.cxx
         qml.qrc
         ${APP_ICONS}
-        ${TS_FILES}
+        ${OS_DEP_SOURCES}
 )
 
 if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -144,6 +151,7 @@ else()
     else()
         if (WIN32)
           set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/vncviewer.rc")
+          find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS WinExtras)
         endif()
         add_executable(vncviewer
           ${PROJECT_SOURCES}
@@ -154,12 +162,17 @@ else()
     qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 endif()
 
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Multimedia)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS OpenGL)
 
 target_compile_definitions(vncviewer
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
+if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
 target_link_libraries(vncviewer
-  PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::Multimedia Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
+  PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::QuickWidgets Qt${QT_VERSION_MAJOR}::OpenGL Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
+else()
+    target_link_libraries(vncviewer
+      PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::OpenGL Qt${QT_VERSION_MAJOR}::WinExtras Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
+endif()
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_import_qml_plugins(vncviewer)

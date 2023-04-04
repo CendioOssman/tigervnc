@@ -18,5 +18,6 @@
         <file>qml/main.qml</file>
         <file>qml/VncWindow.qml</file>
         <file>qml/ServerDialog.qml</file>
+        <file>qml/InfoDialog.qml</file>
     </qresource>
 </RCC>

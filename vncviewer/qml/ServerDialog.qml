@@ -16,6 +16,9 @@ Window {
 
     property var servers: []
 
+    signal optionDialogRequested()
+    signal aboutDialogRequested()
+
     function loadConfig(url) {
         var server = Config.loadViewerParameters(Config.toLocalFile(url))
         validateServerText(server)
@@ -96,7 +99,7 @@ Window {
             anchors.leftMargin: 15
             anchors.topMargin: 12
             text: qsTr("Options...")
-            onClicked: optionDialog.open()
+            onClicked: optionDialogRequested()
         }
 
         CButton {
@@ -143,7 +146,7 @@ Window {
             anchors.topMargin: 16
             anchors.bottomMargin: 10
             text: qsTr("About...")
-            onClicked: aboutDialog.open()
+            onClicked: aboutDialogRequested()
         }
 
         CButton {
@@ -167,23 +170,10 @@ Window {
 
     Loader {
         active: false
-        OptionDialog {
-            id: optionDialog
-        }
-    }
-
-    Loader {
-        active: false
-        AboutDialog {
-            id: aboutDialog
-        }
-    }
-
-    Loader {
-        active: false
         AuthDialog {
             id: authDialog
             onCommit: authenticate(user, password)
+            onAbort: AppManager.resetConnection()
         }
     }
 

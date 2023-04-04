@@ -4,6 +4,8 @@
 #include "rdr/Exception.h"
 #include "vncstream.h"
 #include "vncconnection.h"
+#include "viewerconfig.h"
+#include "qdesktopwindow.h"
 #include "appmanager.h"
 
 AppManager *AppManager::m_manager;
@@ -12,7 +14,7 @@ AppManager::AppManager()
     : QObject(nullptr)
     , m_error(0)
     , m_worker(new QVNCConnection)
-    , m_socket(nullptr)
+    , m_window(nullptr)
 {
     m_worker->start();
     connect(m_worker, &QVNCConnection::credentialRequested, this, [this](bool secured, bool userNeeded, bool passwordNeeded) {
@@ -21,6 +23,7 @@ AppManager::AppManager()
     connect(this, &AppManager::connectToServerRequested, m_worker, &QVNCConnection::connectToServer, Qt::QueuedConnection);
     connect(this, &AppManager::authenticateRequested, m_worker, &QVNCConnection::authenticate, Qt::QueuedConnection);
     connect(m_worker, &QVNCConnection::newVncWindowRequested, this, &AppManager::newVncWindowRequested, Qt::QueuedConnection);
+    connect(this, &AppManager::resetConnectionRequested, m_worker, &QVNCConnection::resetConnection, Qt::QueuedConnection);
 }
 
 AppManager::~AppManager()
@@ -28,6 +31,7 @@ AppManager::~AppManager()
     m_worker->exit();
     m_worker->wait(QDeadlineTimer(1000));
     m_worker->deleteLater();
+    delete m_window;
 }
 
 int AppManager::initialize()
@@ -44,19 +48,9 @@ int AppManager::initialize()
     return 0;
 }
 
-void AppManager::bind(int fd)
-{
-    emit bindRequested(fd);
-}
-
-void AppManager::unbind(int fd)
-{
-    emit unbindRequested(fd);
-}
-
 void AppManager::connectToServer(const QString addressport)
 {
-    emit connectToServerRequested(addressport);
+  emit connectToServerRequested(addressport);
 }
 
 void AppManager::authenticate(QString user, QString password)
@@ -64,9 +58,48 @@ void AppManager::authenticate(QString user, QString password)
     emit authenticateRequested(user, password);
 }
 
+void AppManager::resetConnection()
+{
+    emit resetConnectionRequested();
+}
+
 void AppManager::publishError(const QString &message)
 {
     emit errorOcurred(m_error++, message);
+}
+
+void AppManager::openVNCWindow(int width, int height, QString name)
+{
+  delete m_window;
+  m_window = new QDesktopWindow();
+  m_window->resize(width, height);
+  m_window->setWindowTitle(QString::asprintf("%.240s - TigerVNC", name.toStdString().c_str()));
+  m_window->show();
+}
+
+void AppManager::update(int x0, int y0, int x1, int y1)
+{
+  emit updateRequested(x0, y0, x1, y1);
+}
+
+void AppManager::openContextMenu()
+{
+  emit contextMenuRequested();
+}
+
+void AppManager::openInfoDialog()
+{
+  emit infoDialogRequested();
+}
+
+void AppManager::openOptionDialog()
+{
+  emit optionDialogRequested();
+}
+
+void AppManager::openAboutDialog()
+{
+  emit aboutDialogRequested();
 }
 
 QVNCApplication::QVNCApplication(int &argc, char **argv)
@@ -86,6 +119,9 @@ bool QVNCApplication::notify(QObject *receiver, QEvent *e)
     catch (rdr::Exception &e) {
         qDebug() << "Error: " << e.str();
         AppManager::instance()->publishError(e.str());
+        if (e.abort) {
+          quit();
+        }
     }
     catch (int &e) {
     qDebug() << "Error: " << strerror(e);

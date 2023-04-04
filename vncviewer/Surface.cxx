@@ -20,7 +20,8 @@
 #include <config.h>
 #endif
 
-#include <FL/Fl_RGB_Image.H>
+//#include <FL/Fl_RGB_Image.H>
+#include <QImage>
 
 #include "Surface.h"
 
@@ -30,8 +31,8 @@ Surface::Surface(int width, int height) :
   alloc();
 }
 
-Surface::Surface(const Fl_RGB_Image* image) :
-  w(image->w()), h(image->h())
+Surface::Surface(const QImage *image) :
+  w(image->width()), h(image->height())
 {
   alloc();
   update(image);

@@ -13,6 +13,8 @@
 #include <rfb/util.h>
 #include "rfb/PixelFormat.h"
 #include "rfb/encodings.h"
+#include "rfb/ServerParams.h"
+#include "rdr/ZlibInStream.h"
 #include "vncconnection.h"
 #include "msgreader.h"
 
@@ -22,7 +24,7 @@ static rfb::IntParameter maxCutText("MaxCutText", "Maximum permitted length of a
 
 using namespace rfb;
 
-QMsgReader::QMsgReader(QVNCConnection* /* CMsgHandler* */ handler_, rdr::FdInStream *is_)
+QMsgReader::QMsgReader(QVNCConnection* /* CMsgHandler* */ handler_, rdr::InStream *is_)
   : imageBufIdealSize(0), handler(handler_), is(is_),
     state(MSGSTATE_IDLE), cursorEncoding(-1)
 {
@@ -70,7 +72,6 @@ bool QMsgReader::readMsg()
     state = MSGSTATE_MESSAGE;
   }
 
-#if 0
   if (currentMsgType != msgTypeFramebufferUpdate) {
     bool ret;
 
@@ -193,14 +194,10 @@ bool QMsgReader::readMsg()
 
     return ret;
   }
-#else
-  return true;
-#endif
 }
 
 bool QMsgReader::readSetColourMapEntries()
 {
-#if 0
   if (!is->hasData(1 + 2 + 2))
     return false;
 
@@ -218,15 +215,12 @@ bool QMsgReader::readSetColourMapEntries()
   for (int i = 0; i < nColours * 3; i++)
     rgbs.buf[i] = is->readU16();
   handler->setColourMapEntries(firstColour, nColours, rgbs.buf);
-#endif
   return true;
 }
 
 bool QMsgReader::readBell()
 {
-#if 0
   handler->bell();
-#endif
   return true;
 }
 
@@ -264,15 +258,12 @@ bool QMsgReader::readServerCutText()
   CharArray ca(len);
   is->readBytes(ca.buf, len);
   CharArray filtered(convertLF(ca.buf, len));
-#if 0
   handler->serverCutText(filtered.buf);
-#endif
   return true;
 }
 
 bool QMsgReader::readExtendedClipboard(rdr::S32 len)
 {
-#if 0
   rdr::U32 flags;
   rdr::U32 action;
 
@@ -312,7 +303,7 @@ bool QMsgReader::readExtendedClipboard(rdr::S32 len)
 
     handler->handleClipboardCaps(flags, lengths);
   } else if (action == clipboardProvide) {
-    ZlibInStream zis;
+    rdr::ZlibInStream zis;
 
     int i;
     size_t num;
@@ -389,13 +380,11 @@ bool QMsgReader::readExtendedClipboard(rdr::S32 len)
       throw Exception("Invalid extended clipboard action");
     }
   }
-#endif
   return true;
 }
 
 bool QMsgReader::readFence()
 {
-#if 0
   rdr::U32 flags;
   rdr::U8 len;
   char data[64];
@@ -424,39 +413,33 @@ bool QMsgReader::readFence()
   is->readBytes(data, len);
 
   handler->fence(flags, len, data);
-#endif
   return true;
 }
 
 bool QMsgReader::readEndOfContinuousUpdates()
 {
-#if 0
   handler->endOfContinuousUpdates();
-#endif
   return true;
 }
 
 bool QMsgReader::readFramebufferUpdate()
 {
-#if 0
   if (!is->hasData(1 + 2))
     return false;
 
   is->skip(1);
   nUpdateRectsLeft = is->readU16();
   handler->framebufferUpdateStart();
-#endif
   return true;
 }
 
 bool QMsgReader::readRect(const Rect& r, int encoding)
 {
-#if 0
-  if ((r.br.x > handler->server.width()) ||
-      (r.br.y > handler->server.height())) {
+  if ((r.br.x > handler->server()->width()) ||
+      (r.br.y > handler->server()->height())) {
     vlog.error("Rect too big: %dx%d at %d,%d exceeds %dx%d",
 	    r.width(), r.height(), r.tl.x, r.tl.y,
-            handler->server.width(), handler->server.height());
+	    handler->server()->width(), handler->server()->height());
     throw Exception("Rect too big");
   }
 
@@ -464,14 +447,10 @@ bool QMsgReader::readRect(const Rect& r, int encoding)
     vlog.error("zero size rect");
 
   return handler->dataRect(r, encoding);
-#else
-  return true;
-#endif
 }
 
 bool QMsgReader::readSetXCursor(int width, int height, const Point& hotspot)
 {
-#if 0
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
 
@@ -530,17 +509,15 @@ bool QMsgReader::readSetXCursor(int width, int height, const Point& hotspot)
   }
 
   handler->setCursor(width, height, hotspot, rgba.buf);
-#endif
   return true;
 }
 
 bool QMsgReader::readSetCursor(int width, int height, const Point& hotspot)
 {
-#if 0
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
 
-  int data_len = width * height * (handler->server.pf().bpp/8);
+  int data_len = width * height * (handler->server()->pf().bpp/8);
   int mask_len = ((width+7)/8) * height;
   rdr::U8Array data(data_len);
   rdr::U8Array mask(mask_len);
@@ -564,26 +541,24 @@ bool QMsgReader::readSetCursor(int width, int height, const Point& hotspot)
       int byte = y * maskBytesPerRow + x / 8;
       int bit = 7 - x % 8;
 
-      handler->server.pf().rgbFromBuffer(out, in, 1);
+      handler->server()->pf().rgbFromBuffer(out, in, 1);
 
       if (mask.buf[byte] & (1 << bit))
         out[3] = 255;
       else
         out[3] = 0;
 
-      in += handler->server.pf().bpp/8;
+      in += handler->server()->pf().bpp/8;
       out += 4;
     }
   }
 
   handler->setCursor(width, height, hotspot, rgba.buf);
-#endif
   return true;
 }
 
 bool QMsgReader::readSetCursorWithAlpha(int width, int height, const Point& hotspot)
 {
-#if 0
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
 
@@ -606,10 +581,10 @@ bool QMsgReader::readSetCursorWithAlpha(int width, int height, const Point& hots
     cursorEncoding = is->readS32();
   }
 
-  origPF = handler->server.pf();
-  handler->server.setPF(rgbaPF);
+  origPF = handler->server()->pf();
+  handler->server()->setPF(rgbaPF);
   ret = handler->readAndDecodeRect(pb.getRect(), cursorEncoding, &pb);
-  handler->server.setPF(origPF);
+  handler->server()->setPF(origPF);
 
   if (!ret)
     return false;
@@ -639,13 +614,11 @@ bool QMsgReader::readSetCursorWithAlpha(int width, int height, const Point& hots
 
   handler->setCursor(width, height, hotspot,
                      pb.getBuffer(pb.getRect(), &stride));
-#endif
   return true;
 }
 
 bool QMsgReader::readSetVMwareCursor(int width, int height, const Point& hotspot)
 {
-#if 0
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
 
@@ -660,7 +633,7 @@ bool QMsgReader::readSetVMwareCursor(int width, int height, const Point& hotspot
   is->skip(1);
 
   if (type == 0) {
-    int len = width * height * (handler->server.pf().bpp/8);
+    int len = width * height * (handler->server()->pf().bpp/8);
     rdr::U8Array andMask(len);
     rdr::U8Array xorMask(len);
 
@@ -681,13 +654,13 @@ bool QMsgReader::readSetVMwareCursor(int width, int height, const Point& hotspot
     andIn = andMask.buf;
     xorIn = xorMask.buf;
     out = data.buf;
-    Bpp = handler->server.pf().bpp/8;
+    Bpp = handler->server()->pf().bpp/8;
     for (int y = 0;y < height;y++) {
       for (int x = 0;x < width;x++) {
         Pixel andPixel, xorPixel;
 
-        andPixel = handler->server.pf().pixelFromBuffer(andIn);
-        xorPixel = handler->server.pf().pixelFromBuffer(xorIn);
+        andPixel = handler->server()->pf().pixelFromBuffer(andIn);
+        xorPixel = handler->server()->pf().pixelFromBuffer(xorIn);
         andIn += Bpp;
         xorIn += Bpp;
 
@@ -696,7 +669,7 @@ bool QMsgReader::readSetVMwareCursor(int width, int height, const Point& hotspot
 
           // Opaque pixel
 
-          handler->server.pf().rgbFromPixel(xorPixel, &r, &g, &b);
+          handler->server()->pf().rgbFromPixel(xorPixel, &r, &g, &b);
           *out++ = r;
           *out++ = g;
           *out++ = b;
@@ -743,13 +716,11 @@ bool QMsgReader::readSetVMwareCursor(int width, int height, const Point& hotspot
   } else {
     throw Exception("Unknown cursor type");
   }
-#endif
   return true;
 }
 
 bool QMsgReader::readSetDesktopName(int x, int y, int w, int h)
 {
-#if 0
   rdr::U32 len;
 
   if (!is->hasData(4))
@@ -772,13 +743,11 @@ bool QMsgReader::readSetDesktopName(int x, int y, int w, int h)
   } else {
     handler->setName(name.buf);
   }
-#endif
   return true;
 }
 
 bool QMsgReader::readExtendedDesktopSize(int x, int y, int w, int h)
 {
-#if 0
   unsigned int screens, i;
   rdr::U32 id, flags;
   int sx, sy, sw, sh;
@@ -808,13 +777,11 @@ bool QMsgReader::readExtendedDesktopSize(int x, int y, int w, int h)
   }
 
   handler->setExtendedDesktopSize(x, y, w, h, layout);
-#endif
   return true;
 }
 
 bool QMsgReader::readLEDState()
 {
-#if 0
   rdr::U8 state;
 
   if (!is->hasData(1))
@@ -823,13 +790,11 @@ bool QMsgReader::readLEDState()
   state = is->readU8();
 
   handler->setLEDState(state);
-#endif
   return true;
 }
 
 bool QMsgReader::readVMwareLEDState()
 {
-#if 0
   rdr::U32 state;
 
   if (!is->hasData(4))
@@ -841,6 +806,5 @@ bool QMsgReader::readVMwareLEDState()
   // so no conversion required
 
   handler->setLEDState(state);
-#endif
   return true;
 }

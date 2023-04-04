@@ -1,28 +1,62 @@
+#include <QGuiApplication>
 #include <QQmlEngine>
 #include <QLocalSocket>
 #include <QTcpSocket>
 #include <QMutexLocker>
 #include <QTimer>
+#include <time.h>
 #include "rfb/Hostname.h"
 #include "rfb/CConnection.h"
 #include "rfb/Exception.h"
 #include "rfb/LogWriter.h"
 #include "rfb/Security.h"
 #include "rfb/PixelFormat.h"
+#include "rfb/PixelBuffer.h"
 #include "rfb/Password.h"
 #include "rfb/d3des.h"
+#include "rfb/encodings.h"
+#include "rfb/Decoder.h"
+#include "rfb/fenceTypes.h"
+#include "rfb/screenTypes.h"
+#include "rfb/clipboardTypes.h"
+#include "rfb/DecodeManager.h"
+#include "rfb/encodings.h"
 #include "vncstream.h"
 #include "vncconnection.h"
 #include "parameters.h"
 #include "msgreader.h"
 #include "msgwriter.h"
+#include "vncpackethandler.h"
 #include <QSocketNotifier>
 #include "network/TcpSocket.h"
-#ifndef Q_OS_WIN
-#include "network/UnixSocket.h"
+#include "DecodeManager.h"
+#include "PlatformPixelBuffer.h"
+#include "i18n.h"
+#include "qdesktopwindow.h"
+#include "abstractvncview.h"
+#include "appmanager.h"
+
+#if !defined(Q_OS_WIN)
+  #include "network/UnixSocket.h"
+#endif
+
+#if !defined(Q_OS_WIN) && !defined(Q_OS_MAC)
+  #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    #include <QX11Info>
+  #endif
 #endif
 
 static rfb::LogWriter vlog("CConnection");
+
+// 8 colours (1 bit per component)
+static const rfb::PixelFormat verylowColourPF(8, 3,false, true, 1, 1, 1, 2, 1, 0);
+// 64 colours (2 bits per component)
+static const rfb::PixelFormat lowColourPF(8, 6, false, true, 3, 3, 3, 4, 2, 0);
+// 256 colours (2-3 bits per component)
+static const rfb::PixelFormat mediumColourPF(8, 8, false, true, 7, 7, 3, 5, 2, 0);
+
+// Time new bandwidth estimates are weighted against (in ms)
+static const unsigned bpsEstimateWindow = 1000;
 
 class QVncAuthHandler : public QVNCPacketHandler
 {
@@ -35,6 +69,7 @@ public:
   {
     const int vncAuthChallengeSize = 16;
     if (state != rfb::CConnection::RFBSTATE_SECURITY) {
+      m_cc->resetConnection();
       throw rdr::Exception("QVncAuthHandler: state error.");
     }
     rfb::PlainPasswd *passwd = m_cc->password();
@@ -81,6 +116,7 @@ public:
   bool processMsg(int state) override
   {
     if (state != rfb::CConnection::RFBSTATE_SECURITY) {
+      m_cc->resetConnection();
       throw rdr::Exception("QVncAuthHandler: state error.");
     }
     QString *user = m_cc->user();
@@ -167,42 +203,44 @@ QVNCConnection::QVNCConnection()
   , m_reader(nullptr)
   , m_writer(nullptr)
   , m_pendingPFChange(false)
+  , m_updateCount(0)
+  , m_pixelCount(0)
   , m_pendingPF(new rfb::PixelFormat)
   , m_serverPF(new rfb::PixelFormat)
+  , m_fullColourPF(new rfb::PixelFormat(32, 24, false, true, 255, 255, 255, 16, 8, 0))
+  , m_nextPF(new rfb::PixelFormat)
   , m_preferredEncoding(0)
+  , m_compressLevel(0)
+  , m_qualityLevel(0)
   , m_encodingChange(false)
+  , m_firstUpdate(true)
+  , m_pendingUpdate(false)
+  , m_continuousUpdates(false)
+  , m_forceNonincremental(false)
   , m_framebuffer(nullptr)
-  , m_timer(new QTimer)
+  , m_decoder(new DecodeManager(this))
+  , m_hasLocalClipboard(false)
+  , m_unsolicitedClipboardAttempt(false)
+  , m_timer(nullptr)
   , m_pendingSocketEvent(false)
   , m_user(nullptr)
   , m_password(nullptr)
+  , m_formatChange(false)
+  , m_supportsLocalCursor(false)
+  , m_supportsCursorPosition(false)
+  , m_supportsDesktopResize(false)
+  , m_supportsLEDState(false)
+  , m_lastServerEncoding((unsigned int)-1)
+  , m_updateStartPos(0)
+  , m_bpsEstimate(20000000)
+  , m_updateTimer(nullptr)
 {
   moveToThread(this);
-  m_timer->moveToThread(this);
-  m_timer->setInterval(10);
-  m_timer->setSingleShot(true);
-  connect(m_timer, &QTimer::timeout, this, [this]() {
-    {
-      qDebug() << "QTimer: timeout";
-      QMutexLocker locker(m_mutex);
-      if (m_inProcessing) {
-        qDebug() << "QTimer: start";
-        emit socketNotified();
-        //m_timer->start();
-        return;
-      }
-    }
-    qDebug() << "startProcessing: by timer";
-    startProcessing();
-  });
   connect(this, &QVNCConnection::socketNotified, this, [this]() {
     {
       QMutexLocker locker(m_mutex);
-      if (m_inProcessing) {
-        if (!m_timer->isActive()) {
-          qDebug() << "socketNotified: timer start.";
-          m_timer->start();
-        }
+      if (m_inProcessing || m_blocking) {
+        m_timer->start();
         return;
       }
     }
@@ -211,35 +249,71 @@ QVNCConnection::QVNCConnection()
   });
 }
 
+void QVNCConnection::run()
+{
+  m_timer = new QTimer;
+  m_timer->setInterval(10);
+  m_timer->setSingleShot(true);
+  connect(m_timer, &QTimer::timeout, this, [this]() {
+    {
+      qDebug() << "QTimer: timeout";
+      QMutexLocker locker(m_mutex);
+      if (m_inProcessing || m_blocking) {
+        qDebug() << "QTimer: start";
+        m_timer->start();
+        return;
+      }
+    }
+    qDebug() << "startProcessing: by timer";
+    startProcessing();
+  });
+  m_timer->moveToThread(this);
+
+  m_updateTimer = new QTimer;
+//  m_updateTimer->setInterval(1000);
+//  m_updateTimer->setSingleShot(false);
+//  connect(m_updateTimer, &QTimer::timeout, this, [this]() {
+//    QMutexLocker locker(m_mutex);
+//    if (m_inProcessing || m_blocking || m_state != rfb::CConnection::RFBSTATE_NORMAL) {
+//      return;
+//    }
+//    requestNewUpdate();
+//  });
+//  m_updateTimer->moveToThread(this);
+//  m_updateTimer->start();
+
+  exec();
+}
+
 QVNCConnection::~QVNCConnection()
 {
-  m_timer->deleteLater();
+  resetConnection();
+  m_timer->stop();
+  m_updateTimer->stop();
+  delete m_timer;
+  delete m_updateTimer;
   delete m_mutex;
   delete m_serverParams;
   delete m_security;
-  delete m_socketNotifier;
-  delete m_socketErrorNotifier;
   delete m_encStatus;
-  delete m_reader;
-  delete m_writer;
-  delete m_socket;
-  delete m_user;
-  delete m_password;
-  delete m_framebuffer;
   delete m_pendingPF;
   delete m_serverPF;
+  delete m_fullColourPF;
+  delete m_nextPF;
 }
 
 void QVNCConnection::bind(int fd)
 {
   setStreams(&m_socket->inStream(), &m_socket->outStream());
 
+  delete m_socketNotifier;
   m_socketNotifier = new QSocketNotifier(fd, QSocketNotifier::Read);
   QObject::connect(m_socketNotifier, &QSocketNotifier::activated, this, [this](int fd) {
     Q_UNUSED(fd)
     emit socketNotified();
-  }, Qt::QueuedConnection);
+  });
 
+  delete m_socketErrorNotifier;
   m_socketErrorNotifier = new QSocketNotifier(fd, QSocketNotifier::Exception);
   QObject::connect(m_socketErrorNotifier, &QSocketNotifier::activated, this, [](int fd) {
     Q_UNUSED(fd)
@@ -247,10 +321,54 @@ void QVNCConnection::bind(int fd)
   });
 }
 
-void QVNCConnection::setStreams(rdr::FdInStream *in, rdr::FdOutStream *out)
+void QVNCConnection::setStreams(rdr::InStream *in, rdr::OutStream *out)
 {
   m_istream = in;
   m_ostream = out;
+}
+
+void QVNCConnection::setFramebuffer(rfb::ModifiablePixelBuffer* fb)
+{
+  m_decoder->flush();
+
+  if (fb) {
+    assert(fb->width() == server()->width());
+    assert(fb->height() == server()->height());
+  }
+
+  if ((m_framebuffer != NULL) && (fb != NULL)) {
+    rfb::Rect rect;
+
+    const rdr::U8* data;
+    int stride;
+
+    const rdr::U8 black[4] = { 0, 0, 0, 0 };
+
+    // Copy still valid area
+
+    rect.setXYWH(0, 0, __rfbmin(fb->width(), m_framebuffer->width()), __rfbmin(fb->height(), m_framebuffer->height()));
+    data = m_framebuffer->getBuffer(m_framebuffer->getRect(), &stride);
+    fb->imageRect(rect, data, stride);
+
+    // Black out any new areas
+
+    if (fb->width() > m_framebuffer->width()) {
+      rect.setXYWH(m_framebuffer->width(), 0,
+                   fb->width() - m_framebuffer->width(),
+                   fb->height());
+      fb->fillRect(rect, black);
+    }
+
+    if (fb->height() > m_framebuffer->height()) {
+      rect.setXYWH(0, m_framebuffer->height(),
+                   fb->width(),
+                   fb->height() - m_framebuffer->height());
+      fb->fillRect(rect, black);
+    }
+  }
+
+  delete m_framebuffer;
+  m_framebuffer = fb;
 }
 
 QVNCPacketHandler *QVNCConnection::setPacketHandler(QVNCPacketHandler *handler)
@@ -297,9 +415,50 @@ bool QVNCConnection::authenticate(QString user, QString password)
   if (password.length() > 0) {
     m_password = new rfb::PlainPasswd(strdup(password.toStdString().c_str()));
   }
-//  setPacketHandler(new QVncAuthHandler(this));
   setBlocking(false);
   return true;
+}
+
+void QVNCConnection::resetConnection()
+{
+  QMutexLocker locker(m_mutex);
+
+  m_timer->stop();
+  if (m_socket) {
+    m_socket->shutdown();
+  }
+  delete m_socket;
+  m_socket = nullptr;
+  delete m_socketNotifier;
+  m_socketNotifier = nullptr;
+  delete m_socketErrorNotifier;
+  m_socketErrorNotifier = nullptr;
+  delete m_reader;
+  m_reader = nullptr;
+  delete m_writer;
+  m_writer = nullptr;
+  delete m_user;
+  m_user = nullptr;
+  delete m_password;
+  m_password = nullptr;
+  delete m_framebuffer;
+  m_framebuffer = nullptr;
+  delete m_packetHandler;
+  m_packetHandler = nullptr;
+
+  m_state = rfb::CConnection::RFBSTATE_PROTOCOL_VERSION;
+  m_inProcessing = false;
+  m_blocking = false;
+}
+
+void QVNCConnection::refreshFramebuffer()
+{
+  m_forceNonincremental = true;
+
+  // Without continuous updates we have to make sure we only have a
+  // single update in flight, so we'll have to wait to do the refresh
+  if (m_continuousUpdates)
+    requestNewUpdate();
 }
 
 void QVNCConnection::setState(int state)
@@ -324,21 +483,14 @@ void QVNCConnection::startProcessing()
 {
   {
     QMutexLocker locker(m_mutex);
-    //qDebug() << "startProcessing: enter";
-    if (m_inProcessing) {
-      return;
-    }
     m_timer->stop();
     m_inProcessing = true;
   }
-  if (!blocking()) {
-    processMsg(m_state);
-  }
+  processMsg(m_state);
   {
     QMutexLocker locker(m_mutex);
     m_inProcessing = false;
   }
-  //qDebug() << "startProcessing: exit";
 }
 
 bool QVNCConnection::processMsg(int state)
@@ -349,6 +501,7 @@ bool QVNCConnection::processMsg(int state)
       return true;
     }
   }
+  qDebug() << "QVNCConnection::processMsg: state=" << state;
   switch (state) {
     case rfb::CConnection::RFBSTATE_INVALID:          return true;                       // Stand-by state.
     case rfb::CConnection::RFBSTATE_PROTOCOL_VERSION: return processVersionMsg();        // #1
@@ -383,6 +536,7 @@ bool QVNCConnection::processVersionMsg()
 
   if (sscanf(verStr, "RFB %03d.%03d\n",
              &majorVersion, &minorVersion) != 2) {
+    resetConnection();
     m_state = rfb::CConnection::RFBSTATE_INVALID;
     throw rdr::Exception("reading version failed: not an RFB server?");
   }
@@ -396,6 +550,7 @@ bool QVNCConnection::processVersionMsg()
   if (m_serverParams->beforeVersion(3,3)) {
     vlog.error("Server gave unsupported RFB protocol version %d.%d",
                m_serverParams->majorVersion, m_serverParams->minorVersion);
+    resetConnection();
     m_state = rfb::CConnection::RFBSTATE_INVALID;
     throw rdr::Exception("Server gave unsupported RFB protocol version %d.%d",
                          m_serverParams->majorVersion, m_serverParams->minorVersion);
@@ -449,6 +604,7 @@ bool QVNCConnection::processSecurityTypesMsg()
       if (i == secTypes.end())
         secType = rfb::secTypeInvalid;
     } else {
+      resetConnection();
       vlog.error("Unknown 3.3 security type %d", secType);
       throw rdr::Exception("Unknown 3.3 security type");
     }
@@ -502,6 +658,7 @@ bool QVNCConnection::processSecurityTypesMsg()
   }
 
   if (secType == rfb::secTypeInvalid) {
+    resetConnection();
     m_state = rfb::CConnection::RFBSTATE_INVALID;
     vlog.error("No matching security types");
     throw rdr::Exception("No matching security types");
@@ -552,11 +709,12 @@ bool QVNCConnection::processSecurityResultMsg()
       vlog.debug("auth failed - too many tries");
       break;
     default:
+      resetConnection();
       throw rfb::Exception("Unknown security result from server");
   }
 
   if (m_serverParams->beforeVersion(3,8)) {
-    m_state = rfb::CConnection::RFBSTATE_INVALID;
+    resetConnection();
     throw rfb::AuthFailureException();
   }
 
@@ -582,7 +740,7 @@ bool QVNCConnection::processSecurityReasonMsg()
   m_socket->inStream().readBytes(reason.buf, len);
   reason.buf[len] = '\0';
 
-  m_state = rfb::CConnection::RFBSTATE_INVALID;
+  resetConnection();
   throw rfb::AuthFailureException(reason.buf);
 }
 
@@ -644,10 +802,12 @@ void QVNCConnection::initDone()
 
   *m_serverPF = m_serverParams->pf();
 
+  delete m_framebuffer;
+  m_framebuffer = new PlatformPixelBuffer(m_serverParams->width(), m_serverParams->height());
   emit newVncWindowRequested(m_serverParams->width(), m_serverParams->height(), m_serverParams->name() /*, m_serverPF, this */);
   //  desktop = new DesktopWindow(m_serverParams->width(), m_serverParams->height(),
   //                              m_serverParams->name(), serverPF, this);
-  //  fullColourPF = desktop->getPreferredPF();
+  *m_fullColourPF = m_framebuffer->getPF();
 
   // Force a switch to the format and encoding we'd like
   updatePixelFormat();
@@ -665,12 +825,134 @@ void QVNCConnection::setPreferredEncoding(int encoding)
   m_encodingChange = true;
 }
 
+// requestNewUpdate() requests an update from the server, having set the
+// format and encoding appropriately.
 void QVNCConnection::requestNewUpdate()
 {
+  if (m_formatChange && !m_pendingPFChange) {
+    /* Catch incorrect requestNewUpdate calls */
+    assert(!m_pendingUpdate || m_continuousUpdates);
+
+    // We have to make sure we switch the internal format at a safe
+    // time. For continuous updates we temporarily disable updates and
+    // look for a EndOfContinuousUpdates message to see when to switch.
+    // For classical updates we just got a new update right before this
+    // function was called, so we need to make sure we finish that
+    // update before we can switch.
+
+    m_pendingPFChange = true;
+    *m_pendingPF = *m_nextPF;
+
+    if (m_continuousUpdates)
+      writer()->writeEnableContinuousUpdates(false, 0, 0, 0, 0);
+
+    writer()->writeSetPixelFormat(*m_pendingPF);
+
+    if (m_continuousUpdates)
+      writer()->writeEnableContinuousUpdates(true, 0, 0,
+                                             m_serverParams->width(),
+                                             m_serverParams->height());
+
+    m_formatChange = false;
+  }
+
+  if (m_encodingChange) {
+    updateEncodings();
+    m_encodingChange = false;
+  }
+
+  if (m_forceNonincremental || !m_continuousUpdates) {
+    m_pendingUpdate = true;
+    writer()->writeFramebufferUpdateRequest(rfb::Rect(0, 0,
+                                                 m_serverParams->width(),
+                                                 m_serverParams->height()),
+                                            !m_forceNonincremental);
+  }
+
+  m_forceNonincremental = false;
 }
 
+
+// Ask for encodings based on which decoders are supported.  Assumes higher
+// encoding numbers are more desirable.
+void QVNCConnection::updateEncodings()
+{
+  std::list<rdr::U32> encodings;
+
+  if (m_supportsLocalCursor) {
+    encodings.push_back(rfb::pseudoEncodingCursorWithAlpha);
+    encodings.push_back(rfb::pseudoEncodingVMwareCursor);
+    encodings.push_back(rfb::pseudoEncodingCursor);
+    encodings.push_back(rfb::pseudoEncodingXCursor);
+  }
+  if (m_supportsCursorPosition) {
+    encodings.push_back(rfb::pseudoEncodingVMwareCursorPosition);
+  }
+  if (m_supportsDesktopResize) {
+    encodings.push_back(rfb::pseudoEncodingDesktopSize);
+    encodings.push_back(rfb::pseudoEncodingExtendedDesktopSize);
+  }
+  if (m_supportsLEDState) {
+    encodings.push_back(rfb::pseudoEncodingLEDState);
+    encodings.push_back(rfb::pseudoEncodingVMwareLEDState);
+  }
+
+  encodings.push_back(rfb::pseudoEncodingDesktopName);
+  encodings.push_back(rfb::pseudoEncodingLastRect);
+  encodings.push_back(rfb::pseudoEncodingExtendedClipboard);
+  encodings.push_back(rfb::pseudoEncodingContinuousUpdates);
+  encodings.push_back(rfb::pseudoEncodingFence);
+  encodings.push_back(rfb::pseudoEncodingQEMUKeyEvent);
+
+  if (rfb::Decoder::supported(m_preferredEncoding)) {
+    encodings.push_back(m_preferredEncoding);
+  }
+
+  encodings.push_back(rfb::encodingCopyRect);
+
+  for (int i = rfb::encodingMax; i >= 0; i--) {
+    if ((i != m_preferredEncoding) && rfb::Decoder::supported(i))
+      encodings.push_back(i);
+  }
+
+  if (compressLevel >= 0 && compressLevel <= 9)
+      encodings.push_back(rfb::pseudoEncodingCompressLevel0 + compressLevel);
+  if (qualityLevel >= 0 && qualityLevel <= 9)
+      encodings.push_back(rfb::pseudoEncodingQualityLevel0 + qualityLevel);
+
+  writer()->writeSetEncodings(encodings);
+}
+
+// requestNewUpdate() requests an update from the server, having set the
+// format and encoding appropriately.
 void QVNCConnection::updatePixelFormat()
 {
+  rfb::PixelFormat pf;
+
+  if (fullColour) {
+    pf = *m_fullColourPF;
+  } else {
+    if (lowColourLevel == 0)
+      pf = verylowColourPF;
+    else if (lowColourLevel == 1)
+      pf = lowColourPF;
+    else
+      pf = mediumColourPF;
+  }
+
+  char str[256];
+  pf.print(str, 256);
+  vlog.info("Using pixel format %s" ,str);
+  setPF(&pf);
+}
+
+void QVNCConnection::setPF(const rfb::PixelFormat* pf)
+{
+  if (m_serverParams->pf().equal(*pf) && !m_formatChange)
+    return;
+
+  *m_nextPF = *pf;
+  m_formatChange = true;
 }
 
 void QVNCConnection::authSuccess()
@@ -750,6 +1032,7 @@ bool QVNCConnection::getVeNCryptCredentialProperties(bool &userNeeded, bool &pas
       m_ostream->writeU8(0);
       m_ostream->writeU8(0);
       m_ostream->flush();
+      resetConnection();
       throw rfb::AuthFailureException("The server reported an unsupported VeNCrypt version");
     }
 
@@ -761,9 +1044,10 @@ bool QVNCConnection::getVeNCryptCredentialProperties(bool &userNeeded, bool &pas
     if (!m_istream->hasData(1))
       return false;
 
-    if (m_istream->readU8())
+    if (m_istream->readU8()) {
+      resetConnection();
       throw rfb::AuthFailureException("The server reported it could not support the VeNCrypt version");
-
+    }
     m_encStatus->haveAgreedVersion = true;
   }
 
@@ -774,9 +1058,10 @@ bool QVNCConnection::getVeNCryptCredentialProperties(bool &userNeeded, bool &pas
 
     m_encStatus->nAvailableTypes = m_istream->readU8();
 
-    if (!m_encStatus->nAvailableTypes)
+    if (!m_encStatus->nAvailableTypes) {
+      resetConnection();
       throw rfb::AuthFailureException("The server reported no VeNCrypt sub-types");
-
+    }
     m_encStatus->availableTypes = new rdr::U32[m_encStatus->nAvailableTypes];
     m_encStatus->haveNumberOfTypes = true;
   }
@@ -819,23 +1104,31 @@ bool QVNCConnection::getVeNCryptCredentialProperties(bool &userNeeded, bool &pas
     vlog.info("Choosing security type %s (%d)", rfb::secTypeName(m_encStatus->chosenType), m_encStatus->chosenType);
 
     /* Set up the stack according to the chosen type: */
-    if (m_encStatus->chosenType == rfb::secTypeInvalid || m_encStatus->chosenType == rfb::secTypeVeNCrypt)
+    if (m_encStatus->chosenType == rfb::secTypeInvalid || m_encStatus->chosenType == rfb::secTypeVeNCrypt) {
+      resetConnection();
       throw rfb::AuthFailureException("No valid VeNCrypt sub-type");
-
+    }
     /* send chosen type to server */
     m_ostream->writeU32(m_encStatus->chosenType);
     m_ostream->flush();
 
+    QVNCPacketHandler *handler0;
     switch (m_encStatus->chosenType) {
       case rfb::secTypeVncAuth:
         userNeeded = false;
         passwordNeeded = true;
-        setPacketHandler(new QVncAuthHandler(this));
+        handler0 = setPacketHandler(new QVncAuthHandler(this));
+        if (handler0) {
+          handler0->deleteLater();
+        }
         return true;
       case rfb::secTypePlain:
         userNeeded = true;
         passwordNeeded = true;
-        setPacketHandler(new QPlainAuthHandler(this));
+        handler0 = setPacketHandler(new QPlainAuthHandler(this));
+        if (handler0) {
+          handler0->deleteLater();
+        }
         return true;
 
       case rfb::secTypeTLSNone:
@@ -863,6 +1156,7 @@ bool QVNCConnection::getVeNCryptCredentialProperties(bool &userNeeded, bool &pas
      * happen, since if the server supports 0 sub-types, it doesn't support
      * this security type
      */
+  resetConnection();
   throw rfb::AuthFailureException("The server reported 0 VeNCrypt sub-types");
 }
 
@@ -870,4 +1164,501 @@ bool QVNCConnection::establishSecurityLayer(int securitySubType)
 {
   // cf. common/rfb/SecurityClient.cxx, line:82-
   return true; // TODO
+}
+
+////////////////////////////////////////////////////////////
+
+// autoSelectFormatAndEncoding() chooses the format and encoding appropriate
+// to the connection speed:
+//
+//   First we wait for at least one second of bandwidth measurement.
+//
+//   Above 16Mbps (i.e. LAN), we choose the second highest JPEG quality,
+//   which should be perceptually lossless.
+//
+//   If the bandwidth is below that, we choose a more lossy JPEG quality.
+//
+//   If the bandwidth drops below 256 Kbps, we switch to palette mode.
+//
+//   Note: The system here is fairly arbitrary and should be replaced
+//         with something more intelligent at the server end.
+//
+void QVNCConnection::autoSelectFormatAndEncoding()
+{
+  // Always use Tight
+  setPreferredEncoding(rfb::encodingTight);
+
+  // Select appropriate quality level
+  if (!noJpeg) {
+    int newQualityLevel;
+    if (m_bpsEstimate > 16000000)
+      newQualityLevel = 8;
+    else
+      newQualityLevel = 6;
+
+    if (newQualityLevel != ::qualityLevel) {
+      vlog.info("Throughput %d kbit/s - changing to quality %d", (int)(m_bpsEstimate/1000), newQualityLevel);
+      ::qualityLevel.setParam(newQualityLevel);
+      setQualityLevel(newQualityLevel);
+    }
+  }
+
+  if (server()->beforeVersion(3, 8)) {
+    // Xvnc from TightVNC 1.2.9 sends out FramebufferUpdates with
+    // cursors "asynchronously". If this happens in the middle of a
+    // pixel format change, the server will encode the cursor with
+    // the old format, but the client will try to decode it
+    // according to the new format. This will lead to a
+    // crash. Therefore, we do not allow automatic format change for
+    // old servers.
+    return;
+  }
+
+  // Select best color level
+  bool newFullColour = (m_bpsEstimate > 256000);
+  if (newFullColour != ::fullColour) {
+    if (newFullColour)
+      vlog.info("Throughput %d kbit/s - full color is now enabled", (int)(m_bpsEstimate/1000));
+    else
+      vlog.info("Throughput %d kbit/s - full color is now disabled", (int)(m_bpsEstimate/1000));
+    fullColour.setParam(newFullColour);
+    updatePixelFormat();
+  }
+}
+
+void QVNCConnection::setQualityLevel(int level)
+{
+  if (m_qualityLevel == level)
+    return;
+
+  m_qualityLevel = level;
+  m_encodingChange = true;
+}
+
+// CMsgHandler.h
+void QVNCConnection::supportsQEMUKeyEvent()
+{
+  m_serverParams->supportsQEMUKeyEvent = true;
+}
+
+// CConn.h
+void QVNCConnection::resizeFramebuffer()
+{
+  //  desktop->resizeFramebuffer(m_serverParams->width(), m_serverParams->height());
+}
+
+void QVNCConnection::setDesktopSize(int w, int h)
+{
+  m_decoder->flush();
+
+  server()->setDimensions(w, h);
+
+  if (m_continuousUpdates)
+    writer()->writeEnableContinuousUpdates(true, 0, 0, server()->width(), server()->height());
+
+  resizeFramebuffer();
+  assert(m_framebuffer != nullptr);
+  assert(m_framebuffer->width() == server()->width());
+  assert(m_framebuffer->height() == server()->height());
+}
+
+void QVNCConnection::setExtendedDesktopSize(unsigned reason, unsigned result, int w, int h, const rfb::ScreenSet& layout)
+{
+  m_decoder->flush();
+
+  server()->supportsSetDesktopSize = true;
+
+  if ((reason == rfb::reasonClient) && (result != rfb::resultSuccess))
+    return;
+
+  server()->setDimensions(w, h, layout);
+
+  if (m_continuousUpdates)
+    writer()->writeEnableContinuousUpdates(true, 0, 0,
+                                           server()->width(),
+                                           server()->height());
+
+  resizeFramebuffer();
+  assert(m_framebuffer != nullptr);
+  assert(m_framebuffer->width() == server()->width());
+  assert(m_framebuffer->height() == server()->height());
+}
+
+void QVNCConnection::setName(const char* name)
+{
+  m_serverParams->setName(name);
+}
+
+void QVNCConnection::setColourMapEntries(int firstColour, int nColours, rdr::U16* rgbs)
+{
+  Q_UNUSED(firstColour)
+  Q_UNUSED(nColours)
+  Q_UNUSED(rgbs)
+  vlog.error("Invalid SetColourMapEntries from server!");
+}
+
+void QVNCConnection::bell()
+{
+  AppManager::instance()->window()->view()->bell();
+  // TODO
+#if 0
+#if defined(WIN32)
+  MessageBeep(0xFFFFFFFF); // cf. fltk/src/drivers/WinAPI/Fl_WinAPI_Screen_Driver.cxx:245
+#endif
+#if defined(__APPLE__)
+  NSBeep(); // cf. fltk/src/drivers/Cocoa/Fl_Cocoa_Screen_Driver.cxx:162
+#endif
+#if !defined(WIN32) && !defined(__APPLE__)
+  QString platform = QGuiApplication::platformName();
+  if (platform == "xcb") { // cf. fltk/src/drivers/X11/Fl_X11_Screen_Driver.cxx:398
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    Display *display = QX11Info::display();
+#else
+    QNativeInterface::QX11Application *f = (QNativeInterface::QX11Application *)QGuiApplication::nativeInterface<QNativeInterface::QX11Application>();
+    Display *display f->display();
+#endif
+    extern int XBell(Display*, int);
+    XBell(display, 0 /* volume */);
+  }
+  if (platform == "wayland") {
+    fprintf(stderr, "\007"); // cf. fltk/src/drivers/Wayland/Fl_Wayland_Screen_Driver.cxx:1272
+  }
+#endif
+#endif
+}
+
+// framebufferUpdateStart() is called at the beginning of an update.
+// Here we try to send out a new framebuffer update request so that the
+// next update can be sent out in parallel with us decoding the current
+// one.
+void QVNCConnection::framebufferUpdateStart()
+{
+  assert(m_framebuffer != nullptr);
+
+  // Note: This might not be true if continuous updates are supported
+  m_pendingUpdate = false;
+
+  requestNewUpdate();
+
+  // For bandwidth estimate
+  gettimeofday(&m_updateStartTime, NULL);
+  m_updateStartPos = m_socket->inStream().pos();
+
+  // Update the screen prematurely for very slow updates
+//  Fl::add_timeout(1.0, handleUpdateTimeout, this); // TODO: Qt
+
+}
+
+// framebufferUpdateEnd() is called at the end of an update.
+// For each rectangle, the FdInStream will have timed the speed
+// of the connection, allowing us to select format and encoding
+// appropriately, and then request another incremental update.
+void QVNCConnection::framebufferUpdateEnd()
+{
+  unsigned long long elapsed, bps, weight;
+  struct timeval now;
+
+  m_decoder->flush();
+
+  // A format change has been scheduled and we are now past the update
+  // with the old format. Time to active the new one.
+  if (m_pendingPFChange && !m_continuousUpdates) {
+    server()->setPF(*m_pendingPF);
+    m_pendingPFChange = false;
+  }
+
+  if (m_firstUpdate) {
+    if (server()->supportsContinuousUpdates) {
+      vlog.info("Enabling continuous updates");
+      m_continuousUpdates = true;
+      writer()->writeEnableContinuousUpdates(true, 0, 0,
+                                             server()->width(),
+                                             server()->height());
+    }
+
+    m_firstUpdate = false;
+  }
+
+  m_updateCount++;
+
+  // Calculate bandwidth everything managed to maintain during this update
+  gettimeofday(&now, NULL);
+  elapsed = (now.tv_sec - m_updateStartTime.tv_sec) * 1000000;
+  elapsed += now.tv_usec - m_updateStartTime.tv_usec;
+  if (elapsed == 0)
+    elapsed = 1;
+  bps = (unsigned long long)(m_socket->inStream().pos() -
+                             m_updateStartPos) * 8 *
+                            1000000 / elapsed;
+  // Allow this update to influence things more the longer it took, to a
+  // maximum of 20% of the new value.
+  weight = elapsed * 1000 / bpsEstimateWindow;
+  if (weight > 200000)
+    weight = 200000;
+  m_bpsEstimate = ((m_bpsEstimate * (1000000 - weight)) +
+                 (bps * weight)) / 1000000;
+
+//  Fl::remove_timeout(handleUpdateTimeout, this);
+//  desktop->updateWindow(); TODO: HIRONORI
+
+  // Compute new settings based on updated bandwidth values
+  if (autoSelect)
+    autoSelectFormatAndEncoding();
+}
+
+bool QVNCConnection::dataRect(const rfb::Rect& r, int encoding)
+{
+  bool ret;
+
+  if (encoding != rfb::encodingCopyRect)
+    m_lastServerEncoding = encoding;
+
+  ret = m_decoder->decodeRect(r, encoding, m_framebuffer);
+
+  if (ret)
+    m_pixelCount += r.area();
+
+  return ret;
+}
+
+void QVNCConnection::setCursor(int width, int height, const rfb::Point& hotspot, const unsigned char* data)
+{
+  // viewport->setCursor(width, height, hotspot, data);
+  int x = hotspot.x;
+  int y = hotspot.y;
+  bool emptyCursor = true;
+  for (int i = 0; i < width * height; i++) {
+    if (data[i*4 + 3] != 0) {
+      emptyCursor = false;
+      break;
+    }
+  }
+  if (emptyCursor) {
+    if (::dotWhenNoCursor) {
+      width = height = 5;
+      x = y = 2;
+      data = (const unsigned char*)
+          "\xff\xff\xff\xff" "\xff\xff\xff\xff" "\xff\xff\xff\xff" "\xff\xff\xff\xff" "\xff\xff\xff\xff"
+          "\xff\xff\xff\xff" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\xff\xff\xff\xff"
+          "\xff\xff\xff\xff" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\xff\xff\xff\xff"
+          "\xff\xff\xff\xff" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\xff\xff\xff\xff"
+          "\xff\xff\xff\xff" "\xff\xff\xff\xff" "\xff\xff\xff\xff" "\xff\xff\xff\xff" "\xff\xff\xff\xff";
+    }
+    else {
+      width = height = 2;
+      x = y = 0;
+      data = (const unsigned char*)
+          "\x00\x00\x00\x00" "\x00\x00\x00\x00"
+          "\x00\x00\x00\x00" "\x00\x00\x00\x00";
+    }
+  }
+  AppManager::instance()->window()->view()->setCursor(width, height, x, y, data);
+}
+
+void QVNCConnection::setCursorPos(const rfb::Point& pos)
+{
+  AppManager::instance()->window()->view()->setCursorPos(pos.x, pos.y);
+}
+
+void QVNCConnection::fence(rdr::U32 flags, unsigned len, const char data[])
+{
+  m_serverParams->supportsFence = true;
+  if (flags & rfb::fenceFlagRequest) {
+    // We handle everything synchronously so we trivially honor these modes
+    flags = flags & (rfb::fenceFlagBlockBefore | rfb::fenceFlagBlockAfter);
+
+    writer()->writeFence(flags, len, data);
+    return;
+  }
+}
+
+void QVNCConnection::requestClipboard()
+{
+  if (m_serverClipboard != nullptr) {
+    handleClipboardData(m_serverClipboard);
+    return;
+  }
+
+  if (m_serverParams->clipboardFlags() & rfb::clipboardRequest)
+    writer()->writeClipboardRequest(rfb::clipboardUTF8);
+}
+
+void QVNCConnection::setLEDState(unsigned int state)
+{
+  vlog.debug("Got server LED state: 0x%08x", state);
+  AppManager::instance()->window()->view()->setLEDState(state);
+  m_serverParams->setLEDState(state);
+}
+
+void QVNCConnection::handleClipboardAnnounce(bool available)
+{
+  AppManager::instance()->window()->view()->handleClipboardAnnounce(available);
+  requestClipboard();
+}
+
+void QVNCConnection::handleClipboardData(const char* data)
+{
+  AppManager::instance()->window()->view()->handleClipboardData(data);
+}
+
+
+// CConnection.h
+void QVNCConnection::endOfContinuousUpdates()
+{
+  server()->supportsContinuousUpdates = true;
+
+  // We've gotten the marker for a format change, so make the pending
+  // one active
+  if (m_pendingPFChange) {
+    server()->setPF(*m_pendingPF);
+    m_pendingPFChange = false;
+
+    // We might have another change pending
+    if (m_formatChange)
+      requestNewUpdate();
+  }
+}
+
+bool QVNCConnection::readAndDecodeRect(const rfb::Rect& r, int encoding, rfb::ModifiablePixelBuffer* pb)
+{
+  if (!m_decoder->decodeRect(r, encoding, pb))
+    return false;
+  m_decoder->flush();
+  return true;
+}
+
+void QVNCConnection::serverCutText(const char* str)
+{
+  m_hasLocalClipboard = false;
+
+  m_serverClipboard.clear();
+
+  m_serverClipboard.append(rfb::latin1ToUTF8(str));
+
+  handleClipboardAnnounce(true);
+}
+
+void QVNCConnection::handleClipboardCaps(rdr::U32 flags, const rdr::U32* lengths)
+{
+  vlog.debug("Got server clipboard capabilities:");
+  for (int i = 0;i < 16;i++) {
+    if (flags & (1 << i)) {
+      const char *type;
+
+      switch (1 << i) {
+        case rfb::clipboardUTF8:
+          type = "Plain text";
+          break;
+        case rfb::clipboardRTF:
+          type = "Rich text";
+          break;
+        case rfb::clipboardHTML:
+          type = "HTML";
+          break;
+        case rfb::clipboardDIB:
+          type = "Images";
+          break;
+        case rfb::clipboardFiles:
+          type = "Files";
+          break;
+        default:
+          vlog.debug("    Unknown format 0x%x", 1 << i);
+          continue;
+      }
+
+      if (lengths[i] == 0)
+        vlog.debug("    %s (only notify)", type);
+      else {
+        char bytes[1024];
+        rfb::iecPrefix(lengths[i], "B", bytes, sizeof(bytes));
+        vlog.debug("    %s (automatically send up to %s)", type, bytes);
+      }
+    }
+  }
+
+  server()->setClipboardCaps(flags, lengths);
+
+  rdr::U32 sizes[] = { 0 };
+  writer()->writeClipboardCaps(rfb::clipboardUTF8 |
+                               rfb::clipboardRequest |
+                               rfb::clipboardPeek |
+                               rfb::clipboardNotify |
+                               rfb::clipboardProvide,
+                               sizes);
+}
+
+void QVNCConnection::handleClipboardRequest()
+{
+  //  desktop->handleClipboardRequest();
+}
+
+void QVNCConnection::handleClipboardRequest(rdr::U32 flags)
+{
+  if (!(flags & rfb::clipboardUTF8)) {
+    vlog.debug("Ignoring clipboard request for unsupported formats 0x%x", flags);
+    return;
+  }
+  if (!m_hasLocalClipboard) {
+    vlog.debug("Ignoring unexpected clipboard request");
+    return;
+  }
+  handleClipboardRequest();
+}
+
+void QVNCConnection::handleClipboardPeek(rdr::U32 flags)
+{
+  Q_UNUSED(flags)
+  if (server()->clipboardFlags() & rfb::clipboardNotify)
+    writer()->writeClipboardNotify(m_hasLocalClipboard ? rfb::clipboardUTF8 : 0);
+}
+
+void QVNCConnection::handleClipboardNotify(rdr::U32 flags)
+{
+  m_serverClipboard.clear();
+  if (flags & rfb::clipboardUTF8) {
+    m_hasLocalClipboard = false;
+    handleClipboardAnnounce(true);
+  } else {
+    handleClipboardAnnounce(false);
+  }
+}
+
+void QVNCConnection::handleClipboardProvide(rdr::U32 flags, const size_t* lengths, const rdr::U8* const* data)
+{
+  if (!(flags & rfb::clipboardUTF8)) {
+    vlog.debug("Ignoring clipboard provide with unsupported formats 0x%x", flags);
+    return;
+  }
+
+  m_serverClipboard.clear();
+  m_serverClipboard.append(rfb::convertLF((const char*)data[0], lengths[0]));
+
+  // FIXME: Should probably verify that this data was actually requested
+  handleClipboardData(m_serverClipboard);
+}
+
+QString QVNCConnection::infoText()
+{
+  QString infoText;
+  char pfStr[100];
+
+  infoText += QString::asprintf(_("Desktop name: %.80s\n"), m_serverParams->name());
+  infoText += QString::asprintf(_("Host: %.80s port: %d\n"), m_host.toStdString().c_str(), m_port);
+  infoText += QString::asprintf(_("Size: %d x %d\n"), m_serverParams->width(), m_serverParams->height());
+
+  // TRANSLATORS: Will be filled in with a string describing the
+  // protocol pixel format in a fairly language neutral way
+  m_serverParams->pf().print(pfStr, 100);
+  infoText += QString::asprintf(_("Pixel format: %s\n"), pfStr);
+
+  // TRANSLATORS: Similar to the earlier "Pixel format" string
+  m_serverPF->print(pfStr, 100);
+  infoText += QString::asprintf(_("(server default %s)\n"), pfStr);
+  infoText += QString::asprintf(_("Requested encoding: %s\n"), rfb::encodingName(m_preferredEncoding));
+  infoText += QString::asprintf(_("Last used encoding: %s\n"), rfb::encodingName(m_lastServerEncoding));
+  infoText += QString::asprintf(_("Line speed estimate: %d kbit/s\n"), (int)(m_bpsEstimate/1000));
+  infoText += QString::asprintf(_("Protocol version: %d.%d\n"), m_serverParams->majorVersion, m_serverParams->minorVersion);
+  infoText += QString::asprintf(_("Security method: %s\n"), rfb::secTypeName(m_securityType));
+
+  return infoText;
 }
