@@ -82,7 +82,7 @@ ComboBox {
         width: height * 0.95
         height: control.availableHeight - control.topPadding - control.bottomPadding - 4
         radius: 3
-        color: container.color
+        color: "#ffffffff"
         border.width: 1
         border.color: "#ff6e6e6e"
         Image {

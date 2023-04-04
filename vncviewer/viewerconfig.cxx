@@ -17,6 +17,7 @@ ViewerConfig *ViewerConfig::m_config;
 
 ViewerConfig::ViewerConfig()
     : QObject(nullptr)
+    , m_openGLFBOenabled(QString(qgetenv("TIGERVNC_OPENGL_ENABLED")) == "1")
     , m_encNone(false)
     , m_encTLSAnon(false)
     , m_encTLSX509(false)
@@ -233,6 +234,14 @@ void ViewerConfig::saveServerHistory()
     for(int i = 0; i < m_serverHistory.size() && i <= SERVER_HISTORY_SIZE; i++) {
         stream << m_serverHistory[i] << "\n";
     }
+}
+
+void ViewerConfig::setOpenGLFBOenabled(bool value)
+{
+  if (m_openGLFBOenabled != value) {
+    m_openGLFBOenabled = value;
+    emit openGLFBOenabledChanged(value);
+  }
 }
 
 bool ViewerConfig::autoSelect() const

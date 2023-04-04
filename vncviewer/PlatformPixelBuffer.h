@@ -23,9 +23,10 @@
 
 #include <os/Mutex.h>
 
-#include <rfb/PixelBuffer.h>
+//#include <rfb/PixelBuffer.h>
 #include <rfb/Region.h>
 
+#include "rfb/PixelBuffer.h"
 #include "Surface.h"
 
 class PlatformPixelBuffer: public rfb::FullFramePixelBuffer, public Surface {

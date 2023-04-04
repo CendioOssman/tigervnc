@@ -4,6 +4,8 @@
 #include <list>
 #include <rdr/types.h>
 
+class QMutex;
+
 namespace rdr { class OutStream; }
 
 namespace rfb {
@@ -49,6 +51,7 @@ protected:
 
   rfb::ServerParams* server;
   rdr::OutStream* os;
+  QMutex *m_mutex;
 };
 
 #endif
