@@ -3,18 +3,27 @@
 #include <QPushButton>
 #include <QCheckBox>
 #include <QAction>
+#include <QTimer>
 #include <QDebug>
+#include "rfb/ScreenSet.h"
+#include "rfb/LogWriter.h"
+#include "rfb/ServerParams.h"
+#include "PlatformPixelBuffer.h"
+#include "msgwriter.h"
 #include "appmanager.h"
 #include "qdesktopwindow.h"
 #include "parameters.h"
 #include "menukey.h"
 #include "vncconnection.h"
+#include "i18n.h"
 #include "abstractvncview.h"
 
 #define XK_LATIN1
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
 #include "rfb/keysymdef.h"
+
+static rfb::LogWriter vlog("VNCView");
 
 class QMenuSeparator : public QAction
 {
@@ -43,13 +52,13 @@ public:
     : QCheckableAction(text, parent)
   {
     connect(this, &QAction::toggled, this, [](bool checked) {
-      QDesktopWindow *window = AppManager::instance()->window();
+      QAbstractVNCView *view = AppManager::instance()->view();
       if (checked) {
         // TODO: DesktopWindow::fullscreen_on() must be ported.
-        window->showFullScreen();
+        view->showFullScreen();
       }
       else {
-        window->showNormal();
+        view->showNormal();
       }
     });
   }
@@ -62,8 +71,8 @@ public:
     : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
-      QDesktopWindow *window = AppManager::instance()->window();
-      window->showNormal();
+      QAbstractVNCView *view = AppManager::instance()->view();
+      view->showNormal();
       // TODO:
     });
   }
@@ -78,7 +87,7 @@ public:
     , m_keySym(keySym)
   {
     connect(this, &QAction::toggled, this, [this](bool checked) {
-      QAbstractVNCView *view = AppManager::instance()->window()->view();
+      QAbstractVNCView *view = AppManager::instance()->view();
       if (checked) {
         view->handleKeyPress(m_keyCode, m_keySym);
       }
@@ -104,7 +113,7 @@ public:
       int keyCode;
       quint32 keySym;
       ::getMenuKey(&dummy, &keyCode, &keySym);
-      QAbstractVNCView *view = AppManager::instance()->window()->view();
+      QAbstractVNCView *view = AppManager::instance()->view();
       view->handleKeyPress(keyCode, keySym);
       view->handleKeyRelease(keyCode);
     });
@@ -118,7 +127,7 @@ public:
     : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
-      QAbstractVNCView *view = AppManager::instance()->window()->view();
+      QAbstractVNCView *view = AppManager::instance()->view();
       view->handleKeyPress(0x1d, XK_Control_L);
       view->handleKeyPress(0x38, XK_Alt_L);
       view->handleKeyPress(0xd3, XK_Delete);
@@ -136,8 +145,8 @@ public:
     : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
-      QDesktopWindow *window = AppManager::instance()->window();
-      window->showMinimized();
+      QAbstractVNCView *view = AppManager::instance()->view();
+      view->showMinimized();
     });
   }
 };
@@ -204,6 +213,7 @@ public:
 
 QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   : QWidget(parent, f)
+  , m_devicePixelRatio(devicePixelRatioF())
   , m_contextMenu(nullptr)
   , m_firstLEDState(false)
   , m_pendingServerClipboard(false)
@@ -211,7 +221,11 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   , m_clipboardSource(0)
   , m_keyboardGrabbed(false)
   , m_mouseGrabbed(false)
+  , m_resizeTimer(new QTimer)
 {
+  m_resizeTimer->setInterval(500); // <-- DesktopWindow::resize(int x, int y, int w, int h)
+  m_resizeTimer->setSingleShot(true);
+  connect(m_resizeTimer, &QTimer::timeout, this, &QAbstractVNCView::handleResizeTimeout);
 }
 
 QAbstractVNCView::~QAbstractVNCView()
@@ -220,6 +234,20 @@ QAbstractVNCView::~QAbstractVNCView()
     delete action;
   }
   delete m_contextMenu;
+  delete m_resizeTimer;
+}
+
+void QAbstractVNCView::resize(int width, int height)
+{
+//  rfb::ModifiablePixelBuffer *framebuffer0 = AppManager::instance()->connection()->framebuffer();
+//  if ((width != framebuffer0->width()) || (height != framebuffer0->height())) {
+//    PlatformPixelBuffer *framebuffer = new PlatformPixelBuffer(width, height);
+//    AppManager::instance()->connection()->setFramebuffer(framebuffer);
+//  }
+
+  width /= m_devicePixelRatio;
+  height /= m_devicePixelRatio;
+  QWidget::resize(width, height);
 }
 
 void QAbstractVNCView::popupContextMenu()
@@ -337,4 +365,138 @@ bool QAbstractVNCView::isFullscreen()
 
 void QAbstractVNCView::bell()
 {
+}
+
+void QAbstractVNCView::handleResizeTimeout()
+{
+  remoteResize(width(), height());
+}
+
+void QAbstractVNCView::remoteResize(int w, int h)
+{
+#if 0
+  QVNCConnection *cc = AppManager::instance()->connection();
+  rfb::ScreenSet layout;
+  rfb::ScreenSet::const_iterator iter;
+  if (!fullscreen_active() || (w > width()) || (h > height())) {
+    // In windowed mode (or the framebuffer is so large that we need
+    // to scroll) we just report a single virtual screen that covers
+    // the entire framebuffer.
+
+    layout = cc->server()->screenLayout();
+
+    // Not sure why we have no screens, but adding a new one should be
+    // safe as there is nothing to conflict with...
+    if (layout.num_screens() == 0)
+      layout.add_screen(rfb::Screen());
+    else if (layout.num_screens() != 1) {
+      // More than one screen. Remove all but the first (which we
+      // assume is the "primary").
+
+      while (true) {
+        iter = layout.begin();
+        ++iter;
+
+        if (iter == layout.end())
+          break;
+
+        layout.remove_screen(iter->id);
+      }
+    }
+
+    // Resize the remaining single screen to the complete framebuffer
+    layout.begin()->dimensions.tl.x = 0;
+    layout.begin()->dimensions.tl.y = 0;
+    layout.begin()->dimensions.br.x = w;
+    layout.begin()->dimensions.br.y = h;
+  }
+  else {
+    int i;
+    rdr::U32 id;
+    int sx, sy, sw, sh;
+    rfb::Rect viewport_rect, screen_rect;
+
+    // In full screen we report all screens that are fully covered.
+
+    viewport_rect.setXYWH(x() + (width() - w)/2, y() + (height() - h)/2, w, h);
+
+    // If we can find a matching screen in the existing set, we use
+    // that, otherwise we create a brand new screen.
+    //
+    // FIXME: We should really track screens better so we can handle
+    //        a resized one.
+    //
+    for (i = 0;i < Fl::screen_count();i++) {
+      Fl::screen_xywh(sx, sy, sw, sh, i);
+
+      // Check that the screen is fully inside the framebuffer
+      screen_rect.setXYWH(sx, sy, sw, sh);
+      if (!screen_rect.enclosed_by(viewport_rect))
+        continue;
+
+      // Adjust the coordinates so they are relative to our viewport
+      sx -= viewport_rect.tl.x;
+      sy -= viewport_rect.tl.y;
+
+      // Look for perfectly matching existing screen that is not yet present in
+      // in the screen layout...
+      for (iter = cc->server()->screenLayout().begin();
+           iter != cc->server()->screenLayout().end(); ++iter) {
+        if ((iter->dimensions.tl.x == sx) &&
+            (iter->dimensions.tl.y == sy) &&
+            (iter->dimensions.width() == sw) &&
+            (iter->dimensions.height() == sh) &&
+            (std::find(layout.begin(), layout.end(), *iter) == layout.end()))
+          break;
+      }
+
+      // Found it?
+      if (iter != cc->server()->screenLayout().end()) {
+        layout.add_screen(*iter);
+        continue;
+      }
+
+      // Need to add a new one, which means we need to find an unused id
+      while (true) {
+        id = rand();
+        for (iter = cc->server()->screenLayout().begin();
+             iter != cc->server()->screenLayout().end(); ++iter) {
+          if (iter->id == id)
+            break;
+        }
+
+        if (iter == cc->server()->screenLayout().end())
+          break;
+      }
+
+      layout.add_screen(rfb::Screen(id, sx, sy, sw, sh, 0));
+    }
+
+    // If the viewport doesn't match a physical screen, then we might
+    // end up with no screens in the layout. Add a fake one...
+    if (layout.num_screens() == 0)
+      layout.add_screen(rfb::Screen(0, 0, 0, w, h, 0));
+  }
+
+  // Do we actually change anything?
+  if ((w == cc->server()->width()) &&
+      (h == cc->server()->height()) &&
+      (layout == cc->server()->screenLayout()))
+    return;
+
+  vlog.debug("Requesting framebuffer resize from %dx%d to %dx%d",
+             cc->server()->width(), cc->server()->height(), w, h);
+
+  char buffer[2048];
+  layout.print(buffer, sizeof(buffer));
+  if (!layout.validate(w, h)) {
+    vlog.error(_("Invalid screen layout computed for resize request!"));
+    vlog.error("%s", buffer);
+    return;
+  }
+  else {
+    vlog.debug("%s", buffer);
+  }
+  AppManager::instance()->connection()->writer()->writeSetDesktopSize(w, h, layout);
+#endif
 }

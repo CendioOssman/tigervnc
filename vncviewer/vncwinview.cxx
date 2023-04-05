@@ -84,7 +84,10 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
 {
   setAttribute(Qt::WA_NoBackground);
   setAttribute(Qt::WA_NoSystemBackground);
+  setAttribute(Qt::WA_InputMethodTransparent);
+  setAttribute(Qt::WA_NativeWindow);
   setFocusPolicy(Qt::StrongFocus);
+
   connect(AppManager::instance(), &AppManager::updateRequested, this, [this](int x0, int y0, int x1, int y1) {
     RECT r{x0, y0, x1, y1};
     InvalidateRect(m_hwnd, &r, false);
@@ -452,7 +455,9 @@ void QVNCWinView::showEvent(QShowEvent *e)
   QWidget::showEvent(e);
 
   if (m_hwnd) {
-    SetWindowPos(m_hwnd, HWND_TOP, 0, 0, width(), height(), SWP_SHOWWINDOW);
+    int w = width() * m_devicePixelRatio;
+    int h = height() * m_devicePixelRatio;
+    SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, SWP_SHOWWINDOW);
   }
 }
 
@@ -476,7 +481,10 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
   QWidget::resizeEvent(e);
 
   if (m_hwnd) {
-    SetWindowPos(m_hwnd, HWND_TOP, 0, 0, width(), height(), 0);
+    int w = width() * m_devicePixelRatio;
+    int h = height() * m_devicePixelRatio;
+    SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, 0);
+    m_resizeTimer->start();
   }
 }
 

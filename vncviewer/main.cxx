@@ -12,6 +12,8 @@
 #include "vnccanvas.h"
 #include "vncrenderer.h"
 
+#include <QScreen>
+
 int main(int argc, char *argv[])
 {
     if (qEnvironmentVariableIsEmpty("QTGLESSTREAM_DISPLAY")) {
@@ -19,21 +21,45 @@ int main(int argc, char *argv[])
         qputenv("QT_QPA_EGLFS_PHYSICAL_HEIGHT", QByteArray("120"));
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        QCoreApplication::setAttribute(Qt::AA_DisableHighDpiScaling);
+        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+        QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 #endif
     }
 
     QVNCApplication app(argc, argv);
 
-    QTranslator translator;
-    const QStringList uiLanguages = QLocale::system().uiLanguages();
-    for (const QString &locale : uiLanguages) {
-        const QString baseName = "qvncviewer_" + QLocale(locale).name();
-        if (translator.load(":/i18n/" + baseName)) {
-            app.installTranslator(&translator);
-            break;
-        }
+#if 0
+    QScreen *primaryScreen = app.primaryScreen();
+    QList<QScreen*> screens = app.screens();
+    for (int i = 0; i < screens.size(); i++) {
+      QScreen* screen = screens[i];
+      qDebug() << "=================================";
+      qDebug() << "index=" << i;
+      qDebug() << "isPrimary=" << (screen == primaryScreen);
+      qDebug() << "availableGeometory=" << screen->availableGeometry();
+      qDebug() << "availableSize=" << screen->availableSize();
+      qDebug() << "availableVirtualGeometry=" << screen->availableVirtualGeometry();
+      qDebug() << "availableVirtualSize=" << screen->availableVirtualSize();
+      qDebug() << "depth=" << screen->depth();
+      qDebug() << "devicePixelRatio=" << screen->devicePixelRatio();
+      qDebug() << "geometry=" << screen->geometry();
+      qDebug() << "isLandscape=" << screen->isLandscape(Qt::PrimaryOrientation);
+      qDebug() << "isPortrait=" << screen->isPortrait(Qt::PrimaryOrientation);
+      qDebug() << "logicalDotsPerInch=" << screen->logicalDotsPerInch();
+      qDebug() << "logicalDotsPerInchX=" << screen->logicalDotsPerInchX();
+      qDebug() << "logicalDotsPerInchY=" << screen->logicalDotsPerInchY();
+      qDebug() << "model=" << screen->model();
+      qDebug() << "name=" << screen->name();
+      qDebug() << "nativeOrientation=" << screen->nativeOrientation();
+      qDebug() << "orientation=" << screen->orientation();
+      qDebug() << "physicalDotsPerInch=" << screen->physicalDotsPerInch();
+      qDebug() << "physicalDotsPerInchX=" << screen->physicalDotsPerInchX();
+      qDebug() << "physicalDotsPerInchY=" << screen->physicalDotsPerInchY();
+      qDebug() << "physicalSize=" << screen->physicalSize();
+      qDebug() << "virtualGeometry=" << screen->virtualGeometry();
+      qDebug() << "virtualSize=" << screen->virtualSize();
     }
+#endif
 
     ViewerConfig::initialize();
     AppManager::initialize();

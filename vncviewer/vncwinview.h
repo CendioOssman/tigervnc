@@ -18,7 +18,7 @@ class QVNCWinView : public QAbstractVNCView
 {
   Q_OBJECT
 public:
-  QVNCWinView(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
+  QVNCWinView(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Window);
   virtual ~QVNCWinView();
 
   void setWindow(HWND);

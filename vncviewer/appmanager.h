@@ -5,14 +5,14 @@
 
 class QIODevice;
 class QVNCConnection;
-class QDesktopWindow;
+class QAbstractVNCView;
 
 class AppManager : public QObject
 {
   Q_OBJECT
   Q_PROPERTY(int error READ error NOTIFY errorOcurred)
   Q_PROPERTY(QVNCConnection *connection READ connection CONSTANT)
-  Q_PROPERTY(QDesktopWindow *window READ window CONSTANT)
+  Q_PROPERTY(QAbstractVNCView *view READ view CONSTANT)
 
 public:
   virtual ~AppManager();
@@ -20,11 +20,10 @@ public:
   static int initialize();
   QVNCConnection *connection() const { return m_worker; }
   int error() const { return m_error; }
-  QDesktopWindow *window() const { return m_window; }
+  QAbstractVNCView *view() const { return m_view; }
 
 signals:
   void errorOcurred(int seq, QString message);
-  void windowChanged(QDesktopWindow *window);
   void credentialRequested(bool secured, bool userNeeded, bool passwordNeeded);
   void dataReady(QByteArray bytes);
   void connectToServerRequested(const QString addressport);
@@ -61,7 +60,7 @@ private:
   static AppManager *m_manager;
   int m_error;
   QVNCConnection *m_worker;
-  QDesktopWindow *m_window;
+  QAbstractVNCView *m_view;
   AppManager();
 };
 

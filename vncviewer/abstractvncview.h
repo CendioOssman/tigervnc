@@ -13,6 +13,7 @@ class QAbstractVNCView : public QWidget
 public:
   QAbstractVNCView(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~QAbstractVNCView();
+  void resize(int width, int height);
   void popupContextMenu();
 
 public slots:
@@ -31,8 +32,12 @@ public slots:
   virtual void ungrabPointer();
   virtual bool isFullscreen();
   virtual void bell();
+  virtual void handleResizeTimeout();
+  virtual void remoteResize(int width, int height);
 
 protected:
+  double m_devicePixelRatio;
+
   QMenu *m_contextMenu;
   QList<QAction*> m_actions;
 
@@ -42,6 +47,8 @@ protected:
   int m_clipboardSource;
   bool m_keyboardGrabbed;
   bool m_mouseGrabbed;
+
+  QTimer *m_resizeTimer;
 
   void createContextMenu();
 };

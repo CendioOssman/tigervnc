@@ -22,6 +22,7 @@
 #include "rfb/DecodeManager.h"
 #include "rfb/encodings.h"
 #include "vncstream.h"
+#include "viewerconfig.h"
 #include "vncconnection.h"
 #include "parameters.h"
 #include "msgreader.h"
@@ -380,6 +381,7 @@ QVNCPacketHandler *QVNCConnection::setPacketHandler(QVNCPacketHandler *handler)
 
 void QVNCConnection::connectToServer(const QString addressport)
 {
+  ViewerConfig::config()->saveViewerParameters("", addressport);
   if (addressport.contains("/")) {
 #ifndef Q_OS_WIN
     delete m_socket;
@@ -1299,7 +1301,7 @@ void QVNCConnection::setColourMapEntries(int firstColour, int nColours, rdr::U16
 
 void QVNCConnection::bell()
 {
-  AppManager::instance()->window()->view()->bell();
+  AppManager::instance()->view()->bell();
   // TODO
 #if 0
 #if defined(WIN32)
@@ -1452,12 +1454,12 @@ void QVNCConnection::setCursor(int width, int height, const rfb::Point& hotspot,
           "\x00\x00\x00\x00" "\x00\x00\x00\x00";
     }
   }
-  AppManager::instance()->window()->view()->setCursor(width, height, x, y, data);
+  AppManager::instance()->view()->setCursor(width, height, x, y, data);
 }
 
 void QVNCConnection::setCursorPos(const rfb::Point& pos)
 {
-  AppManager::instance()->window()->view()->setCursorPos(pos.x, pos.y);
+  AppManager::instance()->view()->setCursorPos(pos.x, pos.y);
 }
 
 void QVNCConnection::fence(rdr::U32 flags, unsigned len, const char data[])
@@ -1486,19 +1488,19 @@ void QVNCConnection::requestClipboard()
 void QVNCConnection::setLEDState(unsigned int state)
 {
   vlog.debug("Got server LED state: 0x%08x", state);
-  AppManager::instance()->window()->view()->setLEDState(state);
+  AppManager::instance()->view()->setLEDState(state);
   m_serverParams->setLEDState(state);
 }
 
 void QVNCConnection::handleClipboardAnnounce(bool available)
 {
-  AppManager::instance()->window()->view()->handleClipboardAnnounce(available);
+  AppManager::instance()->view()->handleClipboardAnnounce(available);
   requestClipboard();
 }
 
 void QVNCConnection::handleClipboardData(const char* data)
 {
-  AppManager::instance()->window()->view()->handleClipboardData(data);
+  AppManager::instance()->view()->handleClipboardData(data);
 }
 
 

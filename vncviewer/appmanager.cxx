@@ -1,11 +1,13 @@
 #include <QQmlEngine>
 #include <QLocalSocket>
 #include <QTcpSocket>
+#include <QScreen>
 #include "rdr/Exception.h"
 #include "vncstream.h"
 #include "vncconnection.h"
 #include "viewerconfig.h"
 #include "qdesktopwindow.h"
+#include "vncwinview.h"
 #include "appmanager.h"
 
 AppManager *AppManager::m_manager;
@@ -14,7 +16,7 @@ AppManager::AppManager()
     : QObject(nullptr)
     , m_error(0)
     , m_worker(new QVNCConnection)
-    , m_window(nullptr)
+    , m_view(nullptr)
 {
     m_worker->start();
     connect(m_worker, &QVNCConnection::credentialRequested, this, [this](bool secured, bool userNeeded, bool passwordNeeded) {
@@ -31,7 +33,7 @@ AppManager::~AppManager()
     m_worker->exit();
     m_worker->wait(QDeadlineTimer(1000));
     m_worker->deleteLater();
-    delete m_window;
+    delete m_view;
 }
 
 int AppManager::initialize()
@@ -70,11 +72,14 @@ void AppManager::publishError(const QString &message)
 
 void AppManager::openVNCWindow(int width, int height, QString name)
 {
-  delete m_window;
-  m_window = new QDesktopWindow();
-  m_window->resize(width, height);
-  m_window->setWindowTitle(QString::asprintf("%.240s - TigerVNC", name.toStdString().c_str()));
-  m_window->show();
+  delete m_view;
+#if defined(WIN32)
+  m_view = new QVNCWinView();
+#endif
+
+  m_view->resize(width, height);
+  m_view->setWindowTitle(QString::asprintf("%.240s - TigerVNC", name.toStdString().c_str()));
+  m_view->show();
 }
 
 void AppManager::update(int x0, int y0, int x1, int y1)

@@ -124,7 +124,7 @@ QString ViewerConfig::toLocalFile(const QUrl url) const
 
 void ViewerConfig::saveViewerParameters(QString path, QString serverName) const
 {
-    ::saveViewerParameters(path.toStdString().c_str(), serverName.toStdString().c_str());
+    ::saveViewerParameters(path.isEmpty() ? nullptr : path.toStdString().c_str(), serverName.toStdString().c_str());
 }
 
 QString ViewerConfig::loadViewerParameters(QString path)
