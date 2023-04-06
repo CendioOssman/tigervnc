@@ -3,6 +3,8 @@
 #include "viewerconfig.h"
 #include "parameters.h"
 #include "menukey.h"
+#include "appmanager.h"
+#include "vncconnection.h"
 #include "rfb/encodings.h"
 #include "rfb/Security.h"
 #include "rfb/SecurityClient.h"
@@ -631,3 +633,29 @@ void ViewerConfig::setReconnectOnError(bool value)
     }
 }
 
+void ViewerConfig::handleOptions()
+{
+  // Checking all the details of the current set of encodings is just
+  // a pain. Assume something has changed, as resending the encoding
+  // list is cheap. Avoid overriding what the auto logic has selected
+  // though.
+  QVNCConnection *cc = AppManager::instance()->connection();
+  if (!::autoSelect) {
+    int encNum = encodingNum(::preferredEncoding);
+
+    if (encNum != -1)
+      cc->setPreferredEncoding(encNum);
+  }
+
+  if (::customCompressLevel)
+    cc->setCompressLevel(::compressLevel);
+  else
+    cc->setCompressLevel(-1);
+
+  if (!::noJpeg && !::autoSelect)
+    cc->setQualityLevel(::qualityLevel);
+  else
+    cc->setQualityLevel(-1);
+
+  cc->updatePixelFormat();
+}

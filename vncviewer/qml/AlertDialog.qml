@@ -57,7 +57,7 @@ Window {
             Layout.column: 1
             Layout.rightMargin: 15
             Layout.topMargin: 5
-            Layout.bottomMargin: 10
+            Layout.bottomMargin: 40
             Layout.alignment: Qt.AlignRight | Qt.AlignBottom
             Layout.preferredWidth: 72
             focus: true

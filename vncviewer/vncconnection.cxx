@@ -4,6 +4,7 @@
 #include <QTcpSocket>
 #include <QMutexLocker>
 #include <QTimer>
+#include <QCursor>
 #include <time.h>
 #include "rfb/Hostname.h"
 #include "rfb/CConnection.h"
@@ -227,14 +228,15 @@ QVNCConnection::QVNCConnection()
   , m_user(nullptr)
   , m_password(nullptr)
   , m_formatChange(false)
-  , m_supportsLocalCursor(false)
-  , m_supportsCursorPosition(false)
-  , m_supportsDesktopResize(false)
-  , m_supportsLEDState(false)
+  , m_supportsLocalCursor(true)
+  , m_supportsCursorPosition(true)
+  , m_supportsDesktopResize(true)
+  , m_supportsLEDState(true)
   , m_lastServerEncoding((unsigned int)-1)
   , m_updateStartPos(0)
   , m_bpsEstimate(20000000)
   , m_updateTimer(nullptr)
+  , m_cursor(nullptr)
 {
   moveToThread(this);
   connect(this, &QVNCConnection::socketNotified, this, [this]() {
@@ -248,6 +250,14 @@ QVNCConnection::QVNCConnection()
     //qDebug() << "socketNotified: startProcessing.";
     startProcessing();
   });
+
+  if (customCompressLevel) {
+    setCompressLevel(::compressLevel);
+  }
+
+  if (!::noJpeg) {
+    setQualityLevel(::qualityLevel);
+  }
 }
 
 void QVNCConnection::run()
@@ -447,6 +457,8 @@ void QVNCConnection::resetConnection()
   m_framebuffer = nullptr;
   delete m_packetHandler;
   m_packetHandler = nullptr;
+  delete m_cursor;
+  m_cursor = nullptr;
 
   m_state = rfb::CConnection::RFBSTATE_PROTOCOL_VERSION;
   m_inProcessing = false;
@@ -503,7 +515,7 @@ bool QVNCConnection::processMsg(int state)
       return true;
     }
   }
-  qDebug() << "QVNCConnection::processMsg: state=" << state;
+  //qDebug() << "QVNCConnection::processMsg: state=" << state;
   switch (state) {
     case rfb::CConnection::RFBSTATE_INVALID:          return true;                       // Stand-by state.
     case rfb::CConnection::RFBSTATE_PROTOCOL_VERSION: return processVersionMsg();        // #1
@@ -891,6 +903,7 @@ void QVNCConnection::updateEncodings()
     encodings.push_back(rfb::pseudoEncodingVMwareCursorPosition);
   }
   if (m_supportsDesktopResize) {
+    qDebug() << "QVNCConnection::updateEncodings: m_supportsDesktopResize=" << m_supportsDesktopResize;
     encodings.push_back(rfb::pseudoEncodingDesktopSize);
     encodings.push_back(rfb::pseudoEncodingExtendedDesktopSize);
   }
@@ -917,8 +930,8 @@ void QVNCConnection::updateEncodings()
       encodings.push_back(i);
   }
 
-  if (compressLevel >= 0 && compressLevel <= 9)
-      encodings.push_back(rfb::pseudoEncodingCompressLevel0 + compressLevel);
+  if (m_compressLevel >= 0 && m_compressLevel <= 9)
+      encodings.push_back(rfb::pseudoEncodingCompressLevel0 + m_compressLevel);
   if (qualityLevel >= 0 && qualityLevel <= 9)
       encodings.push_back(rfb::pseudoEncodingQualityLevel0 + qualityLevel);
 
@@ -1246,11 +1259,14 @@ void QVNCConnection::supportsQEMUKeyEvent()
 // CConn.h
 void QVNCConnection::resizeFramebuffer()
 {
-  //  desktop->resizeFramebuffer(m_serverParams->width(), m_serverParams->height());
+  qDebug() << "QVNCConnection::resizeFramebuffer(): width=" << m_serverParams->width() << ",height=" << m_serverParams->height();
+  PlatformPixelBuffer *framebuffer = new PlatformPixelBuffer(m_serverParams->width(), m_serverParams->height());
+  setFramebuffer(framebuffer);
 }
 
 void QVNCConnection::setDesktopSize(int w, int h)
 {
+  qDebug() << "QVNCConnection::QVNCConnection::setDesktopSize: w=" << w << ", h=" << h;
   m_decoder->flush();
 
   server()->setDimensions(w, h);
@@ -1425,6 +1441,7 @@ bool QVNCConnection::dataRect(const rfb::Rect& r, int encoding)
 
 void QVNCConnection::setCursor(int width, int height, const rfb::Point& hotspot, const unsigned char* data)
 {
+#if 0
   // viewport->setCursor(width, height, hotspot, data);
   int x = hotspot.x;
   int y = hotspot.y;
@@ -1455,11 +1472,51 @@ void QVNCConnection::setCursor(int width, int height, const rfb::Point& hotspot,
     }
   }
   AppManager::instance()->view()->setCursor(width, height, x, y, data);
+#else
+  bool emptyCursor = true;
+  for (int i = 0; i < width * height; i++) {
+    if (data[i*4 + 3] != 0) {
+      emptyCursor = false;
+      break;
+    }
+  }
+  if (emptyCursor) {
+    if (::dotWhenNoCursor) {
+      static const char * dotcursor_xpm[] = {
+        "5 5 2 1",
+        ".	c #000000",
+        " 	c #FFFFFF",
+        "     ",
+        " ... ",
+        " ... ",
+        " ... ",
+        "     "};
+      delete m_cursor;
+      m_cursor = new QCursor(QPixmap(dotcursor_xpm), 2, 2);
+    }
+    else {
+      static const char * emptycursor_xpm[] = {
+        "2 2 1 1",
+        ".	c #000000",
+        "..",
+        ".."};
+      delete m_cursor;
+      m_cursor = new QCursor(QPixmap(emptycursor_xpm), 0, 0);
+    }
+  }
+  else {
+    QImage image(data, width, height, QImage::Format_RGBA8888);
+    delete m_cursor;
+    m_cursor = new QCursor(QPixmap::fromImage(image));
+  }
+  emit cursorChanged(m_cursor);
+#endif
 }
 
 void QVNCConnection::setCursorPos(const rfb::Point& pos)
 {
-  AppManager::instance()->view()->setCursorPos(pos.x, pos.y);
+  emit cursorPositionChanged(QPoint(pos.x, pos.y));
+  //AppManager::instance()->view()->setCursorPos(pos.x, pos.y);
 }
 
 void QVNCConnection::fence(rdr::U32 flags, unsigned len, const char data[])
@@ -1488,19 +1545,22 @@ void QVNCConnection::requestClipboard()
 void QVNCConnection::setLEDState(unsigned int state)
 {
   vlog.debug("Got server LED state: 0x%08x", state);
-  AppManager::instance()->view()->setLEDState(state);
+  emit ledStateChanged(state);
+  //AppManager::instance()->view()->setLEDState(state);
   m_serverParams->setLEDState(state);
 }
 
 void QVNCConnection::handleClipboardAnnounce(bool available)
 {
-  AppManager::instance()->view()->handleClipboardAnnounce(available);
+  emit clipboardAnnounced(available);
+  //AppManager::instance()->view()->handleClipboardAnnounce(available);
   requestClipboard();
 }
 
 void QVNCConnection::handleClipboardData(const char* data)
 {
-  AppManager::instance()->view()->handleClipboardData(data);
+  emit clipboardChanged(data);
+  //AppManager::instance()->view()->handleClipboardData(data);
 }
 
 
@@ -1663,4 +1723,13 @@ QString QVNCConnection::infoText()
   infoText += QString::asprintf(_("Security method: %s\n"), rfb::secTypeName(m_securityType));
 
   return infoText;
+}
+
+void QVNCConnection::setCompressLevel(int level)
+{
+  if (m_compressLevel == level)
+    return;
+
+  m_compressLevel = level;
+  m_encodingChange = true;
 }

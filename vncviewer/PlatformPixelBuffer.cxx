@@ -101,7 +101,7 @@ void PlatformPixelBuffer::commitBufferRW(const rfb::Rect& r)
   mutex.unlock();
 
   AppManager::instance()->update(r.tl.x, r.tl.y, r.br.x, r.br.y);
-  qDebug() << "PlatformPixelBuffer::commitBufferRW(): Rect=(" << r.tl.x << "," << r.tl.y << ")-(" << r.br.x << "," << r.br.y << ")";
+//  qDebug() << "PlatformPixelBuffer::commitBufferRW(): Rect=(" << r.tl.x << "," << r.tl.y << ")-(" << r.br.x << "," << r.br.y << ")";
 }
 
 rfb::Rect PlatformPixelBuffer::getDamage(void)

@@ -1,6 +1,8 @@
 #include <QEvent>
+#include <QResizeEvent>
 #include <QMutex>
 #include <QTimer>
+#include <QCursor>
 #include <qt_windows.h>
 
 #define XK_LATIN1
@@ -111,7 +113,9 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
     handleKeyPress(0x1d, XK_Control_L);
   });
 
-  QVNCWinView::setCursor(m_invisibleCursorWidth, m_invisibleCursorHeight, 0, 0, m_invisibleCursor);
+  connect(AppManager::instance()->connection(), &QVNCConnection::cursorChanged, this, [this](QCursor *cursor) {
+    setCursor(cursor);
+  });
 }
 
 /*!
@@ -277,7 +281,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
           int x = (lParam & 0x0000ffff);
           int y = ((lParam & 0xffff0000) >> 16);
           window->postMouseMoveEvent(x, y);
-          qDebug() << "VNCWinView::eventHandler(): WM_MOUSEMOVE: x=" << x << ", y=" << y;
+          //qDebug() << "VNCWinView::eventHandler(): WM_MOUSEMOVE: x=" << x << ", y=" << y;
         }
         break;
       case WM_MOUSELEAVE:
@@ -481,10 +485,18 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
   QWidget::resizeEvent(e);
 
   if (m_hwnd) {
-    int w = width() * m_devicePixelRatio;
-    int h = height() * m_devicePixelRatio;
-    SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, 0);
-    m_resizeTimer->start();
+    QSize size = e->size();
+    bool resizing = (width() != size.width()) || (height() != size.height());
+
+    if (resizing) {
+      int w = width() * m_devicePixelRatio;
+      int h = height() * m_devicePixelRatio;
+      SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, 0);
+      postResizeRequest();
+    }
+    // Some systems require a grab after the window size has been changed.
+    // Otherwise they might hold on to displays, resulting in them being unusable.
+    maybeGrabKeyboard();
   }
 }
 
@@ -767,8 +779,13 @@ int QVNCWinView::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam)
   return 1;
 }
 
-void QVNCWinView::setCursor(int width, int height, int hotX, int hotY, const unsigned char *data)
+void QVNCWinView::setCursor(QCursor *cursor)
 {
+  QImage image = cursor->pixmap().toImage();
+  int width = image.width();
+  int height = image.height();
+  int hotX = cursor->hotSpot().x();
+  int hotY = cursor->hotSpot().y();
   BITMAPV5HEADER header;
   memset(&header, 0, sizeof(BITMAPV5HEADER));
   header.bV5Size = sizeof(BITMAPV5HEADER);
@@ -788,8 +805,10 @@ void QVNCWinView::setCursor(int width, int height, int hotX, int hotY, const uns
   ReleaseDC(nullptr, hdc);
 
   quint32* ptr = bits;
-  for (int i = 0; i < width * height * 4; i += 4) {
-    *ptr++ = qRgba(data[i], data[i+1], data[i+2], data[i+3]);
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      *ptr++ = image.pixel(x, y);
+    }
   }
 
   HBITMAP empty_mask = CreateBitmap(width, height, 1, 1, nullptr);

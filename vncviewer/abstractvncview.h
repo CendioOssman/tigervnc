@@ -6,6 +6,7 @@
 
 class QMenu;
 class QAction;
+class QCursor;
 
 class QAbstractVNCView : public QWidget
 {
@@ -19,7 +20,7 @@ public:
 public slots:
   virtual void handleKeyPress(int keyCode, quint32 keySym);
   virtual void handleKeyRelease(int keyCode);
-  virtual void setCursor(int width, int height, int hotX, int hotY, const unsigned char *data) = 0;
+  virtual void setCursor(QCursor *cursor) = 0;
   virtual void setCursorPos(int x, int y);
   virtual void pushLEDState();
   virtual void setLEDState(unsigned int state);
@@ -51,6 +52,7 @@ protected:
   QTimer *m_resizeTimer;
 
   void createContextMenu();
+  void postResizeRequest();
 };
 
 #endif // ABSTRACTVNCVIEW_H

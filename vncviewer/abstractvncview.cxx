@@ -4,6 +4,7 @@
 #include <QCheckBox>
 #include <QAction>
 #include <QTimer>
+#include <QScreen>
 #include <QDebug>
 #include "rfb/ScreenSet.h"
 #include "rfb/LogWriter.h"
@@ -237,14 +238,13 @@ QAbstractVNCView::~QAbstractVNCView()
   delete m_resizeTimer;
 }
 
+void QAbstractVNCView::postResizeRequest()
+{
+  m_resizeTimer->start();
+}
+
 void QAbstractVNCView::resize(int width, int height)
 {
-//  rfb::ModifiablePixelBuffer *framebuffer0 = AppManager::instance()->connection()->framebuffer();
-//  if ((width != framebuffer0->width()) || (height != framebuffer0->height())) {
-//    PlatformPixelBuffer *framebuffer = new PlatformPixelBuffer(width, height);
-//    AppManager::instance()->connection()->setFramebuffer(framebuffer);
-//  }
-
   width /= m_devicePixelRatio;
   height /= m_devicePixelRatio;
   QWidget::resize(width, height);
@@ -290,7 +290,7 @@ void QAbstractVNCView::handleKeyRelease(int)
 {
 }
 
-void QAbstractVNCView::setCursor(int, int, int, int, const unsigned char *)
+void QAbstractVNCView::setCursor(QCursor *cursor)
 {
 }
 
@@ -374,11 +374,10 @@ void QAbstractVNCView::handleResizeTimeout()
 
 void QAbstractVNCView::remoteResize(int w, int h)
 {
-#if 0
   QVNCConnection *cc = AppManager::instance()->connection();
   rfb::ScreenSet layout;
   rfb::ScreenSet::const_iterator iter;
-  if (!fullscreen_active() || (w > width()) || (h > height())) {
+  if (!fullScreen || (w > width()) || (h > height())) {
     // In windowed mode (or the framebuffer is so large that we need
     // to scroll) we just report a single virtual screen that covers
     // the entire framebuffer.
@@ -411,13 +410,10 @@ void QAbstractVNCView::remoteResize(int w, int h)
     layout.begin()->dimensions.br.y = h;
   }
   else {
-    int i;
     rdr::U32 id;
-    int sx, sy, sw, sh;
-    rfb::Rect viewport_rect, screen_rect;
 
     // In full screen we report all screens that are fully covered.
-
+    rfb::Rect viewport_rect;
     viewport_rect.setXYWH(x() + (width() - w)/2, y() + (height() - h)/2, w, h);
 
     // If we can find a matching screen in the existing set, we use
@@ -426,10 +422,16 @@ void QAbstractVNCView::remoteResize(int w, int h)
     // FIXME: We should really track screens better so we can handle
     //        a resized one.
     //
-    for (i = 0;i < Fl::screen_count();i++) {
-      Fl::screen_xywh(sx, sy, sw, sh, i);
+    for (QScreen *&screen : QGuiApplication::screens()) {
+      double dpr = screen->devicePixelRatio();
+      QRect vg = screen->virtualGeometry();
+      int sx = vg.x();
+      int sy = vg.y();
+      int sw = vg.width() * dpr;
+      int sh = vg.height() * dpr;
 
       // Check that the screen is fully inside the framebuffer
+      rfb::Rect screen_rect;
       screen_rect.setXYWH(sx, sy, sw, sh);
       if (!screen_rect.enclosed_by(viewport_rect))
         continue;
@@ -440,8 +442,7 @@ void QAbstractVNCView::remoteResize(int w, int h)
 
       // Look for perfectly matching existing screen that is not yet present in
       // in the screen layout...
-      for (iter = cc->server()->screenLayout().begin();
-           iter != cc->server()->screenLayout().end(); ++iter) {
+      for (iter = cc->server()->screenLayout().begin(); iter != cc->server()->screenLayout().end(); ++iter) {
         if ((iter->dimensions.tl.x == sx) &&
             (iter->dimensions.tl.y == sy) &&
             (iter->dimensions.width() == sw) &&
@@ -498,5 +499,4 @@ void QAbstractVNCView::remoteResize(int w, int h)
     vlog.debug("%s", buffer);
   }
   AppManager::instance()->connection()->writer()->writeSetDesktopSize(w, h, layout);
-#endif
 }

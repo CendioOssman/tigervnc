@@ -56,13 +56,6 @@ public:
   virtual ~ViewerConfig();
   static ViewerConfig *config() { return m_config; };
   static int initialize();
-  Q_INVOKABLE bool installedSecurity(int type) const;
-  Q_INVOKABLE bool enabledSecurity(int type) const;
-  Q_INVOKABLE QString toLocalFile(const QUrl url) const;
-  Q_INVOKABLE void saveViewerParameters(QString path, QString serverName) const;
-  Q_INVOKABLE QString loadViewerParameters(QString path);
-  Q_INVOKABLE void loadServerHistory();
-  Q_INVOKABLE void saveServerHistory();
   //
   bool openGLFBOenabled() const { return m_openGLFBOenabled; }
   void setOpenGLFBOenabled(bool value);
@@ -176,6 +169,16 @@ signals:
   void reconnectOnErrorChanged(bool value);
   //
   void serverHistoryChanged(QStringList history);
+
+public slots:
+  bool installedSecurity(int type) const;
+  bool enabledSecurity(int type) const;
+  QString toLocalFile(const QUrl url) const;
+  void saveViewerParameters(QString path, QString serverName) const;
+  QString loadViewerParameters(QString path);
+  void loadServerHistory();
+  void saveServerHistory();
+  void handleOptions(); // <- CConn::handleOptions()
 
 private:
   static ViewerConfig *m_config;

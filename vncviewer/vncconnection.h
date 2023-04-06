@@ -55,6 +55,8 @@ public:
   void autoSelectFormatAndEncoding();
   void setQualityLevel(int level);
   rfb::ModifiablePixelBuffer *framebuffer() { return m_framebuffer; }
+  void setCompressLevel(int level);
+  QCursor *cursor() const { return m_cursor; }
 
   // CMsgHandler.h
   void supportsQEMUKeyEvent();
@@ -75,6 +77,7 @@ public:
   void setLEDState(unsigned int state);
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* data);
+  void updatePixelFormat();
 
 
   // CConnection.h
@@ -88,12 +91,18 @@ public:
   void handleClipboardPeek(rdr::U32 flags);
   void handleClipboardNotify(rdr::U32 flags);
   void handleClipboardProvide(rdr::U32 flags, const size_t* lengths, const rdr::U8* const* data);
-  
+  void setPreferredEncoding(int encoding);
+
 
 signals:
   void socketNotified();
   void credentialRequested(bool secured, bool userNeeded, bool passwordNeeded);
   void newVncWindowRequested(int width, int height, QString name);
+  void cursorChanged(QCursor *cursor);
+  void cursorPositionChanged(QPoint point);
+  void ledStateChanged(unsigned int state);
+  void clipboardAnnounced(bool available);
+  void clipboardChanged(const char *data);
 
 public slots:
   void connectToServer(const QString addressport);
@@ -165,6 +174,7 @@ private:
   size_t m_updateStartPos;
   unsigned long long m_bpsEstimate;
   QTimer *m_updateTimer;
+  QCursor *m_cursor;
 
   bool processMsg(int state);
   void bind(int fd);
@@ -177,9 +187,7 @@ private:
   bool processInitMsg();
   void securityCompleted();
   void initDone();
-  void setPreferredEncoding(int encoding);
   void requestNewUpdate();
-  void updatePixelFormat();
   void setPF(const rfb::PixelFormat *pf);
   void authSuccess();
   bool getCredentialProperties(bool &userNeeded, bool &passwordNeeded);

@@ -40,7 +40,7 @@ public slots:
   void refresh(HWND hWnd, bool all = true);
   void handleKeyPress(int keyCode, quint32 keySym) override;
   void handleKeyRelease(int keyCode) override;
-  void setCursor(int width, int height, int hotX, int hotY, const unsigned char *data) override;
+  void setCursor(QCursor *cursor) override;
   void setCursorPos(int x, int y) override;
   void pushLEDState() override;
   void setLEDState(unsigned int state) override;

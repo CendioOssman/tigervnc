@@ -2,6 +2,7 @@
 #include <config.h>
 #endif
 
+#include <QDebug>
 #include <assert.h>
 #include <stdio.h>
 
@@ -226,6 +227,7 @@ bool QMsgReader::readBell()
 
 bool QMsgReader::readServerCutText()
 {
+  qDebug() << "QMsgReader::readServerCutText";
   if (!is->hasData(3 + 4))
     return false;
 
@@ -264,6 +266,7 @@ bool QMsgReader::readServerCutText()
 
 bool QMsgReader::readExtendedClipboard(rdr::S32 len)
 {
+  qDebug() << "QMsgReader::readExtendedClipboard";
   rdr::U32 flags;
   rdr::U32 action;
 
@@ -424,6 +427,7 @@ bool QMsgReader::readEndOfContinuousUpdates()
 
 bool QMsgReader::readFramebufferUpdate()
 {
+  qDebug() << "QMsgReader::readFramebufferUpdate";
   if (!is->hasData(1 + 2))
     return false;
 
@@ -451,6 +455,7 @@ bool QMsgReader::readRect(const Rect& r, int encoding)
 
 bool QMsgReader::readSetXCursor(int width, int height, const Point& hotspot)
 {
+  qDebug() << "QMsgReader::readSetXCursor";
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
 
@@ -514,6 +519,7 @@ bool QMsgReader::readSetXCursor(int width, int height, const Point& hotspot)
 
 bool QMsgReader::readSetCursor(int width, int height, const Point& hotspot)
 {
+  qDebug() << "QMsgReader::readSetCursor";
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
 
@@ -559,6 +565,7 @@ bool QMsgReader::readSetCursor(int width, int height, const Point& hotspot)
 
 bool QMsgReader::readSetCursorWithAlpha(int width, int height, const Point& hotspot)
 {
+  qDebug() << "QMsgReader::readSetCursorWithAlpha";
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
 
@@ -619,6 +626,7 @@ bool QMsgReader::readSetCursorWithAlpha(int width, int height, const Point& hots
 
 bool QMsgReader::readSetVMwareCursor(int width, int height, const Point& hotspot)
 {
+  qDebug() << "QMsgReader::readSetVMwareCursor";
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
 
@@ -721,6 +729,7 @@ bool QMsgReader::readSetVMwareCursor(int width, int height, const Point& hotspot
 
 bool QMsgReader::readSetDesktopName(int x, int y, int w, int h)
 {
+  qDebug() << "QMsgReader::readSetDesktopName";
   rdr::U32 len;
 
   if (!is->hasData(4))
@@ -748,6 +757,7 @@ bool QMsgReader::readSetDesktopName(int x, int y, int w, int h)
 
 bool QMsgReader::readExtendedDesktopSize(int x, int y, int w, int h)
 {
+  qDebug() << "QMsgReader::readExtendedDesktopSize";
   unsigned int screens, i;
   rdr::U32 id, flags;
   int sx, sy, sw, sh;
@@ -782,6 +792,7 @@ bool QMsgReader::readExtendedDesktopSize(int x, int y, int w, int h)
 
 bool QMsgReader::readLEDState()
 {
+  qDebug() << "QMsgReader::readLEDState";
   rdr::U8 state;
 
   if (!is->hasData(1))
@@ -795,6 +806,7 @@ bool QMsgReader::readLEDState()
 
 bool QMsgReader::readVMwareLEDState()
 {
+  qDebug() << "QMsgReader::readVMwareLEDState";
   rdr::U32 state;
 
   if (!is->hasData(4))
