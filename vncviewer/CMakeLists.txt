@@ -167,14 +167,14 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS OpenGL)
 target_compile_definitions(vncviewer
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-target_link_libraries(vncviewer
-  PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::QuickWidgets Qt${QT_VERSION_MAJOR}::OpenGL Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
+    target_link_libraries(vncviewer
+      PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::QuickWidgets Qt${QT_VERSION_MAJOR}::OpenGL Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
 else()
     target_link_libraries(vncviewer
       PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::OpenGL Qt${QT_VERSION_MAJOR}::WinExtras Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
 endif()
 
-if(QT_VERSION_MAJOR EQUAL 6)
+if(${QT_VERSION_MAJOR} EQUAL 6)
     qt_import_qml_plugins(vncviewer)
     qt_finalize_executable(vncviewer)
 endif()
@@ -254,4 +254,25 @@ if(UNIX)
     install(FILES ../media/icons/tigervnc_${res}.png DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/icons/hicolor/${res}x${res}/apps RENAME tigervnc.png)
   endforeach()
   install(FILES ../media/icons/tigervnc.svg DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/icons/hicolor/scalable/apps)
+endif()
+
+if(WIN32 OR APPLE)
+    set(DEPLOY_DIR ${CMAKE_SOURCE_DIR}/deploy CACHE PATH "Package directory")
+    get_target_property(LOCAL_QMAKE_PATH Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
+    get_filename_component(LOCAL_QTBIN_ATH ${LOCAL_QMAKE_PATH} DIRECTORY)
+    if(WIN32)
+        find_program(DEPLOYQT NAMES windeployqt HINTS "${LOCAL_QTBIN_ATH}")
+    else()
+        find_program(DEPLOYQT NAMES macdeployqt HINTS "${LOCAL_QTBIN_ATH}")
+    endif()
+    add_custom_command(
+        TARGET vncviewer
+        POST_BUILD
+        COMMAND ${DEPLOYQT} --$<IF:$<CONFIG:Debug>,debug,release> --dir "${DEPLOY_DIR}" --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer>)
+    add_custom_command(
+        TARGET vncviewer
+        POST_BUILD
+        COMMAND cp -f $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer> "${DEPLOY_DIR}")
+    # To execute mac/windeployqt on 'cmake --install', uncomment the following line.
+    #install(CODE "execute_process(COMMAND ${DEPLOYQT} --$<IF:$<CONFIG:Debug>,debug,release> --dir "${DEPLOY_DIR}" --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml ${CMAKE_INSTALL_PREFIX}/$<TARGET_FILE_NAME:vncviewer>)")
 endif()
