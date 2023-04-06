@@ -20,6 +20,7 @@
 #include "rdr/Exception.h"
 #include "rfb/Timer.h"
 #include "i18n.h"
+#undef asprintf
 #include "vncconnection.h"
 #include "parameters.h"
 #include "abstractvncview.h"

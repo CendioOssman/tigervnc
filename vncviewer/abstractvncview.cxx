@@ -25,6 +25,7 @@
 #include "vncconnection.h"
 #include "locale.h"
 #include "i18n.h"
+#undef asprintf
 #include "parameters.h"
 #include "vncwindow.h"
 #include "abstractvncview.h"

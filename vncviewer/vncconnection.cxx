@@ -17,6 +17,7 @@
 #include "parameters.h"
 #include "appmanager.h"
 #include "i18n.h"
+#undef asprintf
 #include "abstractvncview.h"
 #include "tunnelfactory.h"
 #include "CConn.h"
