@@ -5,6 +5,7 @@
 #include <rdr/types.h>
 
 class QMutex;
+class QVNCConnection;
 
 namespace rdr { class OutStream; }
 

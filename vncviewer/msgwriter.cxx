@@ -22,6 +22,7 @@
 #endif
 
 #include <QMutex>
+#include <QDebug>
 
 #include <stdio.h>
 
@@ -42,7 +43,7 @@
 using namespace rfb;
 
 QMsgWriter::QMsgWriter(ServerParams* server_, rdr::OutStream* os_)
-  : server(server_), os(os_), m_mutex(new QMutex(QMutex::Recursive))
+  : server(server_), os(os_), m_mutex(new QMutex)
 {
 }
 
@@ -61,6 +62,7 @@ void QMsgWriter::writeClientInit(bool shared)
 void QMsgWriter::writeSetPixelFormat(const PixelFormat& pf)
 {
   QMutexLocker locker(m_mutex);
+  qDebug() << "CMsgWriter::writeSetPixelFormat";
   startMsg(msgTypeSetPixelFormat);
   os->pad(3);
   pf.write(os);
@@ -70,6 +72,10 @@ void QMsgWriter::writeSetPixelFormat(const PixelFormat& pf)
 void QMsgWriter::writeSetEncodings(const std::list<rdr::U32> encodings)
 {
   QMutexLocker locker(m_mutex);
+  qDebug() << "CMsgWriter::writeSetEncodings";
+  for (auto encoding : encodings) {
+    qDebug().nospace() << "encoding=" << (int)encoding << ", 0x" << Qt::hex << encoding;
+  }
   std::list<rdr::U32>::const_iterator iter;
   startMsg(msgTypeSetEncodings);
   os->pad(1);
@@ -82,6 +88,7 @@ void QMsgWriter::writeSetEncodings(const std::list<rdr::U32> encodings)
 void QMsgWriter::writeSetDesktopSize(int width, int height,
                                      const ScreenSet& layout)
 {
+  qDebug() << "CMsgWriter::writeSetDesktopSize";
   if (!server->supportsSetDesktopSize)
     throw Exception("Server does not support SetDesktopSize");
 
@@ -95,8 +102,10 @@ void QMsgWriter::writeSetDesktopSize(int width, int height,
   os->writeU8(layout.num_screens());
   os->pad(1);
 
+  qDebug() << "QMsgWriter::writeSetDesktopSize: w=" << width << ", h=" << height;
   ScreenSet::const_iterator iter;
   for (iter = layout.begin();iter != layout.end();++iter) {
+    qDebug() << "QMsgWriter::writeSetDesktopSize: id=" << iter->id << ", iter->dimensions.tl.x=" << iter->dimensions.tl.x << ", iter->dimensions.tl.y=" << iter->dimensions.tl.y << ", iter->dimensions.width()=" << iter->dimensions.width() << ", iter->dimensions.height()=" << iter->dimensions.height();
     os->writeU32(iter->id);
     os->writeU16(iter->dimensions.tl.x);
     os->writeU16(iter->dimensions.tl.y);
@@ -111,6 +120,7 @@ void QMsgWriter::writeSetDesktopSize(int width, int height,
 void QMsgWriter::writeFramebufferUpdateRequest(const Rect& r, bool incremental)
 {
   QMutexLocker locker(m_mutex);
+  qDebug() << "CMsgWriter::writeFramebufferUpdateRequest";
   startMsg(msgTypeFramebufferUpdateRequest);
   os->writeU8(incremental);
   os->writeU16(r.tl.x);
@@ -123,6 +133,7 @@ void QMsgWriter::writeFramebufferUpdateRequest(const Rect& r, bool incremental)
 void QMsgWriter::writeEnableContinuousUpdates(bool enable,
                                               int x, int y, int w, int h)
 {
+  qDebug() << "CMsgWriter::writeEnableContinuousUpdates";
   if (!server->supportsContinuousUpdates)
     throw Exception("Server does not support continuous updates");
 
@@ -141,6 +152,7 @@ void QMsgWriter::writeEnableContinuousUpdates(bool enable,
 
 void QMsgWriter::writeFence(rdr::U32 flags, unsigned len, const char data[])
 {
+  qDebug() << "CMsgWriter::writeFence";
   if (!server->supportsFence)
     throw Exception("Server does not support fences");
   if (len > 64)
@@ -162,6 +174,7 @@ void QMsgWriter::writeFence(rdr::U32 flags, unsigned len, const char data[])
 
 void QMsgWriter::writeKeyEvent(rdr::U32 keysym, rdr::U32 keycode, bool down)
 {
+  qDebug() << "CMsgWriter::writeKeyEvent";
   if (!server->supportsQEMUKeyEvent || !keycode) {
     QMutexLocker locker(m_mutex);
     /* This event isn't meaningful without a valid keysym */
@@ -187,6 +200,7 @@ void QMsgWriter::writeKeyEvent(rdr::U32 keysym, rdr::U32 keycode, bool down)
 void QMsgWriter::writePointerEvent(const Point& pos, int buttonMask)
 {
   QMutexLocker locker(m_mutex);
+  qDebug() << "CMsgWriter::writePointerEvent";
   Point p(pos);
   if (p.x < 0) p.x = 0;
   if (p.y < 0) p.y = 0;
@@ -203,6 +217,7 @@ void QMsgWriter::writePointerEvent(const Point& pos, int buttonMask)
 
 void QMsgWriter::writeClientCutText(const char* str)
 {
+  qDebug() << "CMsgWriter::writeClientCutText";
   size_t len;
 
   if (strchr(str, '\r') != NULL)
@@ -220,6 +235,7 @@ void QMsgWriter::writeClientCutText(const char* str)
 void QMsgWriter::writeClipboardCaps(rdr::U32 caps,
                                     const rdr::U32* lengths)
 {
+  qDebug() << "CMsgWriter::writeClipboardCaps";
 
   if (!(server->clipboardFlags() & clipboardCaps))
     throw Exception("Server does not support clipboard \"caps\" action");
@@ -248,6 +264,7 @@ void QMsgWriter::writeClipboardCaps(rdr::U32 caps,
 
 void QMsgWriter::writeClipboardRequest(rdr::U32 flags)
 {
+  qDebug() << "CMsgWriter::writeClipboardRequest";
   if (!(server->clipboardFlags() & clipboardRequest))
     throw Exception("Server does not support clipboard \"request\" action");
 
@@ -261,6 +278,7 @@ void QMsgWriter::writeClipboardRequest(rdr::U32 flags)
 
 void QMsgWriter::writeClipboardPeek(rdr::U32 flags)
 {
+  qDebug() << "CMsgWriter::writeClipboardPeek";
   if (!(server->clipboardFlags() & clipboardPeek))
     throw Exception("Server does not support clipboard \"peek\" action");
 
@@ -274,6 +292,7 @@ void QMsgWriter::writeClipboardPeek(rdr::U32 flags)
 
 void QMsgWriter::writeClipboardNotify(rdr::U32 flags)
 {
+  qDebug() << "CMsgWriter::writeClipboardNotify";
   if (!(server->clipboardFlags() & clipboardNotify))
     throw Exception("Server does not support clipboard \"notify\" action");
 
@@ -289,6 +308,7 @@ void QMsgWriter::writeClipboardProvide(rdr::U32 flags,
                                       const size_t* lengths,
                                       const rdr::U8* const* data)
 {
+  qDebug() << "CMsgWriter::writeClipboardProvide";
   rdr::MemOutStream mos;
   rdr::ZlibOutStream zos;
 

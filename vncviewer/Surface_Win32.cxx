@@ -29,6 +29,7 @@
 
 void Surface::alloc()
 {
+  qDebug() << "Surface::alloc: width=" << width() << ", height=" << height();
   BITMAPINFOHEADER bih;
   memset(&bih, 0, sizeof(bih));
   bih.biSize         = sizeof(BITMAPINFOHEADER);
