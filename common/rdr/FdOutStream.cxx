@@ -104,6 +104,9 @@ bool FdOutStream::flushBuffer()
 size_t FdOutStream::writeFd(const uint8_t* data, size_t length)
 {
   int n;
+#if defined(WIN32)
+  int werrno;
+#endif
 
   do {
     fd_set fds;

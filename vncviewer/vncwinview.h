@@ -8,10 +8,6 @@
 class QTimer;
 class QMutex;
 
-namespace rfb {
-  class Rect;
-}
-
 using DownMap = std::map<int, quint32>;
 
 class QVNCWinView : public QAbstractVNCView
@@ -25,6 +21,8 @@ public:
   HWND window() const;
   void clearPendingMouseMoveEvent();
   void postMouseMoveEvent(int x, int y);
+  bool hasFocus() const;
+  void setQCursor(const QCursor &cursor);
 
 protected:
   static LRESULT CALLBACK eventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -40,7 +38,6 @@ public slots:
   void refresh(HWND hWnd, bool all = true);
   void handleKeyPress(int keyCode, quint32 keySym) override;
   void handleKeyRelease(int keyCode) override;
-  void setCursor(QCursor *cursor) override;
   void setCursorPos(int x, int y) override;
   void pushLEDState() override;
   void setLEDState(unsigned int state) override;

@@ -29,7 +29,6 @@ signals:
   void connectToServerRequested(const QString addressport);
   void authenticateRequested(QString user, QString password);
   void resetConnectionRequested();
-  void newVncWindowRequested(int width, int height, QString name);
   void updateRequested(int x0, int y0, int x1, int y1);
   void contextMenuRequested();
   void infoDialogRequested();

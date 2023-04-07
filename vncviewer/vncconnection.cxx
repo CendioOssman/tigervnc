@@ -211,19 +211,18 @@ QVNCConnection::QVNCConnection()
   , m_serverPF(new rfb::PixelFormat)
   , m_fullColourPF(new rfb::PixelFormat(32, 24, false, true, 255, 255, 255, 16, 8, 0))
   , m_nextPF(new rfb::PixelFormat)
-  , m_preferredEncoding(0)
-  , m_compressLevel(0)
-  , m_qualityLevel(0)
+  , m_preferredEncoding(rfb::encodingTight)
+  , m_compressLevel(2)
+  , m_qualityLevel(-1)
   , m_encodingChange(false)
   , m_firstUpdate(true)
   , m_pendingUpdate(false)
   , m_continuousUpdates(false)
-  , m_forceNonincremental(false)
+  , m_forceNonincremental(true)
   , m_framebuffer(nullptr)
   , m_decoder(new DecodeManager(this))
   , m_hasLocalClipboard(false)
   , m_unsolicitedClipboardAttempt(false)
-  , m_timer(nullptr)
   , m_pendingSocketEvent(false)
   , m_user(nullptr)
   , m_password(nullptr)
@@ -239,17 +238,7 @@ QVNCConnection::QVNCConnection()
   , m_cursor(nullptr)
 {
   moveToThread(this);
-  connect(this, &QVNCConnection::socketNotified, this, [this]() {
-    {
-      QMutexLocker locker(m_mutex);
-      if (m_inProcessing || m_blocking) {
-        m_timer->start();
-        return;
-      }
-    }
-    //qDebug() << "socketNotified: startProcessing.";
-    startProcessing();
-  });
+  connect(this, &QVNCConnection::socketNotified, this, &QVNCConnection::startProcessing);
 
   if (customCompressLevel) {
     setCompressLevel(::compressLevel);
@@ -260,48 +249,10 @@ QVNCConnection::QVNCConnection()
   }
 }
 
-void QVNCConnection::run()
-{
-  m_timer = new QTimer;
-  m_timer->setInterval(10);
-  m_timer->setSingleShot(true);
-  connect(m_timer, &QTimer::timeout, this, [this]() {
-    {
-      qDebug() << "QTimer: timeout";
-      QMutexLocker locker(m_mutex);
-      if (m_inProcessing || m_blocking) {
-        qDebug() << "QTimer: start";
-        m_timer->start();
-        return;
-      }
-    }
-    qDebug() << "startProcessing: by timer";
-    startProcessing();
-  });
-  m_timer->moveToThread(this);
-
-  m_updateTimer = new QTimer;
-//  m_updateTimer->setInterval(1000);
-//  m_updateTimer->setSingleShot(false);
-//  connect(m_updateTimer, &QTimer::timeout, this, [this]() {
-//    QMutexLocker locker(m_mutex);
-//    if (m_inProcessing || m_blocking || m_state != rfb::CConnection::RFBSTATE_NORMAL) {
-//      return;
-//    }
-//    requestNewUpdate();
-//  });
-//  m_updateTimer->moveToThread(this);
-//  m_updateTimer->start();
-
-  exec();
-}
-
 QVNCConnection::~QVNCConnection()
 {
   resetConnection();
-  m_timer->stop();
   m_updateTimer->stop();
-  delete m_timer;
   delete m_updateTimer;
   delete m_mutex;
   delete m_serverParams;
@@ -311,6 +262,19 @@ QVNCConnection::~QVNCConnection()
   delete m_serverPF;
   delete m_fullColourPF;
   delete m_nextPF;
+  delete m_cursor;
+}
+
+void QVNCConnection::run()
+{
+  m_updateTimer = new QTimer;
+  m_updateTimer->setSingleShot(true);
+  connect(m_updateTimer, &QTimer::timeout, this, []() {
+    AppManager::instance()->view()->handleResizeTimeout();
+  });
+  m_updateTimer->moveToThread(this);
+
+  exec();
 }
 
 void QVNCConnection::bind(int fd)
@@ -328,7 +292,7 @@ void QVNCConnection::bind(int fd)
   m_socketErrorNotifier = new QSocketNotifier(fd, QSocketNotifier::Exception);
   QObject::connect(m_socketErrorNotifier, &QSocketNotifier::activated, this, [](int fd) {
     Q_UNUSED(fd)
-    throw rdr::Exception("CConnection::processMsg: socket error.");
+    throw rdr::Exception("CConnection::bind: socket error.");
   });
 }
 
@@ -435,7 +399,6 @@ void QVNCConnection::resetConnection()
 {
   QMutexLocker locker(m_mutex);
 
-  m_timer->stop();
   if (m_socket) {
     m_socket->shutdown();
   }
@@ -467,6 +430,7 @@ void QVNCConnection::resetConnection()
 
 void QVNCConnection::refreshFramebuffer()
 {
+  qDebug() << "QVNCConnection::refreshFramebuffer: m_continuousUpdates=" << m_continuousUpdates;
   m_forceNonincremental = true;
 
   // Without continuous updates we have to make sure we only have a
@@ -497,10 +461,22 @@ void QVNCConnection::startProcessing()
 {
   {
     QMutexLocker locker(m_mutex);
-    m_timer->stop();
+    if (m_inProcessing || m_blocking) {
+      return;
+    }
     m_inProcessing = true;
   }
-  processMsg(m_state);
+  size_t navailables0;
+  size_t navailables = m_socket->inStream().avail();
+  do {
+    navailables0 = navailables;
+
+    processMsg(m_state);
+
+    //qDebug() << "pre-avail()  navailables=" << navailables;
+    navailables = m_socket->inStream().avail();
+    //qDebug() << "post-avail() navailables=" << navailables;
+  } while (!m_blocking && navailables > 0 && navailables != navailables0);
   {
     QMutexLocker locker(m_mutex);
     m_inProcessing = false;
@@ -515,7 +491,7 @@ bool QVNCConnection::processMsg(int state)
       return true;
     }
   }
-  //qDebug() << "QVNCConnection::processMsg: state=" << state;
+  qDebug() << "QVNCConnection::processMsg: state=" << state;
   switch (state) {
     case rfb::CConnection::RFBSTATE_INVALID:          return true;                       // Stand-by state.
     case rfb::CConnection::RFBSTATE_PROTOCOL_VERSION: return processVersionMsg();        // #1
@@ -811,7 +787,7 @@ void QVNCConnection::initDone()
 {
   // If using AutoSelect with old servers, start in FullColor
   // mode. See comment in autoSelectFormatAndEncoding.
-  if (m_serverParams->beforeVersion(3, 8) && autoSelect)
+  if (m_serverParams->beforeVersion(3, 8) && ::autoSelect)
     fullColour.setParam(true);
 
   *m_serverPF = m_serverParams->pf();
@@ -886,7 +862,6 @@ void QVNCConnection::requestNewUpdate()
   m_forceNonincremental = false;
 }
 
-
 // Ask for encodings based on which decoders are supported.  Assumes higher
 // encoding numbers are more desirable.
 void QVNCConnection::updateEncodings()
@@ -903,7 +878,6 @@ void QVNCConnection::updateEncodings()
     encodings.push_back(rfb::pseudoEncodingVMwareCursorPosition);
   }
   if (m_supportsDesktopResize) {
-    qDebug() << "QVNCConnection::updateEncodings: m_supportsDesktopResize=" << m_supportsDesktopResize;
     encodings.push_back(rfb::pseudoEncodingDesktopSize);
     encodings.push_back(rfb::pseudoEncodingExtendedDesktopSize);
   }
@@ -1200,6 +1174,7 @@ bool QVNCConnection::establishSecurityLayer(int securitySubType)
 //
 void QVNCConnection::autoSelectFormatAndEncoding()
 {
+  qDebug() << "QVNCConnection::autoSelectFormatAndEncoding";
   // Always use Tight
   setPreferredEncoding(rfb::encodingTight);
 
@@ -1262,6 +1237,8 @@ void QVNCConnection::resizeFramebuffer()
   qDebug() << "QVNCConnection::resizeFramebuffer(): width=" << m_serverParams->width() << ",height=" << m_serverParams->height();
   PlatformPixelBuffer *framebuffer = new PlatformPixelBuffer(m_serverParams->width(), m_serverParams->height());
   setFramebuffer(framebuffer);
+
+  // TODO: DesktopWindow::resizeFramebuffer() may have to be ported here.
 }
 
 void QVNCConnection::setDesktopSize(int w, int h)
@@ -1282,6 +1259,7 @@ void QVNCConnection::setDesktopSize(int w, int h)
 
 void QVNCConnection::setExtendedDesktopSize(unsigned reason, unsigned result, int w, int h, const rfb::ScreenSet& layout)
 {
+  qDebug() << "QVNCConnection::QVNCConnection::setExtendedDesktopSize: w=" << w << ", h=" << h;
   m_decoder->flush();
 
   server()->supportsSetDesktopSize = true;
@@ -1363,8 +1341,8 @@ void QVNCConnection::framebufferUpdateStart()
   m_updateStartPos = m_socket->inStream().pos();
 
   // Update the screen prematurely for very slow updates
-//  Fl::add_timeout(1.0, handleUpdateTimeout, this); // TODO: Qt
-
+  m_updateTimer->setInterval(1000);
+  m_updateTimer->start();
 }
 
 // framebufferUpdateEnd() is called at the end of an update.
@@ -1416,11 +1394,11 @@ void QVNCConnection::framebufferUpdateEnd()
   m_bpsEstimate = ((m_bpsEstimate * (1000000 - weight)) +
                  (bps * weight)) / 1000000;
 
-//  Fl::remove_timeout(handleUpdateTimeout, this);
-//  desktop->updateWindow(); TODO: HIRONORI
+  m_updateTimer->stop();
+  AppManager::instance()->view()->updateWindow();
 
   // Compute new settings based on updated bandwidth values
-  if (autoSelect)
+  if (::autoSelect)
     autoSelectFormatAndEncoding();
 }
 
@@ -1441,38 +1419,6 @@ bool QVNCConnection::dataRect(const rfb::Rect& r, int encoding)
 
 void QVNCConnection::setCursor(int width, int height, const rfb::Point& hotspot, const unsigned char* data)
 {
-#if 0
-  // viewport->setCursor(width, height, hotspot, data);
-  int x = hotspot.x;
-  int y = hotspot.y;
-  bool emptyCursor = true;
-  for (int i = 0; i < width * height; i++) {
-    if (data[i*4 + 3] != 0) {
-      emptyCursor = false;
-      break;
-    }
-  }
-  if (emptyCursor) {
-    if (::dotWhenNoCursor) {
-      width = height = 5;
-      x = y = 2;
-      data = (const unsigned char*)
-          "\xff\xff\xff\xff" "\xff\xff\xff\xff" "\xff\xff\xff\xff" "\xff\xff\xff\xff" "\xff\xff\xff\xff"
-          "\xff\xff\xff\xff" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\xff\xff\xff\xff"
-          "\xff\xff\xff\xff" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\xff\xff\xff\xff"
-          "\xff\xff\xff\xff" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\xff\xff\xff\xff"
-          "\xff\xff\xff\xff" "\xff\xff\xff\xff" "\xff\xff\xff\xff" "\xff\xff\xff\xff" "\xff\xff\xff\xff";
-    }
-    else {
-      width = height = 2;
-      x = y = 0;
-      data = (const unsigned char*)
-          "\x00\x00\x00\x00" "\x00\x00\x00\x00"
-          "\x00\x00\x00\x00" "\x00\x00\x00\x00";
-    }
-  }
-  AppManager::instance()->view()->setCursor(width, height, x, y, data);
-#else
   bool emptyCursor = true;
   for (int i = 0; i < width * height; i++) {
     if (data[i*4 + 3] != 0) {
@@ -1497,7 +1443,7 @@ void QVNCConnection::setCursor(int width, int height, const rfb::Point& hotspot,
     else {
       static const char * emptycursor_xpm[] = {
         "2 2 1 1",
-        ".	c #000000",
+        ".	c None",
         "..",
         ".."};
       delete m_cursor;
@@ -1505,18 +1451,17 @@ void QVNCConnection::setCursor(int width, int height, const rfb::Point& hotspot,
     }
   }
   else {
+    qDebug() << "QVNCConnection::setCursor: w=" << width << ", h=" << height << ", data=" << data;
     QImage image(data, width, height, QImage::Format_RGBA8888);
     delete m_cursor;
-    m_cursor = new QCursor(QPixmap::fromImage(image));
+    m_cursor = new QCursor(QPixmap::fromImage(image), hotspot.x, hotspot.y);
   }
-  emit cursorChanged(m_cursor);
-#endif
+  emit cursorChanged(*m_cursor);
 }
 
 void QVNCConnection::setCursorPos(const rfb::Point& pos)
 {
-  emit cursorPositionChanged(QPoint(pos.x, pos.y));
-  //AppManager::instance()->view()->setCursorPos(pos.x, pos.y);
+  emit cursorPositionChanged(pos.x, pos.y);
 }
 
 void QVNCConnection::fence(rdr::U32 flags, unsigned len, const char data[])
@@ -1544,23 +1489,21 @@ void QVNCConnection::requestClipboard()
 
 void QVNCConnection::setLEDState(unsigned int state)
 {
+  qDebug() << "QVNCConnection::setLEDState";
   vlog.debug("Got server LED state: 0x%08x", state);
-  emit ledStateChanged(state);
-  //AppManager::instance()->view()->setLEDState(state);
   m_serverParams->setLEDState(state);
+  emit ledStateChanged(state);
 }
 
 void QVNCConnection::handleClipboardAnnounce(bool available)
 {
   emit clipboardAnnounced(available);
-  //AppManager::instance()->view()->handleClipboardAnnounce(available);
   requestClipboard();
 }
 
 void QVNCConnection::handleClipboardData(const char* data)
 {
   emit clipboardChanged(data);
-  //AppManager::instance()->view()->handleClipboardData(data);
 }
 
 

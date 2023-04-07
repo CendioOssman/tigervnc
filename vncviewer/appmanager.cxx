@@ -24,7 +24,7 @@ AppManager::AppManager()
     }, Qt::QueuedConnection);
     connect(this, &AppManager::connectToServerRequested, m_worker, &QVNCConnection::connectToServer, Qt::QueuedConnection);
     connect(this, &AppManager::authenticateRequested, m_worker, &QVNCConnection::authenticate, Qt::QueuedConnection);
-    connect(m_worker, &QVNCConnection::newVncWindowRequested, this, &AppManager::newVncWindowRequested, Qt::QueuedConnection);
+    connect(m_worker, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow, Qt::QueuedConnection);
     connect(this, &AppManager::resetConnectionRequested, m_worker, &QVNCConnection::resetConnection, Qt::QueuedConnection);
 }
 

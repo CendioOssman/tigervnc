@@ -9,6 +9,7 @@
 #include "rfb/ScreenSet.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ServerParams.h"
+#include "rfb/PixelBuffer.h"
 #include "PlatformPixelBuffer.h"
 #include "msgwriter.h"
 #include "appmanager.h"
@@ -57,10 +58,15 @@ public:
       if (checked) {
         // TODO: DesktopWindow::fullscreen_on() must be ported.
         view->showFullScreen();
+#if 1 // Workaround for Windows wired behavior. On Windows, the first fullscreen attempt always fails. To avoid this, make VNCwindow minimized once then fullscreen again.
+        view->showMinimized();
+        view->showFullScreen();
+#endif
       }
       else {
         view->showNormal();
       }
+      view->handleDesktopSize();
     });
   }
 };
@@ -220,6 +226,9 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   , m_pendingServerClipboard(false)
   , m_pendingClientClipboard(false)
   , m_clipboardSource(0)
+  , m_firstUpdate(true)
+  , m_delayedFullscreen(false)
+  , m_delayedDesktopSize(false)
   , m_keyboardGrabbed(false)
   , m_mouseGrabbed(false)
   , m_resizeTimer(new QTimer)
@@ -227,6 +236,12 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   m_resizeTimer->setInterval(500); // <-- DesktopWindow::resize(int x, int y, int w, int h)
   m_resizeTimer->setSingleShot(true);
   connect(m_resizeTimer, &QTimer::timeout, this, &QAbstractVNCView::handleResizeTimeout);
+
+  connect(AppManager::instance()->connection(), &QVNCConnection::cursorChanged, this, &QAbstractVNCView::setQCursor, Qt::QueuedConnection);
+  connect(AppManager::instance()->connection(), &QVNCConnection::cursorPositionChanged, this, &QAbstractVNCView::setCursorPos, Qt::QueuedConnection);
+  connect(AppManager::instance()->connection(), &QVNCConnection::ledStateChanged, this, &QAbstractVNCView::setLEDState, Qt::QueuedConnection);
+  connect(AppManager::instance()->connection(), &QVNCConnection::clipboardAnnounced, this, &QAbstractVNCView::handleClipboardAnnounce, Qt::QueuedConnection);
+  connect(AppManager::instance()->connection(), &QVNCConnection::clipboardChanged, this, &QAbstractVNCView::handleClipboardData, Qt::QueuedConnection);
 }
 
 QAbstractVNCView::~QAbstractVNCView()
@@ -290,7 +305,7 @@ void QAbstractVNCView::handleKeyRelease(int)
 {
 }
 
-void QAbstractVNCView::setCursor(QCursor *cursor)
+void QAbstractVNCView::setQCursor(const QCursor &)
 {
 }
 
@@ -304,17 +319,6 @@ void QAbstractVNCView::pushLEDState()
 
 void QAbstractVNCView::setLEDState(unsigned int)
 {
-  // The first message is just considered to be the server announcing
-  // support for this extension. We will push our state to sync up the
-  // server when we get focus. If we already have focus we need to push
-  // it here though.
-  if (m_firstLEDState) {
-    m_firstLEDState = false;
-    if (hasFocus()) {
-      pushLEDState();
-    }
-    return;
-  }
 }
 
 void QAbstractVNCView::handleClipboardAnnounce(bool available)
@@ -369,7 +373,7 @@ void QAbstractVNCView::bell()
 
 void QAbstractVNCView::handleResizeTimeout()
 {
-  remoteResize(width(), height());
+  updateWindow();
 }
 
 void QAbstractVNCView::remoteResize(int w, int h)
@@ -498,5 +502,47 @@ void QAbstractVNCView::remoteResize(int w, int h)
   else {
     vlog.debug("%s", buffer);
   }
+  qDebug() << "QAbstractVNCView::remoteResize: w=" << w << ", h=" << h;
   AppManager::instance()->connection()->writer()->writeSetDesktopSize(w, h, layout);
+}
+
+// Copy the areas of the framebuffer that have been changed (damaged)
+// to the displayed window.
+void QAbstractVNCView::updateWindow()
+{
+  // copied from DesktopWindow.cxx.
+  QVNCConnection *cc = AppManager::instance()->connection();
+  if (m_firstUpdate) {
+    if (cc->server()->supportsSetDesktopSize) {
+      // Hack: Wait until we're in the proper mode and position until
+      // resizing things, otherwise we might send the wrong thing.
+      if (m_delayedFullscreen)
+        m_delayedDesktopSize = true;
+      else
+        handleDesktopSize();
+    }
+    m_firstUpdate = false;
+  }
+
+//  // copied from Viewport.cxx. This seems not needed for Windows, because InvalidateRect() is used.
+//  PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
+//  rfb::Rect r = framebuffer->getDamage();
+//  damage(FL_DAMAGE_USER1, r.tl.x + x(), r.tl.y + y(), r.width(), r.height());
+}
+
+void QAbstractVNCView::handleDesktopSize()
+{
+  if (strcmp(::desktopSize, "") != 0) {
+    int width, height;
+    // An explicit size has been requested
+    if (sscanf(::desktopSize, "%dx%d", &width, &height) != 2) {
+      return;
+    }
+    remoteResize(width, height);
+  }
+  else if (::remoteResize) {
+    // No explicit size, but remote resizing is on so make sure it
+    // matches whatever size the window ended up being
+    remoteResize(width(), height());
+  }
 }

@@ -98,8 +98,8 @@ signals:
   void socketNotified();
   void credentialRequested(bool secured, bool userNeeded, bool passwordNeeded);
   void newVncWindowRequested(int width, int height, QString name);
-  void cursorChanged(QCursor *cursor);
-  void cursorPositionChanged(QPoint point);
+  void cursorChanged(const QCursor &cursor);
+  void cursorPositionChanged(int x, int y);
   void ledStateChanged(unsigned int state);
   void clipboardAnnounced(bool available);
   void clipboardChanged(const char *data);
@@ -158,7 +158,6 @@ private:
   QByteArray m_serverClipboard;
   bool m_hasLocalClipboard;
   bool m_unsolicitedClipboardAttempt;
-  QTimer *m_timer;
   bool m_pendingSocketEvent;
   QString *m_user;
   rfb::PlainPasswd *m_password;

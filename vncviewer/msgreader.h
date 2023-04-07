@@ -5,6 +5,9 @@
 #include "rdr/types.h"
 #include "rfb/Rect.h"
 
+class QMutex;
+class QVNCConnection;
+
 namespace rdr {
   class InStream;
 }
@@ -66,6 +69,7 @@ private:
     int rectEncoding;
 
     int cursorEncoding;
+    QMutex *m_mutex;
 
     static const int maxCursorSize = 256;
 };

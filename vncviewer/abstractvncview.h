@@ -20,7 +20,7 @@ public:
 public slots:
   virtual void handleKeyPress(int keyCode, quint32 keySym);
   virtual void handleKeyRelease(int keyCode);
-  virtual void setCursor(QCursor *cursor) = 0;
+  virtual void setQCursor(const QCursor &cursor);
   virtual void setCursorPos(int x, int y);
   virtual void pushLEDState();
   virtual void setLEDState(unsigned int state);
@@ -35,6 +35,8 @@ public slots:
   virtual void bell();
   virtual void handleResizeTimeout();
   virtual void remoteResize(int width, int height);
+  virtual void updateWindow();
+  virtual void handleDesktopSize();
 
 protected:
   double m_devicePixelRatio;
@@ -46,6 +48,9 @@ protected:
   bool m_pendingServerClipboard;
   bool m_pendingClientClipboard;
   int m_clipboardSource;
+  bool m_firstUpdate;
+  bool m_delayedFullscreen;
+  bool m_delayedDesktopSize;
   bool m_keyboardGrabbed;
   bool m_mouseGrabbed;
 

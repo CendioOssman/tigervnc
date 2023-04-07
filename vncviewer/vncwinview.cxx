@@ -112,10 +112,6 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
     m_altGrArmed = false;
     handleKeyPress(0x1d, XK_Control_L);
   });
-
-  connect(AppManager::instance()->connection(), &QVNCConnection::cursorChanged, this, [this](QCursor *cursor) {
-    setCursor(cursor);
-  });
 }
 
 /*!
@@ -445,7 +441,11 @@ bool QVNCWinView::event(QEvent *e)
     case QEvent::Leave:
       qDebug() << "Leave";
       break;
+    case QEvent::CursorChange:
+      qDebug() << "Unprocessed Event: CursorChange";
+      e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
     default:
+      qDebug() << "Unprocessed Event: " << e->type();
       break;
   }
   return QWidget::event(e);
@@ -489,14 +489,24 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
     bool resizing = (width() != size.width()) || (height() != size.height());
 
     if (resizing) {
-      int w = width() * m_devicePixelRatio;
-      int h = height() * m_devicePixelRatio;
-      SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, 0);
-      postResizeRequest();
+      // Try to get the remote size to match our window size, provided
+      // the following conditions are true:
+      //
+      // a) The user has this feature turned on
+      // b) The server supports it
+      // c) We're not still waiting for startup fullscreen to kick in
+      //
+      QVNCConnection *cc = AppManager::instance()->connection();
+      if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize) {
+        int w = width() * m_devicePixelRatio;
+        int h = height() * m_devicePixelRatio;
+        SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, 0);
+        postResizeRequest();
+      }
+      // Some systems require a grab after the window size has been changed.
+      // Otherwise they might hold on to displays, resulting in them being unusable.
+      maybeGrabKeyboard();
     }
-    // Some systems require a grab after the window size has been changed.
-    // Otherwise they might hold on to displays, resulting in them being unusable.
-    maybeGrabKeyboard();
   }
 }
 
@@ -779,13 +789,15 @@ int QVNCWinView::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam)
   return 1;
 }
 
-void QVNCWinView::setCursor(QCursor *cursor)
+void QVNCWinView::setQCursor(const QCursor &cursor)
 {
-  QImage image = cursor->pixmap().toImage();
+  qDebug() << "QVNCWinView::setCursor: #1: cursor=" << cursor;
+  QImage image = cursor.pixmap().toImage();
+  qDebug() << "QVNCWinView::setCursor: #2: cursor=" << cursor;
   int width = image.width();
   int height = image.height();
-  int hotX = cursor->hotSpot().x();
-  int hotY = cursor->hotSpot().y();
+  int hotX = cursor.hotSpot().x();
+  int hotY = cursor.hotSpot().y();
   BITMAPV5HEADER header;
   memset(&header, 0, sizeof(BITMAPV5HEADER));
   header.bV5Size = sizeof(BITMAPV5HEADER);
@@ -836,8 +848,14 @@ void QVNCWinView::setCursorPos(int x, int y)
   SetCursorPos(x, y);
 }
 
+bool QVNCWinView::hasFocus() const
+{
+  return GetFocus() == m_hwnd;
+}
+
 void QVNCWinView::pushLEDState()
 {
+  qDebug() << "QVNCWinView::pushLEDState";
   // Server support?
   rfb::ServerParams *server = AppManager::instance()->connection()->server();
   if (server->ledState() == rfb::ledUnknown) {
@@ -874,9 +892,21 @@ void QVNCWinView::pushLEDState()
 
 void QVNCWinView::setLEDState(unsigned int state)
 {
+  qDebug() << "QVNCWinView::setLEDState";
   vlog.debug("Got server LED state: 0x%08x", state);
 
-  QAbstractVNCView::setLEDState(state);
+  // The first message is just considered to be the server announcing
+  // support for this extension. We will push our state to sync up the
+  // server when we get focus. If we already have focus we need to push
+  // it here though.
+  if (m_firstLEDState) {
+    m_firstLEDState = false;
+    if (hasFocus()) {
+      pushLEDState();
+    }
+    return;
+  }
+
   if (!hasFocus()) {
     return;
   }

@@ -80,6 +80,9 @@ bool FdInStream::fillBuffer()
 size_t FdInStream::readFd(uint8_t* buf, size_t len)
 {
   int n;
+#if defined(WIN32)
+  int werrno;
+#endif
   do {
     fd_set fds;
     struct timeval tv;

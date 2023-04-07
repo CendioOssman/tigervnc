@@ -161,6 +161,7 @@ void Surface::blend(Surface* dst, int src_x, int src_y,
 
 void Surface::alloc()
 {
+  qDebug() << "Surface::alloc: width=" << width() << ", height=" << height();
   BITMAPINFOHEADER bih;
 
 //  data = new RGBQUAD[width() * height()];

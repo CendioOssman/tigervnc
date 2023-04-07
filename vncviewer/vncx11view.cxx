@@ -58,7 +58,7 @@ QVNCX11view::QVNCX11view(QWidget *parent, Qt::WindowFlags f)
     RECT r{x0, y0, x1, y1};
     InvalidateRect(m_hwnd, &r, false); // otherwise, UpdateWindow(m_hwnd);
 #endif
-//    m_rect->union_boundary(rfb::Rect(x0, y0, x1, y1));
+    m_rect->union_boundary(rfb::Rect(x0, y0, x1, y1));
   });
 }
 

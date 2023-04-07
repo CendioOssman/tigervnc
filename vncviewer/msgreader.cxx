@@ -3,6 +3,7 @@
 #endif
 
 #include <QDebug>
+#include <QMutex>
 #include <assert.h>
 #include <stdio.h>
 
@@ -27,16 +28,18 @@ using namespace rfb;
 
 QMsgReader::QMsgReader(QVNCConnection* /* CMsgHandler* */ handler_, rdr::InStream *is_)
   : imageBufIdealSize(0), handler(handler_), is(is_),
-    state(MSGSTATE_IDLE), cursorEncoding(-1)
+    state(MSGSTATE_IDLE), cursorEncoding(-1), m_mutex(new QMutex)
 {
 }
 
 QMsgReader::~QMsgReader()
 {
+  delete m_mutex;
 }
 
 bool QMsgReader::readServerInit()
 {
+  QMutexLocker locker(m_mutex);
   int width, height;
   rdr::U32 len;
 
@@ -65,6 +68,8 @@ bool QMsgReader::readServerInit()
 
 bool QMsgReader::readMsg()
 {
+  QMutexLocker locker(m_mutex);
+  qDebug() << "QMsgReader::readMsg";
   if (state == MSGSTATE_IDLE) {
     if (!is->hasData(1))
       return false;
@@ -407,6 +412,7 @@ bool QMsgReader::readFence()
     return false;
   is->clearRestorePoint();
 
+  qDebug() << "QMsgReader::readFence";
   if (len > sizeof(data)) {
     vlog.error("Ignoring fence with too large payload");
     is->skip(len);
@@ -421,6 +427,7 @@ bool QMsgReader::readFence()
 
 bool QMsgReader::readEndOfContinuousUpdates()
 {
+  qDebug() << "QMsgReader::readEndOfContinuousUpdates";
   handler->endOfContinuousUpdates();
   return true;
 }
@@ -439,6 +446,7 @@ bool QMsgReader::readFramebufferUpdate()
 
 bool QMsgReader::readRect(const Rect& r, int encoding)
 {
+  qDebug() << "QMsgReader::readRect";
   if ((r.br.x > handler->server()->width()) ||
       (r.br.y > handler->server()->height())) {
     vlog.error("Rect too big: %dx%d at %d,%d exceeds %dx%d",
