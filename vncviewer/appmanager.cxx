@@ -6,7 +6,6 @@
 #include "vncstream.h"
 #include "vncconnection.h"
 #include "viewerconfig.h"
-#include "qdesktopwindow.h"
 #include "vncwinview.h"
 #include "appmanager.h"
 
@@ -24,7 +23,7 @@ AppManager::AppManager()
     }, Qt::QueuedConnection);
     connect(this, &AppManager::connectToServerRequested, m_worker, &QVNCConnection::connectToServer, Qt::QueuedConnection);
     connect(this, &AppManager::authenticateRequested, m_worker, &QVNCConnection::authenticate, Qt::QueuedConnection);
-    connect(m_worker, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow, Qt::QueuedConnection);
+    connect(m_worker, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow, Qt::BlockingQueuedConnection);
     connect(this, &AppManager::resetConnectionRequested, m_worker, &QVNCConnection::resetConnection, Qt::QueuedConnection);
 }
 
@@ -80,6 +79,8 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   m_view->resize(width, height);
   m_view->setWindowTitle(QString::asprintf("%.240s - TigerVNC", name.toStdString().c_str()));
   m_view->show();
+
+  emit vncWindowOpened();
 }
 
 void AppManager::update(int x0, int y0, int x1, int y1)

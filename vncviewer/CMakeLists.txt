@@ -42,17 +42,9 @@ set(PROJECT_SOURCES
         msgreader.cxx
         msgwriter.h
         msgwriter.cxx
-        qdesktopwindow.h
-        qdesktopwindow.cxx
         viewerconfig.h
         viewerconfig.cxx
-        vnccanvas.h
-        vnccanvas.cxx
         vncconnection.h
-        vncrenderer.cxx
-        vncrenderer.h
-        logorenderer.cxx
-        logorenderer.h
         vncconnection.cxx
         vncpackethandler.h
         vncstream.h
@@ -256,19 +248,15 @@ if(UNIX)
   install(FILES ../media/icons/tigervnc.svg DESTINATION ${CMAKE_INSTALL_FULL_DATADIR}/icons/hicolor/scalable/apps)
 endif()
 
-if(WIN32 OR APPLE)
+if(WIN32)
     set(DEPLOY_DIR ${CMAKE_SOURCE_DIR}/deploy CACHE PATH "Package directory")
     get_target_property(LOCAL_QMAKE_PATH Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
     get_filename_component(LOCAL_QTBIN_ATH ${LOCAL_QMAKE_PATH} DIRECTORY)
-    if(WIN32)
-        find_program(DEPLOYQT NAMES windeployqt HINTS "${LOCAL_QTBIN_ATH}")
-    else()
-        find_program(DEPLOYQT NAMES macdeployqt HINTS "${LOCAL_QTBIN_ATH}")
-    endif()
+    find_program(DEPLOYQT NAMES windeployqt HINTS "${LOCAL_QTBIN_ATH}")
     add_custom_command(
         TARGET vncviewer
         POST_BUILD
-        COMMAND ${DEPLOYQT} --$<IF:$<CONFIG:Debug>,debug,release> --dir "${DEPLOY_DIR}" --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer>)
+        COMMAND ${DEPLOYQT} --$<IF:$<CONFIG:Debug>,debug,release> --dir "${DEPLOY_DIR}" --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer>)
     add_custom_command(
         TARGET vncviewer
         POST_BUILD

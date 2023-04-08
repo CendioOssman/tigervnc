@@ -9,8 +9,6 @@
 #include "viewerconfig.h"
 #include "appmanager.h"
 #include "vncconnection.h"
-#include "vnccanvas.h"
-#include "vncrenderer.h"
 
 #include <QScreen>
 
@@ -63,8 +61,6 @@ int main(int argc, char *argv[])
 
     ViewerConfig::initialize();
     AppManager::initialize();
-    qmlRegisterType<VncCanvas>("Qt.TigerVNC", 1, 0, "VncCanvas");
-    qmlRegisterType<VNCFramebuffer>("Qt.TigerVNC", 1, 0, "VNCFramebuffer");
 
     QQmlApplicationEngine engine;
 

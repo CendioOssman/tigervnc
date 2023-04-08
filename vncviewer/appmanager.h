@@ -28,12 +28,14 @@ signals:
   void dataReady(QByteArray bytes);
   void connectToServerRequested(const QString addressport);
   void authenticateRequested(QString user, QString password);
+  void newVncWindowRequested(int width, int height, QString name);
   void resetConnectionRequested();
   void updateRequested(int x0, int y0, int x1, int y1);
   void contextMenuRequested();
   void infoDialogRequested();
   void optionDialogRequested();
   void aboutDialogRequested();
+  void vncWindowOpened();
 
 public slots:
   void publishError(const QString &message);

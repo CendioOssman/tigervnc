@@ -18,18 +18,8 @@ Item {
             alertDialog.open()
         }
 
-        function onNewVncWindowRequested(width, height, name) {
+        function onVncWindowOpened(width, height, name) {
             serverDialog.visible = false
-
-            if (Config.openGLFBOenabled) {
-                var component = Qt.createComponent("VncWindow.qml")
-                if (component.status === Component.Ready) {
-                    component.createObject(null, { width: width, height: height, title: name, visible: true })
-                }
-            }
-            else {
-                AppManager.openVNCWindow(width, height, name)
-            }
         }
 
         function onInfoDialogRequested() {
@@ -43,6 +33,9 @@ Item {
         function onAboutDialogRequested() {
             aboutDialog.open();
         }
+    }
+    Connections {
+        target: AppManager
     }
 
     ServerDialog {

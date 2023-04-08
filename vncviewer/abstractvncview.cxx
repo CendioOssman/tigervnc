@@ -13,7 +13,6 @@
 #include "PlatformPixelBuffer.h"
 #include "msgwriter.h"
 #include "appmanager.h"
-#include "qdesktopwindow.h"
 #include "parameters.h"
 #include "menukey.h"
 #include "vncconnection.h"
