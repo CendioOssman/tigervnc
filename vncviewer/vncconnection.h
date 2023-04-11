@@ -112,6 +112,7 @@ public slots:
   void refreshFramebuffer();
   QString infoText();
   void requestClipboard();
+  void updateEncodings();
 
 protected:
   void run() override;
@@ -194,7 +195,6 @@ private:
   bool establishSecurityLayer(int securitySubType);
   void setBlocking(bool blocking);
   bool blocking();
-  void updateEncodings();
 };
 
 #endif // VNCCONNECTION_H

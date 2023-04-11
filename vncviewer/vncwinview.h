@@ -20,12 +20,12 @@ public:
   void setWindow(HWND);
   HWND window() const;
   void clearPendingMouseMoveEvent();
-  void postMouseMoveEvent(int x, int y);
+  void postMouseMoveEvent(int x, int y, int mask);
   bool hasFocus() const;
-  void setQCursor(const QCursor &cursor);
 
 protected:
   static LRESULT CALLBACK eventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+  static void getMouseProperties(WPARAM wParam, LPARAM lParam, int &x, int &y, int &buttonMask, int &wheelMask);
   bool event(QEvent *e) override;
   bool nativeEvent(const QByteArray &eventType, void *message, long *result) override;
   HWND createWindow(HWND parent, HINSTANCE instance);
@@ -34,6 +34,7 @@ protected:
   void resizeEvent(QResizeEvent*) override;
 
 public slots:
+  void setQCursor(const QCursor &cursor) override;
   void returnPressed();
   void refresh(HWND hWnd, bool all = true);
   void handleKeyPress(int keyCode, quint32 keySym) override;
@@ -52,14 +53,6 @@ public slots:
   void fullscreen(bool enabled) override;
 
 private:
-  void fixParent();
-  friend void *getWindowProc(QVNCWinView *host);
-  void resolveAltGrDetection(bool isAltGrSequence);
-  int handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lParam);
-  int handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam);
-  void startMouseTracking();
-  void stopMouseTracking();
-
   void *m_wndproc;
   bool m_hwndowner;
   HWND m_hwnd;
@@ -82,6 +75,14 @@ private:
   const int m_invisibleCursorWidth = 2;
   const int m_invisibleCursorHeight = 2;
   static const unsigned char *m_invisibleCursor;
+
+  void fixParent();
+  friend void *getWindowProc(QVNCWinView *host);
+  void resolveAltGrDetection(bool isAltGrSequence);
+  int handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lParam);
+  int handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam);
+  void startMouseTracking();
+  void stopMouseTracking();
 };
 
 #endif // VNCWINVIEW_H

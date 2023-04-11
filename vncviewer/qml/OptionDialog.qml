@@ -29,6 +29,7 @@ Window {
     }
 
     function commit() {
+        close()
         Config.autoSelect = compressionAutoSelect.checked
         if (compressionEncodingTight.checked) { Config.preferredEncodingNum = 7 }
         if (compressionEncodingZRLE.checked) { Config.preferredEncodingNum = 16 }
@@ -62,27 +63,46 @@ Window {
         Config.acceptClipboard = inputClipboardFromServer.checked
         Config.sendClipboard = inputClipboardToServer.checked
         //
-        Config.fullScreen = !displayWindowed.checked
-        if (displayFullScreenOnCurrentMonitor.checked) { Config.fullScreen = true; Config.fullScreenMode = Config.FSCurrent }
-        if (displayFullScreenOnAllMonitors.checked) { Config.fullScreen = true; Config.fullScreenMode = Config.FSAll }
-        if (displayFullScreenOnSelectedMonitors.checked) { Config.fullScreen = true; Config.fullScreenMode = Config.FSSelected }
+        // Update fullscreen properties. Note that Config.fullScreen must be updated at the last, because changing it causes immediate fullscreening, so
+        // all the fullscreen properties must be updated before updating Config.fullScreen.
         var selectedScreens = []
         for (var bix = 0; bix < screenSelectionButtons.length; bix++) {
             if (screenSelectionButtons[bix].checked) {
                 selectedScreens.push(bix + 1)  // selected screen ID is 1-origin.
             }
         }
+        var selectedScreensChanged = !equals(Config.selectedScreens, selectedScreens)
         Config.selectedScreens = selectedScreens
-        if (Config.fullScreen && Config.fullScreenMode === Config.FullScreenSelected && selectedScreens.length === 0) {
-            Config.fullScreenMode = Config.FullScreenCurrent
+        if (displayWindowed.checked) {
+            Config.fullScreen = false
+        }
+        else {
+            var newFullScreenMode = displayFullScreenOnAllMonitors.checked ? Config.FSAll : displayFullScreenOnSelectedMonitors.checked ? Config.FSSelected : Config.FSCurrent
+            if (newFullScreenMode !== Config.fullScreenMode || (newFullScreenMode === Config.FSSelected && (Config.fullScreenMode !== Config.FSSelected || selectedScreensChanged))) {
+                Config.fullScreenMode = newFullScreenMode
+                // To reconfigure the fullscreen mode, set Config.fullScreen to false once, then set it to true.
+                Config.fullScreen = false
+                Config.fullScreen = true
+            }
         }
         //
         Config.shared = miscShared.checked
         Config.reconnectOnError = miscReconnectQuery.checked
 
         AppManager.applyOptionsToView()
+    }
 
-        close()
+    function equals(a1, a2) {
+        if (a1.length !== a2.length) {
+            return false
+        }
+        for (var i = 0; i < a1.length; i++) {
+            if (a1[i] !== a2[i]) {
+                return false
+            }
+        }
+
+        return true
     }
 
     function reset() {
@@ -191,7 +211,8 @@ Window {
             //console.log("screen[" + j + "] lx=" + lx + ",ly=" + ly + ",lw=" + lw + ",lh=" +lh)
             var comp = Qt.createComponent("CButton.qml", Component.PreferSynchronous)
             var button = comp.createObject(displaySelectionView, { x: lx, y: ly, width: lw, height: lh, checkable: true })
-            button.toggled.connect(reportScreenSelection) // For debugging purpose.
+            var handler = selectionHandlerFactory.createObject(this, { buttonIndex: j })
+            button.toggled.connect(handler.validateDisplaySelection)
             screenSelectionButtons.push(button)
         }
 
@@ -204,7 +225,27 @@ Window {
         }
     }
 
-    function reportScreenSelection() {
+    Component {
+        id: selectionHandlerFactory
+        QtObject {
+            property int buttonIndex
+            // Ensure the number of selected screens never becomes zero.
+            function validateDisplaySelection() {
+                var found = false
+                var currentButtonIndex = 0
+                for (var i = 0; i < screenSelectionButtons.length; i++) {
+                    if (screenSelectionButtons[i].checked) {
+                        found = true
+                    }
+                }
+                if (!found) {
+                    screenSelectionButtons[buttonIndex].checked = true
+                }
+            }
+        }
+    }
+
+    function reportScreenSelection() { // For debugging purpose.
         for (var i = 0; i < screenSelectionButtons.length; i++) {
             console.log("screenSelectionButtons[" + i + "]=" + screenSelectionButtons[i].checked)
         }

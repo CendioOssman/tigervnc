@@ -79,16 +79,19 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   m_view->resize(width, height);
   m_view->setWindowTitle(QString::asprintf("%.240s - TigerVNC", name.toStdString().c_str()));
   m_view->show();
+  if (ViewerConfig::config()->fullScreen()) {
+    m_view->fullscreen(true);
+  }
 
   emit vncWindowOpened();
 }
 
 void AppManager::applyOptionsToView()
 {
-  if (!m_view) {
-    return;
-  }
-  m_view->fullscreen(ViewerConfig::config()->fullScreen());
+//  if (!m_view) {
+//    return;
+//  }
+//  m_view->fullscreen(ViewerConfig::config()->fullScreen());
 }
 
 void AppManager::update(int x0, int y0, int x1, int y1)

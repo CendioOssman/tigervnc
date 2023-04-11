@@ -1268,9 +1268,7 @@ void QVNCConnection::setExtendedDesktopSize(unsigned reason, unsigned result, in
   server()->setDimensions(w, h, layout);
 
   if (m_continuousUpdates)
-    writer()->writeEnableContinuousUpdates(true, 0, 0,
-                                           server()->width(),
-                                           server()->height());
+    writer()->writeEnableContinuousUpdates(true, 0, 0, server()->width(), server()->height());
 
   resizeFramebuffer();
   assert(m_framebuffer != nullptr);
@@ -1363,6 +1361,7 @@ void QVNCConnection::framebufferUpdateEnd()
 
   if (m_firstUpdate) {
     if (server()->supportsContinuousUpdates) {
+      qDebug() << "QVNCConnection::framebufferUpdateEnd: m_continuousUpdates=true";
       vlog.info("Enabling continuous updates");
       m_continuousUpdates = true;
       writer()->writeEnableContinuousUpdates(true, 0, 0,

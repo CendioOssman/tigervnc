@@ -5,6 +5,7 @@
 #include <QAction>
 #include <QTimer>
 #include <QScreen>
+#include <QWindow>
 #include <QDebug>
 #include "rfb/ScreenSet.h"
 #include "rfb/LogWriter.h"
@@ -56,6 +57,11 @@ public:
     connect(this, &QAction::toggled, this, [](bool checked) {
       AppManager::instance()->view()->fullscreen(checked);
     });
+    connect(ViewerConfig::config(), &ViewerConfig::fullScreenChanged, this, [this](bool enabled) {
+      setChecked(enabled);
+    });
+
+    setChecked(ViewerConfig::config()->fullScreen());
   }
 };
 
@@ -180,6 +186,7 @@ public:
   {
     connect(this, &QAction::triggered, this, []() {
       AppManager::instance()->connection()->refreshFramebuffer();
+      AppManager::instance()->view()->updateWindow();
     });
   }
 };
@@ -210,10 +217,6 @@ public:
 
 QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   : QWidget(parent, f)
-  , m_x(0)
-  , m_y(0)
-  , m_width(0)
-  , m_height(0)
   , m_devicePixelRatio(devicePixelRatioF())
   , m_contextMenu(nullptr)
   , m_firstLEDState(false)
@@ -228,7 +231,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   , m_resizeTimer(new QTimer)
   , m_fullscreenEnabled(false)
 {
-  m_resizeTimer->setInterval(500); // <-- DesktopWindow::resize(int x, int y, int w, int h)
+  m_resizeTimer->setInterval(10); // <-- DesktopWindow::resize(int x, int y, int w, int h)
   m_resizeTimer->setSingleShot(true);
   connect(m_resizeTimer, &QTimer::timeout, this, &QAbstractVNCView::handleDesktopSize);
 
@@ -248,7 +251,7 @@ QAbstractVNCView::~QAbstractVNCView()
   delete m_resizeTimer;
 }
 
-void QAbstractVNCView::postResizeRequest()
+void QAbstractVNCView::postRemoteResizeRequest()
 {
   m_resizeTimer->start();
 }
@@ -377,7 +380,7 @@ void QAbstractVNCView::remoteResize(int w, int h)
   QVNCConnection *cc = AppManager::instance()->connection();
   rfb::ScreenSet layout;
   rfb::ScreenSet::const_iterator iter;
-  if (!fullScreen || (w > width()) || (h > height())) {
+  if (!m_fullscreenEnabled || (w > width() * m_devicePixelRatio) || (h > height() * m_devicePixelRatio)) {
     // In windowed mode (or the framebuffer is so large that we need
     // to scroll) we just report a single virtual screen that covers
     // the entire framebuffer.
@@ -414,7 +417,8 @@ void QAbstractVNCView::remoteResize(int w, int h)
 
     // In full screen we report all screens that are fully covered.
     rfb::Rect viewport_rect;
-    viewport_rect.setXYWH(x() + (width() - w)/2, y() + (height() - h)/2, w, h);
+    //viewport_rect.setXYWH(x() + (width() - w)/2, y() + (height() - h)/2, w, h);
+    viewport_rect.setXYWH(0, 0, w, h);
 
     // If we can find a matching screen in the existing set, we use
     // that, otherwise we create a brand new screen.
@@ -422,9 +426,11 @@ void QAbstractVNCView::remoteResize(int w, int h)
     // FIXME: We should really track screens better so we can handle
     //        a resized one.
     //
-    for (QScreen *&screen : QGuiApplication::screens()) {
+    QApplication *app = static_cast<QApplication*>(QApplication::instance());
+    QList<QScreen*> screens = app->screens();
+    for (QScreen *&screen : screens) {
       double dpr = screen->devicePixelRatio();
-      QRect vg = screen->virtualGeometry();
+      QRect vg = screen->geometry();
       int sx = vg.x();
       int sy = vg.y();
       int sw = vg.width() * dpr;
@@ -498,7 +504,7 @@ void QAbstractVNCView::remoteResize(int w, int h)
   else {
     vlog.debug("%s", buffer);
   }
-  qDebug() << "QAbstractVNCView::remoteResize: w=" << w << ", h=" << h;
+  qDebug() << "QAbstractVNCView::remoteResize: w=" << w << ", h=" << h << ", layout=" << buffer;
   AppManager::instance()->connection()->writer()->writeSetDesktopSize(w, h, layout);
 }
 
@@ -521,23 +527,26 @@ void QAbstractVNCView::updateWindow()
   }
 
   rfb::ModifiablePixelBuffer *framebuffer = cc->framebuffer();
+  qDebug() << "QAbstractVNCView::updateWindow: w=" << framebuffer->width() << ", h=" << framebuffer->height();
   emit AppManager::instance()->updateRequested(0, 0, framebuffer->width(), framebuffer->height());
 }
 
 void QAbstractVNCView::handleDesktopSize()
 {
   if (strcmp(::desktopSize, "") != 0) {
-    int width, height;
+    int w, h;
     // An explicit size has been requested
-    if (sscanf(::desktopSize, "%dx%d", &width, &height) != 2) {
+    if (sscanf(::desktopSize, "%dx%d", &w, &h) != 2) {
       return;
     }
-    remoteResize(width, height);
+    remoteResize(w * m_devicePixelRatio, h * m_devicePixelRatio);
+    qDebug() << "QAbstractVNCView::handleDesktopSize(explicit): width=" << w << ", height=" << h;
   }
   else if (::remoteResize) {
     // No explicit size, but remote resizing is on so make sure it
     // matches whatever size the window ended up being
     remoteResize(width() * m_devicePixelRatio, height() * m_devicePixelRatio);
+    qDebug() << "QAbstractVNCView::handleDesktopSize(implicit): width=" << width() << ", height=" << height();
   }
 }
 
@@ -564,13 +573,12 @@ QList<int> QAbstractVNCView::fullscreenScreens()
 
 void QAbstractVNCView::fullscreen(bool enabled)
 {
+  qDebug() << "QAbstractVNCView::fullscreen: enabled=" << enabled;
+  m_fullscreenEnabled = false;
   if (enabled) {
     // cf. DesktopWindow::fullscreen_on()
     if (!isFullscreenEnabled()) {
-      m_x = x();
-      m_y = y();
-      m_width = width() * m_devicePixelRatio;
-      m_height = height() * m_devicePixelRatio;
+      m_geometry = saveGeometry();
     }
 
     auto mode = ViewerConfig::config()->fullScreenMode();
@@ -578,14 +586,14 @@ void QAbstractVNCView::fullscreen(bool enabled)
       QApplication *app = static_cast<QApplication*>(QApplication::instance());
       QList<QScreen*> screens = app->screens();
       QList<int> selectedScreens = fullscreenScreens();
-
+      QScreen *selectedPrimaryScreen = screens[selectedScreens[0]];
       int xmin = MAXINT;
       int ymin = MAXINT;
       int xmax = MININT;
       int ymax = MININT;
-      for (int id = 0; id < selectedScreens.length(); id++) {
-        QScreen *screen = screens[id];
-        QRect rect = screen->virtualGeometry();
+      for (int &screenIndex : selectedScreens) {
+        QScreen *screen = screens[screenIndex];
+        QRect rect = screen->geometry();
         double dpr = screen->devicePixelRatio();
         if (xmin > rect.x()) {
           xmin = rect.x();
@@ -606,8 +614,10 @@ void QAbstractVNCView::fullscreen(bool enabled)
 
       if (selectedScreens.length() == 1) {
         moveView(xmin, ymin);
+        windowHandle()->setScreen(selectedPrimaryScreen);
         showFullScreen();
-#if 1 // Workaround for Windows wired behavior. On Windows, the first fullscreen attempt always fails. To avoid this, make VNCwindow minimized once then fullscreen again.
+        handleDesktopSize();
+#if 1 // Workaround for Windows weird behavior. On Windows, the first fullscreen attempt always fails. To avoid this, make VNCwindow minimized once then fullscreen again.
         showMinimized();
         showFullScreen();
 #endif
@@ -616,15 +626,13 @@ void QAbstractVNCView::fullscreen(bool enabled)
         setWindowFlag(Qt::FramelessWindowHint, true);
         moveView(xmin, ymin);
         resize(w, h);
-#if 1 // Workaround for Windows wired behavior. On Windows, the first fullscreen attempt always fails. To avoid this, make VNCwindow minimized once then fullscreen again.
-        showMinimized();
         showNormal();
-#endif
       }
     }
     else {
       showFullScreen();
-#if 1 // Workaround for Windows wired behavior. On Windows, the first fullscreen attempt always fails. To avoid this, make VNCwindow minimized once then fullscreen again.
+      handleDesktopSize();
+#if 1 // Workaround for Windows weird behavior. On Windows, the first fullscreen attempt always fails. To avoid this, make VNCwindow minimized once then fullscreen again.
       showMinimized();
       showFullScreen();
 #endif
@@ -634,17 +642,12 @@ void QAbstractVNCView::fullscreen(bool enabled)
     setWindowFlag(Qt::FramelessWindowHint, false);
     setWindowFlag(Qt::Window, true);
     showNormal();
-#if 1 // Workaround for Windows wired behavior. On Windows, the first fullscreen attempt always fails. To avoid this, make VNCwindow minimized once then fullscreen again.
-    showMinimized();
-    showNormal();
-#endif
-    moveView(m_x, m_y);
-    resize(m_width, m_height);
+    restoreGeometry(m_geometry);
+    handleDesktopSize();
   }
-  handleDesktopSize();
+  m_fullscreenEnabled = enabled;
   raise();
   setFocus();
-  m_fullscreenEnabled = enabled;
 }
 
 void QAbstractVNCView::moveView(int x, int y)

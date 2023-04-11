@@ -243,7 +243,7 @@ void QVNCWinView::clearPendingMouseMoveEvent()
   m_mouseMoveEventTimer->stop();
 }
 
-void QVNCWinView::postMouseMoveEvent(int x, int y)
+void QVNCWinView::postMouseMoveEvent(int x, int y, int mask)
 {
   {
     QMutexLocker locker(m_mutex);
@@ -254,9 +254,10 @@ void QVNCWinView::postMouseMoveEvent(int x, int y)
       return;
     }
   }
+  qDebug() << "QVNCWinView::postMouseMoveEvent: x=" << x << ", y=" << y << ", btn=" << Qt::hex << mask;
   QMsgWriter *writer = AppManager::instance()->connection()->writer();
   rfb::Point p(x, y);
-  writer->writePointerEvent(p, 0);
+  writer->writePointerEvent(p, mask);
   m_pendingMouseMoveEvent = false;
   m_mouseMoveEventTimer->start();
 }
@@ -275,9 +276,9 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
     switch (message) {
       case WM_MOUSEMOVE: {
           window->startMouseTracking();
-          int x = (lParam & 0x0000ffff);
-          int y = ((lParam & 0xffff0000) >> 16);
-          window->postMouseMoveEvent(x, y);
+          int x, y, buttonMask, wheelMask;
+          getMouseProperties(wParam, lParam, x, y, buttonMask, wheelMask);
+          window->postMouseMoveEvent(x, y, buttonMask | wheelMask);
           //qDebug() << "VNCWinView::eventHandler(): WM_MOUSEMOVE: x=" << x << ", y=" << y;
         }
         break;
@@ -294,38 +295,12 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       case WM_XBUTTONUP:
       case WM_XBUTTONDOWN: {
           window->clearPendingMouseMoveEvent();
-          short h = (short)HIWORD(wParam);
-          WORD l = LOWORD(wParam);
-          int buttonMask = 0;
-          int wheelMask = 0;
-          if (l & MK_LBUTTON) {
-            buttonMask |= 1;
-          }
-          if (l & MK_MBUTTON) {
-            buttonMask |= 2;
-          }
-          if (l & MK_RBUTTON) {
-            buttonMask |= 4;
-          }
-          if (l & MK_XBUTTON1) {
-            wheelMask |= 32;
-          }
-          if (l & MK_XBUTTON2) {
-            wheelMask |= 64;
-          }
-          if (h < 0) {
-            wheelMask |= 8;
-          }
-          if (h > 0) {
-            wheelMask |= 16;
-          }
-
-          int x = (lParam & 0x0000ffff);
-          int y = ((lParam & 0xffff0000) >> 16);
+          int x, y, buttonMask, wheelMask;
+          getMouseProperties(wParam, lParam, x, y, buttonMask, wheelMask);
           rfb::Point p(x, y);
           QMsgWriter *writer = AppManager::instance()->connection()->writer();
           writer->writePointerEvent(p, buttonMask | wheelMask);
-          qDebug() << "VNCWinView::eventHandler(): (button up/down): x=" << p.x << ", y=" << p.y;
+          qDebug() << "QVNCWinView::eventHandler (button up/down): x=" << x << ", y=" << y << ", btn=" << Qt::hex << (buttonMask | wheelMask);
           if (message == WM_LBUTTONUP || message == WM_MBUTTONUP || message == WM_RBUTTONUP || message == WM_XBUTTONUP) {
             // We usually fail to grab the mouse if a mouse button was
             // pressed when we gained focus (e.g. clicking on our window),
@@ -364,6 +339,38 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
     }
   }
   return 0;
+}
+
+void QVNCWinView::getMouseProperties(WPARAM wParam, LPARAM lParam, int &x, int &y, int &buttonMask, int &wheelMask)
+{
+  short h = (short)HIWORD(wParam);
+  WORD l = LOWORD(wParam);
+  buttonMask = 0;
+  wheelMask = 0;
+  if (l & MK_LBUTTON) {
+    buttonMask |= 1;
+  }
+  if (l & MK_MBUTTON) {
+    buttonMask |= 2;
+  }
+  if (l & MK_RBUTTON) {
+    buttonMask |= 4;
+  }
+  if (l & MK_XBUTTON1) {
+    wheelMask |= 32;
+  }
+  if (l & MK_XBUTTON2) {
+    wheelMask |= 64;
+  }
+  if (h < 0) {
+    wheelMask |= 8;
+  }
+  if (h > 0) {
+    wheelMask |= 16;
+  }
+
+  x = (lParam & 0x0000ffff);
+  y = ((lParam & 0xffff0000) >> 16);
 }
 
 void QVNCWinView::refresh(HWND hWnd, bool all)
@@ -483,27 +490,34 @@ void QVNCWinView::focusInEvent(QFocusEvent *e)
 */
 void QVNCWinView::resizeEvent(QResizeEvent *e)
 {
+  qDebug() << "QVNCWinView::resizeEvent: w=" << e->size().width() << ", h=" << e->size().height();
   QWidget::resizeEvent(e);
 
   if (m_hwnd) {
-    // Try to get the remote size to match our window size, provided
-    // the following conditions are true:
-    //
-    // a) The user has this feature turned on
-    // b) The server supports it
-    // c) We're not still waiting for startup fullscreen to kick in
-    //
-    QVNCConnection *cc = AppManager::instance()->connection();
-    if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize) {
-      QSize size = e->size();
-      int w = size.width() * m_devicePixelRatio;
-      int h = size.height() * m_devicePixelRatio;
-      SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, 0);
-      postResizeRequest();
+    QSize size = e->size();
+    int w = size.width() * m_devicePixelRatio;
+    int h = size.height() * m_devicePixelRatio;
+    qDebug() << "QVNCWinView::resizeEvent: SetWindowPos w=" << w << ", h=" << h;
+    SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, 0);
+
+    bool resizing = (width() != size.width()) || (height() != size.height());
+
+    if (resizing) {
+      // Try to get the remote size to match our window size, provided
+      // the following conditions are true:
+      //
+      // a) The user has this feature turned on
+      // b) The server supports it
+      // c) We're not still waiting for startup fullscreen to kick in
+      //
+      QVNCConnection *cc = AppManager::instance()->connection();
+      if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize) {
+        postRemoteResizeRequest();
+      }
+      // Some systems require a grab after the window size has been changed.
+      // Otherwise they might hold on to displays, resulting in them being unusable.
+      maybeGrabKeyboard();
     }
-    // Some systems require a grab after the window size has been changed.
-    // Otherwise they might hold on to displays, resulting in them being unusable.
-    maybeGrabKeyboard();
   }
 }
 
@@ -1074,7 +1088,7 @@ void QVNCWinView::fullscreen(bool enabled)
 {
   QList<int> selectedScreens = fullscreenScreens();
   auto mode = ViewerConfig::config()->fullScreenMode();
-  if (mode != ViewerConfig::FSCurrent && selectedScreens.length() > 1) {
+  if (!enabled || (mode != ViewerConfig::FSCurrent && selectedScreens.length() > 1)) {
     int showHide = enabled ? SW_HIDE : SW_SHOW;
     HWND hTrayWnd = ::FindWindow("Shell_TrayWnd", NULL);
     ShowWindow(hTrayWnd, showHide);
