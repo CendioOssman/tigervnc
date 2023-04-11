@@ -21,6 +21,7 @@
 #include "msgwriter.h"
 #include "win32.h"
 #include "i18n.h"
+#include "viewerconfig.h"
 #include "vncwinview.h"
 
 #include <QDebug>
@@ -430,22 +431,22 @@ bool QVNCWinView::event(QEvent *e)
         EnableWindow(m_hwnd, true);
       break;
     case QEvent::WindowActivate:
-      qDebug() << "WindowActivate";
+      //qDebug() << "WindowActivate";
       break;
     case QEvent::WindowDeactivate:
-      qDebug() << "WindowDeactivate";
+      //qDebug() << "WindowDeactivate";
       break;
     case QEvent::Enter:
-      qDebug() << "Enter";
+      //qDebug() << "Enter";
       break;
     case QEvent::Leave:
-      qDebug() << "Leave";
+      //qDebug() << "Leave";
       break;
     case QEvent::CursorChange:
-      qDebug() << "Unprocessed Event: CursorChange";
+      //qDebug() << "Unprocessed Event: CursorChange";
       e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
     default:
-      qDebug() << "Unprocessed Event: " << e->type();
+      //qDebug() << "Unprocessed Event: " << e->type();
       break;
   }
   return QWidget::event(e);
@@ -485,28 +486,24 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
   QWidget::resizeEvent(e);
 
   if (m_hwnd) {
-    QSize size = e->size();
-    bool resizing = (width() != size.width()) || (height() != size.height());
-
-    if (resizing) {
-      // Try to get the remote size to match our window size, provided
-      // the following conditions are true:
-      //
-      // a) The user has this feature turned on
-      // b) The server supports it
-      // c) We're not still waiting for startup fullscreen to kick in
-      //
-      QVNCConnection *cc = AppManager::instance()->connection();
-      if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize) {
-        int w = width() * m_devicePixelRatio;
-        int h = height() * m_devicePixelRatio;
-        SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, 0);
-        postResizeRequest();
-      }
-      // Some systems require a grab after the window size has been changed.
-      // Otherwise they might hold on to displays, resulting in them being unusable.
-      maybeGrabKeyboard();
+    // Try to get the remote size to match our window size, provided
+    // the following conditions are true:
+    //
+    // a) The user has this feature turned on
+    // b) The server supports it
+    // c) We're not still waiting for startup fullscreen to kick in
+    //
+    QVNCConnection *cc = AppManager::instance()->connection();
+    if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize) {
+      QSize size = e->size();
+      int w = size.width() * m_devicePixelRatio;
+      int h = size.height() * m_devicePixelRatio;
+      SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, 0);
+      postResizeRequest();
     }
+    // Some systems require a grab after the window size has been changed.
+    // Otherwise they might hold on to displays, resulting in them being unusable.
+    maybeGrabKeyboard();
   }
 }
 
@@ -971,17 +968,9 @@ void QVNCWinView::handleClipboardData(const char* data)
   CloseClipboard();
 }
 
-bool QVNCWinView::isFullscreen()
-{
-    RECT a, b;
-    GetWindowRect(m_hwnd, &a);
-    GetWindowRect(GetDesktopWindow(), &b);
-    return a.left == b.left && a.top == b.top && a.right == b.right && a.bottom == b.bottom;
-}
-
 void QVNCWinView::maybeGrabKeyboard()
 {
-  if (::fullscreenSystemKeys && isFullScreen() && hasFocus()) {
+  if (::fullscreenSystemKeys && isFullscreenEnabled() && hasFocus()) {
     grabKeyboard();
   }
 }
@@ -1074,4 +1063,25 @@ void QVNCWinView::stopMouseTracking()
 {
   m_mouseTracking = false;
   SetCursor(m_defaultCursor);
+}
+
+void QVNCWinView::moveView(int x, int y)
+{
+  MoveWindow((HWND)winId(), x, y, width(), height(), false);
+}
+
+void QVNCWinView::fullscreen(bool enabled)
+{
+  QList<int> selectedScreens = fullscreenScreens();
+  auto mode = ViewerConfig::config()->fullScreenMode();
+  if (mode != ViewerConfig::FSCurrent && selectedScreens.length() > 1) {
+    int showHide = enabled ? SW_HIDE : SW_SHOW;
+    HWND hTrayWnd = ::FindWindow("Shell_TrayWnd", NULL);
+    ShowWindow(hTrayWnd, showHide);
+    CloseHandle(hTrayWnd);
+    HWND hSecondaryTrayWnd = ::FindWindow("Shell_SecondaryTrayWnd", NULL);
+    ShowWindow(hSecondaryTrayWnd, showHide);
+    CloseHandle(hSecondaryTrayWnd);
+  }
+  QAbstractVNCView::fullscreen(enabled);
 }

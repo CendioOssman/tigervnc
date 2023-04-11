@@ -42,7 +42,7 @@ class ViewerConfig : public QObject
   Q_PROPERTY(bool sendClipboard READ sendClipboard WRITE setSendClipboard NOTIFY sendClipboardChanged)
   // Display properties
   Q_PROPERTY(bool fullScreen READ fullScreen WRITE setFullScreen NOTIFY fullScreenChanged)
-  Q_PROPERTY(QString fullScreenMode READ fullScreenMode WRITE setFullScreenMode NOTIFY fullScreenModeChanged)
+  Q_PROPERTY(FullScreenMode fullScreenMode READ fullScreenMode WRITE setFullScreenMode NOTIFY fullScreenModeChanged)
   Q_PROPERTY(QList<int> selectedScreens READ selectedScreens WRITE setSelectedScreens NOTIFY selectedScreensChanged)
   // Miscellaneous properties
   Q_PROPERTY(bool shared READ shared WRITE setShared NOTIFY sharedChanged)
@@ -52,6 +52,12 @@ class ViewerConfig : public QObject
 
 public:
   const char* SERVER_HISTORY="tigervnc.history";
+  enum FullScreenMode {
+    FSCurrent,
+    FSAll,
+    FSSelected,
+  };
+  Q_ENUM(FullScreenMode)
 
   virtual ~ViewerConfig();
   static ViewerConfig *config() { return m_config; };
@@ -117,8 +123,8 @@ public:
   //
   bool fullScreen() const;
   void setFullScreen(bool value);
-  QString fullScreenMode() const;
-  void setFullScreenMode(QString value);
+  ViewerConfig::FullScreenMode fullScreenMode() const;
+  void setFullScreenMode(ViewerConfig::FullScreenMode value);
   QList<int> selectedScreens() const; // { return m_selectedScreens; }
   void setSelectedScreens(QList<int> value);
   //
@@ -162,7 +168,7 @@ signals:
   void sendClipboardChanged(bool value);
   //
   void fullScreenChanged(bool value);
-  void fullScreenModeChanged(QString value);
+  void fullScreenModeChanged(ViewerConfig::FullScreenMode value);
   void selectedScreensChanged(QList<int> value);
   //
   void sharedChanged(bool value);

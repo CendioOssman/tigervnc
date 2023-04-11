@@ -47,8 +47,9 @@ public slots:
   void ungrabKeyboard() override;
   void grabPointer() override;
   void ungrabPointer() override;
-  bool isFullscreen() override;
   void bell() override;
+  void moveView(int x, int y) override;
+  void fullscreen(bool enabled) override;
 
 private:
   void fixParent();

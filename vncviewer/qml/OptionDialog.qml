@@ -63,19 +63,24 @@ Window {
         Config.sendClipboard = inputClipboardToServer.checked
         //
         Config.fullScreen = !displayWindowed.checked
-        if (displayFullScreenOnCurrentMonitor.checked) { Config.fullScreen = true; Config.fullScreenMode = "Current" }
-        if (displayFullScreenOnAllMonitors.checked) { Config.fullScreen = true; Config.fullScreenMode = "All" }
-        if (displayFullScreenOnSelectedMonitors.checked) { Config.fullScreen = true; Config.fullScreenMode = "Selected" }
+        if (displayFullScreenOnCurrentMonitor.checked) { Config.fullScreen = true; Config.fullScreenMode = Config.FSCurrent }
+        if (displayFullScreenOnAllMonitors.checked) { Config.fullScreen = true; Config.fullScreenMode = Config.FSAll }
+        if (displayFullScreenOnSelectedMonitors.checked) { Config.fullScreen = true; Config.fullScreenMode = Config.FSSelected }
         var selectedScreens = []
         for (var bix = 0; bix < screenSelectionButtons.length; bix++) {
             if (screenSelectionButtons[bix].checked) {
-                selectedScreens.push(bix)
+                selectedScreens.push(bix + 1)  // selected screen ID is 1-origin.
             }
         }
         Config.selectedScreens = selectedScreens
+        if (Config.fullScreen && Config.fullScreenMode === Config.FullScreenSelected && selectedScreens.length === 0) {
+            Config.fullScreenMode = Config.FullScreenCurrent
+        }
         //
         Config.shared = miscShared.checked
         Config.reconnectOnError = miscReconnectQuery.checked
+
+        AppManager.applyOptionsToView()
 
         close()
     }
@@ -115,9 +120,9 @@ Window {
         inputClipboardToServer.checked = Config.sendClipboard
         //
         displayWindowed.checked = !Config.fullScreen
-        displayFullScreenOnCurrentMonitor.checked = Config.fullScreen && Config.fullScreenMode.toLowerCase() === "current"
-        displayFullScreenOnAllMonitors.checked = Config.fullScreen && Config.fullScreenMode.toLowerCase() === "all"
-        displayFullScreenOnSelectedMonitors.checked = Config.fullScreen && Config.fullScreenMode.toLowerCase() === "selected"
+        displayFullScreenOnCurrentMonitor.checked = Config.fullScreen && Config.fullScreenMode === Config.FSCurrent
+        displayFullScreenOnAllMonitors.checked = Config.fullScreen && Config.fullScreenMode === Config.FSAll
+        displayFullScreenOnSelectedMonitors.checked = Config.fullScreen && Config.fullScreenMode === Config.FSSelected
         //
         miscShared.checked = Config.shared
         miscReconnectQuery.checked = Config.reconnectOnError

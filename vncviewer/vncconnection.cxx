@@ -269,7 +269,7 @@ void QVNCConnection::run()
   m_updateTimer = new QTimer;
   m_updateTimer->setSingleShot(true);
   connect(m_updateTimer, &QTimer::timeout, this, []() {
-    AppManager::instance()->view()->handleResizeTimeout();
+    AppManager::instance()->view()->handleDesktopSize();
   });
   m_updateTimer->moveToThread(this);
 

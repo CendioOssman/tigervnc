@@ -100,6 +100,7 @@ ViewerConfig::~ViewerConfig()
 int ViewerConfig::initialize()
 {
     m_config = new ViewerConfig();
+    qRegisterMetaType<ViewerConfig::FullScreenMode>("ViewerConfig::FullScreenMode");
     qmlRegisterSingletonType<ViewerConfig>("Qt.TigerVNC", 1, 0, "Config", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
         Q_UNUSED(engine)
         Q_UNUSED(scriptEngine)
@@ -575,16 +576,18 @@ void ViewerConfig::setFullScreen(bool value)
     }
 }
 
-QString ViewerConfig::fullScreenMode() const
+ViewerConfig::FullScreenMode ViewerConfig::fullScreenMode() const
 {
-    return QString(::fullScreenMode);
+    QString mode = QString(::fullScreenMode).toLower();
+    return mode == "current" ? FSCurrent : mode == "all" ? FSAll : FSSelected;
 }
 
-void ViewerConfig::setFullScreenMode(QString value)
+void ViewerConfig::setFullScreenMode(ViewerConfig::FullScreenMode mode)
 {
+    QString value = mode == FSCurrent ? "Current" : mode == FSAll ? "All" : "Selected";
     if (::fullScreenMode != value) {
         ::fullScreenMode.setParam(value.toStdString().c_str());
-        emit fullScreenModeChanged(value);
+        emit fullScreenModeChanged(mode);
     }
 }
 

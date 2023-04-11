@@ -83,6 +83,14 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   emit vncWindowOpened();
 }
 
+void AppManager::applyOptionsToView()
+{
+  if (!m_view) {
+    return;
+  }
+  m_view->fullscreen(ViewerConfig::config()->fullScreen());
+}
+
 void AppManager::update(int x0, int y0, int x1, int y1)
 {
   emit updateRequested(x0, y0, x1, y1);

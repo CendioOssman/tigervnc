@@ -31,14 +31,19 @@ public slots:
   virtual void ungrabKeyboard();
   virtual void grabPointer();
   virtual void ungrabPointer();
-  virtual bool isFullscreen();
+  virtual bool isFullscreenEnabled();
   virtual void bell();
-  virtual void handleResizeTimeout();
   virtual void remoteResize(int width, int height);
   virtual void updateWindow();
   virtual void handleDesktopSize();
+  virtual void fullscreen(bool enabled);
+  virtual void moveView(int x, int y);
 
 protected:
+  int m_x;
+  int m_y;
+  int m_width;
+  int m_height;
   double m_devicePixelRatio;
 
   QMenu *m_contextMenu;
@@ -55,9 +60,11 @@ protected:
   bool m_mouseGrabbed;
 
   QTimer *m_resizeTimer;
+  bool m_fullscreenEnabled;
 
   void createContextMenu();
   void postResizeRequest();
+  QList<int> fullscreenScreens();
 };
 
 #endif // ABSTRACTVNCVIEW_H

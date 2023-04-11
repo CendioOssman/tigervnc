@@ -43,6 +43,7 @@ public slots:
   void authenticate(QString user, QString password);
   void resetConnection();
   void openVNCWindow(int width, int height, QString name);
+  void applyOptionsToView();
   /**
    * @brief Request the framebuffer to add the given dirty region. Typically, called
    * by PlatformPixelBuffer::commitBufferRW().

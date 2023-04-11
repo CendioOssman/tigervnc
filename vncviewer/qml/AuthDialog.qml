@@ -31,6 +31,7 @@ Window {
     }
 
     function cancel() {
+        passwordText.text = ""
         close()
         abort()
     }

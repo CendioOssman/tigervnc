@@ -10,7 +10,15 @@
 #include "appmanager.h"
 #include "vncconnection.h"
 
+//#define PRINT_SCREEN
+
+#if defined(PRINT_SCREEN)
 #include <QScreen>
+#if defined(WIN32)
+#include <windef.h>
+#include <winuser.h>
+#endif
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -26,7 +34,7 @@ int main(int argc, char *argv[])
 
     QVNCApplication app(argc, argv);
 
-#if 0
+#if defined(PRINT_SCREEN)
     QScreen *primaryScreen = app.primaryScreen();
     QList<QScreen*> screens = app.screens();
     for (int i = 0; i < screens.size(); i++) {
@@ -56,7 +64,24 @@ int main(int argc, char *argv[])
       qDebug() << "physicalSize=" << screen->physicalSize();
       qDebug() << "virtualGeometry=" << screen->virtualGeometry();
       qDebug() << "virtualSize=" << screen->virtualSize();
+#if defined(WIN32)
+      QRect sr = screen->geometry();
+      HMONITOR hMon = MonitorFromPoint(POINT{sr.x(), sr.y()}, MONITOR_DEFAULTTONULL);
+      if (hMon) {
+        MONITORINFO info;
+        info.cbSize = sizeof(MONITORINFO);
+        GetMonitorInfo(hMon, &info);
+        qDebug() << "MONITORINFOEX.rcMonitor left=" << info.rcMonitor.left << ", top=" << info.rcMonitor.top << ", right=" << info.rcMonitor.right << ", bottom=" << info.rcMonitor.bottom;
+        qDebug() << "MONITORINFOEX.rcWork    left=" << info.rcWork.left << ", top=" << info.rcWork.top << ", right=" << info.rcWork.right << ", bottom=" << info.rcWork.bottom;
+        qDebug() << "MONITORINFOEX.dwFlags (primary?)=" << info.dwFlags;
+      }
+#endif
     }
+#if defined(WIN32)
+    for (int i = 0; i < 79; i++) {
+      qDebug().nospace() << "GetSystemMetrics(" << i << ")=" << GetSystemMetrics(i);
+    }
+#endif
 #endif
 
     ViewerConfig::initialize();
