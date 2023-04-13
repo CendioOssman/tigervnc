@@ -6,6 +6,9 @@
 #include <QTimer>
 #include <QScreen>
 #include <QWindow>
+#include <QLabel>
+#include <QBitmap>
+#include <QPainter>
 #include <QDebug>
 #include "rfb/ScreenSet.h"
 #include "rfb/LogWriter.h"
@@ -77,6 +80,9 @@ public:
         view->showNormal();
         view->handleDesktopSize();
       }
+    });
+    connect(ViewerConfig::config(), &ViewerConfig::fullScreenChanged, this, [this](bool enabled) {
+      setEnabled(!enabled); // cf. Viewport::initContextMenu()
     });
   }
 };
@@ -229,11 +235,55 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   , m_keyboardGrabbed(false)
   , m_mouseGrabbed(false)
   , m_resizeTimer(new QTimer)
+  , m_delayedInitializeTimer(new QTimer)
+  , m_overlayTipCloseTimer(new QTimer)
   , m_fullscreenEnabled(false)
+  , m_defaultScreen(screen())
 {
+  int radius = 5;
+  m_overlayTip = new QLabel(QString::asprintf(_("Press %s to open the context menu"), (const char*)::menuKey), this, Qt::SplashScreen | Qt::WindowStaysOnTopHint);
+  m_overlayTip->hide();
+  m_overlayTip->setGeometry(0, 0, 300, 40);
+  m_overlayTip->setStyleSheet(QString::asprintf("QLabel {"
+                                                "border-radius: %dpx;"
+                                                "background-color: #50505050;"
+                                                "color: #e0ffffff;"
+                                                "font-size: 14px;"
+                                                "font-weight: bold;"
+                                                "}", radius));
+  m_overlayTip->setWindowOpacity(0.8);
+  const QRect rect(QPoint(0,0), m_overlayTip->geometry().size());
+  QBitmap b(rect.size());
+  b.fill(QColor(Qt::color0));
+  QPainter painter(&b);
+  painter.setRenderHint(QPainter::Antialiasing);
+  painter.setBrush(Qt::color1);
+  painter.drawRoundedRect(rect, radius, radius, Qt::AbsoluteSize);
+  painter.end();
+  m_overlayTip->setMask(b);
+  m_overlayTip->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+
+  m_overlayTipCloseTimer->setInterval(5000);
+  m_overlayTipCloseTimer->setSingleShot(true);
+  connect(m_overlayTipCloseTimer, &QTimer::timeout, this, [this]() {
+    m_overlayTip->hide();
+  });
+
   m_resizeTimer->setInterval(10); // <-- DesktopWindow::resize(int x, int y, int w, int h)
   m_resizeTimer->setSingleShot(true);
   connect(m_resizeTimer, &QTimer::timeout, this, &QAbstractVNCView::handleDesktopSize);
+
+  m_delayedInitializeTimer->setInterval(1000);
+  m_delayedInitializeTimer->setSingleShot(true);
+  connect(m_delayedInitializeTimer, &QTimer::timeout, this, [this]() {
+    AppManager::instance()->connection()->refreshFramebuffer();
+    AppManager::instance()->view()->updateWindow();
+
+    m_overlayTip->move(x() + (width() - m_overlayTip->width()) / 2, y() + 50);
+    m_overlayTip->show();
+    m_overlayTipCloseTimer->start();
+  });
+  m_delayedInitializeTimer->start();
 
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorChanged, this, &QAbstractVNCView::setQCursor, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorPositionChanged, this, &QAbstractVNCView::setCursorPos, Qt::QueuedConnection);
@@ -249,6 +299,7 @@ QAbstractVNCView::~QAbstractVNCView()
   }
   delete m_contextMenu;
   delete m_resizeTimer;
+  delete m_delayedInitializeTimer;
 }
 
 void QAbstractVNCView::postRemoteResizeRequest()
@@ -574,7 +625,10 @@ QList<int> QAbstractVNCView::fullscreenScreens()
 void QAbstractVNCView::fullscreen(bool enabled)
 {
   qDebug() << "QAbstractVNCView::fullscreen: enabled=" << enabled;
+  // TODO: Flag m_fullscreenEnabled seems have to be disabled before executing fullscreen(). Need clarification.
   m_fullscreenEnabled = false;
+  QApplication *app = static_cast<QApplication*>(QApplication::instance());
+  QList<QScreen*> screens = app->screens();
   if (enabled) {
     // cf. DesktopWindow::fullscreen_on()
     if (!isFullscreenEnabled()) {
@@ -583,8 +637,6 @@ void QAbstractVNCView::fullscreen(bool enabled)
 
     auto mode = ViewerConfig::config()->fullScreenMode();
     if (mode != ViewerConfig::FSCurrent) {
-      QApplication *app = static_cast<QApplication*>(QApplication::instance());
-      QList<QScreen*> screens = app->screens();
       QList<int> selectedScreens = fullscreenScreens();
       QScreen *selectedPrimaryScreen = screens[selectedScreens[0]];
       int xmin = MAXINT;
@@ -613,8 +665,8 @@ void QAbstractVNCView::fullscreen(bool enabled)
       qDebug() << "Fullsize Geometry=" << QRect(xmin, ymin, w, h);
 
       if (selectedScreens.length() == 1) {
-        moveView(xmin, ymin);
         windowHandle()->setScreen(selectedPrimaryScreen);
+        moveView(xmin, ymin);
         showFullScreen();
         handleDesktopSize();
 #if 1 // Workaround for Windows weird behavior. On Windows, the first fullscreen attempt always fails. To avoid this, make VNCwindow minimized once then fullscreen again.
@@ -630,6 +682,7 @@ void QAbstractVNCView::fullscreen(bool enabled)
       }
     }
     else {
+      windowHandle()->setScreen(m_defaultScreen);
       showFullScreen();
       handleDesktopSize();
 #if 1 // Workaround for Windows weird behavior. On Windows, the first fullscreen attempt always fails. To avoid this, make VNCwindow minimized once then fullscreen again.

@@ -7,6 +7,8 @@
 class QMenu;
 class QAction;
 class QCursor;
+class QLabel;
+class QScreen;
 
 class QAbstractVNCView : public QWidget
 {
@@ -45,6 +47,7 @@ protected:
 
   QMenu *m_contextMenu;
   QList<QAction*> m_actions;
+  QLabel *m_overlayTip;
 
   bool m_firstLEDState;
   bool m_pendingServerClipboard;
@@ -57,7 +60,10 @@ protected:
   bool m_mouseGrabbed;
 
   QTimer *m_resizeTimer;
+  QTimer *m_delayedInitializeTimer;
+  QTimer *m_overlayTipCloseTimer;
   bool m_fullscreenEnabled;
+  QScreen *m_defaultScreen;
 
   void createContextMenu();
   void postRemoteResizeRequest();

@@ -19,7 +19,6 @@ public:
 
   void setWindow(HWND);
   HWND window() const;
-  void clearPendingMouseMoveEvent();
   void postMouseMoveEvent(int x, int y, int mask);
   bool hasFocus() const;
 
@@ -57,10 +56,6 @@ private:
   bool m_hwndowner;
   HWND m_hwnd;
   QMutex *m_mutex;
-  bool m_pendingMouseMoveEvent;
-  int m_mouseX;
-  int m_mouseY;
-  QTimer *m_mouseMoveEventTimer;
 
   bool m_altGrArmed;
   unsigned int m_altGrCtrlTime;

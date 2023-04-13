@@ -36,6 +36,16 @@ static const WORD NoSymbol = 0;
 
 const unsigned char *QVNCWinView::m_invisibleCursor = (unsigned char*)"\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\x00\x00";
 
+static bool restoreFunctionRegistered = false;
+static void restoreTray() {
+  HWND hTrayWnd = ::FindWindow("Shell_TrayWnd", NULL);
+  ShowWindow(hTrayWnd, SW_SHOW);
+  CloseHandle(hTrayWnd);
+  HWND hSecondaryTrayWnd = ::FindWindow("Shell_SecondaryTrayWnd", NULL);
+  ShowWindow(hSecondaryTrayWnd, SW_SHOW);
+  CloseHandle(hSecondaryTrayWnd);
+}
+
 
 /*!
     \class VNCWinView qwinhost.h
@@ -74,10 +84,6 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
   , m_hwndowner(false)
   , m_hwnd(0)
   , m_mutex(new QMutex)
-  , m_pendingMouseMoveEvent(false)
-  , m_mouseX(0)
-  , m_mouseY(0)
-  , m_mouseMoveEventTimer(new QTimer)
   , m_altGrArmed(false)
   , m_menuKeySym(XK_F8)
   , m_altGrCtrlTimer(new QTimer)
@@ -94,18 +100,6 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
   connect(AppManager::instance(), &AppManager::updateRequested, this, [this](int x0, int y0, int x1, int y1) {
     RECT r{x0, y0, x1, y1};
     InvalidateRect(m_hwnd, &r, false);
-  });
-  m_mouseMoveEventTimer->setInterval(0);
-  m_mouseMoveEventTimer->setSingleShot(true);
-  connect(m_mouseMoveEventTimer, &QTimer::timeout, this, [this]() {
-    QMutexLocker locker(m_mutex);
-    if (!m_pendingMouseMoveEvent) {
-      return;
-    }
-    rfb::Point p(m_mouseX, m_mouseY);
-    QMsgWriter *writer = AppManager::instance()->connection()->writer();
-    writer->writePointerEvent(p, 0);
-    qDebug() << "MouseMoveTimer[" << QTime::currentTime().toString() << "] x=" << p.x << ", y=" << p.y;
   });
   m_altGrCtrlTimer->setInterval(100);
   m_altGrCtrlTimer->setSingleShot(true);
@@ -129,8 +123,6 @@ QVNCWinView::~QVNCWinView()
   if (m_hwnd && m_hwndowner) {
     DestroyWindow(m_hwnd);
   }
-  m_mouseMoveEventTimer->stop();
-  delete m_mouseMoveEventTimer;
   delete m_mutex;
 
   m_altGrCtrlTimer->stop();
@@ -238,28 +230,11 @@ HWND QVNCWinView::window() const
   return m_hwnd;
 }
 
-void QVNCWinView::clearPendingMouseMoveEvent()
-{
-  m_mouseMoveEventTimer->stop();
-}
-
 void QVNCWinView::postMouseMoveEvent(int x, int y, int mask)
 {
-  {
-    QMutexLocker locker(m_mutex);
-    if (m_mouseMoveEventTimer->isActive()) {
-      m_mouseX = x;
-      m_mouseY = y;
-      m_pendingMouseMoveEvent = true;
-      return;
-    }
-  }
-  qDebug() << "QVNCWinView::postMouseMoveEvent: x=" << x << ", y=" << y << ", btn=" << Qt::hex << mask;
-  QMsgWriter *writer = AppManager::instance()->connection()->writer();
   rfb::Point p(x, y);
+  QMsgWriter *writer = AppManager::instance()->connection()->writer();
   writer->writePointerEvent(p, mask);
-  m_pendingMouseMoveEvent = false;
-  m_mouseMoveEventTimer->start();
 }
 
 void *getWindowProc(QVNCWinView *host)
@@ -294,7 +269,6 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       case WM_MOUSEWHEEL:
       case WM_XBUTTONUP:
       case WM_XBUTTONDOWN: {
-          window->clearPendingMouseMoveEvent();
           int x, y, buttonMask, wheelMask;
           getMouseProperties(wParam, lParam, x, y, buttonMask, wheelMask);
           rfb::Point p(x, y);
@@ -334,7 +308,16 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       case WM_PAINT:
         window->refresh(hWnd);
         break;
+      case WM_SIZE: {
+          UINT w = LOWORD(lParam);
+          UINT h = HIWORD(lParam);
+          qDebug() << "VNCWinView::eventHandler(): WM_SIZE: w=" << w << ", h=" << h;
+          SetWindowPos(hWnd, HWND_TOP, 0, 0, w, h, 0);
+          AppManager::instance()->view()->adjustSize();
+        }
+        break;
       default:
+        qDebug() << "VNCWinView::eventHandler() (DefWindowProc): message=" << message;
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
   }
@@ -453,7 +436,7 @@ bool QVNCWinView::event(QEvent *e)
       //qDebug() << "Unprocessed Event: CursorChange";
       e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
     default:
-      //qDebug() << "Unprocessed Event: " << e->type();
+      qDebug() << "Unprocessed Event: " << e->type();
       break;
   }
   return QWidget::event(e);
@@ -470,6 +453,7 @@ void QVNCWinView::showEvent(QShowEvent *e)
     int w = width() * m_devicePixelRatio;
     int h = height() * m_devicePixelRatio;
     SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, SWP_SHOWWINDOW);
+    adjustSize();
   }
 }
 
@@ -495,13 +479,15 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
 
   if (m_hwnd) {
     QSize size = e->size();
+#if 1
     int w = size.width() * m_devicePixelRatio;
     int h = size.height() * m_devicePixelRatio;
-    qDebug() << "QVNCWinView::resizeEvent: SetWindowPos w=" << w << ", h=" << h;
+    // Following SetWindowPos is needed here in addition to eventHandler()'s WM_SIZE handler, because
+    // the WM_SIZE handler is not called when the parent QWidget calls showFullScreen().
     SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, 0);
-
+    adjustSize();
+#endif
     bool resizing = (width() != size.width()) || (height() != size.height());
-
     if (resizing) {
       // Try to get the remote size to match our window size, provided
       // the following conditions are true:
@@ -1089,6 +1075,9 @@ void QVNCWinView::fullscreen(bool enabled)
   QList<int> selectedScreens = fullscreenScreens();
   auto mode = ViewerConfig::config()->fullScreenMode();
   if (!enabled || (mode != ViewerConfig::FSCurrent && selectedScreens.length() > 1)) {
+    if (!restoreFunctionRegistered) {
+      atexit(restoreTray);
+    }
     int showHide = enabled ? SW_HIDE : SW_SHOW;
     HWND hTrayWnd = ::FindWindow("Shell_TrayWnd", NULL);
     ShowWindow(hTrayWnd, showHide);
