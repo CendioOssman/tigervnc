@@ -43,7 +43,7 @@
 
 #if !defined(Q_OS_WIN) && !defined(Q_OS_MAC)
   #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    #include <QX11Info>
+    #include <QtX11Extras/QX11Info>
   #endif
 #endif
 

@@ -26,8 +26,6 @@
 
 #include <stdint.h>
 
-#include <QObject>
-
 #include <rfb/ServerParams.h>
 #include <rfb/Rect.h>
 #include <rfb/ScreenSet.h>
@@ -36,8 +34,7 @@ namespace rdr { class InStream; }
 
 namespace rfb {
 
-  class CMsgHandler : public ::QObject {
-    Q_OBJECT
+  class CMsgHandler {
 
   public:
     CMsgHandler();

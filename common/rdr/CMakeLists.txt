@@ -41,14 +41,12 @@ add_library(rdr STATIC
 
 target_include_directories(rdr PUBLIC ${CMAKE_SOURCE_DIR}/common)
 target_include_directories(rdr SYSTEM PUBLIC ${ZLIB_INCLUDE_DIRS})
-target_link_libraries(rdr Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::Widgets ${ZLIB_LIBRARIES} os rfb)
+target_link_libraries(rdr ${ZLIB_LIBRARIES} os rfb)
 
 if(MSVC)
   # undef min and max macro
   target_compile_definitions(rfb PRIVATE NOMINMAX)
 endif()
-target_compile_definitions(rdr
-  PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 
 if(GNUTLS_FOUND)
   target_include_directories(rdr SYSTEM PUBLIC ${GNUTLS_INCLUDE_DIR})

@@ -6,7 +6,10 @@
 #include "vncstream.h"
 #include "vncconnection.h"
 #include "viewerconfig.h"
+#include "abstractvncview.h"
+#if defined(WIN32)
 #include "vncwinview.h"
+#endif
 #include "appmanager.h"
 
 AppManager *AppManager::m_manager;

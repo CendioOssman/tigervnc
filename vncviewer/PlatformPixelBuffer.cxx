@@ -22,10 +22,15 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <QTextStream>
+#include <QEvent>
+#include <QCursor>
 
 #if !defined(WIN32) && !defined(__APPLE__)
+#include <X11/Xlib.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <X11/extensions/XShm.h>
 #endif
 
 //#include <FL/Fl.H>

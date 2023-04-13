@@ -23,8 +23,9 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include <FL/Fl_RGB_Image.H>
-#include <FL/x.H>
+//#include <FL/Fl_RGB_Image.H>
+//#include <FL/x.H>
+#include <QImage>
 
 #include <rdr/Exception.h>
 
@@ -61,7 +62,7 @@ void Surface::draw(Surface* dst, int src_x, int src_y,
                    src_x, src_y, 0, 0, dst_x, dst_y, dst_w, dst_h);
 }
 
-static Picture alpha_mask(int a)
+Picture Surface::alpha_mask(int a)
 {
   Pixmap pixmap;
   XRenderPictFormat* format;
@@ -122,7 +123,9 @@ void Surface::alloc()
   XRenderPictFormat* format;
 
   // Might not be open at this point
+#if 0
   fl_open_display();
+#endif
 
   pixmap = XCreatePixmap(fl_display, XDefaultRootWindow(fl_display),
                          width(), height(), 32);
@@ -169,17 +172,19 @@ void Surface::dealloc()
   XFreePixmap(fl_display, pixmap);
 }
 
-void Surface::update(const Fl_RGB_Image* image)
+void Surface::update(const QImage* image)
 {
   XImage* img;
   GC gc;
 
+#if 0
   int x, y;
   const unsigned char* in;
   unsigned char* out;
+#endif
 
-  assert(image->w() == width());
-  assert(image->h() == height());
+  assert(image->width() == width());
+  assert(image->height() == height());
 
   img = XCreateImage(fl_display, (Visual*)CopyFromParent, 32,
                      ZPixmap, 0, nullptr, width(), height(),
@@ -192,11 +197,12 @@ void Surface::update(const Fl_RGB_Image* image)
     throw rdr::Exception("malloc");
 
   // Convert data and pre-multiply alpha
+#if 0
   in = (const unsigned char*)image->data()[0];
   out = (unsigned char*)img->data;
   for (y = 0;y < img->height;y++) {
     for (x = 0;x < img->width;x++) {
-      switch (image->d()) {
+      switch (image->depth()) {
       case 1:
         *out++ = in[0];
         *out++ = in[0];
@@ -227,6 +233,7 @@ void Surface::update(const Fl_RGB_Image* image)
     if (image->ld() != 0)
       in += image->ld() - image->w() * image->d();
   }
+#endif
 
   gc = XCreateGC(fl_display, pixmap, 0, nullptr);
   XPutImage(fl_display, pixmap, gc, img,

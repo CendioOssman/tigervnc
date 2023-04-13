@@ -385,11 +385,6 @@ void QVNCWinView::refresh(HWND hWnd, bool all)
   EndPaint(hWnd, &ps);
 }
 
-void QVNCWinView::returnPressed()
-{
-  QMessageBox::information(topLevelWidget(), "Message from Qt", "Return pressed in QLineEdit!");
-}
-
 /*!
     \reimp
 */

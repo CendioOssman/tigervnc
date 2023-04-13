@@ -10,6 +10,8 @@
 #include <QBitmap>
 #include <QPainter>
 #include <QDebug>
+#include <QUrl>
+#include <climits>
 #include "rfb/ScreenSet.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ServerParams.h"
@@ -24,10 +26,12 @@
 #include "viewerconfig.h"
 #include "abstractvncview.h"
 
+#if defined(WIN32)
 #define XK_LATIN1
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
 #include "rfb/keysymdef.h"
+#endif
 
 static rfb::LogWriter vlog("VNCView");
 
@@ -639,10 +643,10 @@ void QAbstractVNCView::fullscreen(bool enabled)
     if (mode != ViewerConfig::FSCurrent) {
       QList<int> selectedScreens = fullscreenScreens();
       QScreen *selectedPrimaryScreen = screens[selectedScreens[0]];
-      int xmin = MAXINT;
-      int ymin = MAXINT;
-      int xmax = MININT;
-      int ymax = MININT;
+      int xmin = INT_MAX;
+      int ymin = INT_MAX;
+      int xmax = INT_MIN;
+      int ymax = INT_MIN;
       for (int &screenIndex : selectedScreens) {
         QScreen *screen = screens[screenIndex];
         QRect rect = screen->geometry();

@@ -131,9 +131,6 @@ add_library(rfb STATIC
   obfuscate.cxx
   util.cxx)
 
-target_compile_definitions(rfb
-  PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
-
 target_include_directories(rfb PUBLIC ${CMAKE_SOURCE_DIR}/common)
 target_include_directories(rfb SYSTEM PUBLIC ${JPEG_INCLUDE_DIR})
 target_include_directories(rfb SYSTEM PUBLIC ${PIXMAN_INCLUDE_DIRS})

@@ -146,7 +146,7 @@ void ViewerConfig::loadServerHistory()
 
     char* homeDir = NULL;
     if (getvnchomedir(&homeDir) == -1)
-      throw rdr::Exception(tr("Could not obtain the home directory path"));
+      throw rdr::Exception("%s", tr("Could not obtain the home directory path").toStdString().c_str());
 
     char filepath[PATH_MAX];
     snprintf(filepath, sizeof(filepath), "%s%s", homeDir, SERVER_HISTORY);
@@ -159,7 +159,7 @@ void ViewerConfig::loadServerHistory()
         // no history file
         return;
       }
-      throw rdr::Exception(tr("Could not open \"%1\": %2").arg("%s", filepath).arg("%s", strerror(errno)));
+      throw rdr::Exception("%s", tr("Could not open \"%1\": %2").arg("%s", filepath).arg("%s", strerror(errno)).toStdString().c_str());
     }
 
     int lineNr = 0;
@@ -173,14 +173,14 @@ void ViewerConfig::loadServerHistory()
           break;
 
         fclose(f);
-        throw rdr::Exception(tr("Failed to read line %1 in file %2: %3").arg("%d", lineNr).arg("%s", filepath).arg("%s", strerror(errno)));
+        throw rdr::Exception("%s", tr("Failed to read line %1 in file %2: %3").arg("%d", lineNr).arg("%s", filepath).arg("%s", strerror(errno)).toStdString().c_str());
       }
 
       int len = strlen(line);
 
       if (len == (sizeof(line) - 1)) {
         fclose(f);
-        throw rdr::Exception(tr("Failed to read line %1 in file %2: %3").arg("%d", lineNr).arg("%s", filepath).arg("%s", tr("Line too long")));
+        throw rdr::Exception("%s", tr("Failed to read line %1 in file %2: %3").arg("%d", lineNr).arg("%s", filepath).arg("%s", tr("Line too long")).toStdString().c_str());
       }
 
       if ((len > 0) && (line[len-1] == '\n')) {
@@ -219,7 +219,7 @@ void ViewerConfig::saveServerHistory()
 
     char* homeDir = nullptr;
     if (getvnchomedir(&homeDir) == -1) {
-        throw rdr::Exception(tr("Could not obtain the home directory path"));
+        throw rdr::Exception("%s", tr("Could not obtain the home directory path").toStdString().c_str());
     }
 
     char filepath[PATH_MAX];
@@ -229,7 +229,7 @@ void ViewerConfig::saveServerHistory()
     /* Write server history to file */
     QFile f(filepath);
     if (!f.open(QIODevice::WriteOnly | QIODevice::Append)) {
-        throw rdr::Exception(tr("Could not open \"%1\": %2").arg("%s", filepath).arg("%s", strerror(errno)));
+        throw rdr::Exception("%s", tr("Could not open \"%1\": %2").arg("%s", filepath).arg("%s", strerror(errno)).toStdString().c_str());
     }
     QTextStream stream(&f);
 

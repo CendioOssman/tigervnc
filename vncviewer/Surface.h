@@ -26,6 +26,8 @@
 typedef struct CGImage* CGImageRef;
 #else
 #include <X11/extensions/Xrender.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #endif
 
 //class Fl_RGB_Image;
@@ -74,6 +76,16 @@ protected:
   Pixmap pixmap;
   Picture picture;
   XRenderPictFormat* visFormat;
+
+  // cf. https://www.fltk.org/doc-1.3/osissues.html
+  Display *fl_display;
+  Window fl_window;
+  GC fl_gc;
+  int fl_screen;
+  XVisualInfo *fl_visual;
+  Colormap fl_colormap;
+
+  Picture alpha_mask(int a);
 #endif
 };
 

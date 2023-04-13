@@ -34,7 +34,6 @@ protected:
 
 public slots:
   void setQCursor(const QCursor &cursor) override;
-  void returnPressed();
   void refresh(HWND hWnd, bool all = true);
   void handleKeyPress(int keyCode, quint32 keySym) override;
   void handleKeyRelease(int keyCode) override;

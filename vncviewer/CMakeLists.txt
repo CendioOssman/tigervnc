@@ -6,6 +6,9 @@ include_directories(${GETTEXT_INCLUDE_DIR})
 
 include_directories(${CMAKE_SOURCE_DIR}/common)
 
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Quick Widgets REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Quick Widgets REQUIRED)
+
 if (WIN32)
   set(APP_ICONS "${CMAKE_CURRENT_SOURCE_DIR}/winvnc.ico")
   set(OS_DEP_SOURCES
@@ -51,8 +54,6 @@ set(PROJECT_SOURCES
         vncstream.cxx
         abstractvncview.h
         abstractvncview.cxx
-        vncwinview.h
-        vncwinview.cxx
         keysym2ucs.c
         keysym2ucs.h
         #
@@ -112,15 +113,15 @@ if(WIN32)
 elseif(APPLE)
   set(OS_DEPENDENT_LIBRARIES "-framework Cocoa -framework Carbon -framework IOKit")
 else()
-  set(OS_DEPENDENT_LIBRARIES ${X11_Xi_LIB})
-
+  set(OS_DEPENDENT_LIBRARIES ${X11_XiLIB} "-lXrender" "-lXext" "-lX11")
   if(X11_Xrandr_LIB)
     add_definitions(-DHAVE_XRANDR)
     set(OS_DEPENDENT_LIBRARIES "${OS_DEPENDENT_LIBRARIES} ${X11_Xrandr_LIB}")
+    ##set(CMAKE_REQUIRED_LIBRARIES "")
   endif()
 endif()
 
-if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
+if(QT_VERSION_MAJOR GREATER_EQUAL 6)
     set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/vncviewer.rc")
     qt_add_executable(vncviewer
         MANUAL_FINALIZATION
@@ -143,7 +144,11 @@ else()
     else()
         if (WIN32)
           set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/vncviewer.rc")
-          find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS WinExtras)
+          #find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS WinExtras)
+        endif()
+        if (UNIX)
+          find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS X11Extras)
+          set(OS_DEPENDENT_LIBRARIES ${OS_DEPENDENT_LIBRARIES} Qt${QT_VERSION_MAJOR}::X11Extras)
         endif()
         add_executable(vncviewer
           ${PROJECT_SOURCES}
@@ -151,22 +156,24 @@ else()
         )
     endif()
 
-    qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
+###    qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 endif()
 
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS OpenGL)
+###find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS OpenGL)
 
 target_compile_definitions(vncviewer
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
-if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
+if(QT_VERSION_MAJOR GREATER_EQUAL 6)
     target_link_libraries(vncviewer
-      PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::QuickWidgets Qt${QT_VERSION_MAJOR}::OpenGL Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
+      PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::QuickWidgets Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
 else()
     target_link_libraries(vncviewer
-      PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::OpenGL Qt${QT_VERSION_MAJOR}::WinExtras Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
+      PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
+    #target_link_libraries(vncviewer
+    #  PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::WinExtras Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
 endif()
 
-if(${QT_VERSION_MAJOR} EQUAL 6)
+if(QT_VERSION_MAJOR EQUAL 6)
     qt_import_qml_plugins(vncviewer)
     qt_finalize_executable(vncviewer)
 endif()
