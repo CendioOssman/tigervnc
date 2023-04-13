@@ -35,7 +35,6 @@ static rfb::LogWriter vlog("CMsgHandler");
 using namespace rfb;
 
 CMsgHandler::CMsgHandler()
-    : QObject(nullptr)
 {
 }
 
