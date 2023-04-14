@@ -3,14 +3,19 @@
 #include <QTcpSocket>
 #include <QScreen>
 #include "rdr/Exception.h"
+#include "gettext.h"
+#include "i18n.h"
 #include "vncstream.h"
 #include "vncconnection.h"
 #include "viewerconfig.h"
 #include "abstractvncview.h"
+#include "appmanager.h"
+
 #if defined(WIN32)
 #include "vncwinview.h"
+#elif defined(Q_OS_UNIX)
+#include "vncx11view.h"
 #endif
-#include "appmanager.h"
 
 AppManager *AppManager::m_manager;
 
@@ -77,7 +82,19 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   delete m_view;
 #if defined(WIN32)
   m_view = new QVNCWinView();
+#elif defined(Q_OS_UNIX)
+  QString platform = QGuiApplication::platformName();
+  if (platform == "xcb") {
+    m_view = new QVNCX11View();
+  }
+  else if (platform == "wayland") {
+    ; // TODO
+  }
 #endif
+
+  if (!m_view) {
+    throw rdr::Exception(_("Platform not supported."));
+  }
 
   m_view->resize(width, height);
   m_view->setWindowTitle(QString::asprintf("%.240s - TigerVNC", name.toStdString().c_str()));
@@ -89,17 +106,9 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   emit vncWindowOpened();
 }
 
-void AppManager::applyOptionsToView()
+void AppManager::invalidate(int x0, int y0, int x1, int y1)
 {
-//  if (!m_view) {
-//    return;
-//  }
-//  m_view->fullscreen(ViewerConfig::config()->fullScreen());
-}
-
-void AppManager::update(int x0, int y0, int x1, int y1)
-{
-  emit updateRequested(x0, y0, x1, y1);
+  emit invalidateRequested(x0, y0, x1, y1);
 }
 
 void AppManager::openContextMenu()

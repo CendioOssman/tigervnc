@@ -21,6 +21,7 @@ public:
   HWND window() const;
   void postMouseMoveEvent(int x, int y, int mask);
   bool hasFocus() const;
+  qulonglong nativeWindowHandle() const override;
 
 protected:
   static LRESULT CALLBACK eventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -33,8 +34,8 @@ protected:
   void resizeEvent(QResizeEvent*) override;
 
 public slots:
+  void addInvalidRegion(int x0, int y0, int x1, int y1);
   void setQCursor(const QCursor &cursor) override;
-  void refresh(HWND hWnd, bool all = true);
   void handleKeyPress(int keyCode, quint32 keySym) override;
   void handleKeyRelease(int keyCode) override;
   void setCursorPos(int x, int y) override;
@@ -49,6 +50,7 @@ public slots:
   void bell() override;
   void moveView(int x, int y) override;
   void fullscreen(bool enabled) override;
+  void updateWindow() override;
 
 private:
   void *m_wndproc;
@@ -77,6 +79,7 @@ private:
   int handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam);
   void startMouseTracking();
   void stopMouseTracking();
+  void refresh(HWND hWnd, bool all = true);
 };
 
 #endif // VNCWINVIEW_H

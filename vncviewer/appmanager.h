@@ -30,7 +30,7 @@ signals:
   void authenticateRequested(QString user, QString password);
   void newVncWindowRequested(int width, int height, QString name);
   void resetConnectionRequested();
-  void updateRequested(int x0, int y0, int x1, int y1);
+  void invalidateRequested(int x0, int y0, int x1, int y1);
   void contextMenuRequested();
   void infoDialogRequested();
   void optionDialogRequested();
@@ -43,7 +43,6 @@ public slots:
   void authenticate(QString user, QString password);
   void resetConnection();
   void openVNCWindow(int width, int height, QString name);
-  void applyOptionsToView();
   /**
    * @brief Request the framebuffer to add the given dirty region. Typically, called
    * by PlatformPixelBuffer::commitBufferRW().
@@ -52,7 +51,7 @@ public slots:
    * @param x1 X of the bottom right point.
    * @param y1 Y of the bottom right point.
    */
-  void update(int x0, int y0, int x1, int y1);
+  void invalidate(int x0, int y0, int x1, int y1);
   void openContextMenu();
   void openInfoDialog();
   void openOptionDialog();

@@ -22,8 +22,6 @@
 
 #include <assert.h>
 
-//#include <FL/Fl_RGB_Image.H>
-//#include <FL/x.H>
 #include <QImage>
 
 #include <rdr/Exception.h>

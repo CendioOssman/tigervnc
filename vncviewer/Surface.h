@@ -25,9 +25,9 @@
 // Apple headers conflict with FLTK, so redefine types here
 typedef struct CGImage* CGImageRef;
 #else
-#include <X11/extensions/Xrender.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/extensions/Xrender.h>
 #endif
 
 //class Fl_RGB_Image;
@@ -44,6 +44,11 @@ public:
   int height() { return h; }
 #if defined(WIN32)
   HBITMAP hbitmap() { return bitmap; }
+#else
+  Pixmap pixmap() { return m_pixmap; }
+  GC gc() { return m_gc; }
+  XVisualInfo *visualInfo() { return m_visualInfo; }
+  Colormap colormap() { return m_colorMap; }
 #endif
 
   void clear(unsigned char r, unsigned char g, unsigned char b, unsigned char a=255);
@@ -73,17 +78,16 @@ protected:
 #elif defined(__APPLE__)
   unsigned char* data;
 #else
-  Pixmap pixmap;
-  Picture picture;
-  XRenderPictFormat* visFormat;
+  Pixmap m_pixmap;
+  Picture m_picture;
+  XRenderPictFormat* m_visualFormat;
 
   // cf. https://www.fltk.org/doc-1.3/osissues.html
-  Display *fl_display;
-  Window fl_window;
-  GC fl_gc;
-  int fl_screen;
-  XVisualInfo *fl_visual;
-  Colormap fl_colormap;
+  Display *m_display;
+  GC m_gc;
+  int m_screen;
+  XVisualInfo *m_visualInfo;
+  Colormap m_colorMap;
 
   Picture alpha_mask(int a);
 #endif

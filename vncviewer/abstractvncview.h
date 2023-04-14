@@ -18,6 +18,7 @@ public:
   virtual ~QAbstractVNCView();
   virtual void resize(int width, int height);
   void popupContextMenu();
+  virtual qulonglong nativeWindowHandle() const;
 
 public slots:
   virtual void handleKeyPress(int keyCode, quint32 keySym);

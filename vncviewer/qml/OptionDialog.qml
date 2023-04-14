@@ -88,8 +88,6 @@ Window {
         //
         Config.shared = miscShared.checked
         Config.reconnectOnError = miscReconnectQuery.checked
-
-        AppManager.applyOptionsToView()
     }
 
     function equals(a1, a2) {

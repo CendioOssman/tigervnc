@@ -44,6 +44,10 @@ public:
   void commitBufferRW(const rfb::Rect& r) override;
 
   rfb::Rect getDamage(void);
+#if !defined(WIN32)
+  XImage *ximage() { return xim; }
+  XShmSegmentInfo *shmSegmentInfo() { return shminfo; }
+#endif
 
   using rfb::FullFramePixelBuffer::width;
   using rfb::FullFramePixelBuffer::height;
@@ -56,7 +60,6 @@ protected:
 protected:
   bool setupShm(int width, int height);
 
-protected:
   XShmSegmentInfo *shminfo;
   XImage *xim;
 #endif

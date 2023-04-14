@@ -356,6 +356,11 @@ void QAbstractVNCView::createContextMenu()
   }
 }
 
+qulonglong QAbstractVNCView::nativeWindowHandle() const
+{
+  return 0;
+}
+
 void QAbstractVNCView::handleKeyPress(int, quint32)
 {
 }
@@ -580,10 +585,6 @@ void QAbstractVNCView::updateWindow()
     }
     m_firstUpdate = false;
   }
-
-  rfb::ModifiablePixelBuffer *framebuffer = cc->framebuffer();
-  qDebug() << "QAbstractVNCView::updateWindow: w=" << framebuffer->width() << ", h=" << framebuffer->height();
-  emit AppManager::instance()->updateRequested(0, 0, framebuffer->width(), framebuffer->height());
 }
 
 void QAbstractVNCView::handleDesktopSize()

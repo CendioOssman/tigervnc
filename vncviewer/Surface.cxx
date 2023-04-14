@@ -25,8 +25,23 @@
 
 #include "Surface.h"
 
-Surface::Surface(int width, int height) :
-  w(width), h(height)
+Surface::Surface(int width, int height)
+  : w(width)
+  , h(height)
+#if defined(WIN32)
+  , data(nullptr)
+#elif defined(__APPLE__)
+  , data(nullptr)
+#else
+  , m_pixmap(0)
+  , m_picture(0)
+  , m_visualFormat(nullptr)
+  , m_display(nullptr)
+  , m_gc(nullptr)
+  , m_screen(0)
+  , m_visualInfo(nullptr)
+  , m_colorMap(0)
+#endif
 {
   alloc();
 }

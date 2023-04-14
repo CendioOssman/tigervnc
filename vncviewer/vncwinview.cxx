@@ -97,10 +97,7 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
   setAttribute(Qt::WA_NativeWindow);
   setFocusPolicy(Qt::StrongFocus);
 
-  connect(AppManager::instance(), &AppManager::updateRequested, this, [this](int x0, int y0, int x1, int y1) {
-    RECT r{x0, y0, x1, y1};
-    InvalidateRect(m_hwnd, &r, false);
-  });
+  connect(AppManager::instance(), &AppManager::invalidateRequested, this, &QVNCWinView::addInvalidRegion);
   m_altGrCtrlTimer->setInterval(100);
   m_altGrCtrlTimer->setSingleShot(true);
   connect(m_altGrCtrlTimer, &QTimer::timeout, this, [this]() {
@@ -131,6 +128,17 @@ QVNCWinView::~QVNCWinView()
   DestroyIcon(m_cursor);
 }
 
+qulonglong QVNCWinView::nativeWindowHandle() const
+{
+  return (qulonglong)m_hwnd;
+}
+
+void QVNCWinView::addInvalidRegion(int x0, int y0, int x1, int y1)
+{
+  RECT r{x0, y0, x1, y1};
+  InvalidateRect(m_hwnd, &r, false);
+}
+    
 /*!
     Reimplement this virtual function to create and return the native
     Win32 window. \a parent is the handle to this widget, and \a
@@ -1092,4 +1100,13 @@ void QVNCWinView::fullscreen(bool enabled)
     CloseHandle(hSecondaryTrayWnd);
   }
   QAbstractVNCView::fullscreen(enabled);
+}
+
+void QVNCWinView::updateWindow()
+{
+  QAbstractVNCView::updateWindow();
+  // just clear the invalid region stored in the framebuffer.
+  QVNCConnection *cc = AppManager::instance()->connection();
+  PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
+  framebuffer->getDamage();
 }

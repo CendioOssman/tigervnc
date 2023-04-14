@@ -301,8 +301,15 @@ void QVNCConnection::setStreams(rdr::InStream *in, rdr::OutStream *out)
   m_ostream = out;
 }
 
+rfb::ModifiablePixelBuffer *QVNCConnection::framebuffer()
+{
+  QMutexLocker locker(m_mutex);
+  return m_framebuffer;
+}
+
 void QVNCConnection::setFramebuffer(rfb::ModifiablePixelBuffer* fb)
 {
+  QMutexLocker locker(m_mutex);
   m_decoder->flush();
 
   if (fb) {

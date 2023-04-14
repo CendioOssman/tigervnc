@@ -54,7 +54,7 @@ public:
   rfb::PlainPasswd *password() { return m_password; }
   void autoSelectFormatAndEncoding();
   void setQualityLevel(int level);
-  rfb::ModifiablePixelBuffer *framebuffer() { return m_framebuffer; }
+  rfb::ModifiablePixelBuffer *framebuffer();
   void setCompressLevel(int level);
   QCursor *cursor() const { return m_cursor; }
 

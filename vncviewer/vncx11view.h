@@ -1,19 +1,25 @@
 #ifndef VNCX11VIEW_H
 #define VNCX11VIEW_H
 
+#include <X11/Xlib.h>
 #include "abstractvncview.h"
 
 namespace rfb {
-  class Rect;
+  class Region;
 }
 
-class QVNCX11view : public QAbstractVNCView
+class QVNCX11View : public QAbstractVNCView
 {
   Q_OBJECT
 public:
-  QVNCX11view(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
-  virtual ~QVNCX11view();
+  QVNCX11View(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
+  virtual ~QVNCX11View();
+  qulonglong nativeWindowHandle() const override;
+  Display *display() const;
+
+public slots:
   void bell() override;
+  void updateWindow() override;
 
 protected:
   bool event(QEvent *e) override;
@@ -25,8 +31,13 @@ protected:
 signals:
   void message(const QString &msg, int timeout);
 
+public slots:
+  void addInvalidRegion(int x0, int y0, int x1, int y1);
+  void draw();
+
 private:
-  rfb::Rect *m_rect;
+  Window m_window;
+  rfb::Region *m_region;
 };
 
 #endif // VNCX11VIEW_H
