@@ -273,7 +273,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
     m_overlayTip->hide();
   });
 
-  m_resizeTimer->setInterval(10); // <-- DesktopWindow::resize(int x, int y, int w, int h)
+  m_resizeTimer->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
   m_resizeTimer->setSingleShot(true);
   connect(m_resizeTimer, &QTimer::timeout, this, &QAbstractVNCView::handleDesktopSize);
 
@@ -673,10 +673,6 @@ void QAbstractVNCView::fullscreen(bool enabled)
         moveView(xmin, ymin);
         showFullScreen();
         handleDesktopSize();
-#if 1 // Workaround for Windows weird behavior. On Windows, the first fullscreen attempt always fails. To avoid this, make VNCwindow minimized once then fullscreen again.
-        showMinimized();
-        showFullScreen();
-#endif
       }
       else {
         setWindowFlag(Qt::FramelessWindowHint, true);
@@ -689,10 +685,6 @@ void QAbstractVNCView::fullscreen(bool enabled)
       windowHandle()->setScreen(m_defaultScreen);
       showFullScreen();
       handleDesktopSize();
-#if 1 // Workaround for Windows weird behavior. On Windows, the first fullscreen attempt always fails. To avoid this, make VNCwindow minimized once then fullscreen again.
-      showMinimized();
-      showFullScreen();
-#endif
     }
   }
   else {

@@ -308,11 +308,17 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       case WM_PAINT:
         window->refresh(hWnd);
         break;
-      case WM_SIZE: {
-          UINT w = LOWORD(lParam);
-          UINT h = HIWORD(lParam);
-          qDebug() << "VNCWinView::eventHandler(): WM_SIZE: w=" << w << ", h=" << h;
-          SetWindowPos(hWnd, HWND_TOP, 0, 0, w, h, 0);
+      case WM_WINDOWPOSCHANGED: {
+          // Use WM_WINDOWPOSCHANGED instead of WM_SIZE. WM_SIZE is being sent while the window size is changing, whereas
+          // WM_WINDOWPOSCHANGED is sent only a couple of times when the window sizing completes.
+          LPWINDOWPOS pos = (LPWINDOWPOS)lParam;
+          int w = pos->cx;
+          int h = pos->cy;
+          qDebug() << "VNCWinView::eventHandler(): WM_WINDOWPOSCHANGED: w=" << w << ", h=" << h << "current w=" << AppManager::instance()->view()->width() << "current h=" << AppManager::instance()->view()->height();
+          // Do not rely on the lParam's geometry, because it's sometimes incorrect, especially when the fullscreen is activated.
+          // See the following URL for more information.
+          // https://stackoverflow.com/questions/52157587/why-qresizeevent-qwidgetsize-gives-different-when-fullscreen
+          SetWindowPos(hWnd, HWND_TOP, 0, 0, AppManager::instance()->view()->width(), AppManager::instance()->view()->height(), 0);
           AppManager::instance()->view()->adjustSize();
         }
         break;
@@ -428,7 +434,7 @@ bool QVNCWinView::event(QEvent *e)
       //qDebug() << "Leave";
       break;
     case QEvent::CursorChange:
-      //qDebug() << "Unprocessed Event: CursorChange";
+      //qDebug() << "CursorChange";
       e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
     default:
       qDebug() << "Unprocessed Event: " << e->type();
@@ -1070,8 +1076,12 @@ void QVNCWinView::fullscreen(bool enabled)
   QList<int> selectedScreens = fullscreenScreens();
   auto mode = ViewerConfig::config()->fullScreenMode();
   if (!enabled || (mode != ViewerConfig::FSCurrent && selectedScreens.length() > 1)) {
+    // Hide/show the task tray, when the fullscreen is enabled with multiple screens.
+    // This is needed because the fullscreen on multiple screens cannot invoke Win32-API 'showFullScreen()'
+    // so that the task tray won't be hidden.
+
     if (!restoreFunctionRegistered) {
-      atexit(restoreTray);
+      atexit(restoreTray); // Restore the task tray on unexpected process termination.
     }
     int showHide = enabled ? SW_HIDE : SW_SHOW;
     HWND hTrayWnd = ::FindWindow("Shell_TrayWnd", NULL);
