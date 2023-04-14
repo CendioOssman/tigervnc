@@ -35,7 +35,7 @@ BuildRequires:  libXfont2-devel
 BuildRequires:  libselinux-devel, selinux-policy-devel, systemd
 
 BuildRequires:  qt5-qtbase-devel, qt5-qtdeclarative-devel
-BuildRequires:  qt5-qtmultimedia-devel, qt5-linguist
+BuildRequires:  qt5-qtmultimedia-devel, qt5-qtx11extras-devel, qt5-linguist
 BuildRequires:  xorg-x11-server-devel
 
 Requires(post):   coreutils

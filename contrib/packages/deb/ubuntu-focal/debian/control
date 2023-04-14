@@ -29,6 +29,7 @@ Build-Depends:
  qtbase5-dev,
  qtdeclarative5-dev,
  qtmultimedia5-dev,
+ libqt5x11extras5-dev,
  qttools5-dev,
  xorg-server-source,
  xserver-xorg-dev,
