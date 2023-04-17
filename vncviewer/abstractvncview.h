@@ -51,6 +51,10 @@ public:
   virtual void handleKeyRelease(int keyCode);
   virtual void dim(bool enabled) {}
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+  QScreen *screen() const;
+#endif
+
 public slots:
   virtual void setQCursor(const QCursor &cursor);
   virtual void setCursorPos(int x, int y);

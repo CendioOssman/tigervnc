@@ -426,6 +426,14 @@ qulonglong QAbstractVNCView::nativeWindowHandle() const
   return 0;
 }
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+QScreen *QAbstractVNCView::screen() const
+{
+  // FIXME: check best overlap
+  return qApp->screens()[0];
+}
+#endif
+
 void QAbstractVNCView::setMenuKeyStatus(quint32 keysym, bool checked)
 {
   if (keysym == XK_Control_L) {
