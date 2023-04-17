@@ -29,6 +29,32 @@ jobs:
           name: Linux (Ubuntu)
           path: build/tigervnc-*.tar.gz
 
+  build-linux-qt6:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext appstream
+          sudo apt-get install -y libgnutls28-dev nettle-dev libgmp-dev
+          sudo apt-get install -y libgl-dev qt6-base-dev qt6-declarative-dev qt6-multimedia-dev qt6-tools-dev
+          sudo apt-get install -y libxtst-dev libxdamage-dev libxfixes-dev libxrandr-dev libpam-dev
+          sudo apt-get install -y libavcodec-dev libavutil-dev libswscale-dev
+      - name: Configure
+        run: cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
+      - name: Build
+        working-directory: build
+        run: make
+      - name: Install
+        working-directory: build
+        run: make tarball
+      - uses: actions/upload-artifact@v3
+        with:
+          name: Linux (Ubuntu)
+          path: build/tigervnc-*.tar.gz
+
   build-windows:
     runs-on: windows-latest
     timeout-minutes: 20
