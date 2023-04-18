@@ -242,7 +242,6 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   , m_delayedInitializeTimer(new QTimer)
   , m_overlayTipCloseTimer(new QTimer)
   , m_fullscreenEnabled(false)
-  , m_defaultScreen(screen())
 {
   int radius = 5;
   m_overlayTip = new QLabel(QString::asprintf(_("Press %s to open the context menu"), (const char*)::menuKey), this, Qt::SplashScreen | Qt::WindowStaysOnTopHint);
@@ -683,7 +682,7 @@ void QAbstractVNCView::fullscreen(bool enabled)
       }
     }
     else {
-      windowHandle()->setScreen(m_defaultScreen);
+      windowHandle()->setScreen(getCurrentScreen());
       showFullScreen();
       handleDesktopSize();
     }
@@ -703,4 +702,18 @@ void QAbstractVNCView::fullscreen(bool enabled)
 void QAbstractVNCView::moveView(int x, int y)
 {
   move(x, y);
+}
+
+QScreen *QAbstractVNCView::getCurrentScreen()
+{
+  int cx = x() + width() / 2;
+  int cy = y() + height() / 2;
+  QApplication *app = static_cast<QApplication*>(QApplication::instance());
+  QList<QScreen*> screens = app->screens();
+  for (QScreen *&screen : screens) {
+    if (screen->geometry().contains(cx, cy)) {
+      return screen;
+    }
+  }
+  return screens[0];
 }

@@ -65,11 +65,11 @@ protected:
   QTimer *m_delayedInitializeTimer;
   QTimer *m_overlayTipCloseTimer;
   bool m_fullscreenEnabled;
-  QScreen *m_defaultScreen;
 
   void createContextMenu();
   void postRemoteResizeRequest();
   QList<int> fullscreenScreens();
+  QScreen *getCurrentScreen();
 };
 
 #endif // ABSTRACTVNCVIEW_H
