@@ -18,7 +18,7 @@ Item {
             alertDialog.open()
         }
 
-        function onVncWindowOpened(width, height, name) {
+        function onVncWindowOpened() {
             serverDialog.visible = false
         }
 
