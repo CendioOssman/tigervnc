@@ -80,9 +80,9 @@ set(PROJECT_SOURCES
         ${OS_DEP_SOURCES}
 )
 
-if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set_target_properties(vncviewer PROPERTIES WIN32_EXECUTABLE TRUE)
-endif()
+##if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+##  set_target_properties(vncviewer PROPERTIES WIN32_EXECUTABLE TRUE)
+##endif()
 
 ###if(WIN32)
 ###  # Since vncviewer.rc is generated, local includes will be looking
@@ -263,7 +263,8 @@ if(WIN32)
     add_custom_command(
         TARGET vncviewer
         POST_BUILD
-        COMMAND ${DEPLOYQT} --$<IF:$<CONFIG:Debug>,debug,release> --dir "${DEPLOY_DIR}" --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer>)
+        COMMAND ${DEPLOYQT} --dir "${DEPLOY_DIR}" --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer>)
+        ###COMMAND ${DEPLOYQT} --$<IF:$<CONFIG:Debug>,debug,release> --dir "${DEPLOY_DIR}" --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer>)
     add_custom_command(
         TARGET vncviewer
         POST_BUILD
