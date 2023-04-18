@@ -19,6 +19,7 @@ public:
   virtual void resize(int width, int height);
   void popupContextMenu();
   virtual qulonglong nativeWindowHandle() const;
+  double devicePixelRatio() const { return m_devicePixelRatio; }
 
 public slots:
   virtual void handleKeyPress(int keyCode, quint32 keySym);

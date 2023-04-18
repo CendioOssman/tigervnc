@@ -314,19 +314,21 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
         window->handleKeyUpEvent(message, wParam, lParam);
         break;
       case WM_PAINT:
-        window->refresh(hWnd);
+        window->refresh(hWnd, false);
         break;
       case WM_WINDOWPOSCHANGED: {
           // Use WM_WINDOWPOSCHANGED instead of WM_SIZE. WM_SIZE is being sent while the window size is changing, whereas
           // WM_WINDOWPOSCHANGED is sent only a couple of times when the window sizing completes.
           LPWINDOWPOS pos = (LPWINDOWPOS)lParam;
-          int w = pos->cx;
-          int h = pos->cy;
-          qDebug() << "VNCWinView::eventHandler(): WM_WINDOWPOSCHANGED: w=" << w << ", h=" << h << "current w=" << AppManager::instance()->view()->width() << "current h=" << AppManager::instance()->view()->height();
+          int lw = pos->cx;
+          int lh = pos->cy;
+          qDebug() << "VNCWinView::eventHandler(): WM_WINDOWPOSCHANGED: w=" << lw << ", h=" << lh << "current w=" << AppManager::instance()->view()->width() << "current h=" << AppManager::instance()->view()->height();
           // Do not rely on the lParam's geometry, because it's sometimes incorrect, especially when the fullscreen is activated.
           // See the following URL for more information.
           // https://stackoverflow.com/questions/52157587/why-qresizeevent-qwidgetsize-gives-different-when-fullscreen
-          SetWindowPos(hWnd, HWND_TOP, 0, 0, AppManager::instance()->view()->width(), AppManager::instance()->view()->height(), 0);
+          int w = AppManager::instance()->view()->width() * AppManager::instance()->view()->devicePixelRatio() + 0.5;
+          int h = AppManager::instance()->view()->height() * AppManager::instance()->view()->devicePixelRatio() + 0.5;
+          SetWindowPos(hWnd, HWND_TOP, 0, 0, w, h, 0);
           AppManager::instance()->view()->adjustSize();
         }
         break;
@@ -496,23 +498,20 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
     SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, 0);
     adjustSize();
 #endif
-    bool resizing = (width() != size.width()) || (height() != size.height());
-    if (resizing) {
-      // Try to get the remote size to match our window size, provided
-      // the following conditions are true:
-      //
-      // a) The user has this feature turned on
-      // b) The server supports it
-      // c) We're not still waiting for startup fullscreen to kick in
-      //
-      QVNCConnection *cc = AppManager::instance()->connection();
-      if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize) {
-        postRemoteResizeRequest();
-      }
-      // Some systems require a grab after the window size has been changed.
-      // Otherwise they might hold on to displays, resulting in them being unusable.
-      maybeGrabKeyboard();
+    // Try to get the remote size to match our window size, provided
+    // the following conditions are true:
+    //
+    // a) The user has this feature turned on
+    // b) The server supports it
+    // c) We're not still waiting for startup fullscreen to kick in
+    //
+    QVNCConnection *cc = AppManager::instance()->connection();
+    if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize) {
+      postRemoteResizeRequest();
     }
+    // Some systems require a grab after the window size has been changed.
+    // Otherwise they might hold on to displays, resulting in them being unusable.
+    maybeGrabKeyboard();
   }
 }
 
