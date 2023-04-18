@@ -282,7 +282,9 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
           rfb::Point p(x, y);
           QMsgWriter *writer = AppManager::instance()->connection()->writer();
           writer->writePointerEvent(p, buttonMask | wheelMask);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
           qDebug() << "QVNCWinView::eventHandler (button up/down): x=" << x << ", y=" << y << ", btn=" << Qt::hex << (buttonMask | wheelMask);
+#endif
           if (message == WM_LBUTTONUP || message == WM_MBUTTONUP || message == WM_RBUTTONUP || message == WM_XBUTTONUP) {
             // We usually fail to grab the mouse if a mouse button was
             // pressed when we gained focus (e.g. clicking on our window),

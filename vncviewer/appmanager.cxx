@@ -2,6 +2,7 @@
 #include <QLocalSocket>
 #include <QTcpSocket>
 #include <QScreen>
+#include <QDeadlineTimer>
 #include "rdr/Exception.h"
 #include "gettext.h"
 #include "i18n.h"
@@ -38,7 +39,9 @@ AppManager::AppManager()
 AppManager::~AppManager()
 {
     m_worker->exit();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     m_worker->wait(QDeadlineTimer(1000));
+#endif
     m_worker->deleteLater();
     delete m_view;
 }

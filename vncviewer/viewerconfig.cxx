@@ -1,5 +1,6 @@
 #include <QQmlEngine>
 #include <QDir>
+#include <QTextStream>
 #include "viewerconfig.h"
 #include "parameters.h"
 #include "menukey.h"
@@ -227,16 +228,17 @@ void ViewerConfig::saveServerHistory()
     delete[] homeDir;
 
     /* Write server history to file */
-    QFile f(filepath);
-    if (!f.open(QIODevice::WriteOnly | QIODevice::Append)) {
-        throw rdr::Exception("%s", tr("Could not open \"%1\": %2").arg("%s", filepath).arg("%s", strerror(errno)).toStdString().c_str());
+    FILE *f = fopen(filepath, "ab");
+    if (!f) {
+      throw rdr::Exception("%s", tr("Could not open \"%1\": %2").arg("%s", filepath).arg("%s", strerror(errno)).toStdString().c_str());
     }
-    QTextStream stream(&f);
+    QTextStream stream(f, QIODevice::WriteOnly | QIODevice::Append);
 
     // Save the last X elements to the config file.
     for(int i = 0; i < m_serverHistory.size() && i <= SERVER_HISTORY_SIZE; i++) {
         stream << m_serverHistory[i] << "\n";
     }
+    fclose(f);
 }
 
 void ViewerConfig::setOpenGLFBOenabled(bool value)

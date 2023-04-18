@@ -73,9 +73,11 @@ void QMsgWriter::writeSetEncodings(const std::list<rdr::U32> encodings)
 {
   QMutexLocker locker(m_mutex);
   qDebug() << "QMsgWriter::writeSetEncodings";
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
   for (auto encoding : encodings) {
     qDebug().nospace() << "encoding=" << (int)encoding << ", 0x" << Qt::hex << encoding;
   }
+#endif
   std::list<rdr::U32>::const_iterator iter;
   startMsg(msgTypeSetEncodings);
   os->pad(1);
