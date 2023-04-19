@@ -1072,11 +1072,10 @@ void QVNCWinView::stopMouseTracking()
 
 void QVNCWinView::moveView(int x, int y)
 {
-  QAbstractVNCView::moveView(x, y);
+  MoveWindow((HWND)window()->winId(), x, y, width(), height(), false); // This works on the regular DPI screens, when the fullscreen on all displays is enabled.
   //SetWindowPos((HWND)window(), HWND_TOP, x, y, width(), height(), 0);
-  //MoveWindow((HWND)window()->winId(), x, y, width(), height(), false);
   //MoveWindow((HWND)effectiveWinId(), x, y, width(), height(), false);
-  //MoveWindow((HWND)effectiveWinId(), x, y, 100, 100, false);
+  //QAbstractVNCView::moveView(x, y);
 }
 
 void QVNCWinView::fullscreen(bool enabled)
