@@ -41,6 +41,8 @@ AppManager::~AppManager()
     m_worker->exit();
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     m_worker->wait(QDeadlineTimer(1000));
+#else
+    m_worker->wait(1000);
 #endif
     m_worker->deleteLater();
     delete m_view;

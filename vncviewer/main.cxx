@@ -4,13 +4,14 @@
 #include <QLocale>
 #include <QTranslator>
 #include <QMainWindow>
+#include <QDebug>
 #include "eventfilter.h"
 #include "config.h"
 #include "viewerconfig.h"
 #include "appmanager.h"
 #include "vncconnection.h"
 
-//#define PRINT_SCREEN
+#define PRINT_SCREEN
 
 #if defined(PRINT_SCREEN)
 #include <QScreen>

@@ -1,4 +1,4 @@
-import QtQuick 2.15
+import QtQuick 2.12
 import Qt.TigerVNC 1.0
 
 Item {
@@ -33,9 +33,12 @@ Item {
         function onAboutDialogRequested() {
             aboutDialog.open();
         }
-    }
-    Connections {
-        target: AppManager
+
+        onErrorOcurred: onErrorOcurred(seq, message)
+        onVncWindowOpened: onVncWindowOpened()
+        onInfoDialogRequested: onInfoDialogRequested()
+        onOptionDialogRequested: onOptionDialogRequested()
+        onAboutDialogRequested: onAboutDialogRequested()
     }
 
     ServerDialog {

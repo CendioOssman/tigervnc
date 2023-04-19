@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Window 2.15
-import QtQuick.Controls 2.15
+import QtQuick 2.12
+import QtQuick.Window 2.12
+import QtQuick.Controls 2.12
 import Qt.TigerVNC 1.0
 
 Window {
@@ -56,6 +56,8 @@ Window {
             authDialog.passwordNeeded = passwordNeeded
             authDialog.open()
         }
+
+        onCredentialRequested: onCredentialRequested(secured, userNeeded, passwordNeeded)
     }
 
     Rectangle {
@@ -164,7 +166,7 @@ Window {
             anchors.top: aboutButton.top
             enabled: addressInput.currentText.length > 0
             text: qsTr("Connect")
-            onClicked: AppManager.connectToServer(addressInput.currentValue)
+            onClicked: AppManager.connectToServer(addressInput.currentText)
         }
     }
 

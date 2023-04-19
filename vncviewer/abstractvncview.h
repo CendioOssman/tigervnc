@@ -20,6 +20,7 @@ public:
   void popupContextMenu();
   virtual qulonglong nativeWindowHandle() const;
   double devicePixelRatio() const { return m_devicePixelRatio; }
+  QScreen *getCurrentScreen();
 
 public slots:
   virtual void handleKeyPress(int keyCode, quint32 keySym);
@@ -69,7 +70,6 @@ protected:
   void createContextMenu();
   void postRemoteResizeRequest();
   QList<int> fullscreenScreens();
-  QScreen *getCurrentScreen();
 };
 
 #endif // ABSTRACTVNCVIEW_H

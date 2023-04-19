@@ -243,6 +243,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   , m_overlayTipCloseTimer(new QTimer)
   , m_fullscreenEnabled(false)
 {
+  setContentsMargins(0, 0, 0, 0);
   int radius = 5;
   m_overlayTip = new QLabel(QString::asprintf(_("Press %s to open the context menu"), (const char*)::menuKey), this, Qt::SplashScreen | Qt::WindowStaysOnTopHint);
   m_overlayTip->hide();
@@ -631,6 +632,7 @@ void QAbstractVNCView::fullscreen(bool enabled)
   qDebug() << "QAbstractVNCView::fullscreen: enabled=" << enabled;
   // TODO: Flag m_fullscreenEnabled seems have to be disabled before executing fullscreen(). Need clarification.
   m_fullscreenEnabled = false;
+  m_resizeTimer->stop();
   QApplication *app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
   if (enabled) {
@@ -706,12 +708,13 @@ void QAbstractVNCView::moveView(int x, int y)
 
 QScreen *QAbstractVNCView::getCurrentScreen()
 {
-  int cx = x() + width() / 2;
-  int cy = y() + height() / 2;
+  QPoint globalCursorPos = QCursor::pos();
+  qDebug() << "QAbstractVNCView::getCurrentScreen: pos=" << globalCursorPos;
   QApplication *app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
   for (QScreen *&screen : screens) {
-    if (screen->geometry().contains(cx, cy)) {
+    if (screen->geometry().contains(globalCursorPos)) {
+      qDebug() << "QAbstractVNCView::getCurrentScreen: found screen isPrimary=" << (screen == app->primaryScreen());
       return screen;
     }
   }

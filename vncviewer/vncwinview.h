@@ -18,7 +18,6 @@ public:
   virtual ~QVNCWinView();
 
   void setWindow(HWND);
-  HWND window() const;
   void postMouseMoveEvent(int x, int y, int mask);
   bool hasFocus() const;
   qulonglong nativeWindowHandle() const override;

@@ -227,17 +227,6 @@ void QVNCWinView::setWindow(HWND window)
   m_hwndowner = false;
 }
 
-/*!
-    Returns the handle to the native Win32 window, or null if no
-    window has been set or created yet.
-
-    \sa setWindow(), createWindow()
-*/
-HWND QVNCWinView::window() const
-{
-  return m_hwnd;
-}
-
 void QVNCWinView::postMouseMoveEvent(int x, int y, int mask)
 {
   rfb::Point p(x, y);
@@ -331,6 +320,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
           int w = AppManager::instance()->view()->width() * AppManager::instance()->view()->devicePixelRatio() + 0.5;
           int h = AppManager::instance()->view()->height() * AppManager::instance()->view()->devicePixelRatio() + 0.5;
           SetWindowPos(hWnd, HWND_TOP, 0, 0, w, h, 0);
+          qDebug() << "VNCWinView::eventHandler(): SetWindowPos: w=" << w << ", h=" << h;
           AppManager::instance()->view()->adjustSize();
         }
         break;
@@ -466,6 +456,7 @@ void QVNCWinView::showEvent(QShowEvent *e)
     int w = width() * m_devicePixelRatio;
     int h = height() * m_devicePixelRatio;
     SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, SWP_SHOWWINDOW);
+    qDebug() << "VNCWinView::showEvent(): SetWindowPos: w=" << w << ", h=" << h;
     adjustSize();
   }
 }
@@ -492,28 +483,32 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
 
   if (m_hwnd) {
     QSize size = e->size();
-#if 1
+
     int w = size.width() * m_devicePixelRatio;
     int h = size.height() * m_devicePixelRatio;
     // Following SetWindowPos is needed here in addition to eventHandler()'s WM_SIZE handler, because
     // the WM_SIZE handler is not called when the parent QWidget calls showFullScreen().
     SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, 0);
+    qDebug() << "VNCWinView::resizeEvent(): SetWindowPos: w=" << w << ", h=" << h;
     adjustSize();
-#endif
-    // Try to get the remote size to match our window size, provided
-    // the following conditions are true:
-    //
-    // a) The user has this feature turned on
-    // b) The server supports it
-    // c) We're not still waiting for startup fullscreen to kick in
-    //
-    QVNCConnection *cc = AppManager::instance()->connection();
-    if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize) {
-      postRemoteResizeRequest();
+
+    bool resizing = (width() != size.width()) || (height() != size.height());
+    if (resizing) {
+      // Try to get the remote size to match our window size, provided
+      // the following conditions are true:
+      //
+      // a) The user has this feature turned on
+      // b) The server supports it
+      // c) We're not still waiting for startup fullscreen to kick in
+      //
+      QVNCConnection *cc = AppManager::instance()->connection();
+      if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize) {
+        postRemoteResizeRequest();
+      }
+      // Some systems require a grab after the window size has been changed.
+      // Otherwise they might hold on to displays, resulting in them being unusable.
+      maybeGrabKeyboard();
     }
-    // Some systems require a grab after the window size has been changed.
-    // Otherwise they might hold on to displays, resulting in them being unusable.
-    maybeGrabKeyboard();
   }
 }
 
@@ -1077,7 +1072,11 @@ void QVNCWinView::stopMouseTracking()
 
 void QVNCWinView::moveView(int x, int y)
 {
-  MoveWindow((HWND)winId(), x, y, width(), height(), false);
+  QAbstractVNCView::moveView(x, y);
+  //SetWindowPos((HWND)window(), HWND_TOP, x, y, width(), height(), 0);
+  //MoveWindow((HWND)window()->winId(), x, y, width(), height(), false);
+  //MoveWindow((HWND)effectiveWinId(), x, y, width(), height(), false);
+  //MoveWindow((HWND)effectiveWinId(), x, y, 100, 100, false);
 }
 
 void QVNCWinView::fullscreen(bool enabled)
