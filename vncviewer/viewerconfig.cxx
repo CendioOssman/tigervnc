@@ -228,7 +228,7 @@ void ViewerConfig::saveServerHistory()
     delete[] homeDir;
 
     /* Write server history to file */
-    FILE *f = fopen(filepath, "ab");
+    FILE *f = fopen(filepath, "wb");
     if (!f) {
       throw rdr::Exception("%s", tr("Could not open \"%1\": %2").arg("%s", filepath).arg("%s", strerror(errno)).toStdString().c_str());
     }
