@@ -10,6 +10,13 @@ class QCursor;
 class QLabel;
 class QScreen;
 
+namespace rfb {
+  class Region;
+  class Point;
+}
+
+using DownMap = std::map<int, quint32>;
+
 class QAbstractVNCView : public QWidget
 {
   Q_OBJECT
@@ -48,6 +55,7 @@ protected:
   QByteArray m_geometry;
   double m_devicePixelRatio;
 
+  quint32 m_menuKeySym;
   QMenu *m_contextMenu;
   QList<QAction*> m_actions;
   QLabel *m_overlayTip;
@@ -67,9 +75,21 @@ protected:
   QTimer *m_overlayTipCloseTimer;
   bool m_fullscreenEnabled;
 
+  DownMap m_downKeySym;
+  QTimer *m_mouseButtonEmulationTimer;
+  int m_state;
+  int m_emulatedButtonMask;
+  int m_lastButtonMask;
+  rfb::Point *m_lastPos;
+  rfb::Point *m_origPos;
+
   void createContextMenu();
   void postRemoteResizeRequest();
   QList<int> fullscreenScreens();
+  void filterPointerEvent(const rfb::Point &pos, int buttonMask);
+  void sendAction(const rfb::Point &pos, int buttonMask, int action);
+  int createButtonMask(int buttonMask);
+  void handleMouseButtonEmulationTimeout();
 };
 
 #endif // ABSTRACTVNCVIEW_H

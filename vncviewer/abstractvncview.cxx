@@ -12,6 +12,7 @@
 #include <QDebug>
 #include <QUrl>
 #include <climits>
+#include "rfb/Exception.h"
 #include "rfb/ScreenSet.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ServerParams.h"
@@ -225,9 +226,144 @@ public:
   }
 };
 
+/*
+ * Lets create a simple finite-state machine for 3 button emulation:
+ *
+ * We track buttons 1 and 3 (left and right).  There are 11 states:
+ *   0 ground           - initial state
+ *   1 delayed left     - left pressed, waiting for right
+ *   2 delayed right    - right pressed, waiting for left
+ *   3 pressed middle   - right and left pressed, emulated middle sent
+ *   4 pressed left     - left pressed and sent
+ *   5 pressed right    - right pressed and sent
+ *   6 released left    - left released after emulated middle
+ *   7 released right   - right released after emulated middle
+ *   8 repressed left   - left pressed after released left
+ *   9 repressed right  - right pressed after released right
+ *  10 pressed both     - both pressed, not emulating middle
+ *
+ * At each state, we need handlers for the following events
+ *   0: no buttons down
+ *   1: left button down
+ *   2: right button down
+ *   3: both buttons down
+ *   4: emulate3Timeout passed without a button change
+ * Note that button events are not deltas, they are the set of buttons being
+ * pressed now.  It's possible (ie, mouse hardware does it) to go from (eg)
+ * left down to right down without anything in between, so all cases must be
+ * handled.
+ *
+ * a handler consists of three values:
+ *   0: action1
+ *   1: action2
+ *   2: new emulation state
+ *
+ * action > 0: ButtonPress
+ * action = 0: nothing
+ * action < 0: ButtonRelease
+ *
+ * The comment preceeding each section is the current emulation state.
+ * The comments to the right are of the form
+ *      <button state> (<events>) -> <new emulation state>
+ * which should be read as
+ *      If the buttons are in <button state>, generate <events> then go to
+ *      <new emulation state>.
+ */
+static const signed char stateTab[11][5][3] = {
+/* 0 ground */
+  {
+    {  0,  0,  0 },   /* nothing -> ground (no change) */
+    {  0,  0,  1 },   /* left -> delayed left */
+    {  0,  0,  2 },   /* right -> delayed right */
+    {  2,  0,  3 },   /* left & right (middle press) -> pressed middle */
+    {  0,  0, -1 }    /* timeout N/A */
+  },
+/* 1 delayed left */
+  {
+    {  1, -1,  0 },   /* nothing (left event) -> ground */
+    {  0,  0,  1 },   /* left -> delayed left (no change) */
+    {  1, -1,  2 },   /* right (left event) -> delayed right */
+    {  2,  0,  3 },   /* left & right (middle press) -> pressed middle */
+    {  1,  0,  4 },   /* timeout (left press) -> pressed left */
+  },
+/* 2 delayed right */
+  {
+    {  3, -3,  0 },   /* nothing (right event) -> ground */
+    {  3, -3,  1 },   /* left (right event) -> delayed left (no change) */
+    {  0,  0,  2 },   /* right -> delayed right (no change) */
+    {  2,  0,  3 },   /* left & right (middle press) -> pressed middle */
+    {  3,  0,  5 },   /* timeout (right press) -> pressed right */
+  },
+/* 3 pressed middle */
+  {
+    { -2,  0,  0 },   /* nothing (middle release) -> ground */
+    {  0,  0,  7 },   /* left -> released right */
+    {  0,  0,  6 },   /* right -> released left */
+    {  0,  0,  3 },   /* left & right -> pressed middle (no change) */
+    {  0,  0, -1 },   /* timeout N/A */
+  },
+/* 4 pressed left */
+  {
+    { -1,  0,  0 },   /* nothing (left release) -> ground */
+    {  0,  0,  4 },   /* left -> pressed left (no change) */
+    { -1,  0,  2 },   /* right (left release) -> delayed right */
+    {  3,  0, 10 },   /* left & right (right press) -> pressed both */
+    {  0,  0, -1 },   /* timeout N/A */
+  },
+/* 5 pressed right */
+  {
+    { -3,  0,  0 },   /* nothing (right release) -> ground */
+    { -3,  0,  1 },   /* left (right release) -> delayed left */
+    {  0,  0,  5 },   /* right -> pressed right (no change) */
+    {  1,  0, 10 },   /* left & right (left press) -> pressed both */
+    {  0,  0, -1 },   /* timeout N/A */
+  },
+/* 6 released left */
+  {
+    { -2,  0,  0 },   /* nothing (middle release) -> ground */
+    { -2,  0,  1 },   /* left (middle release) -> delayed left */
+    {  0,  0,  6 },   /* right -> released left (no change) */
+    {  1,  0,  8 },   /* left & right (left press) -> repressed left */
+    {  0,  0, -1 },   /* timeout N/A */
+  },
+/* 7 released right */
+  {
+    { -2,  0,  0 },   /* nothing (middle release) -> ground */
+    {  0,  0,  7 },   /* left -> released right (no change) */
+    { -2,  0,  2 },   /* right (middle release) -> delayed right */
+    {  3,  0,  9 },   /* left & right (right press) -> repressed right */
+    {  0,  0, -1 },   /* timeout N/A */
+  },
+/* 8 repressed left */
+  {
+    { -2, -1,  0 },   /* nothing (middle release, left release) -> ground */
+    { -2,  0,  4 },   /* left (middle release) -> pressed left */
+    { -1,  0,  6 },   /* right (left release) -> released left */
+    {  0,  0,  8 },   /* left & right -> repressed left (no change) */
+    {  0,  0, -1 },   /* timeout N/A */
+  },
+/* 9 repressed right */
+  {
+    { -2, -3,  0 },   /* nothing (middle release, right release) -> ground */
+    { -3,  0,  7 },   /* left (right release) -> released right */
+    { -2,  0,  5 },   /* right (middle release) -> pressed right */
+    {  0,  0,  9 },   /* left & right -> repressed right (no change) */
+    {  0,  0, -1 },   /* timeout N/A */
+  },
+/* 10 pressed both */
+  {
+    { -1, -3,  0 },   /* nothing (left release, right release) -> ground */
+    { -3,  0,  4 },   /* left (right release) -> pressed left */
+    { -1,  0,  5 },   /* right (left release) -> pressed right */
+    {  0,  0, 10 },   /* left & right -> pressed both (no change) */
+    {  0,  0, -1 },   /* timeout N/A */
+  },
+};
+
 QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   : QWidget(parent, f)
   , m_devicePixelRatio(devicePixelRatioF())
+  , m_menuKeySym(XK_F8)
   , m_contextMenu(nullptr)
   , m_firstLEDState(false)
   , m_pendingServerClipboard(false)
@@ -242,6 +378,12 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   , m_delayedInitializeTimer(new QTimer)
   , m_overlayTipCloseTimer(new QTimer)
   , m_fullscreenEnabled(false)
+  , m_mouseButtonEmulationTimer(new QTimer)
+  , m_state(0)
+  , m_emulatedButtonMask(0)
+  , m_lastButtonMask(0)
+  , m_lastPos(new rfb::Point)
+  , m_origPos(new rfb::Point)
 {
   setContentsMargins(0, 0, 0, 0);
   int radius = 5;
@@ -289,6 +431,10 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   });
   m_delayedInitializeTimer->start();
 
+  m_mouseButtonEmulationTimer->setInterval(50);
+  m_mouseButtonEmulationTimer->setSingleShot(true);
+  connect(m_mouseButtonEmulationTimer, &QTimer::timeout, this, &QAbstractVNCView::handleMouseButtonEmulationTimeout);
+
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorChanged, this, &QAbstractVNCView::setQCursor, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorPositionChanged, this, &QAbstractVNCView::setCursorPos, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::ledStateChanged, this, &QAbstractVNCView::setLEDState, Qt::QueuedConnection);
@@ -304,6 +450,9 @@ QAbstractVNCView::~QAbstractVNCView()
   delete m_contextMenu;
   delete m_resizeTimer;
   delete m_delayedInitializeTimer;
+  delete m_mouseButtonEmulationTimer;
+  delete m_lastPos;
+  delete m_origPos;
 }
 
 void QAbstractVNCView::postRemoteResizeRequest()
@@ -719,4 +868,137 @@ QScreen *QAbstractVNCView::getCurrentScreen()
     }
   }
   return screens[0];
+}
+
+
+// EmulateMB::filterPointerEvent(const rfb::Point& pos, int buttonMask)
+void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
+{
+  QMsgWriter *writer = AppManager::instance()->connection()->writer();
+
+  // Just pass through events if the emulate setting is disabled
+  if (!emulateMiddleButton) {
+    writer->writePointerEvent(pos, mask);
+    return;
+  }
+
+  m_lastButtonMask = mask;
+  *m_lastPos = pos;
+
+  int btstate = 0;
+  if (mask & 0x1) {
+    btstate |= 0x1;
+  }
+  if (mask & 0x4) {
+    btstate |= 0x2;
+  }
+  if ((m_state > 10) || (m_state < 0)) {
+    throw rfb::Exception(_("Invalid state for 3 button emulation"));
+  }
+  int action1 = stateTab[m_state][btstate][0];
+  if (action1 != 0) {
+    // Some presses are delayed, that means we have to check if that's
+    // the case and send the position corresponding to where the event
+    // first was initiated
+    if ((stateTab[m_state][4][2] >= 0) && action1 > 0)
+      // We have a timeout state and a button press (a delayed press),
+      // always use the original position when leaving a timeout state,
+      // whether the timeout was triggered or not
+      sendAction(*m_origPos, mask, action1);
+    else
+      // Normal non-delayed event
+      sendAction(pos, mask, action1);
+  }
+
+  // In our case with the state machine, action2 always occurs during a button
+  // release but if this change we need handle action2 accordingly
+  int action2 = stateTab[m_state][btstate][1];
+  if (action2 != 0) {
+    if ((stateTab[m_state][4][2] >= 0) && action2 > 0)
+      sendAction(*m_origPos, mask, action2);
+    else
+      // Normal non-delayed event
+      sendAction(pos, mask, action2);
+  }
+
+  // Still send a pointer move event even if there are no actions.
+  // However if the timer is running then we are supressing _all_
+  // events, even movement. The pointer's actual position will be
+  // sent once the timer fires or is abandoned.
+  if ((action1 == 0) && (action2 == 0) && !m_mouseButtonEmulationTimer->isActive()) {
+    mask = createButtonMask(mask);
+    QMsgWriter *writer = AppManager::instance()->connection()->writer();
+    writer->writePointerEvent(pos, mask);
+  }
+
+  int lastState = m_state;
+  m_state = stateTab[m_state][btstate][2];
+
+  if (lastState != m_state) {
+    m_mouseButtonEmulationTimer->stop();
+
+    if (stateTab[m_state][4][2] >= 0) {
+      // We need to save the original position so that
+      // drags start from the correct position
+      *m_origPos = pos;
+      m_mouseButtonEmulationTimer->start();
+    }
+  }
+}
+
+// EmulateMB::sendAction(const rfb::Point& pos, int buttonMask, int action)
+void QAbstractVNCView::sendAction(const rfb::Point& pos, int buttonMask, int action)
+{
+  assert(action != 0);
+  if (action < 0) {
+    m_emulatedButtonMask &= ~(1 << ((-action) - 1));
+  }
+  else {
+    m_emulatedButtonMask |= (1 << (action - 1));
+  }
+  buttonMask = createButtonMask(buttonMask);
+  QMsgWriter *writer = AppManager::instance()->connection()->writer();
+  writer->writePointerEvent(pos, buttonMask);
+}
+
+// EmulateMB:createButtonMask(int buttonMask)
+int QAbstractVNCView::createButtonMask(int buttonMask)
+{
+  // Unset left and right buttons in the mask
+  buttonMask &= ~0x5;
+
+  // Set the left and right buttons according to the action
+  return buttonMask | m_emulatedButtonMask;
+}
+
+// EmulateMB::handleTimeout(rfb::Timer *t)
+void QAbstractVNCView::handleMouseButtonEmulationTimeout()
+{
+  if ((m_state > 10) || (m_state < 0)) {
+    throw rfb::Exception(_("Invalid state for 3 button emulation"));
+  }
+
+  // Timeout shouldn't trigger when there's no timeout action
+  assert(stateTab[m_state][4][2] >= 0);
+
+  int action1 = stateTab[m_state][4][0];
+  if (action1 != 0) {
+    sendAction(*m_origPos, m_lastButtonMask, action1);
+  }
+  int action2 = stateTab[m_state][4][1];
+  if (action2 != 0) {
+    sendAction(*m_origPos, m_lastButtonMask, action2);
+  }
+  int buttonMask = m_lastButtonMask;
+
+  // Pointer move events are not sent when waiting for the timeout.
+  // However, we can't let the position get out of sync so when
+  // the pointer has moved we have to send the latest position here.
+  if (!m_origPos->equals(*m_lastPos)) {
+    buttonMask = createButtonMask(buttonMask);
+    QMsgWriter *writer = AppManager::instance()->connection()->writer();
+    writer->writePointerEvent(*m_lastPos, buttonMask);
+  }
+
+  m_state = stateTab[m_state][4][2];
 }

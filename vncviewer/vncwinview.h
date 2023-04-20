@@ -8,8 +8,6 @@
 class QTimer;
 class QMutex;
 
-using DownMap = std::map<int, quint32>;
-
 class QVNCWinView : public QAbstractVNCView
 {
   Q_OBJECT
@@ -59,8 +57,6 @@ private:
 
   bool m_altGrArmed;
   unsigned int m_altGrCtrlTime;
-  quint32 m_menuKeySym;
-  DownMap m_downKeySym;
   QTimer *m_altGrCtrlTimer;
 
   HCURSOR m_cursor;

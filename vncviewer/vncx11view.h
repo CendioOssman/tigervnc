@@ -4,10 +4,6 @@
 #include <X11/Xlib.h>
 #include "abstractvncview.h"
 
-namespace rfb {
-  class Region;
-}
-
 class QVNCX11View : public QAbstractVNCView
 {
   Q_OBJECT
@@ -20,6 +16,8 @@ public:
 public slots:
   void bell() override;
   void updateWindow() override;
+  void handleKeyPress(int keyCode, quint32 keySym) override;
+  void handleKeyRelease(int keyCode) override;
 
 protected:
   bool event(QEvent *e) override;
@@ -27,6 +25,9 @@ protected:
   void showEvent(QShowEvent *) override;
   void focusInEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
+
+  void handleMouseButtonEvent(QMouseEvent*);
+  void handleMouseWheelEvent(QWheelEvent*);
 
 signals:
   void message(const QString &msg, int timeout);

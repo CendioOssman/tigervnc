@@ -85,7 +85,6 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
   , m_hwnd(0)
   , m_mutex(new QMutex)
   , m_altGrArmed(false)
-  , m_menuKeySym(XK_F8)
   , m_altGrCtrlTimer(new QTimer)
   , m_cursor(nullptr)
   , m_mouseTracking(false)
@@ -431,9 +430,11 @@ bool QVNCWinView::event(QEvent *e)
       break;
     case QEvent::Enter:
       //qDebug() << "Enter";
+      grabPointer();
       break;
     case QEvent::Leave:
       //qDebug() << "Leave";
+      ungrabPointer();
       break;
     case QEvent::CursorChange:
       //qDebug() << "CursorChange";

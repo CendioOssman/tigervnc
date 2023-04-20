@@ -2,14 +2,15 @@
 #include <QTextStream>
 #include <QDataStream>
 #include <QUrl>
-#if defined(WIN32)
-#include <qt_windows.h>
-#endif
+#include "rfb/Exception.h"
 #include "rfb/ServerParams.h"
+#include "rfb/LogWriter.h"
+#include "i18n.h"
 #include "parameters.h"
 #include "appmanager.h"
 #include "vncconnection.h"
 #include "PlatformPixelBuffer.h"
+#include "msgwriter.h"
 #include "vncx11view.h"
 
 #include <X11/Xlib.h>
@@ -24,104 +25,19 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/XKBlib.h>
 #include <X11/extensions/Xrender.h>
 
-#pragma pack (1)
-struct BITMAPFILEHEADER
-{
-  short    bfType;
-  int    bfSize;
-  short    bfReserved1;
-  short    bfReserved2;
-  int   bfOffBits;
-};
+extern const struct _code_map_xkb_to_qnum {
+  const char * from;
+  const unsigned short to;
+} code_map_xkb_to_qnum[];
+extern const unsigned int code_map_xkb_to_qnum_len;
 
-struct BITMAPINFOHEADER
-{
-  int  biSize;
-  int   biWidth;
-  int   biHeight;
-  short   biPlanes;
-  short   biBitCount;
-  int  biCompression;
-  int  biSizeImage;
-  int   biXPelsPerMeter;
-  int   biYPelsPerMeter;
-  int  biClrUsed;
-  int  biClrImportant;
-};
+static int code_map_keycode_to_qnum[256];
 
-void saveXImageToBitmap(XImage *pImage)
-{
-  BITMAPFILEHEADER bmpFileHeader;
-  BITMAPINFOHEADER bmpInfoHeader;
-  memset(&bmpFileHeader, 0, sizeof(BITMAPFILEHEADER));
-  memset(&bmpInfoHeader, 0, sizeof(BITMAPINFOHEADER));
-  bmpFileHeader.bfType = 0x4D42;
-  bmpFileHeader.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
-  bmpFileHeader.bfReserved1 = 0;
-  bmpFileHeader.bfReserved2 = 0;
-  int biBitCount = 32;
-  int dwBmpSize = ((pImage->width * biBitCount + 31) / 32) * 4 * pImage->height;
-  bmpFileHeader.bfSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) +  dwBmpSize;
+static rfb::LogWriter vlog("QVNCX11View");
 
-  bmpInfoHeader.biSize = sizeof(BITMAPINFOHEADER);
-  bmpInfoHeader.biWidth = pImage->width;
-  bmpInfoHeader.biHeight = pImage->height;
-  bmpInfoHeader.biPlanes = 1;
-  bmpInfoHeader.biBitCount = biBitCount;
-  bmpInfoHeader.biSizeImage = 0;
-  bmpInfoHeader.biCompression = 0;
-  bmpInfoHeader.biXPelsPerMeter = 0;
-  bmpInfoHeader.biYPelsPerMeter = 0;
-  bmpInfoHeader.biClrUsed = 0;
-  bmpInfoHeader.biClrImportant = 0;
-
-  static int cnt = 0;
-  char filePath[255];
-  sprintf(filePath, "bitmap%d.bmp", cnt++);
-  FILE *fp = fopen(filePath, "wb");
-
-  if(fp == NULL)
-    return;
-
-  fwrite(&bmpFileHeader, sizeof(bmpFileHeader), 1, fp);
-  fwrite(&bmpInfoHeader, sizeof(bmpInfoHeader), 1, fp);
-  fwrite(pImage->data, dwBmpSize, 1, fp);
-  fclose(fp);
-}
-
-/*!
-    \class VNCX11view qwinhost.h
-    \brief The VNCX11view class provides an API to use native Win32
-    windows in Qt applications.
-
-    VNCX11view exists to provide a QWidget that can act as a parent for
-    any native Win32 control. Since VNCX11view is a proper QWidget, it
-    can be used as a toplevel widget (e.g. 0 parent) or as a child of
-    any other QWidget.
-
-    VNCX11view integrates the native control into the Qt user interface,
-    e.g. handles focus switches and laying out.
-
-    Applications moving to Qt may have custom Win32 controls that will
-    take time to rewrite with Qt. Such applications can use these
-    custom controls as children of VNCX11view widgets. This allows the
-    application's user interface to be replaced gradually.
-
-    When the VNCX11view is destroyed, and the Win32 window hasn't been
-    set with setWindow(), the window will also be destroyed.
-*/
-
-/*!
-    Creates an instance of VNCX11view. \a parent and \a f are
-    passed on to the QWidget constructor. The widget has by default
-    no background.
-
-    \warning You cannot change the parent widget of the VNCX11view instance
-    after the native window has been created, i.e. do not call
-    QWidget::setParent or move the VNCX11view into a different layout.
-*/
 QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   : QAbstractVNCView(parent, f)
   , m_window(0)
@@ -131,13 +47,45 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   setAttribute(Qt::WA_NoSystemBackground);
   setFocusPolicy(Qt::StrongFocus);
   connect(AppManager::instance(), &AppManager::invalidateRequested, this, &QVNCX11View::addInvalidRegion, Qt::QueuedConnection);
+
+  XkbDescPtr xkb;
+  Status status;
+
+  xkb = XkbGetMap(display(), 0, XkbUseCoreKbd);
+  if (!xkb)
+    throw rfb::Exception("XkbGetMap");
+
+  status = XkbGetNames(display(), XkbKeyNamesMask, xkb);
+  if (status != Success)
+    throw rfb::Exception("XkbGetNames");
+
+  memset(code_map_keycode_to_qnum, 0, sizeof(code_map_keycode_to_qnum));
+  for (KeyCode keycode = xkb->min_key_code;
+       keycode < xkb->max_key_code;
+       keycode++) {
+    const char *keyname = xkb->names->keys[keycode].name;
+    unsigned short rfbcode;
+
+    if (keyname[0] == '\0')
+      continue;
+
+    rfbcode = 0;
+    for (unsigned i = 0; i < code_map_xkb_to_qnum_len; i++) {
+        if (strncmp(code_map_xkb_to_qnum[i].from,
+                    keyname, XkbKeyNameLength) == 0) {
+            rfbcode = code_map_xkb_to_qnum[i].to;
+            break;
+        }
+    }
+    if (rfbcode != 0)
+        code_map_keycode_to_qnum[keycode] = rfbcode;
+    else
+        vlog.debug("No key mapping for key %.4s", keyname);
+  }
+
+  XkbFreeKeyboard(xkb, 0, True);
 }
 
-/*!
-    Destroys the VNCX11view object. If the hosted Win32 window has not
-    been set explicitly using setWindow() the window will be
-    destroyed.
-*/
 QVNCX11View::~QVNCX11View()
 {
 }
@@ -157,85 +105,6 @@ Display *QVNCX11View::display() const
   return display;
 }
 
-char *loadbmpfile(const char *filename, int *width, int *height, int *bitcount, int *linelen)
-{
-    char *bmpdata = nullptr;
-    int i, size;
-    int off, hs, w = 0, h = 0, bcnt = 0;
-    int line = 0;
-    int pl = 0, bicomp = 0, clrused;
-    char bm[3];
-    FILE *fi = fopen(filename,"rb");
-    bcnt = 0;
-    if (fi) {
-        fread(bm, 1, 2, fi);
-        fread(&i , 4, 1, fi);//fsize
-        fread(&i , 2, 2, fi);
-        fread(&off , 4, 1, fi);//offset
-        fread(&hs , 4, 1, fi);//hdsize
-        if (hs == 40) {
-            fread(&w , 4, 1, fi);//width
-            fread(&h , 4, 1, fi);//height
-            fread(&pl , 2, 1, fi);//planes
-            fread(&bcnt , 2, 1, fi);//bitcount
-            fread(&bicomp, 4, 1, fi);//biComp
-            fread(&i , 4, 1, fi);//biSizeImage
-            fread(&i , 4, 1, fi);//biXPixPerMeter
-            fread(&i , 4, 1, fi);//biYPixPerMeter
-            fread(&clrused , 4, 1, fi);//biClrUsed
-            fread(&i , 4, 1, fi);//biClrImpotant
-        } else {
-            fread(&w , 2, 1, fi);//width
-            fread(&h , 2, 1, fi);//height
-            fread(&pl , 2, 1, fi);//planes
-            fread(&bcnt , 2, 1, fi);//bitcount
-        }
-        line = w * (bcnt / 8);
-        line = ((line + 3) / 4) * 4;
-        size = line * h;
-        if (size < 0) size = -size;
-        bmpdata = (char*)malloc(size);
-        fread(bmpdata, 1, size, fi);
-
-        fclose(fi);
-    }
-    *bitcount = bcnt;
-    *width = w;
-    *height = h;
-    *linelen = line;
-    return bmpdata;
-}
-
-XImage *load_bmp(Display *d, const char *filename, int *imwidth, int *imheight) {
-    char *bmpdata;
-    int depth = XDefaultDepth(d, 0);
-    int width, height, bitcount, linelen, bpp;
-    XImage *img;
-    char *data;
-    int i, j, h, pixbytes;
-    bmpdata = loadbmpfile(filename, &width, &height, &bitcount, &linelen);
-    pixbytes = bitcount / 8;
-    bpp = depth >= 24 ? 4 : 2;
-    h = height;
-    if (height < 0) height = -height;
-    data = (char*)calloc(bpp, height * width);
-    for (i = 0; i < height; i++) {
-        int k = h < 0 ? i * linelen : (height - i -1) * linelen;
-        int m = i * width * bpp;
-        for (j = 0; j < width; j++) {
-            int r = k + j * pixbytes;
-            int s = m + j * bpp;
-            memcpy(data+s, bmpdata+r, pixbytes);
-        }
-    }
-    free(bmpdata);
-    img = XCreateImage( d, CopyFromParent, depth, ZPixmap,
-            0, data, width, height, bpp*8, bpp*width );
-    *imwidth = width;
-    *imheight = height;
-    return img;
-}
-
 void QVNCX11View::addInvalidRegion(int x0, int y0, int x1, int y1)
 {
   m_region->assign_union(rfb::Rect(x0, y0, x1, y1));
@@ -252,20 +121,10 @@ void QVNCX11View::addInvalidRegion(int x0, int y0, int x1, int y1)
   qDebug() << "QQVNCX11View::addInvalidRegion: x=" << r.tl.x << ", y=" << r.tl.y << ", w=" << (r.br.x-r.tl.x) << ", h=" << (r.br.y-r.tl.y);
 
   // copy the specified region in XImage (== data in framebuffer) to Pixmap.
-  //GC gc = framebuffer->gc();
   Pixmap pixmap = framebuffer->pixmap();
   XGCValues gcvalues;
   GC gc = XCreateGC(display(), pixmap, 0, &gcvalues);
-#if 1
   XImage *xim = framebuffer->ximage();
-#else
-  int iwidth, iheight;
-  XImage *xim = load_bmp(display(), "tiger.bmp", &iwidth, &iheight);
-  x1 = x0 + iwidth;
-  y1 = y0 + iheight;
-  w = x1 - x0;
-  h = y1 - y0;
-#endif
   XShmSegmentInfo *shminfo = framebuffer->shmSegmentInfo();
   if (shminfo) {
     int ret = XShmPutImage(display(), pixmap, gc, xim, x0, y0, x0, y0, w, h, False);
@@ -277,96 +136,17 @@ void QVNCX11View::addInvalidRegion(int x0, int y0, int x1, int y1)
   } else {
     int ret = XPutImage(display(), pixmap, gc, xim, x0, y0, x0, y0, w, h);
     qDebug() << "XPutImage(pixmap):ret=" << ret;
-//    ret = XPutImage(display(), m_window, gc, xim, x0, y0, x0, y0, w, h);
-//    qDebug() << "XPutImage(window):ret=" << ret;
   }
-  //const char* str1 = "################# QVNCX11View::updateWindow 1 ##############";
-  //const char* str2 = "################# QVNCX11View::updateWindow 2 ##############";
-  //XDrawString(display(), m_window, gc, 200, 100, str1, strlen(str1));
-  //XDrawString(display(), pixmap, gc, 200, 200, str2, strlen(str2));
 
   XFreeGC(display(), gc);
 
   update(x0, y0, w, h);
-
-#if 0
-  if (w > 500) {
-    saveXImageToBitmap(xim);
-  }
-#endif
 }
 
 void QVNCX11View::updateWindow()
 {
   QAbstractVNCView::updateWindow();
   // Nothing more to do, because invalid regions are notified to Qt by addInvalidRegion().
-#if 0
-  QVNCConnection *cc = AppManager::instance()->connection();
-  PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-  rfb::Rect r = framebuffer->getDamage();
-  qDebug() << "QVNCX11View::updateWindow: x=" << r.tl.x << ", y=" << r.tl.y << ", w=" << (r.br.x-r.tl.x) << ", h=" << (r.br.y-r.tl.y);
-  int w = r.width();
-  int h = r.height();
-  if (w <= 0 || h <= 0) {
-    return;
-  }
-  int x0 = r.tl.x;
-  int y0 = r.tl.y;
-  int x1 = r.br.x;
-  int y1 = r.br.y;
-
-  Pixmap pixmap = framebuffer->pixmap();
-#if 0
-  // not working.
-  XImage *xim = framebuffer->ximage();
-#else
-  // work well. (only on m_window)
-  static char data[50 * 50 * 4];
-  memset(data, 250, 50 * 50 * 4);
-#if 0
-  XImage *xim = XCreateImage(
-        display(),
-        CopyFromParent,
-        DefaultDepth(display(),DefaultScreen(display())),
-        ZPixmap,
-        0,
-        data,
-        50,
-        50,
-        32,
-        50 * 4);
-  x1 = x0 + 50;
-  y1 = y0 + 50;
-#else
-  int iwidth, iheight;
-  XImage *xim = load_bmp(display(), "tiger.bmp", &iwidth, &iheight);
-  x1 = x0 + iwidth;
-  y1 = y0 + iheight;
-#endif
-#endif
-
-  XShmSegmentInfo *shminfo = framebuffer->shmSegmentInfo();
-  GC gc = framebuffer->gc();
-  //GC gc = DefaultGC(display(), 0);
-  //GC gc = XCreateGC(display(), pixmap, 0, NULL);
-  if (shminfo) {
-    int ret = XShmPutImage(display(), pixmap, gc, xim, x0, y0, x1, y1, w, h, False);
-    //int ret = XShmPutImage(display(), m_window, gc, xim, x0, y0, x1, y1, w, h, False);
-    qDebug() << "XShmPutImage: ret=" << ret;
-    // Need to make sure the X server has finished reading the
-    // shared memory before we return
-    XSync(display(), False);
-  } else {
-    int ret = XPutImage(display(), pixmap, gc, xim, x0, y0, x1, y1, w, h);
-    //int ret = XPutImage(display(), m_window, gc, xim, x0, y0, x1, y1, w, h);
-    qDebug() << "XPutImage :ret=" << ret;
-  }
-  const char* str1 = "################# QVNCX11View::updateWindow 1 ##############";
-  const char* str2 = "################# QVNCX11View::updateWindow 2 ##############";
-  XDrawString(display(), m_window, gc, 200, 100, str1, strlen(str1));
-  XDrawString(display(), pixmap, gc, 200, 100, str2, strlen(str2));
-  //XFreeGC(display(), gc);
-#endif
 }
 
 /*!
@@ -394,29 +174,14 @@ bool QVNCX11View::event(QEvent *e)
         XMapWindow(display(), m_window);
       }
       break;
+    case QEvent::MouseMove:
     case QEvent::MouseButtonPress:
     case QEvent::MouseButtonRelease:
-    case QEvent::MouseButtonDblClick: {
-      QMouseEvent *mev = (QMouseEvent*)e;
-      qDebug() << "QVNCX11View::event: x=" << mev->x() << ",y=" << mev->y() << ",button=" << Qt::hex << mev->button();
-
-      //GC gc = DefaultGC(display(), 0);
-      QVNCConnection *cc = AppManager::instance()->connection();
-      PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-      GC gc = framebuffer->gc();
-//      const char* str = "ABCDEFG ################# Hello ##############";
-//      XDrawString(display(), m_window, gc, mev->x() , mev->y(), str, strlen(str));
-
-//      int iwidth, iheight;
-//      XImage *image = load_bmp(display(), "tiger.bmp", &iwidth, &iheight);
-//      XPutImage(display(), m_window, gc, image, 0, 0, mev->x() , mev->y(), iwidth, iheight);
-      //QVNCConnection *cc = AppManager::instance()->connection();
-      //PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-      XImage *image = framebuffer->ximage();
-      XPutImage(display(), m_window, gc, image, 0, 0, 0, 0, image->width, image->height);
-      XSync(display(), False);
-      }
+    case QEvent::MouseButtonDblClick:
+      handleMouseButtonEvent((QMouseEvent*)e);
       break;
+    case QEvent::Wheel:
+      handleMouseWheelEvent((QWheelEvent*)e);
     case QEvent::WindowBlocked:
       //      if (m_hwnd)
       //        EnableWindow(m_hwnd, false);
@@ -433,9 +198,11 @@ bool QVNCX11View::event(QEvent *e)
       break;
     case QEvent::Enter:
       //qDebug() << "Enter";
+      grabPointer();
       break;
     case QEvent::Leave:
       //qDebug() << "Leave";
+      ungrabPointer();
       break;
     case QEvent::CursorChange:
       //qDebug() << "CursorChange";
@@ -474,11 +241,12 @@ void QVNCX11View::focusInEvent(QFocusEvent *e)
 */
 void QVNCX11View::resizeEvent(QResizeEvent *e)
 {
-  XResizeWindow(display(), m_window, e->size().width(), e->size().height());
-  QWidget::resizeEvent(e);
-
   if (m_window) {
-//    QSize size = e->size();
+    QSize size = e->size();
+    int w = size.width() * m_devicePixelRatio;
+    int h = size.height() * m_devicePixelRatio;
+    XResizeWindow(display(), m_window, w, h);
+    QWidget::resizeEvent(e);
     adjustSize();
 
 //    bool resizing = (width() != size.width()) || (height() != size.height());
@@ -509,23 +277,82 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, long *
   if (eventType == "xcb_generic_event_t") {
     xcb_generic_event_t* ev = static_cast<xcb_generic_event_t *>(message);
     uint16_t xcbEventType = ev->response_type & ~0x80;
-    //qDebug() << "QVNCX11View::nativeEvent: xcbEventType=" << xcbEventType << ",eventType=" << eventType;
+    qDebug() << "QVNCX11View::nativeEvent: xcbEventType=" << xcbEventType << ",eventType=" << eventType;
     if (xcbEventType == XCB_GE_GENERIC) {
+#if 0
       xcb_ge_generic_event_t* genericEvent = static_cast<xcb_ge_generic_event_t*>(message);
       xcbEventType = genericEvent->event_type;
-      //qDebug() << "QVNCX11View::nativeEvent: XCB_GE_GENERIC: xcbEventType=" << xcbEventType;
+      qDebug() << "QVNCX11View::nativeEvent: XCB_GE_GENERIC: xcbEventType=" << xcbEventType;
+#endif
     }
-
+#if 0
     // seems not working.
-//    if (xcbEventType == XCB_BUTTON_PRESS) {
-//      xcb_button_press_event_t* buttonPressEvent = static_cast<xcb_button_press_event_t*>(message);
-//      qDebug() << "QVNCX11View::nativeEvent: XCB_BUTTON_PRESS: x=" << buttonPressEvent->root_x << ",y=" << buttonPressEvent->root_y << ",button=" << Qt::hex << buttonPressEvent->detail;
-//    }
-    if (xcbEventType == XCB_KEY_PRESS) {
-        xcb_key_press_event_t* keyPressEvent = reinterpret_cast<xcb_key_press_event_t*>(ev);
-        qDebug() << "QVNCX11View::nativeEvent: XCB_KEY_PRESS: key=0x" << Qt::hex << keyPressEvent->detail;
+    else if (xcbEventType == XCB_BUTTON_PRESS) {
+      xcb_button_press_event_t* buttonPressEvent = static_cast<xcb_button_press_event_t*>(message);
+      qDebug() << "QVNCX11View::nativeEvent: XCB_BUTTON_PRESS: x=" << buttonPressEvent->root_x << ",y=" << buttonPressEvent->root_y << ",button=" << Qt::hex << buttonPressEvent->detail;
     }
-    if (xcbEventType == XCB_EXPOSE) {
+#endif
+    else if (xcbEventType == XCB_KEY_PRESS) {
+      xcb_key_press_event_t* xevent = reinterpret_cast<xcb_key_press_event_t*>(message);
+      qDebug() << "QVNCX11View::nativeEvent: XCB_KEY_PRESS: keycode=0x" << Qt::hex << xevent->detail << ", state=0x" << xevent->state << ", mapped_keycode=0x" << code_map_keycode_to_qnum[xevent->detail];
+
+      //int keycode = code_map_keycode_to_qnum[xevent->detail]; // TODO: what's this table???
+      int keycode = xevent->detail;
+
+      // Generate a fake keycode just for tracking if we can't figure
+      // out the proper one
+      if (keycode == 0)
+        keycode = 0x100 | xevent->detail;
+
+//#if 0
+//      int shiftLevel = (xevent->state & ShiftMask) ? 1 : 0;
+//      KeySym keysym = XkbKeycodeToKeysym(display(), keycode, 0, shiftLevel);
+//#else
+//      KeySym keysym = XkbKeycodeToKeysym(display(), keycode, 0, 0);
+//      int shiftLevel = 0;
+//      if (keysym == XK_Shift_L || keysym == XK_Shift_R) {
+//        shiftLevel = 1;
+//      }
+//      else if (keysym == XK_ISO_Level3_Shift) {
+//        shiftLevel = 2;
+//      }
+//      keysym = XkbKeycodeToKeysym(display(), keycode, 0, vel);
+//#endif
+      KeySym keysym = XkbKeycodeToKeysym(display(), keycode, 0, 0); // Fourth argument 'shiftLevel' should be always zero.
+      if (keysym == NoSymbol) {
+        vlog.error(_("No symbol for key code %d (in the current state)"), (int)xevent->detail);
+      }
+
+      switch (keysym) {
+        // For the first few years, there wasn't a good consensus on what the
+        // Windows keys should be mapped to for X11. So we need to help out a
+        // bit and map all variants to the same key...
+        case XK_Hyper_L:
+          keysym = XK_Super_L;
+          break;
+        case XK_Hyper_R:
+          keysym = XK_Super_R;
+          break;
+          // There has been several variants for Shift-Tab over the years.
+          // RFB states that we should always send a normal tab.
+        case XK_ISO_Left_Tab:
+          keysym = XK_Tab;
+          break;
+      }
+
+      handleKeyPress(keycode, keysym);
+      return true;
+    }
+    else if (xcbEventType == XCB_KEY_RELEASE) {
+      xcb_key_release_event_t* xevent = reinterpret_cast<xcb_key_release_event_t*>(message);
+      //int keycode = code_map_keycode_to_qnum[xevent->detail]; // TODO: what's this table???
+      int keycode = xevent->detail;
+      if (keycode == 0)
+        keycode = 0x100 | xevent->detail;
+      handleKeyRelease(keycode);
+      return true;
+    }
+    else if (xcbEventType == XCB_EXPOSE) {
 
     }
   }
@@ -560,3 +387,134 @@ void QVNCX11View::draw()
 
   m_region->clear();
 }
+
+// Viewport::handle(int event)
+void QVNCX11View::handleMouseButtonEvent(QMouseEvent *e)
+{
+    int buttonMask = 0;
+    Qt::MouseButtons buttons = e->buttons();
+    if (buttons & Qt::LeftButton) {
+      buttonMask |= 1;
+    }
+    if (buttons & Qt::MidButton) {
+      buttonMask |= 2;
+    }
+    if (buttons & Qt::RightButton) {
+      buttonMask |= 4;
+    }
+
+    filterPointerEvent(rfb::Point(e->x(), e->y()), buttonMask);
+}
+
+// Viewport::handle(int event)
+void QVNCX11View::handleMouseWheelEvent(QWheelEvent *e)
+{
+    int buttonMask = 0;
+    Qt::MouseButtons buttons = e->buttons();
+    if (buttons & Qt::LeftButton) {
+      buttonMask |= 1;
+    }
+    if (buttons & Qt::MidButton) {
+      buttonMask |= 2;
+    }
+    if (buttons & Qt::RightButton) {
+      buttonMask |= 4;
+    }
+
+    int wheelMask = 0;
+    QPoint delta = e->angleDelta();
+    int dy = delta.y();
+    int dx = delta.x();
+    if (dy < 0) {
+      wheelMask |= 8;
+    }
+    if (dy > 0) {
+      wheelMask |= 16;
+    }
+    if (dx < 0) {
+      wheelMask |= 32;
+    }
+    if (dx > 0) {
+      wheelMask |= 64;
+    }
+
+    // A quick press of the wheel "button", followed by a immediate
+    // release below
+    filterPointerEvent(rfb::Point(e->position().x(), e->position().y()), buttonMask | wheelMask);
+}
+
+void QVNCX11View::handleKeyPress(int keyCode, quint32 keySym)
+{
+  static bool menuRecursion = false;
+
+  // Prevent recursion if the menu wants to send its own
+  // activation key.
+  if (m_menuKeySym && (keySym == m_menuKeySym) && !menuRecursion) {
+    menuRecursion = true;
+    popupContextMenu();
+    menuRecursion = false;
+    return;
+  }
+
+  if (viewOnly)
+    return;
+
+  if (keyCode == 0) {
+    vlog.error(_("No key code specified on key press"));
+    return;
+  }
+
+  // Because of the way keyboards work, we cannot expect to have the same
+  // symbol on release as when pressed. This breaks the VNC protocol however,
+  // so we need to keep track of what keysym a key _code_ generated on press
+  // and send the same on release.
+  m_downKeySym[keyCode] = keySym;
+
+  vlog.debug("Key pressed: 0x%04x => XK_%s (0x%04x)", keyCode, XKeysymToString(keySym), keySym);
+
+  try {
+    QVNCConnection *cc = AppManager::instance()->connection();
+    // Fake keycode?
+    if (keyCode > 0xff)
+      cc->writer()->writeKeyEvent(keySym, 0, true);
+    else
+      cc->writer()->writeKeyEvent(keySym, keyCode, true);
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    e.abort = true;
+    throw;
+  }
+}
+
+void QVNCX11View::handleKeyRelease(int keyCode)
+{
+  DownMap::iterator iter;
+
+  if (viewOnly)
+    return;
+
+  iter = m_downKeySym.find(keyCode);
+  if (iter == m_downKeySym.end()) {
+    // These occur somewhat frequently so let's not spam them unless
+    // logging is turned up.
+    vlog.debug("Unexpected release of key code %d", keyCode);
+    return;
+  }
+
+  vlog.debug("Key released: 0x%04x => XK_%s (0x%04x)", keyCode, XKeysymToString(iter->second), iter->second);
+
+  try {
+    QVNCConnection *cc = AppManager::instance()->connection();
+    if (keyCode > 0xff)
+      cc->writer()->writeKeyEvent(iter->second, 0, false);
+    else
+      cc->writer()->writeKeyEvent(iter->second, keyCode, false);
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    e.abort = true;
+    throw;
+  }
+
+  m_downKeySym.erase(iter);
+}
+
