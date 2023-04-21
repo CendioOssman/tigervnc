@@ -14,6 +14,9 @@ public:
   Display *display() const;
 
 public slots:
+  void setQCursor(const QCursor &cursor) override;
+  void grabPointer() override;
+  void ungrabPointer() override;
   void bell() override;
   void updateWindow() override;
   void handleKeyPress(int keyCode, quint32 keySym) override;
@@ -25,6 +28,7 @@ protected:
   void showEvent(QShowEvent *) override;
   void focusInEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
+  bool eventFilter(QObject *obj, QEvent *event) override;
 
   void handleMouseButtonEvent(QMouseEvent*);
   void handleMouseWheelEvent(QWheelEvent*);
@@ -39,6 +43,7 @@ public slots:
 private:
   Window m_window;
   rfb::Region *m_region;
+  Pixmap toPixmap(QBitmap &bitmap);
 };
 
 #endif // VNCX11VIEW_H

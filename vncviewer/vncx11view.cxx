@@ -2,6 +2,8 @@
 #include <QTextStream>
 #include <QDataStream>
 #include <QUrl>
+#include <QImage>
+#include <QBitmap>
 #include "rfb/Exception.h"
 #include "rfb/ServerParams.h"
 #include "rfb/LogWriter.h"
@@ -11,6 +13,7 @@
 #include "vncconnection.h"
 #include "PlatformPixelBuffer.h"
 #include "msgwriter.h"
+#include "touch.h"
 #include "vncx11view.h"
 
 #include <X11/Xlib.h>
@@ -27,6 +30,7 @@
 #include <X11/Xutil.h>
 #include <X11/XKBlib.h>
 #include <X11/extensions/Xrender.h>
+#include <X11/extensions/XInput2.h>
 
 extern const struct _code_map_xkb_to_qnum {
   const char * from;
@@ -47,6 +51,7 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   setAttribute(Qt::WA_NoSystemBackground);
   setFocusPolicy(Qt::StrongFocus);
   connect(AppManager::instance(), &AppManager::invalidateRequested, this, &QVNCX11View::addInvalidRegion, Qt::QueuedConnection);
+  installEventFilter(this);
 
   XkbDescPtr xkb;
   Status status;
@@ -60,27 +65,24 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
     throw rfb::Exception("XkbGetNames");
 
   memset(code_map_keycode_to_qnum, 0, sizeof(code_map_keycode_to_qnum));
-  for (KeyCode keycode = xkb->min_key_code;
-       keycode < xkb->max_key_code;
-       keycode++) {
+  for (KeyCode keycode = xkb->min_key_code; keycode < xkb->max_key_code; keycode++) {
     const char *keyname = xkb->names->keys[keycode].name;
-    unsigned short rfbcode;
-
     if (keyname[0] == '\0')
       continue;
 
-    rfbcode = 0;
+    unsigned short rfbcode = 0;
     for (unsigned i = 0; i < code_map_xkb_to_qnum_len; i++) {
-        if (strncmp(code_map_xkb_to_qnum[i].from,
-                    keyname, XkbKeyNameLength) == 0) {
-            rfbcode = code_map_xkb_to_qnum[i].to;
-            break;
-        }
+      if (strncmp(code_map_xkb_to_qnum[i].from, keyname, XkbKeyNameLength) == 0) {
+        rfbcode = code_map_xkb_to_qnum[i].to;
+        break;
+      }
     }
     if (rfbcode != 0)
-        code_map_keycode_to_qnum[keycode] = rfbcode;
-    else
-        vlog.debug("No key mapping for key %.4s", keyname);
+      code_map_keycode_to_qnum[keycode] = rfbcode;
+    else {
+      code_map_keycode_to_qnum[keycode] = keycode;
+      //vlog.debug("No key mapping for key %.4s", keyname);
+    }
   }
 
   XkbFreeKeyboard(xkb, 0, True);
@@ -118,7 +120,7 @@ void QVNCX11View::addInvalidRegion(int x0, int y0, int x1, int y1)
   QVNCConnection *cc = AppManager::instance()->connection();
   PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
   rfb::Rect r = framebuffer->getDamage();
-  qDebug() << "QQVNCX11View::addInvalidRegion: x=" << r.tl.x << ", y=" << r.tl.y << ", w=" << (r.br.x-r.tl.x) << ", h=" << (r.br.y-r.tl.y);
+  //qDebug() << "QQVNCX11View::addInvalidRegion: x=" << r.tl.x << ", y=" << r.tl.y << ", w=" << (r.br.x-r.tl.x) << ", h=" << (r.br.y-r.tl.y);
 
   // copy the specified region in XImage (== data in framebuffer) to Pixmap.
   Pixmap pixmap = framebuffer->pixmap();
@@ -129,13 +131,13 @@ void QVNCX11View::addInvalidRegion(int x0, int y0, int x1, int y1)
   if (shminfo) {
     int ret = XShmPutImage(display(), pixmap, gc, xim, x0, y0, x0, y0, w, h, False);
     //int ret = XShmPutImage(display(), m_window, gc, xim, x0, y0, x0, y0, w, h, False);
-    qDebug() << "XShmPutImage: ret=" << ret;
+    //qDebug() << "XShmPutImage: ret=" << ret;
     // Need to make sure the X server has finished reading the
     // shared memory before we return
     XSync(display(), False);
   } else {
     int ret = XPutImage(display(), pixmap, gc, xim, x0, y0, x0, y0, w, h);
-    qDebug() << "XPutImage(pixmap):ret=" << ret;
+    //qDebug() << "XPutImage(pixmap):ret=" << ret;
   }
 
   XFreeGC(display(), gc);
@@ -157,7 +159,7 @@ bool QVNCX11View::event(QEvent *e)
   switch(e->type()) {
     case QEvent::Polish:
       if (!m_window) {
-        qDebug() << "display numbers:  QX11Info::display()=" <<  QX11Info::display() << ", XOpenDisplay(NULL)=" << XOpenDisplay(NULL);
+        //qDebug() << "display numbers:  QX11Info::display()=" <<  QX11Info::display() << ", XOpenDisplay(NULL)=" << XOpenDisplay(NULL);
         int screenNumber = DefaultScreen(display());
         int w = width();
         int h = height();
@@ -169,10 +171,25 @@ bool QVNCX11View::event(QEvent *e)
         xattr.background_pixel = 0;
         xattr.border_pixel = 0;
         xattr.colormap = framebuffer->colormap();
-        m_window = XCreateWindow(display(), RootWindow(display(), screenNumber), 0, 0, w, h, borderWidth, 32, InputOutput, framebuffer->visualInfo()->visual, CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWColormap, &xattr);
+        unsigned int wattr = CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWColormap;
+        m_window = XCreateWindow(display(), RootWindow(display(), screenNumber), 0, 0, w, h, borderWidth, 32, InputOutput, framebuffer->visualInfo()->visual, wattr, &xattr);
         XReparentWindow(display(), m_window, winId(), 0, 0);
         XMapWindow(display(), m_window);
+        setMouseTracking(true);
+
+//        int minKeyCode, maxKeyCode;
+//        XDisplayKeycodes(display(), &minKeyCode, &maxKeyCode);
+//        int nKeyCodes = maxKeyCode - minKeyCode + 1;
+//        int nKeySymsPerKeyCode = 0;
+//        KeySym *keySyms = XGetKeyboardMapping(display(), minKeyCode, nKeyCodes, &nKeySymsPerKeyCode);
+//        for (int kc = minKeyCode; kc <= maxKeyCode; kc++) {
+//          int ix = (kc - minKeyCode) * nKeySymsPerKeyCode;
+//          qDebug() << "KeyCode=" << kc << ", KeySym=" << keySyms[ix];
+//        }
+//        XFree(keySyms);
       }
+      break;
+    case QEvent::KeyboardLayoutChange:
       break;
     case QEvent::MouseMove:
     case QEvent::MouseButtonPress:
@@ -192,23 +209,26 @@ bool QVNCX11View::event(QEvent *e)
       break;
     case QEvent::WindowActivate:
       //qDebug() << "WindowActivate";
+      grabPointer();
       break;
     case QEvent::WindowDeactivate:
       //qDebug() << "WindowDeactivate";
-      break;
-    case QEvent::Enter:
-      //qDebug() << "Enter";
-      grabPointer();
-      break;
-    case QEvent::Leave:
-      //qDebug() << "Leave";
       ungrabPointer();
       break;
+//    case QEvent::Enter:
+//      qDebug() << "Enter";
+//      grabPointer();
+//      break;
+//    case QEvent::Leave:
+//      qDebug() << "Leave";
+//      ungrabPointer();
+//      break;
     case QEvent::CursorChange:
       //qDebug() << "CursorChange";
       e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
+      return true;
     case QEvent::Paint:
-      qDebug() << "QEvent::Paint";
+      //qDebug() << "QEvent::Paint";
       draw();
       e->setAccepted(true);
       return true;
@@ -276,14 +296,22 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, long *
 {
   if (eventType == "xcb_generic_event_t") {
     xcb_generic_event_t* ev = static_cast<xcb_generic_event_t *>(message);
-    uint16_t xcbEventType = ev->response_type & ~0x80;
-    qDebug() << "QVNCX11View::nativeEvent: xcbEventType=" << xcbEventType << ",eventType=" << eventType;
+    //uint16_t xcbEventType = ev->response_type & ~0x80;
+    uint16_t xcbEventType = ev->response_type;
+    //qDebug() << "QVNCX11View::nativeEvent: xcbEventType=" << xcbEventType << ",eventType=" << eventType;
     if (xcbEventType == XCB_GE_GENERIC) {
-#if 0
       xcb_ge_generic_event_t* genericEvent = static_cast<xcb_ge_generic_event_t*>(message);
-      xcbEventType = genericEvent->event_type;
-      qDebug() << "QVNCX11View::nativeEvent: XCB_GE_GENERIC: xcbEventType=" << xcbEventType;
-#endif
+      quint16 geEventType = genericEvent->event_type;
+      //qDebug() << "QVNCX11View::nativeEvent: XCB_GE_GENERIC: xcbEventType=" << xcbEventType << ", geEventType=" << geEventType;
+      // XI_Inter/XI_Leave causes QEvent::WindowActivate/WindowDeactivate.
+//      if (geEventType == XI_Enter) {
+//        qDebug() << "######################################################### Enter ##############################################";
+//        grabPointer();
+//      }
+//      else if (geEventType == XI_Leave) {
+//        qDebug() << "######################################################### Leave ##############################################";
+//        ungrabPointer();
+//      }
     }
 #if 0
     // seems not working.
@@ -294,31 +322,39 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, long *
 #endif
     else if (xcbEventType == XCB_KEY_PRESS) {
       xcb_key_press_event_t* xevent = reinterpret_cast<xcb_key_press_event_t*>(message);
-      qDebug() << "QVNCX11View::nativeEvent: XCB_KEY_PRESS: keycode=0x" << Qt::hex << xevent->detail << ", state=0x" << xevent->state << ", mapped_keycode=0x" << code_map_keycode_to_qnum[xevent->detail];
+      //qDebug() << "QVNCX11View::nativeEvent: XCB_KEY_PRESS: keycode=0x" << Qt::hex << xevent->detail << ", state=0x" << xevent->state << ", mapped_keycode=0x" << code_map_keycode_to_qnum[xevent->detail];
 
-      //int keycode = code_map_keycode_to_qnum[xevent->detail]; // TODO: what's this table???
-      int keycode = xevent->detail;
+      int keycode = code_map_keycode_to_qnum[xevent->detail]; // TODO: what's this table???
+      //int keycode = xevent->detail;
+      if (keycode == 50) {
+        keycode = 42;
+      }
 
       // Generate a fake keycode just for tracking if we can't figure
       // out the proper one
       if (keycode == 0)
         keycode = 0x100 | xevent->detail;
 
-//#if 0
-//      int shiftLevel = (xevent->state & ShiftMask) ? 1 : 0;
-//      KeySym keysym = XkbKeycodeToKeysym(display(), keycode, 0, shiftLevel);
-//#else
-//      KeySym keysym = XkbKeycodeToKeysym(display(), keycode, 0, 0);
-//      int shiftLevel = 0;
-//      if (keysym == XK_Shift_L || keysym == XK_Shift_R) {
-//        shiftLevel = 1;
-//      }
-//      else if (keysym == XK_ISO_Level3_Shift) {
-//        shiftLevel = 2;
-//      }
-//      keysym = XkbKeycodeToKeysym(display(), keycode, 0, vel);
-//#endif
-      KeySym keysym = XkbKeycodeToKeysym(display(), keycode, 0, 0); // Fourth argument 'shiftLevel' should be always zero.
+      XKeyEvent kev;
+      kev.type = xevent->response_type;
+      kev.serial = xevent->sequence;
+      kev.send_event = false;
+      kev.display = display();
+      kev.window = xevent->event;
+      kev.root = xevent->root;
+      kev.subwindow = xevent->child;
+      kev.time = xevent->time;
+      kev.x = xevent->event_x;
+      kev.y = xevent->event_y;
+      kev.x_root = xevent->root_x;
+      kev.y_root = xevent->root_y;
+      kev.state = xevent->state;
+      kev.keycode = xevent->detail;
+      kev.same_screen = xevent->same_screen;
+      char buffer[10];
+      KeySym keysym;
+      XLookupString(&kev, buffer, sizeof(buffer), &keysym, NULL);
+
       if (keysym == NoSymbol) {
         vlog.error(_("No symbol for key code %d (in the current state)"), (int)xevent->detail);
       }
@@ -345,8 +381,8 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, long *
     }
     else if (xcbEventType == XCB_KEY_RELEASE) {
       xcb_key_release_event_t* xevent = reinterpret_cast<xcb_key_release_event_t*>(message);
-      //int keycode = code_map_keycode_to_qnum[xevent->detail]; // TODO: what's this table???
-      int keycode = xevent->detail;
+      int keycode = code_map_keycode_to_qnum[xevent->detail]; // TODO: what's this table???
+      //int keycode = xevent->detail;
       if (keycode == 0)
         keycode = 0x100 | xevent->detail;
       handleKeyRelease(keycode);
@@ -355,9 +391,19 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, long *
     else if (xcbEventType == XCB_EXPOSE) {
 
     }
+    else if (xcbEventType == XCB_ENTER_NOTIFY) {
+      // Won't reach here, because Enter/Leave events are handled by XInput.
+      //qDebug() << "XCB_ENTER_NOTIFY";
+      grabPointer();
+    }
+    else if (xcbEventType == XCB_LEAVE_NOTIFY) {
+      // Won't reach here, because Enter/Leave events are handled by XInput.
+      //qDebug() << "XCB_LEAVE_NOTIFY";
+      ungrabPointer();
+    }
   }
-  return false;
-  //return QWidget::nativeEvent(eventType, message, result);
+  //return false;
+  return QWidget::nativeEvent(eventType, message, result);
 }
 
 void QVNCX11View::bell()
@@ -380,7 +426,7 @@ void QVNCX11View::draw()
   if (w <= 0 || h <= 0) {
     return;
   }
-  qDebug() << "QVNCX11View::draw: x=" << x0 << ", y=" << y0 << ", w=" << w << ", h=" << h;
+  //qDebug() << "QVNCX11View::draw: x=" << x0 << ", y=" << y0 << ", w=" << w << ", h=" << h;
   QVNCConnection *cc = AppManager::instance()->connection();
   PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
   framebuffer->draw(x0, y0, x0, y0, w, h);
@@ -440,7 +486,11 @@ void QVNCX11View::handleMouseWheelEvent(QWheelEvent *e)
 
     // A quick press of the wheel "button", followed by a immediate
     // release below
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     filterPointerEvent(rfb::Point(e->position().x(), e->position().y()), buttonMask | wheelMask);
+#else
+    filterPointerEvent(rfb::Point(e->x(), e->y()), buttonMask | wheelMask);
+#endif
 }
 
 void QVNCX11View::handleKeyPress(int keyCode, quint32 keySym)
@@ -518,3 +568,95 @@ void QVNCX11View::handleKeyRelease(int keyCode)
   m_downKeySym.erase(iter);
 }
 
+Pixmap QVNCX11View::toPixmap(QBitmap &bitmap)
+{
+  QImage image = bitmap.toImage();
+
+  int xbytes = (image.width() + 7) / 8;
+  int ybytes = image.height();
+  char *data = new char[xbytes * ybytes];
+  uchar *src = image.bits();
+  char *dst = data;
+  for (int y = 0; y < ybytes; y++) {
+    memcpy(dst, src, xbytes);
+    src += image.bytesPerLine();
+    dst += xbytes;
+  }
+
+  Pixmap pixmap = XCreateBitmapFromData(display(), nativeWindowHandle(), data, image.width(), image.height());
+
+  delete[] data;
+  return pixmap;
+}
+
+void QVNCX11View::setQCursor(const QCursor &cursor)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+  QBitmap cursorBitmap = cursor.bitmap(Qt::ReturnByValue);
+#else
+  QBitmap cursorBitmap = *cursor.bitmap();
+#endif
+
+  QImage image = cursor.pixmap().toImage();
+  image.toPixelFormat(QImage::Format_MonoLSB);
+  QBitmap maskBitmap = QBitmap::fromImage(image.createHeuristicMask());
+
+  int hotX = cursor.hotSpot().x();
+  int hotY = cursor.hotSpot().y();
+
+  int screen = DefaultScreen(display());
+
+  Pixmap cursorPixmap = toPixmap(cursorBitmap);
+  Pixmap maskPixmap = toPixmap(maskBitmap);
+
+  XColor color;
+  color.pixel = BlackPixel(display(), screen);
+  color.red = color.green = color.blue = 0;
+  color.flags = DoRed | DoGreen | DoBlue;
+  XColor maskColor;
+  maskColor.pixel = WhitePixel(display(), screen);
+  maskColor.red = maskColor.green = maskColor.blue = 65535;
+  maskColor.flags = DoRed | DoGreen | DoBlue;
+
+  Cursor xcursor = XCreatePixmapCursor(display(), cursorPixmap, maskPixmap, &color, &maskColor, hotX, hotY);
+  XDefineCursor(display(), nativeWindowHandle(), xcursor);
+  XFreeCursor(display(), xcursor);
+  XFreeColors(display(), DefaultColormap(display(), screen), &color.pixel, 1, 0);
+
+  XFreePixmap(display(), cursorPixmap);
+  XFreePixmap(display(), maskPixmap);
+}
+
+void QVNCX11View::grabPointer()
+{
+  //x11_grab_pointer(nativeWindowHandle());
+  setMouseTracking(true);
+  m_mouseGrabbed = true;
+}
+
+void QVNCX11View::ungrabPointer()
+{
+  //x11_ungrab_pointer(nativeWindowHandle());
+  setMouseTracking(false);
+  m_mouseGrabbed = false;
+}
+
+bool QVNCX11View::eventFilter(QObject *obj, QEvent *event)
+{
+//  if (event->type() == QEvent::MouseMove) {
+//    QMouseEvent *e = static_cast<QMouseEvent *>(event);
+//    qDebug() << "QVNCX11View::eventFilter: pos=" << e->pos();
+//    return false;
+//  }
+//  else if (event->type() == QEvent::Enter) {
+//    qDebug() << "QVNCX11View::eventFilter: event type=Enter";
+//    return false;
+//  }
+//  else if (event->type() == QEvent::Leave) {
+//    qDebug() << "QVNCX11View::eventFilter: event type=Leave";
+//    return false;
+//  }
+
+  // standard event processing
+  return QObject::eventFilter(obj, event);
+}

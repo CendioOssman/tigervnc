@@ -439,6 +439,7 @@ bool QVNCWinView::event(QEvent *e)
     case QEvent::CursorChange:
       //qDebug() << "CursorChange";
       e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
+      break;
     default:
       qDebug() << "Unprocessed Event: " << e->type();
       break;

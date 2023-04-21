@@ -17,6 +17,8 @@ if (WIN32)
       Surface_Win32.cxx
       win32.c
       win32.h
+      Win32TouchHandler.cxx
+      Win32TouchHandler.h
   )
 elseif(APPLE)
 #  set(APP_ICONS "${CMAKE_CURRENT_SOURCE_DIR}/media/icons/tigervnc.icns")
@@ -31,6 +33,8 @@ else()
       vncx11view.h
       Surface_X11.cxx
       xkb_to_qnum.c
+      XInputTouchHandler.h
+      XInputTouchHandler.cxx
       #vncwaylandview.cxx
       #vncwaylandview.h
   )
@@ -57,6 +61,13 @@ set(PROJECT_SOURCES
         abstractvncview.cxx
         keysym2ucs.c
         keysym2ucs.h
+        touch.cxx
+        touch.h
+        BaseTouchHandler.cxx
+        BaseTouchHandler.h
+        GestureHandler.cxx
+        GestureHandler.h
+        GestureEvent.h
         #
         gettext.h
         parameters.h
@@ -114,7 +125,7 @@ if(WIN32)
 elseif(APPLE)
   set(OS_DEPENDENT_LIBRARIES "-framework Cocoa -framework Carbon -framework IOKit")
 else()
-  set(OS_DEPENDENT_LIBRARIES ${X11_XiLIB} "-lXrender" "-lXext" "-lX11")
+  set(OS_DEPENDENT_LIBRARIES ${X11_XiLIB} "-lXi" "-lXrender" "-lXext" "-lX11")
   if(X11_Xrandr_LIB)
     add_definitions(-DHAVE_XRANDR)
     set(OS_DEPENDENT_LIBRARIES "${OS_DEPENDENT_LIBRARIES} ${X11_Xrandr_LIB}")

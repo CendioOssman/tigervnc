@@ -23,18 +23,22 @@
 
 #include <assert.h>
 
+#include <QDataStream>
+#include <QCursor>
+
 #include <map>
 
 #if defined(WIN32)
 #include <windows.h>
 #include <commctrl.h>
 #elif !defined(__APPLE__)
+#include <QGuiApplication>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QX11Info>
+#endif
 #include <X11/extensions/XInput2.h>
 #include <X11/extensions/XI2.h>
 #endif
-
-#include <FL/Fl.H>
-#include <FL/x.H>
 
 #include <rfb/Exception.h>
 #include <rfb/LogWriter.h>
@@ -48,6 +52,8 @@
 #include "XInputTouchHandler.h"
 #endif
 
+#include "appmanager.h"
+#include "abstractvncview.h"
 #include "touch.h"
 
 static rfb::LogWriter vlog("Touch");
@@ -55,8 +61,7 @@ static rfb::LogWriter vlog("Touch");
 #if !defined(WIN32) && !defined(__APPLE__)
 static int xi_major;
 #endif
-
-typedef std::map<Window, class BaseTouchHandler*> HandlerMap;
+typedef std::map<qulonglong, class BaseTouchHandler*> HandlerMap;
 static HandlerMap handlers;
 
 #if defined(WIN32)
@@ -65,18 +70,19 @@ LRESULT CALLBACK win32WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
                                  UINT_PTR /*uIdSubclass*/,
                                  DWORD_PTR /*dwRefData*/)
 {
+#if 0
   bool handled = false;
 
   if (uMsg == WM_NCDESTROY) {
-    delete handlers[hWnd];
-    handlers.erase(hWnd);
+    delete handlers[(qulonglong)hWnd];
+    handlers.erase((qulonglong)hWnd);
     RemoveWindowSubclass(hWnd, &win32WindowProc, 1);
   } else {
-    if (handlers.count(hWnd) == 0) {
+    if (handlers.count((qulonglong)hWnd) == 0) {
       vlog.error(_("Got message (0x%x) for an unhandled window"), uMsg);
     } else {
       handled = dynamic_cast<Win32TouchHandler*>
-        (handlers[hWnd])->processEvent(uMsg, wParam, lParam);
+        (handlers[(qulonglong)hWnd])->processEvent(uMsg, wParam, lParam);
     }
   }
 
@@ -85,11 +91,17 @@ LRESULT CALLBACK win32WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
     return 0;
   else
     return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+#endif
 }
 
 #elif !defined(__APPLE__)
 static void x11_change_touch_ownership(bool enable)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  Display *display = QX11Info::display();
+#else
+  Display *display = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
   HandlerMap::const_iterator iter;
 
   XIEventMask *curmasks;
@@ -102,7 +114,7 @@ static void x11_change_touch_ownership(bool enable)
   newmask.mask_len = sizeof(mask);
 
   for (iter = handlers.begin(); iter != handlers.end(); ++iter) {
-    curmasks = XIGetSelectedEvents(fl_display, iter->first, &num_masks);
+    curmasks = XIGetSelectedEvents(display, iter->first, &num_masks);
     if (curmasks == nullptr) {
       if (num_masks == -1)
         vlog.error(_("Unable to get X Input 2 event mask for window 0x%08lx"), iter->first);
@@ -125,7 +137,7 @@ static void x11_change_touch_ownership(bool enable)
     else
       XIClearMask(newmask.mask, XI_TouchOwnership);
 
-    XISelectEvents(fl_display, iter->first, &newmask, 1);
+    XISelectEvents(display, iter->first, &newmask, 1);
 
     XFree(curmasks);
   }
@@ -177,9 +189,10 @@ static int handleTouchEvent(void *event, void* /*data*/)
   // Trigger on the first WM_PAINT event. We can't trigger on WM_CREATE
   // events since FLTK's system handlers trigger before WndProc.
   // WM_CREATE events are sent directly to WndProc.
-  if (msg->message == WM_PAINT && handlers.count(msg->hwnd) == 0) {
+  if (msg->message == WM_PAINT && handlers.count((qulonglong)msg->hwnd) == 0) {
+#if 0 // TODO
     try {
-      handlers[msg->hwnd] = new Win32TouchHandler(msg->hwnd);
+      handlers[(qulonglong)msg->hwnd] = new Win32TouchHandler(msg->hwnd);
     } catch (rfb::Exception& e) {
       vlog.error(_("Failed to create touch handler: %s"), e.str());
       abort_vncviewer(_("Failed to create touch handler: %s"), e.str());
@@ -189,6 +202,7 @@ static int handleTouchEvent(void *event, void* /*data*/)
       vlog.error(_("Couldn't attach event handler to window (error 0x%x)"),
                  (int)GetLastError());
     }
+#endif
   }
 #elif defined(__APPLE__)
   // No touch support on macOS
@@ -210,9 +224,14 @@ static int handleTouchEvent(void *event, void* /*data*/)
     handlers.erase(xevent->xdestroywindow.window);
   } else if (xevent->type == GenericEvent) {
     if (xevent->xgeneric.extension == xi_major) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  Display *display = QX11Info::display();
+#else
+  Display *display = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
       XIDeviceEvent *devev;
 
-      if (!XGetEventData(fl_display, &xevent->xcookie)) {
+      if (!XGetEventData(display, &xevent->xcookie)) {
         vlog.error(_("Failed to get event data for X Input event"));
         return 1;
       }
@@ -227,13 +246,13 @@ static int handleTouchEvent(void *event, void* /*data*/)
           ;
         else
           vlog.error(_("X Input event for unknown window"));
-        XFreeEventData(fl_display, &xevent->xcookie);
+        XFreeEventData(display, &xevent->xcookie);
         return 1;
       }
 
       dynamic_cast<XInputTouchHandler*>(handlers[devev->event])->processEvent(devev);
 
-      XFreeEventData(fl_display, &xevent->xcookie);
+      XFreeEventData(display, &xevent->xcookie);
 
       return 1;
     }
@@ -249,29 +268,39 @@ void enable_touch()
   int ev, err;
   int major_ver, minor_ver;
 
-  fl_open_display();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  Display *display = QX11Info::display();
+#else
+  Display *display = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
 
-  if (!XQueryExtension(fl_display, "XInputExtension", &xi_major, &ev, &err)) {
-    abort_vncviewer(_("X Input extension not available."));
-    return; // Not reached
+  if (!XQueryExtension(display, "XInputExtension", &xi_major, &ev, &err)) {
+    rfb::Exception e(_("X Input extension not available."));
+    e.abort = true;
+    throw e;
   }
 
   major_ver = 2;
   minor_ver = 2;
-  if (XIQueryVersion(fl_display, &major_ver, &minor_ver) != Success) {
-    abort_vncviewer(_("X Input 2 (or newer) is not available."));
-    return; // Not reached
+  if (XIQueryVersion(display, &major_ver, &minor_ver) != Success) {
+    rfb::Exception e(_("X Input 2 (or newer) is not available."));
+    e.abort = true;
+    throw e;
   }
 
   if ((major_ver == 2) && (minor_ver < 2))
     vlog.error(_("X Input 2.2 (or newer) is not available. Touch gestures will not be supported."));
 #endif
 
+#if 0 // TODO
   Fl::add_system_handler(handleTouchEvent, nullptr);
+#endif
 }
 
 void disable_touch()
 {
+#if 0
   Fl::remove_system_handler(handleTouchEvent);
+#endif
 }
 

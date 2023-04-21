@@ -24,11 +24,14 @@
 #include <assert.h>
 #include <string.h>
 
+#include <QGuiApplication>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QX11Info>
+#endif
+
 #include <X11/extensions/XInput2.h>
 #include <X11/extensions/XI2.h>
 #include <X11/XKBlib.h>
-
-#include <FL/x.H>
 
 #ifndef XK_MISCELLANY
 #define XK_MISCELLANY
@@ -46,6 +49,11 @@ static bool grabbed = false;
 XInputTouchHandler::XInputTouchHandler(Window wnd_)
   : wnd(wnd_), fakeStateMask(0)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  Display *display = QX11Info::display();
+#else
+  Display *display = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
   XIEventMask eventmask;
   unsigned char flags[XIMaskLen(XI_LASTEVENT)] = { 0 };
 
@@ -82,11 +90,16 @@ XInputTouchHandler::XInputTouchHandler(Window wnd_)
   if (!grabbed)
     XISetMask(flags, XI_TouchOwnership);
 
-  XISelectEvents(fl_display, wnd, &eventmask, 1);
+  XISelectEvents(display, wnd, &eventmask, 1);
 }
 
 bool XInputTouchHandler::grabPointer()
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  Display *display = QX11Info::display();
+#else
+  Display *display = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
   XIEventMask *curmasks;
   int num_masks;
 
@@ -96,7 +109,7 @@ bool XInputTouchHandler::grabPointer()
   bool gotGrab;
 
   // We grab for the same events as the window is currently interested in
-  curmasks = XIGetSelectedEvents(fl_display, wnd, &num_masks);
+  curmasks = XIGetSelectedEvents(display, wnd, &num_masks);
   if (curmasks == nullptr) {
     if (num_masks == -1)
       vlog.error(_("Unable to get X Input 2 event mask for window 0x%08lx"), wnd);
@@ -113,7 +126,7 @@ bool XInputTouchHandler::grabPointer()
     return false;
   }
 
-  devices = XIQueryDevice(fl_display, XIAllMasterDevices, &ndevices);
+  devices = XIQueryDevice(display, XIAllMasterDevices, &ndevices);
 
   // Iterate through available devices to find those which
   // provide pointer input, and attempt to grab all such devices.
@@ -126,7 +139,7 @@ bool XInputTouchHandler::grabPointer()
 
     curmasks[0].deviceid = device->deviceid;
 
-    ret = XIGrabDevice(fl_display,
+    ret = XIGrabDevice(display,
                        device->deviceid,
                        wnd,
                        CurrentTime,
@@ -161,10 +174,15 @@ bool XInputTouchHandler::grabPointer()
 
 void XInputTouchHandler::ungrabPointer()
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  Display *display = QX11Info::display();
+#else
+  Display *display = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
   int ndevices;
   XIDeviceInfo *devices, *device;
 
-  devices = XIQueryDevice(fl_display, XIAllMasterDevices, &ndevices);
+  devices = XIQueryDevice(display, XIAllMasterDevices, &ndevices);
 
   // Release all devices, hoping they are the same as when we
   // grabbed things
@@ -174,7 +192,7 @@ void XInputTouchHandler::ungrabPointer()
     if (device->use != XIMasterPointer)
       continue;
 
-    XIUngrabDevice(fl_display, device->deviceid, CurrentTime);
+    XIUngrabDevice(display, device->deviceid, CurrentTime);
   }
 
   XIFreeDeviceInfo(devices);
@@ -184,6 +202,11 @@ void XInputTouchHandler::ungrabPointer()
 
 void XInputTouchHandler::processEvent(const XIDeviceEvent* devev)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  Display *display = QX11Info::display();
+#else
+  Display *display = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
   // FLTK doesn't understand X Input events, and we've stopped
   // delivery of Core events by enabling the X Input ones. Make
   // FLTK happy by faking Core events based on the X Input ones.
@@ -240,7 +263,7 @@ void XInputTouchHandler::processEvent(const XIDeviceEvent* devev)
     // XInput2 wants us to explicitly accept touch sequences
     // for grabbed devices before it will pass events
     if (grabbed) {
-      XIAllowTouchEvents(fl_display,
+      XIAllowTouchEvents(display,
                          devev->deviceid,
                          devev->detail,
                          devev->event,
@@ -312,6 +335,11 @@ void XInputTouchHandler::fakeButtonEvent(bool press, int button,
 
 void XInputTouchHandler::preparePointerEvent(XEvent* dst, const GestureEvent src)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  Display *display = QX11Info::display();
+#else
+  Display *display = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
   Window root, child;
   int rootX, rootY;
   XkbStateRec xkbState;
@@ -319,21 +347,21 @@ void XInputTouchHandler::preparePointerEvent(XEvent* dst, const GestureEvent src
   // We don't have a real event to steal things from, so we'll have
   // to fake these events based on the current state of things
 
-  root = XDefaultRootWindow(fl_display);
-  XTranslateCoordinates(fl_display, wnd, root,
+  root = XDefaultRootWindow(display);
+  XTranslateCoordinates(display, wnd, root,
                         src.eventX,
                         src.eventY,
                         &rootX, &rootY, &child);
-  XkbGetState(fl_display, XkbUseCoreKbd, &xkbState);
+  XkbGetState(display, XkbUseCoreKbd, &xkbState);
 
   // XButtonEvent and XMotionEvent are almost identical, so we
   // don't have to care which it is for these fields
-  dst->xbutton.serial = XLastKnownRequestProcessed(fl_display);
-  dst->xbutton.display = fl_display;
+  dst->xbutton.serial = XLastKnownRequestProcessed(display);
+  dst->xbutton.display = display;
   dst->xbutton.window = wnd;
   dst->xbutton.root = root;
   dst->xbutton.subwindow = None;
-  dst->xbutton.time = fl_event_time;
+  dst->xbutton.time = CurrentTime;
   dst->xbutton.x = src.eventX;
   dst->xbutton.y = src.eventY;
   dst->xbutton.x_root = rootX;
@@ -386,6 +414,11 @@ void XInputTouchHandler::fakeButtonEvent(bool press, int button,
 void XInputTouchHandler::fakeKeyEvent(bool press, int keysym,
                                       const GestureEvent origEvent)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  Display *display = QX11Info::display();
+#else
+  Display *display = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
   XEvent fakeEvent;
 
   Window root, child;
@@ -394,26 +427,26 @@ void XInputTouchHandler::fakeKeyEvent(bool press, int keysym,
 
   int modmask;
 
-  root = XDefaultRootWindow(fl_display);
-  XTranslateCoordinates(fl_display, wnd, root,
+  root = XDefaultRootWindow(display);
+  XTranslateCoordinates(display, wnd, root,
                         origEvent.eventX,
                         origEvent.eventY,
                         &rootX, &rootY, &child);
-  XkbGetState(fl_display, XkbUseCoreKbd, &xkbState);
+  XkbGetState(display, XkbUseCoreKbd, &xkbState);
 
-  KeyCode kc = XKeysymToKeycode(fl_display, keysym);
+  KeyCode kc = XKeysymToKeycode(display, keysym);
 
   memset(&fakeEvent, 0, sizeof(XEvent));
 
   fakeEvent.type = press ? KeyPress : KeyRelease;
   fakeEvent.xkey.type = press ? KeyPress : KeyRelease;
   fakeEvent.xkey.keycode = kc;
-  fakeEvent.xkey.serial = XLastKnownRequestProcessed(fl_display);
-  fakeEvent.xkey.display = fl_display;
+  fakeEvent.xkey.serial = XLastKnownRequestProcessed(display);
+  fakeEvent.xkey.display = display;
   fakeEvent.xkey.window = wnd;
   fakeEvent.xkey.root = root;
   fakeEvent.xkey.subwindow = None;
-  fakeEvent.xkey.time = fl_event_time;
+  fakeEvent.xkey.time = CurrentTime;
   fakeEvent.xkey.x = origEvent.eventX;
   fakeEvent.xkey.y = origEvent.eventY;
   fakeEvent.xkey.x_root = rootX;
@@ -456,6 +489,11 @@ void XInputTouchHandler::handleGestureEvent(const GestureEvent& event)
 
 void XInputTouchHandler::pushFakeEvent(XEvent* event)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  Display *display = QX11Info::display();
+#else
+  Display *display = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
   // Perhaps use XPutBackEvent() to avoid round trip latency?
-  XSendEvent(fl_display, event->xany.window, true, 0, event);
+  XSendEvent(display, event->xany.window, true, 0, event);
 }
