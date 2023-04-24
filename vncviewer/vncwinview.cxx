@@ -34,8 +34,6 @@ static rfb::LogWriter vlog("Viewport");
 static const WORD SCAN_FAKE = 0xaa;
 static const WORD NoSymbol = 0;
 
-const unsigned char *QVNCWinView::m_invisibleCursor = (unsigned char*)"\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\x00\x00" "\x00\x00\x00\x00";
-
 static bool restoreFunctionRegistered = false;
 static void restoreTray() {
   HWND hTrayWnd = ::FindWindow("Shell_TrayWnd", NULL);

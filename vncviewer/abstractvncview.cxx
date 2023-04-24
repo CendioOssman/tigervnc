@@ -946,7 +946,7 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
   }
 }
 
-// EmulateMB::sendAction(const rfb::Point& pos, int buttonMask, int action)
+EmulateMB::sendAction(const rfb::Point& pos, int buttonMask, int action)
 void QAbstractVNCView::sendAction(const rfb::Point& pos, int buttonMask, int action)
 {
   assert(action != 0);

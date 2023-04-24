@@ -63,10 +63,6 @@ private:
   bool m_mouseTracking;
   HCURSOR m_defaultCursor;
 
-  const int m_invisibleCursorWidth = 2;
-  const int m_invisibleCursorHeight = 2;
-  static const unsigned char *m_invisibleCursor;
-
   void fixParent();
   friend void *getWindowProc(QVNCWinView *host);
   void resolveAltGrDetection(bool isAltGrSequence);
