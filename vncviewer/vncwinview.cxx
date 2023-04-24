@@ -1078,29 +1078,6 @@ void QVNCWinView::moveView(int x, int y)
   //QAbstractVNCView::moveView(x, y);
 }
 
-void QVNCWinView::fullscreen(bool enabled)
-{
-  QList<int> selectedScreens = fullscreenScreens();
-  auto mode = ViewerConfig::config()->fullScreenMode();
-  if (!enabled || (mode != ViewerConfig::FSCurrent && selectedScreens.length() > 1)) {
-    // Hide/show the task tray, when the fullscreen is enabled with multiple screens.
-    // This is needed because the fullscreen on multiple screens cannot invoke Win32-API 'showFullScreen()'
-    // so that the task tray won't be hidden.
-
-    if (!restoreFunctionRegistered) {
-      atexit(restoreTray); // Restore the task tray on unexpected process termination.
-    }
-    int showHide = enabled ? SW_HIDE : SW_SHOW;
-    HWND hTrayWnd = ::FindWindow("Shell_TrayWnd", NULL);
-    ShowWindow(hTrayWnd, showHide);
-    CloseHandle(hTrayWnd);
-    HWND hSecondaryTrayWnd = ::FindWindow("Shell_SecondaryTrayWnd", NULL);
-    ShowWindow(hSecondaryTrayWnd, showHide);
-    CloseHandle(hSecondaryTrayWnd);
-  }
-  QAbstractVNCView::fullscreen(enabled);
-}
-
 void QVNCWinView::updateWindow()
 {
   QAbstractVNCView::updateWindow();

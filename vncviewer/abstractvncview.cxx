@@ -820,25 +820,30 @@ void QAbstractVNCView::fullscreen(bool enabled)
       qDebug() << "Fullsize Geometry=" << QRect(xmin, ymin, w, h);
 
       if (selectedScreens.length() == 1) {
+        setWindowFlag(Qt::BypassWindowManagerHint, true);
         windowHandle()->setScreen(selectedPrimaryScreen);
         moveView(xmin, ymin);
         showFullScreen();
         handleDesktopSize();
       }
       else {
+        setWindowFlag(Qt::BypassWindowManagerHint, true);
         setWindowFlag(Qt::FramelessWindowHint, true);
+        setWindowState(Qt::WindowFullScreen);
         moveView(xmin, ymin);
         resize(w, h);
         showNormal();
       }
     }
     else {
+      setWindowFlag(Qt::BypassWindowManagerHint, true);
       windowHandle()->setScreen(getCurrentScreen());
       showFullScreen();
       handleDesktopSize();
     }
   }
   else {
+    setWindowFlag(Qt::BypassWindowManagerHint, false);
     setWindowFlag(Qt::FramelessWindowHint, false);
     setWindowFlag(Qt::Window, true);
     showNormal();
@@ -846,8 +851,9 @@ void QAbstractVNCView::fullscreen(bool enabled)
     handleDesktopSize();
   }
   m_fullscreenEnabled = enabled;
-  raise();
   setFocus();
+  activateWindow();
+  raise();
 }
 
 void QAbstractVNCView::moveView(int x, int y)
@@ -946,7 +952,7 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
   }
 }
 
-EmulateMB::sendAction(const rfb::Point& pos, int buttonMask, int action)
+//EmulateMB::sendAction(const rfb::Point& pos, int buttonMask, int action)
 void QAbstractVNCView::sendAction(const rfb::Point& pos, int buttonMask, int action)
 {
   assert(action != 0);

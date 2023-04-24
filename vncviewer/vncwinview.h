@@ -46,7 +46,6 @@ public slots:
   void ungrabPointer() override;
   void bell() override;
   void moveView(int x, int y) override;
-  void fullscreen(bool enabled) override;
   void updateWindow() override;
 
 private:
