@@ -158,7 +158,7 @@ else()
           set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/vncviewer.rc")
           #find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS WinExtras)
         endif()
-        if (UNIX)
+        if(UNIX AND NOT APPLE)
           find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS X11Extras)
           set(OS_DEPENDENT_LIBRARIES ${OS_DEPENDENT_LIBRARIES} Qt${QT_VERSION_MAJOR}::X11Extras)
         endif()
@@ -172,6 +172,10 @@ else()
 endif()
 
 ###find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS OpenGL)
+
+if(APPLE)
+    set_target_properties(vncviewer PROPERTIES MACOSX_BUNDLE TRUE)
+endif()
 
 target_compile_definitions(vncviewer
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
@@ -270,17 +274,23 @@ endif()
 if(WIN32)
     set(DEPLOY_DIR ${CMAKE_SOURCE_DIR}/deploy CACHE PATH "Package directory")
     get_target_property(LOCAL_QMAKE_PATH Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
-    get_filename_component(LOCAL_QTBIN_ATH ${LOCAL_QMAKE_PATH} DIRECTORY)
-    find_program(DEPLOYQT NAMES windeployqt HINTS "${LOCAL_QTBIN_ATH}")
+    get_filename_component(LOCAL_QTBIN_PATH ${LOCAL_QMAKE_PATH} DIRECTORY)
+    find_program(DEPLOYQT NAMES windeployqt HINTS "${LOCAL_QTBIN_PATH}")
     add_custom_command(
         TARGET vncviewer
         POST_BUILD
-        COMMAND ${DEPLOYQT} --dir "${DEPLOY_DIR}" --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer>)
-        ###COMMAND ${DEPLOYQT} --$<IF:$<CONFIG:Debug>,debug,release> --dir "${DEPLOY_DIR}" --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer>)
+        COMMAND ${DEPLOYQT} --dir $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer> --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer>)
     add_custom_command(
         TARGET vncviewer
         POST_BUILD
         COMMAND cp -f $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer> "${DEPLOY_DIR}")
-    # To execute mac/windeployqt on 'cmake --install', uncomment the following line.
-    #install(CODE "execute_process(COMMAND ${DEPLOYQT} --$<IF:$<CONFIG:Debug>,debug,release> --dir "${DEPLOY_DIR}" --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml ${CMAKE_INSTALL_PREFIX}/$<TARGET_FILE_NAME:vncviewer>)")
+endif()
+if(APPLE AND CMAKE_BUILD_TYPE MATCHES Release)
+    get_target_property(LOCAL_QMAKE_PATH Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
+    get_filename_component(LOCAL_QTBIN_PATH ${LOCAL_QMAKE_PATH} DIRECTORY)
+    find_program(DEPLOYQT NAMES macdeployqt HINTS "${LOCAL_QTBIN_PATH}")
+    add_custom_command(
+        TARGET vncviewer
+        POST_BUILD
+        COMMAND ${DEPLOYQT} $<TARGET_FILE_DIR:vncviewer>/../.. -always-overwrite -qmldir=${CMAKE_SOURCE_DIR}/vncviewer/qml)
 endif()

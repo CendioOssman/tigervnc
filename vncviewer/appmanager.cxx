@@ -87,7 +87,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   delete m_view;
 #if defined(WIN32)
   m_view = new QVNCWinView();
-#elif defined(Q_OS_UNIX)
+#elif defined(Q_OS_UNIX) && !defined(__APPLE__)
   QString platform = QGuiApplication::platformName();
   if (platform == "xcb") {
     m_view = new QVNCX11View();

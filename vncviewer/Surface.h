@@ -44,6 +44,7 @@ public:
   int height() { return h; }
 #if defined(WIN32)
   HBITMAP hbitmap() { return bitmap; }
+#elif defined(__APPLE__)
 #else
   Pixmap pixmap() { return m_pixmap; }
   GC gc() { return m_gc; }

@@ -27,7 +27,7 @@
 #include "viewerconfig.h"
 #include "abstractvncview.h"
 
-#if defined(WIN32)
+#if defined(WIN32) || defined(__APPLE__)
 #define XK_LATIN1
 #define XK_MISCELLANY
 #define XK_XKB_KEYS

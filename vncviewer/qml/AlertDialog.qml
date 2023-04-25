@@ -11,7 +11,7 @@ Window {
 
     width: container.implicitWidth
     height: container.implicitHeight
-    flags: Qt.SubWindow
+    flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint
     modality: Qt.ApplicationModal
     title: qsTr("TigerVNC Viewer")
     color: "#ffdcdcdc"
