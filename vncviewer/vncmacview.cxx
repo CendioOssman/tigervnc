@@ -191,15 +191,15 @@ void QVNCMacView::focusInEvent(QFocusEvent *e)
 void QVNCMacView::resizeEvent(QResizeEvent *e)
 {
   if (m_view) {
-    //    QSize size = e->size();
-    //    int w = size.width() * m_devicePixelRatio;
-    //    int h = size.height() * m_devicePixelRatio;
-    //    XResizeWindow(display(), m_view, w, h);
+    QSize size = e->size();
+    int w = size.width() * m_devicePixelRatio;
+    int h = size.height() * m_devicePixelRatio;
+    cocoa_resize(m_view, w, h);
     QWidget::resizeEvent(e);
     adjustSize();
 
-    //    bool resizing = (width() != size.width()) || (height() != size.height());
-    //    if (resizing) {
+//    bool resizing = (width() != size.width()) || (height() != size.height());
+//    if (resizing) {
     // Try to get the remote size to match our window size, provided
     // the following conditions are true:
     //
@@ -214,7 +214,7 @@ void QVNCMacView::resizeEvent(QResizeEvent *e)
     // Some systems require a grab after the window size has been changed.
     // Otherwise they might hold on to displays, resulting in them being unusable.
     maybeGrabKeyboard();
-    //    }
+//    }
   }
 }
 

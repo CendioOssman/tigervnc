@@ -25,6 +25,7 @@ class QWidget;
 
 NSView *cocoa_create_view(QWidget *parent);
 void cocoa_beep();
+void cocoa_resize(NSView *view, int width, int height);
 
 int cocoa_get_level(QWidget *parent);
 void cocoa_set_level(QWidget *parent, int level);

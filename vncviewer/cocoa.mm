@@ -53,7 +53,6 @@ static bool captured = false;
 NSView *cocoa_create_view(QWidget *parent)
 {
   NSView *parentView = (__bridge NSView*)reinterpret_cast<void *>(parent->winId());
-
   NSView *view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, parent->width(), parent->height())];
 #if 1
   [view setWantsLayer:true];
@@ -62,18 +61,28 @@ NSView *cocoa_create_view(QWidget *parent)
 
   [parentView addSubview:view];
 
-  [view setTranslatesAutoresizingMaskIntoConstraints:NO];
+  [view removeConstraints:[view constraints]];
+  [view setTranslatesAutoresizingMaskIntoConstraints:NO]; // disable auto-layout.
+#if 0
   [view.bottomAnchor constraintEqualToAnchor:parentView.bottomAnchor constant:0.0f].active = YES;
   [view.leadingAnchor constraintEqualToAnchor:parentView.leadingAnchor constant:0.0f].active = YES;
   [view.widthAnchor constraintEqualToAnchor:parentView.widthAnchor multiplier:1.0f constant:0.0f].active = YES;
   [view.heightAnchor constraintEqualToAnchor:parentView.heightAnchor multiplier:1.0f constant:0.0f].active = YES;
-
+#endif
   return view;
 }
 
 void cocoa_beep()
 {
   NSBeep();
+}
+
+void cocoa_resize(NSView *view, int width, int height)
+{
+  NSRect r = [view frame];
+  r.size.width = width;
+  r.size.height = height;
+  [view setFrame:r];
 }
 
 int cocoa_get_level(QWidget *parent)
