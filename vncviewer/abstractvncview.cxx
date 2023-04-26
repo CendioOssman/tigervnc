@@ -562,19 +562,33 @@ void QAbstractVNCView::maybeGrabKeyboard()
 
 void QAbstractVNCView::grabKeyboard()
 {
+  m_keyboardGrabbed = true;
+
+  QPoint gpos = QCursor::pos();
+  QPoint lpos = mapFromGlobal(gpos);
+  QRect r = rect();
+  if (r.contains(lpos)) {
+    grabPointer();
+  }
 }
 
 void QAbstractVNCView::ungrabKeyboard()
 {
+  m_keyboardGrabbed = true;
 }
 
 void QAbstractVNCView::grabPointer()
 {
+  setMouseTracking(true);
+  m_mouseGrabbed = true;
 }
 
 void QAbstractVNCView::ungrabPointer()
 {
+  setMouseTracking(false);
+  m_mouseGrabbed = false;
 }
+
 bool QAbstractVNCView::isFullscreenEnabled()
 {
   return m_fullscreenEnabled;

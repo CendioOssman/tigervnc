@@ -14,6 +14,8 @@
 
 #if defined(WIN32)
 #include "vncwinview.h"
+#elif defined(__APPLE__)
+#include "vncmacview.h"
 #elif defined(Q_OS_UNIX)
 #include "vncx11view.h"
 #endif
@@ -87,7 +89,9 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   delete m_view;
 #if defined(WIN32)
   m_view = new QVNCWinView();
-#elif defined(Q_OS_UNIX) && !defined(__APPLE__)
+#elif defined(__APPLE__)
+  m_view = new QVNCMacView();
+#elif defined(Q_OS_UNIX)
   QString platform = QGuiApplication::platformName();
   if (platform == "xcb") {
     m_view = new QVNCX11View();
@@ -158,7 +162,7 @@ bool QVNCApplication::notify(QObject *receiver, QEvent *e)
         }
     }
     catch (int &e) {
-    qDebug() << "Error: " << strerror(e);
+        qDebug() << "Error: " << strerror(e);
         AppManager::instance()->publishError(strerror(e));
     }
     catch (...) {

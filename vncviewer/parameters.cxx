@@ -28,6 +28,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <tchar.h>
+#else
+#include <sys/stat.h>
 #endif
 
 #include <QtGlobal>
@@ -640,13 +643,13 @@ void saveViewerParameters(const char *filename, const char *servername) {
 #ifdef _WIN32
     saveToReg(servername);
     return;
-#endif
-    
+#else
     const char* configDir = os::getvncconfigdir();
     if (configDir == nullptr)
       throw Exception(_("Could not determine VNC config directory path"));
 
     snprintf(filepath, sizeof(filepath), "%s/default.tigervnc", configDir);
+#endif
   } else {
     snprintf(filepath, sizeof(filepath), "%s", filename);
   }
@@ -745,13 +748,13 @@ char* loadViewerParameters(const char *filename) {
 
 #ifdef _WIN32
     return loadFromReg();
-#endif
-
+#else
     const char* configDir = os::getvncconfigdir();
     if (configDir == nullptr)
       throw Exception(_("Could not determine VNC config directory path"));
 
     snprintf(filepath, sizeof(filepath), "%s/default.tigervnc", configDir);
+#endif
   } else {
     snprintf(filepath, sizeof(filepath), "%s", filename);
   }

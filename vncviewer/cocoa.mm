@@ -20,9 +20,9 @@
 #include <config.h>
 #endif
 
-#include <FL/Fl.H>
-#include <FL/Fl_Window.H>
-#include <FL/x.H>
+#include <QApplication>
+#include <QScreen>
+#include <QWidget>
 
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
@@ -50,48 +50,78 @@ const int kVK_Menu = 0x6E;
 
 static bool captured = false;
 
-int cocoa_get_level(Fl_Window *win)
+NSView *cocoa_create_view(QWidget *parent)
 {
-  NSWindow *nsw;
-  nsw = (NSWindow*)fl_xid(win);
-  return [nsw level];
+  NSView *parentView = (__bridge NSView*)reinterpret_cast<void *>(parent->winId());
+
+  NSView *view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, parent->width(), parent->height())];
+#if 1
+  [view setWantsLayer:true];
+  view.layer.backgroundColor = [NSColor yellowColor].CGColor;
+#endif
+
+  [parentView addSubview:view];
+
+  [view setTranslatesAutoresizingMaskIntoConstraints:NO];
+  [view.bottomAnchor constraintEqualToAnchor:parentView.bottomAnchor constant:0.0f].active = YES;
+  [view.leadingAnchor constraintEqualToAnchor:parentView.leadingAnchor constant:0.0f].active = YES;
+  [view.widthAnchor constraintEqualToAnchor:parentView.widthAnchor multiplier:1.0f constant:0.0f].active = YES;
+  [view.heightAnchor constraintEqualToAnchor:parentView.heightAnchor multiplier:1.0f constant:0.0f].active = YES;
+
+  return view;
 }
 
-void cocoa_set_level(Fl_Window *win, int level)
+void cocoa_beep()
 {
-  NSWindow *nsw;
-  nsw = (NSWindow*)fl_xid(win);
-  [nsw setLevel:level];
+  NSBeep();
 }
 
-int cocoa_capture_displays(Fl_Window *win)
+int cocoa_get_level(QWidget *parent)
 {
-  NSWindow *nsw;
+  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
+  return [window level];
+}
 
-  nsw = (NSWindow*)fl_xid(win);
+void cocoa_set_level(QWidget *parent, int level)
+{
+  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
+  [window setLevel:level];
+}
 
-  CGDisplayCount count;
+int cocoa_capture_displays(QWidget *parent)
+{
+  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
   CGDirectDisplayID displays[16];
 
-  int sx, sy, sw, sh;
-  rfb::Rect windows_rect, screen_rect;
+  NSRect r = [window frame];
+  rfb::Rect windows_rect;
+  windows_rect.setXYWH(r.origin.x, r.origin.y, r.size.width, r.size.height);
 
-  windows_rect.setXYWH(win->x(), win->y(), win->w(), win->h());
-
-  if (CGGetActiveDisplayList(16, displays, &count) != kCGErrorSuccess)
+  CGDisplayCount count;
+  if (CGGetActiveDisplayList(16, displays, &count) != kCGErrorSuccess) {
     return 1;
+  }
 
-  if (count != (unsigned)Fl::screen_count())
+  QApplication *app = static_cast<QApplication*>(QApplication::instance());
+  QList<QScreen*> screens = app->screens();
+  if (count != screens.length()) {
     return 1;
+  }
 
-  for (int i = 0; i < Fl::screen_count(); i++) {
-    Fl::screen_xywh(sx, sy, sw, sh, i);
-
+  for (int i = 0; i < screens.length(); i++) {
+    double dpr = screens[i]->devicePixelRatio();
+    QRect vg = screens[i]->geometry();
+    int sx = vg.x();
+    int sy = vg.y();
+    int sw = vg.width() * dpr;
+    int sh = vg.height() * dpr;
+    
+    rfb::Rect screen_rect;
     screen_rect.setXYWH(sx, sy, sw, sh);
     if (screen_rect.enclosed_by(windows_rect)) {
-      if (CGDisplayCapture(displays[i]) != kCGErrorSuccess)
+      if (CGDisplayCapture(displays[i]) != kCGErrorSuccess) {
         return 1;
-
+      }
     } else {
       // A display might have been captured with the previous
       // monitor selection. In that case we don't want to keep
@@ -102,56 +132,49 @@ int cocoa_capture_displays(Fl_Window *win)
 
   captured = true;
 
-  if ([nsw level] == CGShieldingWindowLevel())
+  if ([window level] == CGShieldingWindowLevel()) {
     return 0;
+  }
 
-  [nsw setLevel:CGShieldingWindowLevel()];
+  [window setLevel:CGShieldingWindowLevel()];
 
   // We're not getting put in front of the shielding window in many
   // cases on macOS 13, despite setLevel: being documented as also
   // pushing the window to the front. So let's explicitly move it.
-  [nsw orderFront:nsw];
+  [window orderFront:window];
 
   return 0;
 }
 
-void cocoa_release_displays(Fl_Window *win)
+void cocoa_release_displays(QWidget *parent)
 {
-  NSWindow *nsw;
-  int newlevel;
+  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
 
-  if (captured)
+  if (captured) {
     CGReleaseAllDisplays();
-
+  }
   captured = false;
 
-  nsw = (NSWindow*)fl_xid(win);
-
   // Someone else has already changed the level of this window
-  if ([nsw level] != CGShieldingWindowLevel())
+  if ([window level] != CGShieldingWindowLevel()) {
     return;
+  }
 
   // FIXME: Store the previous level somewhere so we don't have to hard
   //        code a level here.
-  if (win->fullscreen_active() && win->contains(Fl::focus()))
-    newlevel = NSStatusWindowLevel;
-  else
-    newlevel = NSNormalWindowLevel;
+  int newlevel = parent->isFullScreen() ? NSStatusWindowLevel : NSNormalWindowLevel;
 
   // Only change if different as the level change also moves the window
   // to the top of that level.
-  if ([nsw level] != newlevel)
-    [nsw setLevel:newlevel];
+  if ([window level] != newlevel) {
+    [window setLevel:newlevel];
+  }
 }
 
-CGColorSpaceRef cocoa_win_color_space(Fl_Window *win)
+CGColorSpaceRef cocoa_win_color_space(QWidget *parent)
 {
-  NSWindow *nsw;
-  NSColorSpace *nscs;
-
-  nsw = (NSWindow*)fl_xid(win);
-
-  nscs = [nsw colorSpace];
+  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
+  NSColorSpace *nscs = [window colorSpace];
   if (nscs == nil) {
     // Offscreen, so return standard SRGB color space
     assert(false);
@@ -166,73 +189,69 @@ CGColorSpaceRef cocoa_win_color_space(Fl_Window *win)
   return lut;
 }
 
-bool cocoa_win_is_zoomed(Fl_Window *win)
+bool cocoa_win_is_zoomed(QWidget *parent)
 {
-  NSWindow *nsw;
-  nsw = (NSWindow*)fl_xid(win);
-  return [nsw isZoomed];
+  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
+  return [window isZoomed];
 }
 
-void cocoa_win_zoom(Fl_Window *win)
+void cocoa_win_zoom(QWidget *parent)
 {
-  NSWindow *nsw;
-  nsw = (NSWindow*)fl_xid(win);
-  [nsw zoom:nsw];
+  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
+  [window zoom:window];
 }
 
 int cocoa_is_keyboard_sync(const void *event)
 {
-  const NSEvent* nsevent = (const NSEvent*)event;
-
   assert(event);
+  const NSEvent *nsevent = (const NSEvent*)event;
 
   // If we get a NSFlagsChanged event with key code 0 then this isn't
   // an actual keyboard event but rather the system trying to sync up
   // modifier state after it has stolen input for some reason (e.g.
   // Cmd+Tab)
 
-  if ([nsevent type] != NSFlagsChanged)
+  if ([nsevent type] != NSFlagsChanged) {
     return 0;
-  if ([nsevent keyCode] != 0)
+  }
+  if ([nsevent keyCode] != 0) {
     return 0;
-
+  }
   return 1;
 }
 
 int cocoa_is_keyboard_event(const void *event)
 {
-  NSEvent *nsevent;
-
-  nsevent = (NSEvent*)event;
-
+  NSEvent *nsevent = (NSEvent*)event;
   switch ([nsevent type]) {
   case NSKeyDown:
   case NSKeyUp:
   case NSFlagsChanged:
-    if (cocoa_is_keyboard_sync(event))
+    if (cocoa_is_keyboard_sync(event)) {
       return 0;
+    }
     return 1;
   default:
     return 0;
   }
+
+  return 0;
 }
 
 int cocoa_is_key_press(const void *event)
 {
-  NSEvent *nsevent;
+  NSEvent *nsevent = (NSEvent*)event;
 
-  nsevent = (NSEvent*)event;
-
-  if ([nsevent type] == NSKeyDown)
+  if ([nsevent type] == NSKeyDown) {
     return 1;
-
+  }
   if ([nsevent type] == NSFlagsChanged) {
     UInt32 mask;
 
     // We don't see any event on release of CapsLock
-    if ([nsevent keyCode] == kVK_CapsLock)
+    if ([nsevent keyCode] == kVK_CapsLock) {
       return 1;
-
+    }
     // These are entirely undocumented, but I cannot find any other way
     // of differentiating between left and right keys
     switch ([nsevent keyCode]) {
@@ -267,10 +286,12 @@ int cocoa_is_key_press(const void *event)
       return 0;
     }
 
-    if ([nsevent modifierFlags] & mask)
+    if ([nsevent modifierFlags] & mask) {
       return 1;
-    else
+    }
+    else {
       return 0;
+    }
   }
 
   return 0;
@@ -278,19 +299,17 @@ int cocoa_is_key_press(const void *event)
 
 int cocoa_event_keycode(const void *event)
 {
-  NSEvent *nsevent;
-  int keycode;
-
-  nsevent = (NSEvent*)event;
-
-  keycode = [nsevent keyCode];
+  NSEvent *nsevent = (NSEvent*)event;
+  int keycode = [nsevent keyCode];
 
   // macOS swaps these two keys for unknown reasons for ISO layouts
   if (KBGetLayoutType(LMGetKbdType()) == kKeyboardISO) {
-    if (keycode == kVK_ANSI_Grave)
+    if (keycode == kVK_ANSI_Grave) {
       return kVK_ISO_Section;
-    if (keycode == kVK_ISO_Section)
+    }
+    if (keycode == kVK_ISO_Section) {
       return kVK_ANSI_Grave;
+    }
   }
 
   return keycode;
@@ -298,39 +317,27 @@ int cocoa_event_keycode(const void *event)
 
 static NSString *key_translate(UInt16 keyCode, UInt32 modifierFlags)
 {
-  const UCKeyboardLayout *layout;
-  OSStatus err;
-
-  layout = nullptr;
-
-  TISInputSourceRef keyboard;
-  CFDataRef uchr;
-
-  keyboard = TISCopyCurrentKeyboardLayoutInputSource();
-  uchr = (CFDataRef)TISGetInputSourceProperty(keyboard,
-                                              kTISPropertyUnicodeKeyLayoutData);
-  if (uchr == nullptr)
+  TISInputSourceRef keyboard = TISCopyCurrentKeyboardLayoutInputSource();
+  CFDataRef uchr = (CFDataRef)TISGetInputSourceProperty(keyboard, kTISPropertyUnicodeKeyLayoutData);
+  if (uchr == nullptr) {
     return nil;
-
-  layout = (const UCKeyboardLayout*)CFDataGetBytePtr(uchr);
-  if (layout == nullptr)
+  }
+  const UCKeyboardLayout *layout = (const UCKeyboardLayout*)CFDataGetBytePtr(uchr);
+  if (layout == nullptr) {
     return nil;
+  }
 
-  UInt32 dead_state;
-  UniCharCount max_len, actual_len;
+  UniCharCount actual_len;
   UniChar string[255];
-
-  dead_state = 0;
-  max_len = sizeof(string)/sizeof(*string);
-
+  UInt32 dead_state = 0;
+  UniCharCount max_len = sizeof(string) / sizeof(*string);
   modifierFlags = (modifierFlags >> 8) & 0xff;
-
-  err = UCKeyTranslate(layout, keyCode, kUCKeyActionDown, modifierFlags,
+  OSStatus err = UCKeyTranslate(layout, keyCode, kUCKeyActionDown, modifierFlags,
                        LMGetKbdType(), 0, &dead_state, max_len, &actual_len,
                        string);
-  if (err != noErr)
+  if (err != noErr) {
     return nil;
-
+  }
   // Dead key?
   if (dead_state != 0) {
     // We have no fool proof way of asking what dead key this is.
@@ -339,8 +346,9 @@ static NSString *key_translate(UInt16 keyCode, UInt32 modifierFlags)
     err = UCKeyTranslate(layout, keyCode, kUCKeyActionDown, modifierFlags,
                          LMGetKbdType(), 0, &dead_state, max_len, &actual_len,
                          string);
-    if (err != noErr)
+    if (err != noErr) {
       return nil;
+    }
   }
 
   return [NSString stringWithCharacters:string length:actual_len];
@@ -425,23 +433,15 @@ static const int kvk_map[][2] = {
 
 int cocoa_event_keysym(const void *event)
 {
-  NSEvent *nsevent;
-
-  UInt16 key_code;
-  size_t i;
-
-  NSString *chars;
-  UInt32 modifiers;
-
-  nsevent = (NSEvent*)event;
-
-  key_code = [nsevent keyCode];
+  NSEvent *nsevent = (NSEvent*)event;
+  UInt16 key_code = [nsevent keyCode];
 
   // Start with keys that either don't generate a symbol, or
   // generate the same symbol as some other key.
-  for (i = 0;i < sizeof(kvk_map)/sizeof(kvk_map[0]);i++) {
-    if (key_code == kvk_map[i][0])
+  for (size_t i = 0; i < sizeof(kvk_map) / sizeof(kvk_map[0]); i++) {
+    if (key_code == kvk_map[i][0]) {
       return kvk_map[i][1];
+    }
   }
 
   // OS X always sends the same key code for the decimal key on the
@@ -464,80 +464,75 @@ int cocoa_event_keysym(const void *event)
   // have to do some lookup ourselves. This matches our behaviour on
   // other platforms.
 
-  modifiers = 0;
-  if ([nsevent modifierFlags] & NSAlphaShiftKeyMask)
+  UInt32 modifiers = 0;
+  if ([nsevent modifierFlags] & NSAlphaShiftKeyMask) {
     modifiers |= alphaLock;
-  if ([nsevent modifierFlags] & NSShiftKeyMask)
+  }
+  if ([nsevent modifierFlags] & NSShiftKeyMask) {
     modifiers |= shiftKey;
-  if ([nsevent modifierFlags] & NSAlternateKeyMask)
+  }
+  if ([nsevent modifierFlags] & NSAlternateKeyMask) {
     modifiers |= optionKey;
+  }
 
-  chars = key_translate(key_code, modifiers);
-  if (chars == nil)
+  NSString *chars = key_translate(key_code, modifiers);
+  if (chars == nil) {
     return NoSymbol;
+  }
 
   // FIXME: Some dead keys are given as NBSP + combining character
-  if ([chars length] != 1)
+  if ([chars length] != 1) {
     return NoSymbol;
-
+  }
   // Dead key?
-  if ([[nsevent characters] length] == 0)
+  if ([[nsevent characters] length] == 0) {
     return ucs2keysym(ucs2combining([chars characterAtIndex:0]));
-
+  }
   return ucs2keysym([chars characterAtIndex:0]);
 }
 
 static int cocoa_open_hid(io_connect_t *ioc)
 {
-  kern_return_t ret;
-  io_service_t ios;
-  CFMutableDictionaryRef mdict;
-
-  mdict = IOServiceMatching(kIOHIDSystemClass);
-  ios = IOServiceGetMatchingService(kIOMasterPortDefault,
-                                    (CFDictionaryRef) mdict);
-  if (!ios)
+  CFMutableDictionaryRef mdict = IOServiceMatching(kIOHIDSystemClass);
+  io_service_t ios = IOServiceGetMatchingService(kIOMasterPortDefault, (CFDictionaryRef) mdict);
+  if (!ios) {
     return KERN_FAILURE;
-
-  ret = IOServiceOpen(ios, mach_task_self(), kIOHIDParamConnectType, ioc);
+  }
+  kern_return_t ret = IOServiceOpen(ios, mach_task_self(), kIOHIDParamConnectType, ioc);
   IOObjectRelease(ios);
-  if (ret != KERN_SUCCESS)
+  if (ret != KERN_SUCCESS) {
     return ret;
-
+  }
   return KERN_SUCCESS;
 }
 
 static int cocoa_set_modifier_lock_state(int modifier, bool on)
 {
-  kern_return_t ret;
   io_connect_t ioc;
-
-  ret = cocoa_open_hid(&ioc);
-  if (ret != KERN_SUCCESS)
+  kern_return_t ret = cocoa_open_hid(&ioc);
+  if (ret != KERN_SUCCESS) {
     return ret;
-
+  }
   ret = IOHIDSetModifierLockState(ioc, modifier, on);
   IOServiceClose(ioc);
-  if (ret != KERN_SUCCESS)
+  if (ret != KERN_SUCCESS) {
     return ret;
-
+  }
   return KERN_SUCCESS;
 }
 
 static int cocoa_get_modifier_lock_state(int modifier, bool *on)
 {
-  kern_return_t ret;
   io_connect_t ioc;
-
-  ret = cocoa_open_hid(&ioc);
-  if (ret != KERN_SUCCESS)
+  kern_return_t ret = cocoa_open_hid(&ioc);
+  if (ret != KERN_SUCCESS) {
     return ret;
-
+  }
   ret = IOHIDGetModifierLockState(ioc, modifier, on);
   IOServiceClose(ioc);
-  if (ret != KERN_SUCCESS)
+  if (ret != KERN_SUCCESS) {
     return ret;
-
+  }
   return KERN_SUCCESS;
 }
 

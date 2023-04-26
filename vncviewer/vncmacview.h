@@ -1,24 +1,23 @@
-#ifndef VNCX11VIEW_H
-#define VNCX11VIEW_H
+#ifndef VNCMACVIEW_H
+#define VNCMACVIEW_H
 
-#include <X11/Xlib.h>
 #include "abstractvncview.h"
 
-class QVNCX11View : public QAbstractVNCView
+class QWindow;
+class NSView;
+
+class QVNCMacView : public QAbstractVNCView
 {
   Q_OBJECT
 public:
-  QVNCX11View(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
-  virtual ~QVNCX11View();
+  QVNCMacView(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
+  virtual ~QVNCMacView();
   qulonglong nativeWindowHandle() const override;
-  Display *display() const;
 
 public slots:
   void setQCursor(const QCursor &cursor) override;
   void grabKeyboard() override;
   void ungrabKeyboard() override;
-  void grabPointer() override;
-  void ungrabPointer() override;
   void bell() override;
   void updateWindow() override;
   void handleKeyPress(int keyCode, quint32 keySym) override;
@@ -43,9 +42,8 @@ public slots:
   void draw();
 
 private:
-  Window m_window;
+  NSView *m_view;
   rfb::Region *m_region;
-  Pixmap toPixmap(QBitmap &bitmap);
 };
 
-#endif // VNCX11VIEW_H
+#endif // VNCMACVIEW_H

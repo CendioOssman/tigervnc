@@ -19,20 +19,25 @@
 #ifndef __VNCVIEWER_COCOA_H__
 #define __VNCVIEWER_COCOA_H__
 
-class Fl_Window;
+class NSWindow;
+class NSView;
+class QWidget;
 
-int cocoa_get_level(Fl_Window *win);
-void cocoa_set_level(Fl_Window *win, int level);
+NSView *cocoa_create_view(QWidget *parent);
+void cocoa_beep();
 
-int cocoa_capture_displays(Fl_Window *win);
-void cocoa_release_displays(Fl_Window *win);
+int cocoa_get_level(QWidget *parent);
+void cocoa_set_level(QWidget *parent, int level);
+
+int cocoa_capture_displays(QWidget *parent);
+void cocoa_release_displays(QWidget *parent);
 
 typedef struct CGColorSpace *CGColorSpaceRef;
 
-CGColorSpaceRef cocoa_win_color_space(Fl_Window *win);
+CGColorSpaceRef cocoa_win_color_space(QWidget *parent);
 
-bool cocoa_win_is_zoomed(Fl_Window *win);
-void cocoa_win_zoom(Fl_Window *win);
+bool cocoa_win_is_zoomed(QWidget *parent);
+void cocoa_win_zoom(QWidget *parent);
 
 int cocoa_is_keyboard_sync(const void *event);
 int cocoa_is_keyboard_event(const void *event);

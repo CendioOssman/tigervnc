@@ -987,7 +987,9 @@ void QVNCWinView::grabKeyboard()
     vlog.error(_("Failure grabbing keyboard"));
     return;
   }
-
+#if 1
+  QAbstractVNCView::grabKeyboard();
+#else
   m_keyboardGrabbed = true;
 
   POINT p;
@@ -995,23 +997,17 @@ void QVNCWinView::grabKeyboard()
   if (p.x >= 0 && p.x < width() && p.y >= 0 && p.y < height()) {
     grabPointer();
   }
+#endif
 }
 
 void QVNCWinView::ungrabKeyboard()
 {
-  m_keyboardGrabbed = false;
+#if 0
+  // maybe unnecessary
   ungrabPointer();
+#endif
   win32_disable_lowlevel_keyboard(m_hwnd);
-}
-
-void QVNCWinView::grabPointer()
-{
-  m_mouseGrabbed = true;
-}
-
-void QVNCWinView::ungrabPointer()
-{
-  m_mouseGrabbed = false;
+  QAbstractVNCView::ungrabKeyboard();
 }
 
 void QVNCWinView::bell()

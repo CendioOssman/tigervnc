@@ -42,8 +42,6 @@ public slots:
   void maybeGrabKeyboard() override;
   void grabKeyboard() override;
   void ungrabKeyboard() override;
-  void grabPointer() override;
-  void ungrabPointer() override;
   void bell() override;
   void moveView(int x, int y) override;
   void updateWindow() override;
