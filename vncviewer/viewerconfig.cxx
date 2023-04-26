@@ -1,6 +1,11 @@
 #include <QQmlEngine>
 #include <QDir>
 #include <QTextStream>
+
+#if !defined(_WIN32)
+#include <sys/stat.h>
+#endif
+
 #include "viewerconfig.h"
 #include "parameters.h"
 #include "menukey.h"
@@ -215,12 +220,14 @@ void ViewerConfig::saveServerHistory()
 {
 #ifdef _WIN32
     saveHistoryToRegKey(m_serverHistory);
-    return;
-#endif
-
+#else
     char* homeDir = nullptr;
     if (getvnchomedir(&homeDir) == -1) {
         throw rdr::Exception("%s", tr("Could not obtain the home directory path").toStdString().c_str());
+    }
+    struct stat sb;
+    if (stat(homeDir, &sb)) {
+      mkdir(homeDir, S_IRWXU);
     }
 
     char filepath[PATH_MAX];
@@ -228,17 +235,19 @@ void ViewerConfig::saveServerHistory()
     delete[] homeDir;
 
     /* Write server history to file */
-    FILE *f = fopen(filepath, "wb");
+    FILE *f = fopen(filepath, "w");
     if (!f) {
       throw rdr::Exception("%s", tr("Could not open \"%1\": %2").arg("%s", filepath).arg("%s", strerror(errno)).toStdString().c_str());
     }
-    QTextStream stream(f, QIODevice::WriteOnly | QIODevice::Append);
+    QTextStream stream(f, QIODevice::WriteOnly | QIODevice::WriteOnly);
 
     // Save the last X elements to the config file.
     for(int i = 0; i < m_serverHistory.size() && i <= SERVER_HISTORY_SIZE; i++) {
         stream << m_serverHistory[i] << "\n";
     }
+    stream.flush();
     fclose(f);
+#endif
 }
 
 void ViewerConfig::setOpenGLFBOenabled(bool value)
