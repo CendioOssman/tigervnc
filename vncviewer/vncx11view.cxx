@@ -679,7 +679,7 @@ void QVNCX11View::ungrabKeyboard()
   while (XCheckIfEvent(display(), &xev, &eventIsFocusWithSerial, (XPointer)&serial) == True) {
     vlog.debug("Ignored synthetic focus event cause by grab change");
   }
-#ndif
+#endif
   
   QAbstractVNCView::ungrabKeyboard();
 }
