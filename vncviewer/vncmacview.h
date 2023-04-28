@@ -5,6 +5,7 @@
 
 class QWindow;
 class NSView;
+class NSCursor;
 
 class QVNCMacView : public QAbstractVNCView
 {
@@ -43,6 +44,7 @@ public slots:
 
 private:
   NSView *m_view;
+  NSCursor *m_cursor;
   rfb::Region *m_region;
 };
 

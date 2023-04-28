@@ -21,11 +21,23 @@
 
 class NSWindow;
 class NSView;
+class NSCursor;
+class NSBitmapImageRep;
+class CGContext;
 class QWidget;
+class QCursor;
 
-NSView *cocoa_create_view(QWidget *parent);
+NSView *cocoa_create_view(QWidget *parent, NSBitmapImageRep *bitmap);
 void cocoa_beep();
+int cocoa_mac_os_version();
+CGContext *cocoa_gc(NSView *view);
 void cocoa_resize(NSView *view, int width, int height);
+NSCursor *cocoa_set_cursor(NSView *view, const QCursor *cursor);
+void cocoa_delete_cursor(NSCursor *cursor);
+NSBitmapImageRep *cocoa_create_bitmap(int width, int height);
+void cocoa_delete_bitmap(NSBitmapImageRep *bitmap);
+unsigned char *cocoa_get_bitmap_data(NSBitmapImageRep *bitmap);
+void cocoa_draw(NSView *view, int x, int y, int w, int h);
 
 int cocoa_get_level(QWidget *parent);
 void cocoa_set_level(QWidget *parent, int level);
@@ -35,7 +47,7 @@ void cocoa_release_displays(QWidget *parent);
 
 typedef struct CGColorSpace *CGColorSpaceRef;
 
-CGColorSpaceRef cocoa_win_color_space(QWidget *parent);
+CGColorSpaceRef cocoa_win_color_space(NSView *view);
 
 bool cocoa_win_is_zoomed(QWidget *parent);
 void cocoa_win_zoom(QWidget *parent);

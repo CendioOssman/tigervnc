@@ -41,6 +41,7 @@ static rfb::LogWriter vlog("QVNCMacView");
 QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
  : QAbstractVNCView(parent, f)
  , m_view(0)
+ , m_cursor(nullptr)
  , m_region(new rfb::Region)
 {
   setAttribute(Qt::WA_NoBackground);
@@ -52,6 +53,7 @@ QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
 
 QVNCMacView::~QVNCMacView()
 {
+  cocoa_delete_cursor(m_cursor);
 }
 
 qulonglong QVNCMacView::nativeWindowHandle() const
@@ -68,6 +70,7 @@ void QVNCMacView::addInvalidRegion(int x0, int y0, int x1, int y1)
   if (w <= 0 || h <= 0) {
     return;
   }
+  draw();
   #if 0
   QVNCConnection *cc = AppManager::instance()->connection();
   PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
@@ -113,7 +116,10 @@ bool QVNCMacView::event(QEvent *e)
   case QEvent::Polish:
     if (!m_view) {
       //qDebug() << "display numbers:  QMACInfo::display()=" <<  QMACInfo::display() << ", XOpenDisplay(NULL)=" << XOpenDisplay(NULL);
-      m_view = cocoa_create_view(this);
+      QVNCConnection *cc = AppManager::instance()->connection();
+      PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
+      NSBitmapImageRep *bitmap = framebuffer->bitmap();
+      m_view = cocoa_create_view(this, bitmap);
       // Do not invoke #fromWinId(), otherwise NSView won't be shown.
       // QWindow *w = windowHandle()->fromWinId((WId)m_view);
       setMouseTracking(true);
@@ -163,7 +169,7 @@ bool QVNCMacView::event(QEvent *e)
     e->setAccepted(true);
     return true;
   default:
-    //qDebug() << "Unprocessed Event: " << e->type();
+    qDebug() << "Unprocessed Event: " << e->type();
     break;
   }
   return QWidget::event(e);
@@ -192,11 +198,18 @@ void QVNCMacView::resizeEvent(QResizeEvent *e)
 {
   if (m_view) {
     QSize size = e->size();
+#if defined(__APPLE__)
+    int w = size.width();
+    int h = size.height();
+#else
     int w = size.width() * m_devicePixelRatio;
     int h = size.height() * m_devicePixelRatio;
+#endif
     cocoa_resize(m_view, w, h);
-    QWidget::resizeEvent(e);
-    adjustSize();
+
+    QWidget::resize(size.width(), size.height());
+    //QWidget::resizeEvent(e);
+    //adjustSize();
 
 //    bool resizing = (width() != size.width()) || (height() != size.height());
 //    if (resizing) {
@@ -429,6 +442,8 @@ void QVNCMacView::handleKeyRelease(int keyCode)
 
 void QVNCMacView::setQCursor(const QCursor &cursor)
 {
+  cocoa_delete_cursor(m_cursor);
+  m_cursor = cocoa_set_cursor(m_view, &cursor);
 #if 0
   #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
   QBitmap cursorBitmap = cursor.bitmap(Qt::ReturnByValue);

@@ -80,7 +80,6 @@ set(PROJECT_SOURCES
         MonitorIndicesParameter.h
         PlatformPixelBuffer.h
         PlatformPixelBuffer.cxx
-        PixelBuffer.cxx
         Surface.h
         Surface.cxx
         DecodeManager.h

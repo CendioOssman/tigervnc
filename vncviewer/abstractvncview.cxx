@@ -463,8 +463,10 @@ void QAbstractVNCView::postRemoteResizeRequest()
 void QAbstractVNCView::resize(int width, int height)
 {
   m_resizeTimer->stop();
+#if !defined(__APPLE__)
   width /= m_devicePixelRatio;
   height /= m_devicePixelRatio;
+#endif
   QWidget::resize(width, height);
   QVNCConnection *cc = AppManager::instance()->connection();
   if (cc->server()->supportsSetDesktopSize) {
@@ -603,7 +605,12 @@ void QAbstractVNCView::remoteResize(int w, int h)
   QVNCConnection *cc = AppManager::instance()->connection();
   rfb::ScreenSet layout;
   rfb::ScreenSet::const_iterator iter;
-  if (!m_fullscreenEnabled || (w > width() * m_devicePixelRatio) || (h > height() * m_devicePixelRatio)) {
+#if defined(__APPLE__)
+  double f = 1.0;
+#else
+  double f = m_devicePixelRatio;
+#endif
+  if (!m_fullscreenEnabled || (w > width() * f) || (h > height() * f)) {
     // In windowed mode (or the framebuffer is so large that we need
     // to scroll) we just report a single virtual screen that covers
     // the entire framebuffer.
@@ -752,19 +759,24 @@ void QAbstractVNCView::updateWindow()
 
 void QAbstractVNCView::handleDesktopSize()
 {
+#if defined(__APPLE__)
+  double f = 1.0;
+#else
+  double f = m_devicePixelRatio;
+#endif
   if (strcmp(::desktopSize, "") != 0) {
     int w, h;
     // An explicit size has been requested
     if (sscanf(::desktopSize, "%dx%d", &w, &h) != 2) {
       return;
     }
-    remoteResize(w * m_devicePixelRatio, h * m_devicePixelRatio);
+    remoteResize(w * f, h * f);
     qDebug() << "QAbstractVNCView::handleDesktopSize(explicit): width=" << w << ", height=" << h;
   }
   else if (::remoteResize) {
     // No explicit size, but remote resizing is on so make sure it
     // matches whatever size the window ended up being
-    remoteResize(width() * m_devicePixelRatio, height() * m_devicePixelRatio);
+    remoteResize(width() * f, height() * f);
     qDebug() << "QAbstractVNCView::handleDesktopSize(implicit): width=" << width() << ", height=" << height();
   }
 }

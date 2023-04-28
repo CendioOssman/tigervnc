@@ -452,11 +452,14 @@ bool QMsgReader::readRect(const Rect& r, int encoding)
     vlog.error("Rect too big: %dx%d at %d,%d exceeds %dx%d",
 	    r.width(), r.height(), r.tl.x, r.tl.y,
 	    handler->server()->width(), handler->server()->height());
-    throw Exception("Rect too big");
+    vlog.error("Rect too big");
+    return false;
   }
 
-  if (r.is_empty())
+  if (r.is_empty()) {
     vlog.error("zero size rect");
+    return false;
+  }
 
   return handler->dataRect(r, encoding);
 }
@@ -577,7 +580,11 @@ bool QMsgReader::readSetCursorWithAlpha(int width, int height, const Point& hots
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
 
+#if defined(__APPLE__)
+  const PixelFormat rgbaPF(32, 32, false, true, 255, 255, 255, 0, 8, 16);
+#else
   const PixelFormat rgbaPF(32, 32, false, true, 255, 255, 255, 16, 8, 0);
+#endif
   ManagedPixelBuffer pb(rgbaPF, width, height);
   PixelFormat origPF;
 

@@ -208,7 +208,11 @@ QVNCConnection::QVNCConnection()
   , m_pixelCount(0)
   , m_pendingPF(new rfb::PixelFormat)
   , m_serverPF(new rfb::PixelFormat)
+#if defined(__APPLE__)
+    , m_fullColourPF(new rfb::PixelFormat(32, 24, false, true, 255, 255, 255, 0, 8, 16))
+#else
   , m_fullColourPF(new rfb::PixelFormat(32, 24, false, true, 255, 255, 255, 16, 8, 0))
+#endif
   , m_nextPF(new rfb::PixelFormat)
   , m_preferredEncoding(rfb::encodingTight)
   , m_compressLevel(2)

@@ -24,6 +24,7 @@
 #elif defined(__APPLE__)
 // Apple headers conflict with FLTK, so redefine types here
 typedef struct CGImage* CGImageRef;
+class NSBitmapImageRep;
 #else
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -45,6 +46,7 @@ public:
 #if defined(WIN32)
   HBITMAP hbitmap() { return bitmap; }
 #elif defined(__APPLE__)
+  NSBitmapImageRep *bitmap() { return m_bitmap; }
 #else
   Pixmap pixmap() { return m_pixmap; }
   GC gc() { return m_gc; }
@@ -78,6 +80,7 @@ protected:
   HBITMAP bitmap;
 #elif defined(__APPLE__)
   unsigned char* data;
+  NSBitmapImageRep *m_bitmap;
 #else
   Pixmap m_pixmap;
   Picture m_picture;

@@ -32,6 +32,7 @@ Surface::Surface(int width, int height)
   , data(nullptr)
 #elif defined(__APPLE__)
   , data(nullptr)
+  , m_bitmap(nullptr)
 #else
   , m_pixmap(0)
   , m_picture(0)
