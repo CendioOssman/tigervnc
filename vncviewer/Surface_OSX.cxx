@@ -227,7 +227,8 @@ void Surface::blend(Surface* dst, int src_x, int src_y,
 void Surface::alloc()
 {
 #if !defined(LEGACY_MAC)
-  m_bitmap = cocoa_create_bitmap(width(), height());
+  data = new unsigned char[width() * height() * 4];
+  m_bitmap = cocoa_create_bitmap(width(), height(), data);
   data = cocoa_get_bitmap_data(m_bitmap);
 #else
   data = new unsigned char[width() * height() * 4];

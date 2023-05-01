@@ -5,6 +5,8 @@
 #include <QWindow>
 #include <QImage>
 #include <QBitmap>
+#include <QElapsedTimer>
+#include <QLabel>
 #include "rfb/ServerParams.h"
 #include "rfb/LogWriter.h"
 #include "rdr/Exception.h"
@@ -42,18 +44,34 @@ QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
  : QAbstractVNCView(parent, f)
  , m_view(0)
  , m_cursor(nullptr)
- , m_region(new rfb::Region)
+ , m_dirty(false)
+ , m_time(new QElapsedTimer)
+ , m_nframes(0)
 {
   setAttribute(Qt::WA_NoBackground);
   setAttribute(Qt::WA_NoSystemBackground);
   setFocusPolicy(Qt::StrongFocus);
   connect(AppManager::instance(), &AppManager::invalidateRequested, this, &QVNCMacView::addInvalidRegion, Qt::QueuedConnection);
   installEventFilter(this);
+
+  m_fpswindow = new QLabel("0 FPS", this, Qt::SplashScreen | Qt::WindowStaysOnTopHint);
+  m_overlayTip->hide();
+  m_fpswindow->setGeometry(0, 0, 50, 15);
+  m_fpswindow->setStyleSheet("QLabel {"
+                             "background-color: #ff505050;"
+                             "color: #ffffffff;"
+                             "font-size: 10px;"
+                             "}");
+  m_fpswindow->setAlignment(Qt::AlignRight);
+  m_fpswindow->setMargin(3);
+  m_fpswindow->setWindowOpacity(0.8);
 }
 
 QVNCMacView::~QVNCMacView()
 {
   cocoa_delete_cursor(m_cursor);
+  delete m_time;
+  delete m_fpswindow;
 }
 
 qulonglong QVNCMacView::nativeWindowHandle() const
@@ -63,14 +81,14 @@ qulonglong QVNCMacView::nativeWindowHandle() const
 
 void QVNCMacView::addInvalidRegion(int x0, int y0, int x1, int y1)
 {
-  m_region->assign_union(rfb::Rect(x0, y0, x1, y1));
-
   int w = x1 - x0;
   int h = y1 - y0;
   if (w <= 0 || h <= 0) {
     return;
   }
-  draw();
+  //draw();
+  cocoa_invalidate_region(m_view, x0, y0, w, h);
+  m_dirty = true;
   #if 0
   QVNCConnection *cc = AppManager::instance()->connection();
   PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
@@ -104,7 +122,8 @@ void QVNCMacView::addInvalidRegion(int x0, int y0, int x1, int y1)
 void QVNCMacView::updateWindow()
 {
   QAbstractVNCView::updateWindow();
-  // Nothing more to do, because invalid regions are notified to Qt by addInvalidRegion().
+  addInvalidRegion(0, 0, width(), height());
+  draw();
 }
 
 /*!
@@ -163,11 +182,11 @@ bool QVNCMacView::event(QEvent *e)
     //qDebug() << "CursorChange";
     e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
     return true;
-  case QEvent::Paint:
-    //qDebug() << "QEvent::Paint";
-    draw();
-    e->setAccepted(true);
-    return true;
+//  case QEvent::Paint:
+//    //qDebug() << "QEvent::Paint";
+//    draw();
+//    e->setAccepted(true);
+//    return true;
   default:
     qDebug() << "Unprocessed Event: " << e->type();
     break;
@@ -231,6 +250,27 @@ void QVNCMacView::resizeEvent(QResizeEvent *e)
   }
 }
 
+void QVNCMacView::paintEvent(QPaintEvent *event)
+{
+  if (m_nframes == 0) {
+    m_time->start();
+    m_fpswindow->move(x() + width() - m_fpswindow->width() - 50, y() + 50);
+    m_fpswindow->show();
+  }
+  else {
+    int fps = m_nframes / ((double)m_time->elapsed() / 1000.0) + 0.5;
+    m_fpswindow->setText(QString::asprintf("%d FPS", fps));
+    if (m_nframes % 300 == 0) {
+      qDebug() << "FPS=" << fps;
+    }
+  }
+  m_nframes++;
+
+  if (m_dirty) {
+    draw();
+  }
+}
+
 /*!
 \reimp
 */
@@ -288,22 +328,19 @@ void QVNCMacView::draw()
   if (!m_view || !AppManager::instance()->view()) {
     return;
   }
-  rfb::Rect rect = m_region->get_bounding_rect();
-  int x0 = rect.tl.x;
-  int y0 = rect.tl.y;
-  int x1 = rect.br.x;
-  int y1 = rect.br.y;
-  int w = x1 - x0;
-  int h = y1 - y0;
-  if (w <= 0 || h <= 0) {
-    return;
-  }
-  //qDebug() << "QVNCMacView::draw: x=" << x0 << ", y=" << y0 << ", w=" << w << ", h=" << h;
   QVNCConnection *cc = AppManager::instance()->connection();
   PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-  framebuffer->draw(x0, y0, x0, y0, w, h);
-
-  m_region->clear();
+  rfb::Rect rect = framebuffer->getDamage();
+  int x = 0, y = 0, w = 0, h = 0;
+  rect.setXYWH(x, y, w, h);
+  if (rect.is_empty()) {
+    x = y = 0;
+    w = width();
+    h = height();
+    cocoa_invalidate_region(m_view, x, y, w, h);
+  }
+  framebuffer->draw(x, y, x, y, w, h);
+  m_dirty = false;
 }
 
 // Viewport::handle(int event)

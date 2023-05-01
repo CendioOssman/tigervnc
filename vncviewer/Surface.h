@@ -47,6 +47,7 @@ public:
   HBITMAP hbitmap() { return bitmap; }
 #elif defined(__APPLE__)
   NSBitmapImageRep *bitmap() { return m_bitmap; }
+  unsigned char *framebuffer() { return data; }
 #else
   Pixmap pixmap() { return m_pixmap; }
   GC gc() { return m_gc; }

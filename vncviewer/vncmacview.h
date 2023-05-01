@@ -4,6 +4,8 @@
 #include "abstractvncview.h"
 
 class QWindow;
+class QElapsedTimer;
+class QLabel;
 class NSView;
 class NSCursor;
 
@@ -30,6 +32,7 @@ protected:
   void showEvent(QShowEvent *) override;
   void focusInEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
+  void paintEvent(QPaintEvent *event) override;
   bool eventFilter(QObject *obj, QEvent *event) override;
 
   void handleMouseButtonEvent(QMouseEvent*);
@@ -45,7 +48,10 @@ public slots:
 private:
   NSView *m_view;
   NSCursor *m_cursor;
-  rfb::Region *m_region;
+  bool m_dirty;
+  QElapsedTimer *m_time;
+  int m_nframes;
+  QLabel *m_fpswindow;
 };
 
 #endif // VNCMACVIEW_H

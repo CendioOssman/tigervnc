@@ -27,6 +27,7 @@ class CGContext;
 class QWidget;
 class QCursor;
 
+
 NSView *cocoa_create_view(QWidget *parent, NSBitmapImageRep *bitmap);
 void cocoa_beep();
 int cocoa_mac_os_version();
@@ -34,10 +35,11 @@ CGContext *cocoa_gc(NSView *view);
 void cocoa_resize(NSView *view, int width, int height);
 NSCursor *cocoa_set_cursor(NSView *view, const QCursor *cursor);
 void cocoa_delete_cursor(NSCursor *cursor);
-NSBitmapImageRep *cocoa_create_bitmap(int width, int height);
+NSBitmapImageRep *cocoa_create_bitmap(int width, int height, unsigned char *framebuffer);
 void cocoa_delete_bitmap(NSBitmapImageRep *bitmap);
 unsigned char *cocoa_get_bitmap_data(NSBitmapImageRep *bitmap);
 void cocoa_draw(NSView *view, int x, int y, int w, int h);
+void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h);
 
 int cocoa_get_level(QWidget *parent);
 void cocoa_set_level(QWidget *parent, int level);
