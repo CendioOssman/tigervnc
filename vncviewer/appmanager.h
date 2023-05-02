@@ -31,6 +31,7 @@ signals:
   void newVncWindowRequested(int width, int height, QString name);
   void resetConnectionRequested();
   void invalidateRequested(int x0, int y0, int x1, int y1);
+  void refreshRequested();
   void contextMenuRequested();
   void infoDialogRequested();
   void optionDialogRequested();
@@ -52,6 +53,7 @@ public slots:
    * @param y1 Y of the bottom right point.
    */
   void invalidate(int x0, int y0, int x1, int y1);
+  void refresh();
   void openContextMenu();
   void openInfoDialog();
   void openOptionDialog();

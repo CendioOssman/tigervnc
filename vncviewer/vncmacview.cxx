@@ -5,7 +5,7 @@
 #include <QWindow>
 #include <QImage>
 #include <QBitmap>
-#include <QElapsedTimer>
+#include <QTimer>
 #include <QLabel>
 #include "rfb/ServerParams.h"
 #include "rfb/LogWriter.h"
@@ -45,8 +45,7 @@ QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
  , m_view(0)
  , m_cursor(nullptr)
  , m_dirty(false)
- , m_time(new QElapsedTimer)
- , m_nframes(0)
+ , m_refreshTimer(new QTimer)
 {
   setAttribute(Qt::WA_NoBackground);
   setAttribute(Qt::WA_NoSystemBackground);
@@ -54,24 +53,21 @@ QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
   connect(AppManager::instance(), &AppManager::invalidateRequested, this, &QVNCMacView::addInvalidRegion, Qt::QueuedConnection);
   installEventFilter(this);
 
-  m_fpswindow = new QLabel("0 FPS", this, Qt::SplashScreen | Qt::WindowStaysOnTopHint);
   m_overlayTip->hide();
-  m_fpswindow->setGeometry(0, 0, 50, 15);
-  m_fpswindow->setStyleSheet("QLabel {"
-                             "background-color: #ff505050;"
-                             "color: #ffffffff;"
-                             "font-size: 10px;"
-                             "}");
-  m_fpswindow->setAlignment(Qt::AlignRight);
-  m_fpswindow->setMargin(3);
-  m_fpswindow->setWindowOpacity(0.8);
+
+  connect(m_refreshTimer, &QTimer::timeout, this, [this]() {
+    draw();
+  }, Qt::QueuedConnection);
+  m_refreshTimer->setInterval(0);
+  m_refreshTimer->setSingleShot(true);
+  m_refreshTimer->start();
 }
 
 QVNCMacView::~QVNCMacView()
 {
   cocoa_delete_cursor(m_cursor);
-  delete m_time;
-  delete m_fpswindow;
+  m_refreshTimer->stop();
+  delete m_refreshTimer;
 }
 
 qulonglong QVNCMacView::nativeWindowHandle() const
@@ -86,43 +82,14 @@ void QVNCMacView::addInvalidRegion(int x0, int y0, int x1, int y1)
   if (w <= 0 || h <= 0) {
     return;
   }
-  //draw();
   cocoa_invalidate_region(m_view, x0, y0, w, h);
   m_dirty = true;
-  #if 0
-  QVNCConnection *cc = AppManager::instance()->connection();
-  PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-  rfb::Rect r = framebuffer->getDamage();
-  //qDebug() << "QQVNCMacView::addInvalidRegion: x=" << r.tl.x << ", y=" << r.tl.y << ", w=" << (r.br.x-r.tl.x) << ", h=" << (r.br.y-r.tl.y);
-
-  // copy the specified region in XImage (== data in framebuffer) to Pixmap.
-  Pixmap pixmap = framebuffer->pixmap();
-  XGCValues gcvalues;
-  GC gc = XCreateGC(display(), pixmap, 0, &gcvalues);
-  XImage *xim = framebuffer->ximage();
-  XShmSegmentInfo *shminfo = framebuffer->shmSegmentInfo();
-  if (shminfo) {
-    int ret = XShmPutImage(display(), pixmap, gc, xim, x0, y0, x0, y0, w, h, False);
-    //int ret = XShmPutImage(display(), m_window, gc, xim, x0, y0, x0, y0, w, h, False);
-    //qDebug() << "XShmPutImage: ret=" << ret;
-    // Need to make sure the X server has finished reading the
-    // shared memory before we return
-    XSync(display(), False);
-  } else {
-    int ret = XPutImage(display(), pixmap, gc, xim, x0, y0, x0, y0, w, h);
-    //qDebug() << "XPutImage(pixmap):ret=" << ret;
-  }
-
-  XFreeGC(display(), gc);
-
-  update(x0, y0, w, h);
-  #endif
+  //draw();
 }
 
 void QVNCMacView::updateWindow()
 {
   QAbstractVNCView::updateWindow();
-  addInvalidRegion(0, 0, width(), height());
   draw();
 }
 
@@ -146,10 +113,12 @@ bool QVNCMacView::event(QEvent *e)
     break;
   case QEvent::KeyboardLayoutChange:
     break;
-  case QEvent::MouseMove:
+  // On macOS, QEvent::MouseMove seems never used. Instead, the native event handler is used.
+  //case QEvent::MouseMove:
   case QEvent::MouseButtonPress:
   case QEvent::MouseButtonRelease:
   case QEvent::MouseButtonDblClick:
+    qDebug() << "QVNCMacView::event: MouseButton event";
     handleMouseButtonEvent((QMouseEvent*)e);
     break;
   case QEvent::Wheel:
@@ -163,21 +132,25 @@ bool QVNCMacView::event(QEvent *e)
     //        EnableWindow(m_hwnd, true);
     break;
   case QEvent::WindowActivate:
-    //qDebug() << "WindowActivate";
+    qDebug() << "WindowActivate";
     grabPointer();
     break;
   case QEvent::WindowDeactivate:
-    //qDebug() << "WindowDeactivate";
+    qDebug() << "WindowDeactivate";
     ungrabPointer();
     break;
-    //    case QEvent::Enter:
-    //      qDebug() << "Enter";
-    //      grabPointer();
-    //      break;
-    //    case QEvent::Leave:
-    //      qDebug() << "Leave";
-    //      ungrabPointer();
-    //      break;
+#if 0 // On macOS, this block is never used.
+  case QEvent::Enter:
+    qDebug() << "Enter";
+    setFocus();
+    grabPointer();
+    break;
+  case QEvent::Leave:
+    qDebug() << "Leave";
+    clearFocus();
+    ungrabPointer();
+    break;
+#endif
   case QEvent::CursorChange:
     //qDebug() << "CursorChange";
     e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
@@ -252,6 +225,7 @@ void QVNCMacView::resizeEvent(QResizeEvent *e)
 
 void QVNCMacView::paintEvent(QPaintEvent *event)
 {
+#if 0
   if (m_nframes == 0) {
     m_time->start();
     m_fpswindow->move(x() + width() - m_fpswindow->width() - 50, y() + 50);
@@ -265,6 +239,7 @@ void QVNCMacView::paintEvent(QPaintEvent *event)
     }
   }
   m_nframes++;
+#endif
 
   if (m_dirty) {
     draw();
@@ -276,9 +251,31 @@ void QVNCMacView::paintEvent(QPaintEvent *event)
 */
 bool QVNCMacView::nativeEvent(const QByteArray &eventType, void *message, long *result)
 {
-  qDebug() << "nativeEvent: eventType=" << eventType;
   if (eventType == "NSEvent") {
     // Special event that means we temporarily lost some input
+    if (cocoa_is_mouse_entered(message)) {
+      qDebug() << "nativeEvent: mouseEntered";
+      setFocus();
+      grabPointer();
+      return true;
+    }
+    else if (cocoa_is_mouse_exited(message)) {
+      qDebug() << "nativeEvent: mouseExited";
+      clearFocus();
+      ungrabPointer();
+      return true;
+    }
+    else if (cocoa_is_mouse_moved(message)) {
+      int x = 0;
+      int y = 0;
+      int buttonMask = 0;
+      cocoa_get_mouse_properties(message, &x, &y, &buttonMask);
+      y = height() - y;
+      qDebug() << "nativeEvent: mouseMoved: x=" << x << ",y=" << y << ",buttonMask=0x" << Qt::hex << buttonMask;
+      filterPointerEvent(rfb::Point(x, y), buttonMask);
+      return true;
+    }
+
     if (cocoa_is_keyboard_sync(message)) {
       while (!m_downKeySym.empty()) {
         handleKeyRelease(m_downKeySym.begin()->first);
@@ -288,6 +285,7 @@ bool QVNCMacView::nativeEvent(const QByteArray &eventType, void *message, long *
 
     if (cocoa_is_keyboard_event(message)) {
       int keyCode = cocoa_event_keycode(message);
+      qDebug() << "nativeEvent: keyEvent: keyCode=" << keyCode << ", hexKeyCode=" << Qt::hex << keyCode;
       if ((unsigned)keyCode >= code_map_osx_to_qnum_len) {
         keyCode = 0;
       }
@@ -315,6 +313,7 @@ bool QVNCMacView::nativeEvent(const QByteArray &eventType, void *message, long *
       return true;
     }
   }
+  qDebug() << "nativeEvent: eventType=" << eventType;
   return QWidget::nativeEvent(eventType, message, result);
 }
 
@@ -325,22 +324,22 @@ void QVNCMacView::bell()
 
 void QVNCMacView::draw()
 {
-  if (!m_view || !AppManager::instance()->view()) {
+  if (!m_dirty || !m_view || !AppManager::instance()->view()) {
     return;
   }
+  m_dirty = false;
+  m_refreshTimer->stop();
   QVNCConnection *cc = AppManager::instance()->connection();
   PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
   rfb::Rect rect = framebuffer->getDamage();
-  int x = 0, y = 0, w = 0, h = 0;
-  rect.setXYWH(x, y, w, h);
-  if (rect.is_empty()) {
-    x = y = 0;
-    w = width();
-    h = height();
-    cocoa_invalidate_region(m_view, x, y, w, h);
+  int x = rect.tl.x;
+  int y = rect.tl.y;
+  int w = rect.br.x - x;
+  int h = rect.br.y - y;
+  if (!rect.is_empty()) {
+    cocoa_draw(m_view, x, y, w, h);
   }
-  framebuffer->draw(x, y, x, y, w, h);
-  m_dirty = false;
+  m_refreshTimer->start();
 }
 
 // Viewport::handle(int event)
@@ -358,6 +357,7 @@ void QVNCMacView::handleMouseButtonEvent(QMouseEvent *e)
     buttonMask |= 4;
   }
 
+  qDebug() << "handleMouseButtonEvent: x=" << e->x() << ",y=" << e->y();
   filterPointerEvent(rfb::Point(e->x(), e->y()), buttonMask);
 }
 

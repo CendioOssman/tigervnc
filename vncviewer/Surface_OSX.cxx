@@ -237,11 +237,7 @@ void Surface::alloc()
 
 void Surface::dealloc()
 {
-#if 0
-  cocoa_delete_bitmap(m_bitmap);
-#else
   delete[] data;
-#endif
 }
 
 void Surface::update(const QImage* image)

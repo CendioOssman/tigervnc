@@ -441,6 +441,7 @@ void QVNCConnection::resetConnection()
 void QVNCConnection::refreshFramebuffer()
 {
   qDebug() << "QVNCConnection::refreshFramebuffer: m_continuousUpdates=" << m_continuousUpdates;
+  emit refreshFramebufferStarted();
   m_forceNonincremental = true;
 
   // Without continuous updates we have to make sure we only have a
@@ -1403,7 +1404,7 @@ void QVNCConnection::framebufferUpdateEnd()
                  (bps * weight)) / 1000000;
 
   m_updateTimer->stop();
-  AppManager::instance()->view()->updateWindow();
+  AppManager::instance()->refresh();
 
   // Compute new settings based on updated bandwidth values
   if (::autoSelect)

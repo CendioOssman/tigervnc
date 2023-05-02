@@ -4,7 +4,7 @@
 #include "abstractvncview.h"
 
 class QWindow;
-class QElapsedTimer;
+class QTimer;
 class QLabel;
 class NSView;
 class NSCursor;
@@ -49,9 +49,7 @@ private:
   NSView *m_view;
   NSCursor *m_cursor;
   bool m_dirty;
-  QElapsedTimer *m_time;
-  int m_nframes;
-  QLabel *m_fpswindow;
+  QTimer *m_refreshTimer;
 };
 
 #endif // VNCMACVIEW_H

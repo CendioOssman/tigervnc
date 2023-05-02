@@ -196,8 +196,11 @@ public:
     : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
+#if !defined(__APPLE__)
+      // Temporarily commented out, because refreshFramebuffer() causes crash.
       AppManager::instance()->connection()->refreshFramebuffer();
       AppManager::instance()->view()->updateWindow();
+#endif
     });
   }
 };
@@ -423,7 +426,9 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   m_delayedInitializeTimer->setSingleShot(true);
   connect(m_delayedInitializeTimer, &QTimer::timeout, this, [this]() {
     AppManager::instance()->connection()->refreshFramebuffer();
+#if !defined(__APPLE__)
     AppManager::instance()->view()->updateWindow();
+#endif
 
     m_overlayTip->move(x() + (width() - m_overlayTip->width()) / 2, y() + 50);
     m_overlayTip->show();
@@ -440,6 +445,8 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   connect(AppManager::instance()->connection(), &QVNCConnection::ledStateChanged, this, &QAbstractVNCView::setLEDState, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::clipboardAnnounced, this, &QAbstractVNCView::handleClipboardAnnounce, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::clipboardChanged, this, &QAbstractVNCView::handleClipboardData, Qt::QueuedConnection);
+
+  connect(AppManager::instance(), &AppManager::refreshRequested, this, &QAbstractVNCView::updateWindow, Qt::QueuedConnection);
 }
 
 QAbstractVNCView::~QAbstractVNCView()

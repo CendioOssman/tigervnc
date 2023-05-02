@@ -27,7 +27,6 @@ class CGContext;
 class QWidget;
 class QCursor;
 
-
 NSView *cocoa_create_view(QWidget *parent, NSBitmapImageRep *bitmap);
 void cocoa_beep();
 int cocoa_mac_os_version();
@@ -36,7 +35,6 @@ void cocoa_resize(NSView *view, int width, int height);
 NSCursor *cocoa_set_cursor(NSView *view, const QCursor *cursor);
 void cocoa_delete_cursor(NSCursor *cursor);
 NSBitmapImageRep *cocoa_create_bitmap(int width, int height, unsigned char *framebuffer);
-void cocoa_delete_bitmap(NSBitmapImageRep *bitmap);
 unsigned char *cocoa_get_bitmap_data(NSBitmapImageRep *bitmap);
 void cocoa_draw(NSView *view, int x, int y, int w, int h);
 void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h);
@@ -58,6 +56,9 @@ int cocoa_is_keyboard_sync(const void *event);
 int cocoa_is_keyboard_event(const void *event);
 
 int cocoa_is_key_press(const void *event);
+bool cocoa_is_mouse_entered(const void *event);
+bool cocoa_is_mouse_exited(const void *event);
+bool cocoa_is_mouse_moved(const void *event);
 
 int cocoa_event_keycode(const void *event);
 int cocoa_event_keysym(const void *event);
@@ -67,5 +68,7 @@ int cocoa_set_num_lock_state(bool on);
 
 int cocoa_get_caps_lock_state(bool *on);
 int cocoa_get_num_lock_state(bool *on);
+
+void cocoa_get_mouse_properties(const void *event, int *x, int *y, int *buttonMask);
 
 #endif

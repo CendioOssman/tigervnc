@@ -26,6 +26,7 @@
 #include <QCursor>
 #include <QPixmap>
 #include <QImage>
+#include <QElapsedTimer>
 #include <QDebug>
 
 #import <Cocoa/Cocoa.h>
@@ -44,7 +45,6 @@
 #include "keysym2ucs.h"
 
 #define NoSymbol 0
-//#define NSVNCVIEW 1
 
 // This wasn't added until 10.12
 #if !defined(MAC_OS_X_VERSION_10_12) || MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_12
@@ -56,25 +56,21 @@ const int kVK_Menu = 0x6E;
 static bool captured = false;
 static int mac_os_version = 0;
 
-NSBitmapImageRep *g_bitmap = NULL;
-
-unsigned char *g_framebuffer = nullptr;
-
-#if defined(NSVNCVIEW)
 //-----------------------------------------------------------------------
 @interface NSVNCView : NSView
 
 @property int width;
 @property int height;
-@property(nonatomic, assign) NSBitmapImageRep *bitmap;
 @property(nonatomic, assign) unsigned char *framebuffer;
-@property(nonatomic, assign) NSImage *image;
+@property(nonatomic, retain) NSBitmapImageRep *bitmap;
+@property(nonatomic, retain) NSImage *image;
 @property(nonatomic, assign) NSCursor *cursor;
+@property(atomic) QElapsedTimer *elapsed;
+@property(atomic) int nframes;
+
 
 - (void)setFrameBuffer:(NSBitmapImageRep*)bitmap width:(int)w height:(int)h;
 - (void)drawRect:(NSRect)aRect;
-- (void)drawRectAt:(NSRect)aRect at:(NSPoint)aPoint;
-- (void)displayFromBuffer:(NSRect)aRect;
 - (void)setRemoteCursor:(NSCursor *)newCursor;
 
 @end
@@ -87,13 +83,32 @@ unsigned char *g_framebuffer = nullptr;
   if (self = [super initWithFrame:frameRect]) {
     // Indicate that this view can draw on a background thread.
     [self setCanDrawConcurrently:YES];
+//    NSTrackingArea *trackingArea = [[[NSTrackingArea alloc] initWithRect:frameRect options: NSTrackingActiveInActiveApp | NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved owner:self userInfo:nil] autorelease];
+//    [self addTrackingArea:trackingArea];
+    _elapsed = new QElapsedTimer;
+    _nframes = 0;
   }
   return self;
 }
 
 - (void)dealloc
 {
+  delete _elapsed;
+  [_image release];
+  [_bitmap release];
   [super dealloc];
+}
+
+- (void)mouseEntered:(NSEvent*)event
+{
+  qDebug() << "-mouseEntered";
+  [[NSApplication sharedApplication] activateIgnoringOtherApps:true];
+}
+
+- (void)mouseExited:(NSEvent*)event
+{
+  qDebug() << "-mouseExited";
+  [[NSApplication sharedApplication] activateIgnoringOtherApps:true];
 }
 
 - (void)setRemoteCursor:(NSCursor *)newCursor
@@ -154,7 +169,7 @@ unsigned char *g_framebuffer = nullptr;
   }
   _image = [[NSImage alloc] initWithSize:f.size];
 
-#if 1
+#if 0
   int bpl = w * 4;
   unsigned char *p0 = _framebuffer;
   for (int y = 0; y < h; y++) {
@@ -174,66 +189,20 @@ unsigned char *g_framebuffer = nullptr;
 
 - (void)drawRect:(NSRect)destRect
 {
-  NSRect b = [self bounds];
-  NSRect r = destRect;
-  r.origin.y = b.size.height - NSMaxY(r);
-  [self drawRectAt:r at:destRect.origin];
-}
-
-- (void)drawRectAt:(NSRect)aRect at:(NSPoint)aPoint
-{
-#if 0
-  NSRect r = aRect;
-  int bitsPerSample = 8;
-  int samplesPerPixel = 4;
-  int bitsPerPixel = bitsPerSample * samplesPerPixel;
-  int bytesPerRow = r.size.width;
-  NSDrawBitmap(r, r.size.width, r.size.height, bitsPerSample, samplesPerPixel, bitsPerPixel, bytesPerRow, NO, YES, NSDeviceRGBColorSpace, &g_framebuffer);
-  [self displayFromBuffer:r];
-#endif
-}
-
-- (void)displayFromBuffer:(NSRect)aRect
-{
-  NSRect b = [self bounds];
-  NSRect r = aRect;
-
-  r.origin.y = b.size.height - NSMaxY(r);
-
+  qDebug() << "drawRect: x=" << destRect.origin.x << ",y=" << destRect.origin.y << ",w=" << destRect.size.width << ",h=" << destRect.size.height;
   [_bitmap bitmapData];
-  
-  if (_image) {
-    [_image release];
-  }
-  _image = [[NSImage alloc] initWithSize:_bitmap.size];
-
+  //[_bitmap drawInRect:destRect];
+  //[_image drawInRect:destRect];
   self.layer.contents = NULL;
   self.layer.contents = _image;
-  self.needsDisplay = YES;
-
-  [self displayRect:r];
-
-#if 0  
-  // Try to draw immediately instead of going through the normal update mechanism.
-  if ([self canDraw]) {
-    [self displayRect:r];
-  }
-  else {
-    // Can't lock focus, but we don't want to miss this update, so mark the
-    // rectangle as invalid so it will be redrawn from the main event loop.
-    [self setNeedsDisplayInRect:aRect];
-  }
-#endif
 }
 
 @end
 
 //-----------------------------------------------------------------------
-#endif
 
 NSView *cocoa_create_view(QWidget *parent, NSBitmapImageRep *bitmap)
 {
-#if defined(NSVNCVIEW)
   int w = [bitmap pixelsWide];
   int h = [bitmap pixelsHigh];
 
@@ -245,47 +214,38 @@ NSView *cocoa_create_view(QWidget *parent, NSBitmapImageRep *bitmap)
   [view setCanDrawConcurrently:true];
   [view setLayerContentsRedrawPolicy:NSViewLayerContentsRedrawNever];
   [[view window] setAllowsConcurrentViewDrawing:true];
+  [[view window] setAcceptsMouseMovedEvents:false]; // Mouse move events are handled by VNCMacView.
 
   [view removeConstraints:[view constraints]];
   [view setTranslatesAutoresizingMaskIntoConstraints:NO]; // disable auto-layout.
   return view;
-#else
-  int w = [bitmap pixelsWide];
-  int h = [bitmap pixelsHigh];
+}
 
-  NSView *parentView = (__bridge NSView*)reinterpret_cast<void *>(parent->winId());
-  NSView *view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, w, h)];
-  [parentView addSubview:view];
-
-#if 0
-  int bpl = w * 4;
-  unsigned char *p0 = [bitmap bitmapData];
-  for (int y = 0; y < h; y++) {
-    unsigned char *p = p0 + y * bpl;
-    for (int x = 0; x < w; x++) {
-      *p++ = 120;
-      *p++ = 0;
-      *p++ = 0;
-      *p++ = 255;
-    }
+void cocoa_draw(NSView *view, int x, int y, int w, int h)
+{
+  NSRect r = NSMakeRect(x, y, w, h);
+  if ([view canDraw]) {
+    [view drawRect:r];
   }
-#endif
+  else {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [view drawRect:r];
+    });
+  }
+}
 
-g_bitmap = bitmap;
-
-  NSImage *image = [[NSImage alloc] initWithSize:NSMakeSize(w, h)];
-  [image addRepresentation:bitmap];
-  [view setWantsLayer:true];
-  [view setCanDrawConcurrently:true];
-  [view setLayerContentsRedrawPolicy:NSViewLayerContentsRedrawNever];
-  [[view window] setAllowsConcurrentViewDrawing:true];
-
-  view.layer.contents = image;
-
-  [view removeConstraints:[view constraints]];
-  [view setTranslatesAutoresizingMaskIntoConstraints:NO]; // disable auto-layout.
-  return view;
-#endif
+void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h)
+{
+  NSRect r = NSMakeRect(x, y, w, h);
+//  if ([view canDraw]) {
+    [view needsToDrawRect:r];
+//  }
+//  else {
+//    dispatch_async(dispatch_get_main_queue(), ^{
+//      [view needsToDrawRect:r];
+//    });
+//  }
+  qDebug() << "cocoa_invalidate_region: x=" << x << ",y=" << y << ",w=" << w << ",h=" << h;
 }
 
 void cocoa_beep()
@@ -376,68 +336,41 @@ NSCursor *cocoa_set_cursor(NSView *view, const QCursor *cursor)
 
   [nsimage addRepresentation:bitmap];
 
-  NSCursor *nscursor = [[NSCursor alloc]
-                        initWithImage:nsimage
-                        hotSpot:NSMakePoint(hotx, hoty)];
-  //NSWindow *window = [view window];
-  //[window invalidateCursorRectsForView:view];
-  [view discardCursorRects];
-
-  [bitmap release];
-  [nsimage release];
-
-  [view addCursorRect:[view bounds] cursor:nscursor];
+  NSCursor *nscursor = [[[NSCursor alloc] initWithImage:nsimage hotSpot:NSMakePoint(hotx, hoty)] autorelease];
+  [(NSVNCView*)view setRemoteCursor:nscursor];
 
   return nscursor;
 }
 
 void cocoa_delete_cursor(NSCursor *cursor)
 {
-  if (!cursor) {
-    [cursor release];
-  }
 }
 
 NSBitmapImageRep *cocoa_create_bitmap(int width, int height, unsigned char *data)
 {
-  int nplanes = 4;
-  size_t bytesPerRow = width * nplanes;
-  //uint8_t *data = new uint8_t[bytesPerRow * height];
+  int samplesPerPixel = 3; // == R G B
+  int bytesPerPixel = 4;   // == R G B PaddingByte
+  size_t bytesPerRow = width * bytesPerPixel;
   NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc]
-                              initWithBitmapDataPlanes: &data // &data
+                              initWithBitmapDataPlanes: &data
                               pixelsWide: width
                               pixelsHigh: height
                               bitsPerSample: 8
-                              samplesPerPixel: nplanes
-                              hasAlpha: YES
+                              samplesPerPixel: samplesPerPixel
+                              hasAlpha: NO
                               isPlanar: NO
                               colorSpaceName: NSDeviceRGBColorSpace //  NSCalibratedRGBColorSpace
                               bytesPerRow: bytesPerRow
-                              bitsPerPixel: nplanes * 8];
-  g_bitmap = bitmap;
-  g_framebuffer = data; // [bitmap bitmapData];
+                              bitsPerPixel: bytesPerPixel * 8];
   qDebug() << "cocoa_create_bitmap: bitmap=" << bitmap << ", data=" << data << ", [bitmap bitmapData]=" << [bitmap bitmapData];
   return bitmap;
 }
 
-void cocoa_delete_bitmap(NSBitmapImageRep *bitmap)
-{
-  unsigned char *data = [bitmap bitmapData];
-  [bitmap release];
-  delete[] data;
-}
-
 unsigned char *cocoa_get_bitmap_data(NSBitmapImageRep *bitmap)
 {
-#if defined(NSVNCVIEW)
   unsigned char *data = [bitmap bitmapData];
   qDebug() << "cocoa_get_bitmap_data: bitmap=" << bitmap << ", data=" << data;
   return data;
-#else
-  unsigned char *data = [bitmap bitmapData];
-  qDebug() << "cocoa_get_bitmap_data: bitmap=" << bitmap << ", data=" << data;
-  return data;
-#endif
 }
 
 NSBitmapImageRep *cocoa_get_image(NSImage *image)
@@ -449,57 +382,6 @@ NSBitmapImageRep *cocoa_get_image(NSImage *image)
     }
   }
   return NULL;
-}
-
-void cocoa_draw(NSView *view, int x, int y, int w, int h)
-{
-#if defined(NSVNCVIEW)
-  //[((NSVNCView*)view) drawRect:NSMakeRect(x, y, w, h)];
-  [((NSVNCView*)view) displayFromBuffer:NSMakeRect(x, y, w, h)];
-#else
-  bool det = false;
-  if (det) {
-    NSImage *image = view.layer.contents;
-    NSData *imageData = [image TIFFRepresentation];
-    NSBitmapImageRep *imageRep = [NSBitmapImageRep imageRepWithData:imageData];
-    NSDictionary *imageProps = [NSDictionary dictionaryWithObject:[NSNumber numberWithFloat:1.0] forKey:NSImageCompressionFactor];
-    NSData *data = [imageRep representationUsingType:NSPNGFileType properties:imageProps];
-    [data writeToFile: @"dump.png" atomically:NO];
-  }
-
-  NSImage *image = view.layer.contents;
-  NSBitmapImageRep *imageRep = cocoa_get_image(image);
-  if (!imageRep) {
-    return;
-  }
-
-  [imageRep bitmapData];
-  //qDebug() << "g_framebuffer=" << g_framebuffer << ", [imageRep bitmapData]=" << [imageRep bitmapData];
-
-  view.layer.contents = NULL;
-  view.layer.contents = image;
-
-  //view.needsDisplay = YES;
-#endif
-}
-
-void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h)
-{
-#if defined(NSVNCVIEW)
-  [((NSVNCView*)view) drawRect:NSMakeRect(x, y, w, h)];
-#else
-  NSPoint point;
-  point.x = x;
-  point.y = y;
-  NSRect r;
-  r.origin.x = x;
-  r.origin.y = y;
-  r.size.width = w;
-  r.size.height = h;
-  NSImage *image = view.layer.contents;
-  [image drawAtPoint:point fromRect:r operation:NSCompositingOperationCopy fraction:1.0];
-  view.needsDisplay = YES;
-#endif
 }
 
 int cocoa_get_level(QWidget *parent)
@@ -721,6 +603,30 @@ int cocoa_is_key_press(const void *event)
   }
 
   return 0;
+}
+
+bool cocoa_is_mouse_entered(const void *event)
+{
+  NSEvent *nsevent = (NSEvent*)event;
+  NSEventType type = [nsevent type];
+  bool det = type == NSEventTypeMouseEntered;
+  return det;
+}
+
+bool cocoa_is_mouse_exited(const void *event)
+{
+  NSEvent *nsevent = (NSEvent*)event;
+  NSEventType type = [nsevent type];
+  bool det = type == NSEventTypeMouseExited;
+  return det;
+}
+
+bool cocoa_is_mouse_moved(const void *event)
+{
+  NSEvent *nsevent = (NSEvent*)event;
+  NSEventType type = [nsevent type];
+  bool det = type == NSEventTypeMouseMoved;
+  return det;
 }
 
 int cocoa_event_keycode(const void *event)
@@ -980,4 +886,13 @@ int cocoa_get_caps_lock_state(bool *on)
 int cocoa_get_num_lock_state(bool *on)
 {
   return cocoa_get_modifier_lock_state(kIOHIDNumLockState, on);
+}
+
+void cocoa_get_mouse_properties(const void *event, int *x, int *y, int *buttonMask)
+{
+  NSEvent *nsevent = (NSEvent*)event;
+  NSPoint p = [nsevent locationInWindow];
+  *x = p.x;
+  *y = p.y;
+  *buttonMask = [nsevent buttonMask];
 }

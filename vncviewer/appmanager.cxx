@@ -120,6 +120,11 @@ void AppManager::invalidate(int x0, int y0, int x1, int y1)
   emit invalidateRequested(x0, y0, x1, y1);
 }
 
+void AppManager::refresh()
+{
+  emit refreshRequested();
+}
+
 void AppManager::openContextMenu()
 {
   emit contextMenuRequested();

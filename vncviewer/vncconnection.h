@@ -103,6 +103,7 @@ signals:
   void ledStateChanged(unsigned int state);
   void clipboardAnnounced(bool available);
   void clipboardChanged(const char *data);
+  void refreshFramebufferStarted();
 
 public slots:
   void connectToServer(const QString addressport);
