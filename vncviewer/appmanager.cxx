@@ -204,6 +204,11 @@ void AppManager::refresh()
   emit refreshRequested();
 }
 
+void AppManager::refresh()
+{
+  emit refreshRequested();
+}
+
 void AppManager::openContextMenu()
 {
   emit contextMenuRequested();
