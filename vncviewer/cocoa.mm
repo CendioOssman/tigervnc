@@ -236,6 +236,7 @@ void cocoa_draw(NSView *view, int x, int y, int w, int h)
 
 void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h)
 {
+#if 0
   NSRect r = NSMakeRect(x, y, w, h);
 //  if ([view canDraw]) {
     [view needsToDrawRect:r];
@@ -246,6 +247,7 @@ void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h)
 //    });
 //  }
   qDebug() << "cocoa_invalidate_region: x=" << x << ",y=" << y << ",w=" << w << ",h=" << h;
+#endif
 }
 
 void cocoa_beep()
