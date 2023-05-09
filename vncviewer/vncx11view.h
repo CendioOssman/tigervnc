@@ -16,14 +16,19 @@ public:
 
 public slots:
   void setQCursor(const QCursor &cursor) override;
+  void handleClipboardData(const char* data) override;
+  void setLEDState(unsigned int state) override;
+  void pushLEDState() override;
+  void handleKeyPress(int keyCode, quint32 keySym) override;
+  void handleKeyRelease(int keyCode) override;
   void grabKeyboard() override;
   void ungrabKeyboard() override;
   void grabPointer() override;
   void ungrabPointer() override;
   void bell() override;
   void updateWindow() override;
-  void handleKeyPress(int keyCode, quint32 keySym) override;
-  void handleKeyRelease(int keyCode) override;
+  void resizePixmap(int width, int height);
+  void draw();
 
 protected:
   bool event(QEvent *e) override;
@@ -39,10 +44,6 @@ protected:
 signals:
   void message(const QString &msg, int timeout);
 
-public slots:
-  void resizePixmap(int width, int height);
-  void draw();
-
 private:
   Window m_window;
   Display *m_display;
@@ -54,6 +55,7 @@ private:
   Picture m_picture;
 
   Pixmap toPixmap(QBitmap &bitmap);
+  unsigned int getModifierMask(unsigned int keysym);
 };
 
 #endif // VNCX11VIEW_H

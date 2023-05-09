@@ -20,6 +20,21 @@ public:
   bool hasFocus() const;
   qulonglong nativeWindowHandle() const override;
 
+public slots:
+  void setQCursor(const QCursor &cursor) override;
+  void setCursorPos(int x, int y) override;
+  void handleClipboardData(const char* data) override;
+  void setLEDState(unsigned int state) override;
+  void pushLEDState() override;
+  void handleKeyPress(int keyCode, quint32 keySym) override;
+  void handleKeyRelease(int keyCode) override;
+  void maybeGrabKeyboard() override;
+  void grabKeyboard() override;
+  void ungrabKeyboard() override;
+  void bell() override;
+  void moveView(int x, int y) override;
+  void updateWindow() override;
+
 protected:
   static LRESULT CALLBACK eventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
   static void getMouseProperties(WPARAM wParam, LPARAM lParam, int &x, int &y, int &buttonMask, int &wheelMask);
@@ -29,21 +44,6 @@ protected:
   void showEvent(QShowEvent *) override;
   void focusInEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
-
-public slots:
-  void setQCursor(const QCursor &cursor) override;
-  void handleKeyPress(int keyCode, quint32 keySym) override;
-  void handleKeyRelease(int keyCode) override;
-  void setCursorPos(int x, int y) override;
-  void pushLEDState() override;
-  void setLEDState(unsigned int state) override;
-  void handleClipboardData(const char* data) override;
-  void maybeGrabKeyboard() override;
-  void grabKeyboard() override;
-  void ungrabKeyboard() override;
-  void bell() override;
-  void moveView(int x, int y) override;
-  void updateWindow() override;
 
 private:
   void *m_wndproc;

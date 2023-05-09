@@ -24,10 +24,8 @@
 #include <stdlib.h>
 #include <QImage>
 #include <QDebug>
-//#include <X11/Xlib.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-//#include <X11/extensions/XShm.h>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QX11Info>
 #else

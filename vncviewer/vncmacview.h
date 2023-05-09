@@ -18,12 +18,16 @@ public:
 
 public slots:
   void setQCursor(const QCursor &cursor) override;
+  void handleClipboardData(const char* data) override;
+  void setLEDState(unsigned int state) override;
+  void pushLEDState() override;
+  void handleKeyPress(int keyCode, quint32 keySym) override;
+  void handleKeyRelease(int keyCode) override;
   void grabKeyboard() override;
   void ungrabKeyboard() override;
   void bell() override;
   void updateWindow() override;
-  void handleKeyPress(int keyCode, quint32 keySym) override;
-  void handleKeyRelease(int keyCode) override;
+  void draw();
 
 protected:
   bool event(QEvent *e) override;
@@ -32,15 +36,11 @@ protected:
   void focusInEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
   void paintEvent(QPaintEvent *event) override;
-
   void handleMouseButtonEvent(QMouseEvent*);
   void handleMouseWheelEvent(QWheelEvent*);
 
 signals:
   void message(const QString &msg, int timeout);
-
-public slots:
-  void draw();
 
 private:
   NSView *m_view;

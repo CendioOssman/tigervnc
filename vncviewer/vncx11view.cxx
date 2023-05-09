@@ -7,6 +7,7 @@
 #include "rfb/Exception.h"
 #include "rfb/ServerParams.h"
 #include "rfb/LogWriter.h"
+#include "rfb/ledStates.h"
 #include "i18n.h"
 #include "parameters.h"
 #include "appmanager.h"
@@ -31,6 +32,11 @@
 #include <X11/XKBlib.h>
 #include <X11/extensions/Xrender.h>
 #include <X11/extensions/XInput2.h>
+
+#define XK_LATIN1
+#define XK_MISCELLANY
+#define XK_XKB_KEYS
+#include "rfb/keysymdef.h"
 
 extern const struct _code_map_xkb_to_qnum {
   const char * from;
@@ -58,7 +64,6 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   connect(AppManager::instance()->connection(), &QVNCConnection::framebufferResized, this, &QVNCX11View::resizePixmap, Qt::QueuedConnection);
   installEventFilter(this);
 
-#if 1
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   m_display = QX11Info::display();
 #else
@@ -79,7 +84,6 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   m_visualInfo = found;
   m_colorMap = XCreateColormap(m_display, RootWindow(m_display, m_screen), m_visualInfo->visual, AllocNone);
   m_visualFormat = XRenderFindVisualFormat(m_display, m_visualInfo->visual);
-#endif
 
   XkbDescPtr xkb;
   Status status;
@@ -700,6 +704,98 @@ bool QVNCX11View::eventFilter(QObject *obj, QEvent *event)
   return QObject::eventFilter(obj, event);
 }
 
+void QVNCX11View::handleClipboardData(const char*)
+{
+}
+
+void QVNCX11View::setLEDState(unsigned int state)
+{
+  qDebug() << "QVNCX11View::setLEDState";
+  vlog.debug("Got server LED state: 0x%08x", state);
+
+  // The first message is just considered to be the server announcing
+  // support for this extension. We will push our state to sync up the
+  // server when we get focus. If we already have focus we need to push
+  // it here though.
+  if (m_firstLEDState) {
+    m_firstLEDState = false;
+    if (hasFocus()) {
+      pushLEDState();
+    }
+    return;
+  }
+
+  if (!hasFocus()) {
+    return;
+  }
+  
+  unsigned int affect = 0;
+  unsigned int values = 0;
+
+  affect |= LockMask;
+  if (state & rfb::ledCapsLock) {
+    values |= LockMask;
+  }
+  unsigned int mask = getModifierMask(XK_Num_Lock);
+  affect |= mask;
+  if (state & rfb::ledNumLock) {
+    values |= mask;
+  }
+  mask = getModifierMask(XK_Scroll_Lock);
+  affect |= mask;
+  if (state & rfb::ledScrollLock) {
+    values |= mask;
+  }
+  Bool ret = XkbLockModifiers(m_display, XkbUseCoreKbd, affect, values);
+  if (!ret) {
+    vlog.error(_("Failed to update keyboard LED state"));
+  }
+}
+
+void QVNCX11View::pushLEDState()
+{
+  qDebug() << "QVNCX11View::pushLEDState";
+  QVNCConnection *cc = AppManager::instance()->connection();
+  // Server support?
+  rfb::ServerParams *server = AppManager::instance()->connection()->server();
+  if (server->ledState() == rfb::ledUnknown) {
+    return;
+  }
+  XkbStateRec xkbState;
+  Status status = XkbGetState(m_display, XkbUseCoreKbd, &xkbState);
+  if (status != Success) {
+    vlog.error(_("Failed to get keyboard LED state: %d"), status);
+    return;
+  }
+  unsigned int state = 0;
+  if (xkbState.locked_mods & LockMask) {
+    state |= rfb::ledCapsLock;
+  }
+  unsigned int mask = getModifierMask(XK_Num_Lock);
+  if (xkbState.locked_mods & mask) {
+    state |= rfb::ledNumLock;
+  }
+  mask = getModifierMask(XK_Scroll_Lock);
+  if (xkbState.locked_mods & mask) {
+    state |= rfb::ledScrollLock;
+  }
+  if ((state & rfb::ledCapsLock) != (cc->server()->ledState() & rfb::ledCapsLock)) {
+    vlog.debug("Inserting fake CapsLock to get in sync with server");
+    handleKeyPress(0x3a, XK_Caps_Lock);
+    handleKeyRelease(0x3a);
+  }
+  if ((state & rfb::ledNumLock) != (cc->server()->ledState() & rfb::ledNumLock)) {
+    vlog.debug("Inserting fake NumLock to get in sync with server");
+    handleKeyPress(0x45, XK_Num_Lock);
+    handleKeyRelease(0x45);
+  }
+  if ((state & rfb::ledScrollLock) != (cc->server()->ledState() & rfb::ledScrollLock)) {
+    vlog.debug("Inserting fake ScrollLock to get in sync with server");
+    handleKeyPress(0x46, XK_Scroll_Lock);
+    handleKeyRelease(0x46);
+  }
+}
+
 void QVNCX11View::grabKeyboard()
 {
 #if 1
@@ -764,4 +860,49 @@ void QVNCX11View::ungrabPointer()
 {
   //x11_ungrab_pointer(nativeWindowHandle());
   QAbstractVNCView::ungrabPointer();
+}
+
+unsigned int QVNCX11View::getModifierMask(unsigned int keysym)
+{
+  XkbDescPtr xkb = XkbGetMap(m_display, XkbAllComponentsMask, XkbUseCoreKbd);
+  if (xkb == nullptr) {
+    return 0;
+  }
+  unsigned int keycode;
+  for (keycode = xkb->min_key_code; keycode <= xkb->max_key_code; keycode++) {
+    unsigned int state_out;
+    KeySym ks;
+    XkbTranslateKeyCode(xkb, keycode, 0, &state_out, &ks);
+    if (ks == NoSymbol) {
+      continue;
+    }
+    if (ks == keysym) {
+      break;
+    }
+  }
+
+  // KeySym not mapped?
+  if (keycode > xkb->max_key_code) {
+    XkbFreeKeyboard(xkb, XkbAllComponentsMask, True);
+    return 0;
+  }
+  XkbAction *act = XkbKeyAction(xkb, keycode, 0);
+  if (act == nullptr) {
+    XkbFreeKeyboard(xkb, XkbAllComponentsMask, True);
+    return 0;
+  }
+  if (act->type != XkbSA_LockMods) {
+    XkbFreeKeyboard(xkb, XkbAllComponentsMask, True);
+    return 0;
+  }
+
+  unsigned int mask = 0;
+  if (act->mods.flags & XkbSA_UseModMapMods) {
+    mask = xkb->map->modmap[keycode];
+  }
+  else {
+    mask = act->mods.mask;
+  }
+  XkbFreeKeyboard(xkb, XkbAllComponentsMask, True);
+  return mask;
 }

@@ -9,6 +9,7 @@
 #include "rfb/ServerParams.h"
 #include "rfb/LogWriter.h"
 #include "rdr/Exception.h"
+#include "rfb/ledStates.h"
 #include "i18n.h"
 #include "parameters.h"
 #include "appmanager.h"
@@ -409,6 +410,94 @@ void QVNCMacView::handleKeyRelease(int keyCode)
 void QVNCMacView::setQCursor(const QCursor &cursor)
 {
   m_cursor = cocoa_set_cursor(m_view, &cursor);
+}
+
+void QVNCMacView::handleClipboardData(const char* data)
+{
+  if (!hasFocus()) {
+    return;
+  }
+
+  size_t len = strlen(data);
+  vlog.debug("Got clipboard data (%d bytes)", (int)len);
+}
+
+void QVNCMacView::setLEDState(unsigned int state)
+{
+  qDebug() << "QVNCMacView::setLEDState";
+  vlog.debug("Got server LED state: 0x%08x", state);
+
+  // The first message is just considered to be the server announcing
+  // support for this extension. We will push our state to sync up the
+  // server when we get focus. If we already have focus we need to push
+  // it here though.
+  if (m_firstLEDState) {
+    m_firstLEDState = false;
+    if (hasFocus()) {
+      pushLEDState();
+    }
+    return;
+  }
+
+  if (!hasFocus()) {
+    return;
+  }
+
+  int ret = cocoa_set_caps_lock_state(state & rfb::ledCapsLock);
+  if (ret == 0) {
+    ret = cocoa_set_num_lock_state(state & rfb::ledNumLock);
+  }
+  
+  if (ret != 0) {
+    vlog.error(_("Failed to update keyboard LED state: %d"), ret);
+  }
+}
+
+void QVNCMacView::pushLEDState()
+{
+  qDebug() << "QVNCMacView::pushLEDState";
+  QVNCConnection *cc = AppManager::instance()->connection();
+  // Server support?
+  rfb::ServerParams *server = AppManager::instance()->connection()->server();
+  if (server->ledState() == rfb::ledUnknown) {
+    return;
+  }
+
+  bool on;
+  int ret = cocoa_get_caps_lock_state(&on);
+  if (ret != 0) {
+    vlog.error(_("Failed to get keyboard LED state: %d"), ret);
+    return;
+  }
+  unsigned int state = 0;
+  if (on) {
+    state |= rfb::ledCapsLock;
+  }
+  ret = cocoa_get_num_lock_state(&on);
+  if (ret != 0) {
+    vlog.error(_("Failed to get keyboard LED state: %d"), ret);
+    return;
+  }
+  if (on) {
+    state |= rfb::ledNumLock;
+  }
+  // No support for Scroll Lock //
+  state |= (cc->server()->ledState() & rfb::ledScrollLock);
+  if ((state & rfb::ledCapsLock) != (cc->server()->ledState() & rfb::ledCapsLock)) {
+    vlog.debug("Inserting fake CapsLock to get in sync with server");
+    handleKeyPress(0x3a, XK_Caps_Lock);
+    handleKeyRelease(0x3a);
+  }
+  if ((state & rfb::ledNumLock) != (cc->server()->ledState() & rfb::ledNumLock)) {
+    vlog.debug("Inserting fake NumLock to get in sync with server");
+    handleKeyPress(0x45, XK_Num_Lock);
+    handleKeyRelease(0x45);
+  }
+  if ((state & rfb::ledScrollLock) != (cc->server()->ledState() & rfb::ledScrollLock)) {
+    vlog.debug("Inserting fake ScrollLock to get in sync with server");
+    handleKeyPress(0x46, XK_Scroll_Lock);
+    handleKeyRelease(0x46);
+  }
 }
 
 void QVNCMacView::grabKeyboard()
