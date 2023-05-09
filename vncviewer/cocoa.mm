@@ -62,14 +62,13 @@ static int mac_os_version = 0;
 @property int width;
 @property int height;
 @property(nonatomic, assign) unsigned char *framebuffer;
-@property(nonatomic, retain) NSBitmapImageRep *bitmap;
 @property(nonatomic, retain) NSImage *image;
 @property(nonatomic, assign) NSCursor *cursor;
 @property(atomic) QElapsedTimer *elapsed;
 @property(atomic) int nframes;
 
 
-- (void)setFrameBuffer:(NSBitmapImageRep*)bitmap width:(int)w height:(int)h;
+- (void)setFrameBuffer:(CGImageRef)iref width:(int)w height:(int)h;
 - (void)drawRect:(NSRect)aRect;
 - (void)setRemoteCursor:(NSCursor *)newCursor;
 
@@ -82,9 +81,9 @@ static int mac_os_version = 0;
 {
   if (self = [super initWithFrame:frameRect]) {
     // Indicate that this view can draw on a background thread.
-    [self setCanDrawConcurrently:YES];
-//    NSTrackingArea *trackingArea = [[[NSTrackingArea alloc] initWithRect:frameRect options: NSTrackingActiveInActiveApp | NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved owner:self userInfo:nil] autorelease];
-//    [self addTrackingArea:trackingArea];
+    [self setCanDrawConcurrently:NO];
+    NSTrackingArea *trackingArea = [[[NSTrackingArea alloc] initWithRect:frameRect options: NSTrackingActiveInActiveApp | NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved owner:self userInfo:nil] autorelease];
+    [self addTrackingArea:trackingArea];
     _elapsed = new QElapsedTimer;
     _nframes = 0;
   }
@@ -95,19 +94,21 @@ static int mac_os_version = 0;
 {
   delete _elapsed;
   [_image release];
+#if 0
   [_bitmap release];
+#endif
   [super dealloc];
 }
 
 - (void)mouseEntered:(NSEvent*)event
 {
-  qDebug() << "-mouseEntered";
+  //qDebug() << "-mouseEntered";
   [[NSApplication sharedApplication] activateIgnoringOtherApps:true];
 }
 
 - (void)mouseExited:(NSEvent*)event
 {
-  qDebug() << "-mouseExited";
+  //qDebug() << "-mouseExited";
   [[NSApplication sharedApplication] activateIgnoringOtherApps:true];
 }
 
@@ -153,10 +154,8 @@ static int mac_os_version = 0;
   return YES;
 }
 
-- (void)setFrameBuffer:(NSBitmapImageRep*)bitmap width:(int)w height:(int)h
+- (void)setFrameBuffer:(CGImageRef)iref width:(int)w height:(int)h
 {
-  _bitmap = bitmap;
-  _framebuffer = [bitmap bitmapData];
   _width = w;
   _height = h;
   NSRect f = [self frame];
@@ -164,55 +163,42 @@ static int mac_os_version = 0;
   f.size.height = h;
   [self setFrame:f];
 
-  if (_image) {
-    [_image release];
-  }
-  _image = [[NSImage alloc] initWithSize:f.size];
-
-#if 0
-  int bpl = w * 4;
-  unsigned char *p0 = _framebuffer;
-  for (int y = 0; y < h; y++) {
-    unsigned char *p = p0 + y * bpl;
-    for (int x = 0; x < w; x++) {
-      *p++ = 120;
-      *p++ = 0;
-      *p++ = 0;
-      *p++ = 255;
-    }
-  }
-#endif
-
-  [_image addRepresentation:bitmap];
+  _image = [[NSImage alloc] initWithCGImage:iref size:NSMakeSize(_width, _height)];
+  [_image setCacheMode:NSImageCacheNever];
   self.layer.contents = _image;
 }
 
 - (void)drawRect:(NSRect)destRect
 {
-  qDebug() << "drawRect: x=" << destRect.origin.x << ",y=" << destRect.origin.y << ",w=" << destRect.size.width << ",h=" << destRect.size.height;
-  [_bitmap bitmapData];
-  //[_bitmap drawInRect:destRect];
-  //[_image drawInRect:destRect];
-  self.layer.contents = NULL;
-  self.layer.contents = _image;
+  //qDebug() << "drawRect: x=" << destRect.origin.x << ",y=" << destRect.origin.y << ",w=" << destRect.size.width << ",h=" << destRect.size.height;
+  NSRect r = NSRect(destRect);
+  r.origin.y = _height - r.origin.y - r.size.height;
+  [_image drawAtPoint:NSMakePoint(r.origin.x, r.origin.y) fromRect:r operation:NSCompositingOperationCopy fraction:1.0];
+  self.needsDisplay = YES;
+}
+
+- (void)setNeedsDisplayInRect:(NSRect)rect
+{
+  NSRect r = NSRect(rect);
+  r.origin.y = _height - r.origin.y - r.size.height;
+  [super setNeedsDisplayInRect:r];
 }
 
 @end
 
 //-----------------------------------------------------------------------
 
-NSView *cocoa_create_view(QWidget *parent, NSBitmapImageRep *bitmap)
+NSView *cocoa_create_view(QWidget *parent, CGImageRef iref)
 {
-  int w = [bitmap pixelsWide];
-  int h = [bitmap pixelsHigh];
+  int w = CGImageGetWidth(iref);
+  int h = CGImageGetHeight(iref);
 
   NSView *parentView = (__bridge NSView*)reinterpret_cast<void *>(parent->winId());
   NSVNCView *view = [[NSVNCView alloc] initWithFrame:NSMakeRect(0, 0, w, h)];
-  [view setFrameBuffer:bitmap width:w height:h];
+  [view setFrameBuffer:iref width:w height:h];
   [parentView addSubview:view];
 
   [view setCanDrawConcurrently:true];
-  [view setLayerContentsRedrawPolicy:NSViewLayerContentsRedrawNever];
   [[view window] setAllowsConcurrentViewDrawing:true];
   [[view window] setAcceptsMouseMovedEvents:false]; // Mouse move events are handled by VNCMacView.
 
@@ -223,31 +209,16 @@ NSView *cocoa_create_view(QWidget *parent, NSBitmapImageRep *bitmap)
 
 void cocoa_draw(NSView *view, int x, int y, int w, int h)
 {
+  //qDebug() << "cocoa_draw: x=" << x << ",y=" << y << ",w=" << w << ",h=" << h;
   NSRect r = NSMakeRect(x, y, w, h);
-  if ([view canDraw]) {
-    [view drawRect:r];
-  }
-  else {
-    dispatch_async(dispatch_get_main_queue(), ^{
-      [view drawRect:r];
-    });
-  }
+  [view drawRect:r];
 }
 
 void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h)
 {
-#if 0
+  //qDebug() << "cocoa_invalidate_region: x=" << x << ",y=" << y << ",w=" << w << ",h=" << h;
   NSRect r = NSMakeRect(x, y, w, h);
-//  if ([view canDraw]) {
-    [view needsToDrawRect:r];
-//  }
-//  else {
-//    dispatch_async(dispatch_get_main_queue(), ^{
-//      [view needsToDrawRect:r];
-//    });
-//  }
-  qDebug() << "cocoa_invalidate_region: x=" << x << ",y=" << y << ",w=" << w << ",h=" << h;
-#endif
+  [view setNeedsDisplayInRect:r];
 }
 
 void cocoa_beep()
@@ -255,49 +226,17 @@ void cocoa_beep()
   NSBeep();
 }
 
-int cocoa_mac_os_version() {
-  if (mac_os_version) {
-    return mac_os_version;
-  }
-  int major = 0, minor = 0, build = 0;
-  NSAutoreleasePool *localPool = [[NSAutoreleasePool alloc] init];
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_10
-  if ([NSProcessInfo instancesRespondToSelector:@selector(operatingSystemVersion)]) {
-    NSOperatingSystemVersion version = [[NSProcessInfo processInfo] operatingSystemVersion];
-    major = (int)version.majorVersion;
-    minor = (int)version.minorVersion;
-    build = (int)version.patchVersion;
-  }
-  else
-#endif
-  {
-    NSDictionary *sv = [NSDictionary dictionaryWithContentsOfFile:@"/System/Library/CoreServices/SystemVersion.plist"];
-    const char *s = [[sv objectForKey:@"ProductVersion"] UTF8String];
-    sscanf(s, "%d.%d.%d", &major, &minor, &build);
-  }
-  [localPool release];
-  mac_os_version = major*10000 + minor*100 + build;
-  return mac_os_version;
-}
-
-CGContext *cocoa_gc(NSView *view)
+void cocoa_resize(NSView *view, CGImageRef iref)
 {
-  NSWindow *window = [view window];
-  NSGraphicsContext *nsgc = [NSGraphicsContext graphicsContextWithWindow:window];
-  static SEL gc_sel = cocoa_mac_os_version() >= 101000 ? @selector(CGContext) : @selector(graphicsPort);
-  CGContextRef gc = (CGContextRef)[nsgc performSelector:gc_sel];
-  return gc;
-}
-
-void cocoa_resize(NSView *view, int width, int height)
-{
-  NSRect r;// = [view frame];
-  r.origin.x = 0;
-  r.origin.y = 0;
-  r.size.width = width;
-  r.size.height = height;
-  [view setFrame:r];
-  //[view setNeedsDisplay:YES];
+  int width = CGImageGetWidth(iref);
+  int height = CGImageGetHeight(iref);
+  [(NSVNCView*)view setFrameBuffer:iref width:width height:height];
+  NSSize size;
+  size.width = width;
+  size.height = height;
+  [view setFrameSize:size];
+  [view setBounds:NSMakeRect(0, 0, width, height)];
+  [view setNeedsDisplay:YES];
   qDebug() << "cocoa_resize: w=" << width << ", h=" << height;
 }
 
@@ -313,7 +252,7 @@ NSCursor *cocoa_set_cursor(NSView *view, const QCursor *cursor)
   int bpl = image.bytesPerLine();
   // OS X >= 10.6 can create a NSImage from a CGImage, but we need to
   // support older versions, hence this pesky handling.
-  NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc]
+  NSBitmapImageRep *bitmap = [[[NSBitmapImageRep alloc]
                               initWithBitmapDataPlanes: NULL
                               pixelsWide: iwidth
                               pixelsHigh: iheight
@@ -323,7 +262,7 @@ NSCursor *cocoa_set_cursor(NSView *view, const QCursor *cursor)
                               isPlanar: NO
                               colorSpaceName: nplanes <= 2 ? NSDeviceWhiteColorSpace : NSDeviceRGBColorSpace
                               bytesPerRow: bpl
-                              bitsPerPixel: nplanes * 8];
+                              bitsPerPixel: nplanes * 8] autorelease];
 
   quint32 *ptr = (quint32*)[bitmap bitmapData];
   if (ptr) {
@@ -334,7 +273,7 @@ NSCursor *cocoa_set_cursor(NSView *view, const QCursor *cursor)
     }
   }
 
-  NSImage *nsimage = [[NSImage alloc] initWithSize:NSMakeSize(image.width(), image.height())];
+  NSImage *nsimage = [[[NSImage alloc] initWithSize:NSMakeSize(image.width(), image.height())] autorelease];
 
   [nsimage addRepresentation:bitmap];
 
@@ -344,58 +283,30 @@ NSCursor *cocoa_set_cursor(NSView *view, const QCursor *cursor)
   return nscursor;
 }
 
-void cocoa_delete_cursor(NSCursor *cursor)
+CGImageRef cocoa_create_bitmap(int width, int height, unsigned char *data)
 {
-}
-
-NSBitmapImageRep *cocoa_create_bitmap(int width, int height, unsigned char *data)
-{
-  int samplesPerPixel = 3; // == R G B
   int bytesPerPixel = 4;   // == R G B PaddingByte
   size_t bytesPerRow = width * bytesPerPixel;
-  NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc]
-                              initWithBitmapDataPlanes: &data
-                              pixelsWide: width
-                              pixelsHigh: height
-                              bitsPerSample: 8
-                              samplesPerPixel: samplesPerPixel
-                              hasAlpha: NO
-                              isPlanar: NO
-                              colorSpaceName: NSDeviceRGBColorSpace //  NSCalibratedRGBColorSpace
-                              bytesPerRow: bytesPerRow
-                              bitsPerPixel: bytesPerPixel * 8];
-  qDebug() << "cocoa_create_bitmap: bitmap=" << bitmap << ", data=" << data << ", [bitmap bitmapData]=" << [bitmap bitmapData];
-  return bitmap;
-}
+  size_t bufferLength = width * height * 4;
+  CGDataProviderRef provider = CGDataProviderCreateWithData(NULL, data, bufferLength, NULL);
+  size_t bitsPerComponent = 8;
+  size_t bitsPerPixel = bytesPerPixel * 8;
+  CGColorSpaceRef colorSpaceRef = CGColorSpaceCreateDeviceRGB();
+  CGBitmapInfo bitmapInfo = kCGBitmapByteOrderDefault | kCGImageAlphaNoneSkipLast;
+  CGColorRenderingIntent renderingIntent = kCGRenderingIntentDefault;
 
-unsigned char *cocoa_get_bitmap_data(NSBitmapImageRep *bitmap)
-{
-  unsigned char *data = [bitmap bitmapData];
-  qDebug() << "cocoa_get_bitmap_data: bitmap=" << bitmap << ", data=" << data;
-  return data;
-}
-
-NSBitmapImageRep *cocoa_get_image(NSImage *image)
-{
-  for (NSImageRep *rep : [image representations]) {
-    if ([rep isKindOfClass:[NSBitmapImageRep class]]) {
-      NSBitmapImageRep *imageRep = reinterpret_cast<NSBitmapImageRep*>(rep);
-      return imageRep;
-    }
-  }
-  return NULL;
-}
-
-int cocoa_get_level(QWidget *parent)
-{
-  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
-  return [window level];
-}
-
-void cocoa_set_level(QWidget *parent, int level)
-{
-  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
-  [window setLevel:level];
+  CGImageRef iref = CGImageCreate(width, 
+                                  height, 
+                                  bitsPerComponent, 
+                                  bitsPerPixel, 
+                                  bytesPerRow, 
+                                  colorSpaceRef, 
+                                  bitmapInfo, 
+                                  provider,   // data provider
+                                  NULL,       // decode
+                                  YES,        // should interpolate
+                                  renderingIntent);
+  return iref;
 }
 
 int cocoa_capture_displays(QWidget *parent)

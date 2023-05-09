@@ -5,7 +5,6 @@
 #include <QWindow>
 #include <QImage>
 #include <QBitmap>
-#include <QTimer>
 #include <QLabel>
 #include "rfb/ServerParams.h"
 #include "rfb/LogWriter.h"
@@ -44,47 +43,25 @@ QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
  : QAbstractVNCView(parent, f)
  , m_view(0)
  , m_cursor(nullptr)
- , m_dirty(false)
- , m_refreshTimer(new QTimer)
 {
   setAttribute(Qt::WA_NoBackground);
   setAttribute(Qt::WA_NoSystemBackground);
   setFocusPolicy(Qt::StrongFocus);
-  connect(AppManager::instance(), &AppManager::invalidateRequested, this, &QVNCMacView::addInvalidRegion, Qt::QueuedConnection);
-  installEventFilter(this);
+  connect(AppManager::instance()->connection(), &QVNCConnection::framebufferResized, this, [this](int width, int height) {
+    PlatformPixelBuffer *framebuffer = (PlatformPixelBuffer*)AppManager::instance()->connection()->framebuffer();
+    cocoa_resize(m_view, framebuffer->bitmap());
+  }, Qt::QueuedConnection);
 
   m_overlayTip->hide();
-
-  connect(m_refreshTimer, &QTimer::timeout, this, [this]() {
-    draw();
-  }, Qt::QueuedConnection);
-  m_refreshTimer->setInterval(0);
-  m_refreshTimer->setSingleShot(true);
-  m_refreshTimer->start();
 }
 
 QVNCMacView::~QVNCMacView()
 {
-  cocoa_delete_cursor(m_cursor);
-  m_refreshTimer->stop();
-  delete m_refreshTimer;
 }
 
 qulonglong QVNCMacView::nativeWindowHandle() const
 {
   return (qulonglong)m_view;
-}
-
-void QVNCMacView::addInvalidRegion(int x0, int y0, int x1, int y1)
-{
-  int w = x1 - x0;
-  int h = y1 - y0;
-  if (w <= 0 || h <= 0) {
-    return;
-  }
-  cocoa_invalidate_region(m_view, x0, y0, w, h);
-  m_dirty = true;
-  //draw();
 }
 
 void QVNCMacView::updateWindow()
@@ -93,9 +70,6 @@ void QVNCMacView::updateWindow()
   draw();
 }
 
-/*!
-\reimp
-*/
 bool QVNCMacView::event(QEvent *e)
 {
   switch(e->type()) {
@@ -104,7 +78,7 @@ bool QVNCMacView::event(QEvent *e)
       //qDebug() << "display numbers:  QMACInfo::display()=" <<  QMACInfo::display() << ", XOpenDisplay(NULL)=" << XOpenDisplay(NULL);
       QVNCConnection *cc = AppManager::instance()->connection();
       PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-      NSBitmapImageRep *bitmap = framebuffer->bitmap();
+      CGImage *bitmap = framebuffer->bitmap();
       m_view = cocoa_create_view(this, bitmap);
       // Do not invoke #fromWinId(), otherwise NSView won't be shown.
       // QWindow *w = windowHandle()->fromWinId((WId)m_view);
@@ -113,8 +87,7 @@ bool QVNCMacView::event(QEvent *e)
     break;
   case QEvent::KeyboardLayoutChange:
     break;
-  // On macOS, QEvent::MouseMove seems never used. Instead, the native event handler is used.
-  //case QEvent::MouseMove:
+  case QEvent::MouseMove:
   case QEvent::MouseButtonPress:
   case QEvent::MouseButtonRelease:
   case QEvent::MouseButtonDblClick:
@@ -160,6 +133,9 @@ bool QVNCMacView::event(QEvent *e)
 //    draw();
 //    e->setAccepted(true);
 //    return true;
+  case QEvent::MetaCall:
+    // qDebug() << "QEvent::MetaCall (signal-slot call)";
+    break;
   default:
     qDebug() << "Unprocessed Event: " << e->type();
     break;
@@ -167,44 +143,22 @@ bool QVNCMacView::event(QEvent *e)
   return QWidget::event(e);
 }
 
-/*!
-\reimp
-*/
 void QVNCMacView::showEvent(QShowEvent *e)
 {
   QWidget::showEvent(e);
 }
 
-/*!
-\reimp
-*/
 void QVNCMacView::focusInEvent(QFocusEvent *e)
 {
   QWidget::focusInEvent(e);
 }
 
-/*!
-\reimp
-*/
 void QVNCMacView::resizeEvent(QResizeEvent *e)
 {
   if (m_view) {
     QSize size = e->size();
-#if defined(__APPLE__)
-    int w = size.width();
-    int h = size.height();
-#else
-    int w = size.width() * m_devicePixelRatio;
-    int h = size.height() * m_devicePixelRatio;
-#endif
-    cocoa_resize(m_view, w, h);
-
     QWidget::resize(size.width(), size.height());
-    //QWidget::resizeEvent(e);
-    //adjustSize();
 
-//    bool resizing = (width() != size.width()) || (height() != size.height());
-//    if (resizing) {
     // Try to get the remote size to match our window size, provided
     // the following conditions are true:
     //
@@ -219,36 +173,14 @@ void QVNCMacView::resizeEvent(QResizeEvent *e)
     // Some systems require a grab after the window size has been changed.
     // Otherwise they might hold on to displays, resulting in them being unusable.
     maybeGrabKeyboard();
-//    }
   }
 }
 
 void QVNCMacView::paintEvent(QPaintEvent *event)
 {
-#if 0
-  if (m_nframes == 0) {
-    m_time->start();
-    m_fpswindow->move(x() + width() - m_fpswindow->width() - 50, y() + 50);
-    m_fpswindow->show();
-  }
-  else {
-    int fps = m_nframes / ((double)m_time->elapsed() / 1000.0) + 0.5;
-    m_fpswindow->setText(QString::asprintf("%d FPS", fps));
-    if (m_nframes % 300 == 0) {
-      qDebug() << "FPS=" << fps;
-    }
-  }
-  m_nframes++;
-#endif
-
-  if (m_dirty) {
-    draw();
-  }
+  draw();
 }
 
-/*!
-\reimp
-*/
 bool QVNCMacView::nativeEvent(const QByteArray &eventType, void *message, long *result)
 {
   if (eventType == "NSEvent") {
@@ -324,11 +256,9 @@ void QVNCMacView::bell()
 
 void QVNCMacView::draw()
 {
-  if (!m_dirty || !m_view || !AppManager::instance()->view()) {
+  if (!m_view || !AppManager::instance()->view()) {
     return;
   }
-  m_dirty = false;
-  m_refreshTimer->stop();
   QVNCConnection *cc = AppManager::instance()->connection();
   PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
   rfb::Rect rect = framebuffer->getDamage();
@@ -339,7 +269,6 @@ void QVNCMacView::draw()
   if (!rect.is_empty()) {
     cocoa_draw(m_view, x, y, w, h);
   }
-  m_refreshTimer->start();
 }
 
 // Viewport::handle(int event)
@@ -479,50 +408,7 @@ void QVNCMacView::handleKeyRelease(int keyCode)
 
 void QVNCMacView::setQCursor(const QCursor &cursor)
 {
-  cocoa_delete_cursor(m_cursor);
   m_cursor = cocoa_set_cursor(m_view, &cursor);
-#if 0
-  #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-  QBitmap cursorBitmap = cursor.bitmap(Qt::ReturnByValue);
-  #else
-  QBitmap cursorBitmap = *cursor.bitmap();
-  #endif
-
-  QImage image = cursor.pixmap().toImage();
-  image.toPixelFormat(QImage::Format_MonoLSB);
-  QBitmap maskBitmap = QBitmap::fromImage(image.createHeuristicMask());
-
-  int hotX = cursor.hotSpot().x();
-  int hotY = cursor.hotSpot().y();
-
-  int screen = DefaultScreen(display());
-
-  Pixmap cursorPixmap = toPixmap(cursorBitmap);
-  Pixmap maskPixmap = toPixmap(maskBitmap);
-
-  XColor color;
-  color.pixel = BlackPixel(display(), screen);
-  color.red = color.green = color.blue = 0;
-  color.flags = DoRed | DoGreen | DoBlue;
-  XColor maskColor;
-  maskColor.pixel = WhitePixel(display(), screen);
-  maskColor.red = maskColor.green = maskColor.blue = 65535;
-  maskColor.flags = DoRed | DoGreen | DoBlue;
-
-  Cursor xcursor = XCreatePixmapCursor(display(), cursorPixmap, maskPixmap, &color, &maskColor, hotX, hotY);
-  XDefineCursor(display(), nativeWindowHandle(), xcursor);
-  XFreeCursor(display(), xcursor);
-  XFreeColors(display(), DefaultColormap(display(), screen), &color.pixel, 1, 0);
-
-  XFreePixmap(display(), cursorPixmap);
-  XFreePixmap(display(), maskPixmap);
-#endif
-}
-
-bool QVNCMacView::eventFilter(QObject *obj, QEvent *event)
-{
-  // standard event processing
-  return QObject::eventFilter(obj, event);
 }
 
 void QVNCMacView::grabKeyboard()

@@ -4,7 +4,6 @@
 #include "abstractvncview.h"
 
 class QWindow;
-class QTimer;
 class QLabel;
 class NSView;
 class NSCursor;
@@ -33,7 +32,6 @@ protected:
   void focusInEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
   void paintEvent(QPaintEvent *event) override;
-  bool eventFilter(QObject *obj, QEvent *event) override;
 
   void handleMouseButtonEvent(QMouseEvent*);
   void handleMouseWheelEvent(QWheelEvent*);
@@ -42,14 +40,11 @@ signals:
   void message(const QString &msg, int timeout);
 
 public slots:
-  void addInvalidRegion(int x0, int y0, int x1, int y1);
   void draw();
 
 private:
   NSView *m_view;
   NSCursor *m_cursor;
-  bool m_dirty;
-  QTimer *m_refreshTimer;
 };
 
 #endif // VNCMACVIEW_H

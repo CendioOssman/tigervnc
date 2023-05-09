@@ -35,7 +35,6 @@
 #include "PlatformPixelBuffer.h"
 #include "i18n.h"
 #include "abstractvncview.h"
-#include "appmanager.h"
 
 #if !defined(Q_OS_WIN)
   #include "network/UnixSocket.h"
@@ -272,8 +271,8 @@ void QVNCConnection::run()
 {
   m_updateTimer = new QTimer;
   m_updateTimer->setSingleShot(true);
-  connect(m_updateTimer, &QTimer::timeout, this, []() {
-    AppManager::instance()->view()->handleDesktopSize();
+  connect(m_updateTimer, &QTimer::timeout, this, [this]() {
+    emit framebufferUpdateEnd();
   });
   m_updateTimer->moveToThread(this);
 
@@ -1249,6 +1248,8 @@ void QVNCConnection::resizeFramebuffer()
   setFramebuffer(framebuffer);
 
   // TODO: DesktopWindow::resizeFramebuffer() may have to be ported here.
+
+  emit framebufferResized(m_serverParams->width(), m_serverParams->height());
 }
 
 void QVNCConnection::setDesktopSize(int w, int h)
@@ -1303,32 +1304,7 @@ void QVNCConnection::setColourMapEntries(int firstColour, int nColours, rdr::U16
 
 void QVNCConnection::bell()
 {
-  AppManager::instance()->view()->bell();
-  // TODO
-#if 0
-#if defined(WIN32)
-  MessageBeep(0xFFFFFFFF); // cf. fltk/src/drivers/WinAPI/Fl_WinAPI_Screen_Driver.cxx:245
-#endif
-#if defined(__APPLE__)
-  NSBeep(); // cf. fltk/src/drivers/Cocoa/Fl_Cocoa_Screen_Driver.cxx:162
-#endif
-#if !defined(WIN32) && !defined(__APPLE__)
-  QString platform = QGuiApplication::platformName();
-  if (platform == "xcb") { // cf. fltk/src/drivers/X11/Fl_X11_Screen_Driver.cxx:398
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    Display *display = QX11Info::display();
-#else
-    QNativeInterface::QX11Application *f = (QNativeInterface::QX11Application *)QGuiApplication::nativeInterface<QNativeInterface::QX11Application>();
-    Display *display f->display();
-#endif
-    extern int XBell(Display*, int);
-    XBell(display, 0 /* volume */);
-  }
-  if (platform == "wayland") {
-    fprintf(stderr, "\007"); // cf. fltk/src/drivers/Wayland/Fl_Wayland_Screen_Driver.cxx:1272
-  }
-#endif
-#endif
+  emit bellRequested();
 }
 
 // framebufferUpdateStart() is called at the beginning of an update.
@@ -1404,7 +1380,7 @@ void QVNCConnection::framebufferUpdateEnd()
                  (bps * weight)) / 1000000;
 
   m_updateTimer->stop();
-  AppManager::instance()->refresh();
+  emit refreshFramebufferEnded();
 
   // Compute new settings based on updated bandwidth values
   if (::autoSelect)
