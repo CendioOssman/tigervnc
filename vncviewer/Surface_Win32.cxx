@@ -20,152 +20,17 @@
 #include <config.h>
 #endif
 
-#include <assert.h>
-
-#include <QImage>
-
-#include <rdr/Exception.h>
-
-#include <QQuickWindow>
-#include "Surface.h"
-
-#ifdef Q_OS_WIN
+#if defined(WIN32)
 #include <windows.h>
 #endif
 
-void Surface::clear(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
-{
-  RGBQUAD* out;
-  int x, y;
-
-  r = (unsigned)r * a / 255;
-  g = (unsigned)g * a / 255;
-  b = (unsigned)b * a / 255;
-
-  out = data;
-  for (y = 0;y < width();y++) {
-    for (x = 0;x < height();x++) {
-      out->rgbRed = r;
-      out->rgbGreen = g;
-      out->rgbBlue = b;
-      out->rgbReserved = a;
-      out++;
-    }
-  }
-}
-
-void Surface::draw(int src_x, int src_y, int dst_x, int dst_y,
-                   int dst_w, int dst_h)
-{
-  HDC dc;
-
-  //dc = CreateCompatibleDC(fl_gc);
-  HDC hdc = GetDC(NULL);
-  dc = CreateCompatibleDC(hdc);
-  if (!dc)
-    throw rdr::SystemException("CreateCompatibleDC", GetLastError());
-
-  if (!SelectObject(dc, bitmap))
-    throw rdr::SystemException("SelectObject", GetLastError());
-
-  if (!BitBlt(hdc, x, y, w, h, dc, src_x, src_y, SRCCOPY)) {
-    // If the desktop we're rendering to is inactive (like when the screen
-    // is locked or the UAC is active), then GDI calls will randomly fail.
-    // This is completely undocumented so we have no idea how best to deal
-    // with it. For now, we've only seen this error and for this function
-    // so only ignore this combination.
-    if (GetLastError() != ERROR_INVALID_HANDLE)
-      throw rdr::SystemException("BitBlt", GetLastError());
-  }
-
-  DeleteDC(dc);
-}
-
-void Surface::draw(Surface* dst, int src_x, int src_y,
-                   int dst_x, int dst_y, int dst_w, int dst_h)
-{
-  HDC origdc, dstdc;
-
-  dstdc = CreateCompatibleDC(nullptr);
-  if (!dstdc)
-    throw rdr::SystemException("CreateCompatibleDC", GetLastError());
-
-  if (!SelectObject(dstdc, dst->bitmap))
-    throw rdr::SystemException("SelectObject", GetLastError());
-
-  HWND hWnd = reinterpret_cast<HWND>(m_window->winId());
-  HDC hdc = GetDC(hWnd);
-  origdc = hdc;
-  hdc = dstdc;
-  draw(src_x, src_y, x, y, w, h);
-  hdc = origdc;
-
-  DeleteDC(dstdc);
-}
-
-void Surface::blend(int /*src_x*/, int /*src_y*/,
-                    int /*dst_x*/, int /*dst_y*/,
-                    int /*dst_w*/, int /*dst_h*/,
-                    int /*a*/)
-{
-  // Compositing doesn't work properly for window DC:s
-  Q_UNUSED(src_x)
-  Q_UNUSED(src_y)
-  Q_UNUSED(x)
-  Q_UNUSED(y)
-  Q_UNUSED(w)
-  Q_UNUSED(h)
-  Q_UNUSED(a)
-  assert(false);
-}
-
-void Surface::blend(Surface* dst, int src_x, int src_y,
-                    int dst_x, int dst_y, int dst_w, int dst_h, int a)
-{
-  HDC dstdc, srcdc;
-  BLENDFUNCTION blend;
-
-  dstdc = CreateCompatibleDC(nullptr);
-  if (!dstdc)
-    throw rdr::SystemException("CreateCompatibleDC", GetLastError());
-  srcdc = CreateCompatibleDC(nullptr);
-  if (!srcdc)
-    throw rdr::SystemException("CreateCompatibleDC", GetLastError());
-
-  if (!SelectObject(dstdc, dst->bitmap))
-    throw rdr::SystemException("SelectObject", GetLastError());
-  if (!SelectObject(srcdc, bitmap))
-    throw rdr::SystemException("SelectObject", GetLastError());
-
-  blend.BlendOp = AC_SRC_OVER;
-  blend.BlendFlags = 0;
-  blend.SourceConstantAlpha = a;
-  blend.AlphaFormat = AC_SRC_ALPHA;
-
-  if (!AlphaBlend(dstdc, dst_x, dst_y, dst_w, dst_h,
-                  srcdc, src_x, src_y, dst_w, dst_h, blend)) {
-    // If the desktop we're rendering to is inactive (like when the screen
-    // is locked or the UAC is active), then GDI calls will randomly fail.
-    // This is completely undocumented so we have no idea how best to deal
-    // with it. For now, we've only seen this error and for this function
-    // so only ignore this combination.
-    if (GetLastError() != ERROR_INVALID_HANDLE)
-      throw rdr::SystemException("BitBlt", GetLastError());
-  }
-
-  DeleteDC(srcdc);
-  DeleteDC(dstdc);
-}
+#include <rdr/Exception.h>
+#include "Surface.h"
 
 void Surface::alloc()
 {
-  qDebug() << "Surface::alloc: width=" << width() << ", height=" << height();
   BITMAPINFOHEADER bih;
-
-//  data = new RGBQUAD[width() * height()];
-
   memset(&bih, 0, sizeof(bih));
-
   bih.biSize         = sizeof(BITMAPINFOHEADER);
   bih.biBitCount     = 32;
   bih.biPlanes       = 1;
@@ -175,64 +40,12 @@ void Surface::alloc()
 
   bitmap = CreateDIBSection(nullptr, (BITMAPINFO*)&bih,
                             DIB_RGB_COLORS, (void**)&data, nullptr, 0);
-  if (!bitmap)
+  if (!bitmap) {
     throw rdr::SystemException("CreateDIBSection", GetLastError());
+  }
 }
 
 void Surface::dealloc()
 {
   DeleteObject(bitmap);
 }
-
-void Surface::update(const QImage *image)
-{
-  qDebug() << "Surface::update()";
-#if 0
-  const unsigned char* in;
-  RGBQUAD* out;
-  int x, y;
-
-  assert(image->width() == width());
-  assert(image->height() == height());
-
-  // Convert data and pre-multiply alpha
-//  in = (const unsigned char*)image->data()[0];
-//  out = data;
-  for (y = 0;y < image->width();y++) {
-    for (x = 0;x < image->height();x++) {
-      QRgb src = image->pixel(x, y);
-      switch (image->depth()) {
-      case 8: // 1:
-        out->rgbBlue = src. // in[0];
-        out->rgbGreen = in[0];
-        out->rgbRed = in[0];
-        out->rgbReserved = 0xff;
-        break;
-      case 16: // 2:
-        out->rgbBlue = (unsigned)in[0] * in[1] / 255;
-        out->rgbGreen = (unsigned)in[0] * in[1] / 255;
-        out->rgbRed = (unsigned)in[0] * in[1] / 255;
-        out->rgbReserved = in[1];
-        break;
-      case 24: // 3:
-        out->rgbBlue = in[2];
-        out->rgbGreen = in[1];
-        out->rgbRed = in[0];
-        out->rgbReserved = 0xff;
-        break;
-      case 32: // 4:
-        out->rgbBlue = (unsigned)in[2] * in[3] / 255;
-        out->rgbGreen = (unsigned)in[1] * in[3] / 255;
-        out->rgbRed = (unsigned)in[0] * in[3] / 255;
-        out->rgbReserved = in[3];
-        break;
-      }
-      in += image->depth();
-      out++;
-    }
-    if (image->ld() != 0)
-      in += image->ld() - image->w() * image->d();
-  }
-#endif
-}
-

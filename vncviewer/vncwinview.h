@@ -31,7 +31,6 @@ protected:
   void resizeEvent(QResizeEvent*) override;
 
 public slots:
-  void addInvalidRegion(int x0, int y0, int x1, int y1);
   void setQCursor(const QCursor &cursor) override;
   void handleKeyPress(int keyCode, quint32 keySym) override;
   void handleKeyRelease(int keyCode) override;
@@ -67,7 +66,7 @@ private:
   int handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam);
   void startMouseTracking();
   void stopMouseTracking();
-  void refresh(HWND hWnd, bool all = true);
+  void refresh(HWND hWnd);
 };
 
 #endif // VNCWINVIEW_H
