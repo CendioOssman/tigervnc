@@ -20,38 +20,22 @@
 #include <config.h>
 #endif
 
-//#include <FL/Fl_RGB_Image.H>
-#include <QImage>
-
 #include "Surface.h"
 
 Surface::Surface(int width, int height)
   : w(width)
   , h(height)
-#if defined(WIN32)
-  , data(nullptr)
-#elif defined(__APPLE__)
-  , data(nullptr)
-  , m_bitmap(nullptr)
-#else
+#if !defined(__APPLE__) && !defined(WIN32)
+  #if 0
   , m_pixmap(0)
   , m_picture(0)
-  , m_visualFormat(nullptr)
   , m_display(nullptr)
-  , m_gc(nullptr)
-  , m_screen(0)
-  , m_visualInfo(nullptr)
-  , m_colorMap(0)
+  #endif
+  , shminfo(nullptr)
+  , xim(nullptr)
 #endif
 {
   alloc();
-}
-
-Surface::Surface(const QImage *image) :
-  w(image->width()), h(image->height())
-{
-  alloc();
-  update(image);
 }
 
 Surface::~Surface()

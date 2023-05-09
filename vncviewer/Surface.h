@@ -22,55 +22,38 @@
 #if defined(WIN32)
 #include <windows.h>
 #elif defined(__APPLE__)
-// Apple headers conflict with FLTK, so redefine types here
-typedef struct CGImage* CGImageRef;
-class NSBitmapImageRep;
+class CGImage;
 #else
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/extensions/Xrender.h>
+#include <X11/extensions/XShm.h>
 #endif
 
-//class Fl_RGB_Image;
-class QImage;
 class QQuickWindow;
 
 class Surface {
 public:
   Surface(int width, int height);
-  Surface(const QImage *image);
   ~Surface();
 
   int width() { return w; }
   int height() { return h; }
 #if defined(WIN32)
   HBITMAP hbitmap() { return bitmap; }
+  RGBQUAD *framebuffer() { return data; }
 #elif defined(__APPLE__)
-  NSBitmapImageRep *bitmap() { return m_bitmap; }
+  CGImage *bitmap() { return m_bitmap; }
   unsigned char *framebuffer() { return data; }
 #else
-  Pixmap pixmap() { return m_pixmap; }
-  GC gc() { return m_gc; }
-  XVisualInfo *visualInfo() { return m_visualInfo; }
-  Colormap colormap() { return m_colorMap; }
+  XImage *ximage() { return xim; }
+  XShmSegmentInfo *shmSegmentInfo() { return shminfo; }
+  char *framebuffer() { return xim->data; }
 #endif
-
-  void clear(unsigned char r, unsigned char g, unsigned char b, unsigned char a=255);
-
-  void draw(int src_x, int src_y, int dst_x, int dst_y,
-            int dst_w, int dst_h);
-  void draw(Surface* dst, int src_x, int src_y, int dst_x, int dst_y,
-            int dst_w, int dst_h);
-
-  void blend(int src_x, int src_y, int dst_x, int dst_y,
-             int dst_w, int dst_h, int a=255);
-  void blend(Surface* dst, int src_x, int src_y, int dst_x, int dst_y,
-             int dst_w, int dst_h, int a=255);
 
 protected:
   void alloc();
   void dealloc();
-  void update(const QImage *image);
 
 protected:
   int w, h;
@@ -81,20 +64,11 @@ protected:
   HBITMAP bitmap;
 #elif defined(__APPLE__)
   unsigned char* data;
-  NSBitmapImageRep *m_bitmap;
+  CGImage *m_bitmap;
 #else
-  Pixmap m_pixmap;
-  Picture m_picture;
-  XRenderPictFormat* m_visualFormat;
-
-  // cf. https://www.fltk.org/doc-1.3/osissues.html
-  Display *m_display;
-  GC m_gc;
-  int m_screen;
-  XVisualInfo *m_visualInfo;
-  Colormap m_colorMap;
-
-  Picture alpha_mask(int a);
+  XShmSegmentInfo *shminfo;
+  XImage *xim;
+  bool setupShm();
 #endif
 };
 

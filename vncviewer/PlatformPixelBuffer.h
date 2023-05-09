@@ -19,13 +19,6 @@
 #ifndef __PLATFORMPIXELBUFFER_H__
 #define __PLATFORMPIXELBUFFER_H__
 
-#if !defined(WIN32) && !defined(__APPLE__)
-#include <X11/Xlib.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <X11/extensions/XShm.h>
-#endif
-
 #include <list>
 
 #include <os/Mutex.h>
@@ -44,10 +37,6 @@ public:
   void commitBufferRW(const rfb::Rect& r) override;
 
   rfb::Rect getDamage(void);
-#if !defined(WIN32) && !defined(__APPLE__)
-  XImage *ximage() { return xim; }
-  XShmSegmentInfo *shmSegmentInfo() { return shminfo; }
-#endif
 
   using rfb::FullFramePixelBuffer::width;
   using rfb::FullFramePixelBuffer::height;
@@ -55,14 +44,6 @@ public:
 protected:
   os::Mutex mutex;
   rfb::Region damage;
-
-#if !defined(WIN32) && !defined(__APPLE__)
-protected:
-  bool setupShm(int width, int height);
-
-  XShmSegmentInfo *shminfo;
-  XImage *xim;
-#endif
 };
 
 #endif

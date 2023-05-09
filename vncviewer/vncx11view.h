@@ -2,6 +2,8 @@
 #define VNCX11VIEW_H
 
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/extensions/Xrender.h>
 #include "abstractvncview.h"
 
 class QVNCX11View : public QAbstractVNCView
@@ -11,7 +13,6 @@ public:
   QVNCX11View(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~QVNCX11View();
   qulonglong nativeWindowHandle() const override;
-  Display *display() const;
 
 public slots:
   void setQCursor(const QCursor &cursor) override;
@@ -39,12 +40,19 @@ signals:
   void message(const QString &msg, int timeout);
 
 public slots:
-  void addInvalidRegion(int x0, int y0, int x1, int y1);
+  void resizePixmap(int width, int height);
   void draw();
 
 private:
   Window m_window;
-  rfb::Region *m_region;
+  Display *m_display;
+  int m_screen;
+  XVisualInfo *m_visualInfo;
+  XRenderPictFormat *m_visualFormat;
+  Colormap m_colorMap;
+  Pixmap m_pixmap;
+  Picture m_picture;
+
   Pixmap toPixmap(QBitmap &bitmap);
 };
 
