@@ -61,7 +61,7 @@ CConnection::CConnection()
     formatChange(false), encodingChange(false),
     firstUpdate(true), pendingUpdate(false), continuousUpdates(false),
     forceNonincremental(true),
-    framebuffer(nullptr), decoder(this),
+    framebuffer(nullptr),
     hasRemoteClipboard(false), hasLocalClipboard(false)
 {
 }
@@ -483,7 +483,7 @@ void CConnection::serverInit(int width, int height,
 bool CConnection::readAndDecodeRect(const Rect& r, int encoding,
                                     ModifiablePixelBuffer* pb)
 {
-  if (!decoder.decodeRect(r, encoding, pb))
+  if (!decoder.decodeRect(r, encoding, pb, getInStream(), &server))
     return false;
   decoder.flush();
   return true;
@@ -529,7 +529,7 @@ void CConnection::framebufferUpdateEnd()
 
 bool CConnection::dataRect(const Rect& r, int encoding)
 {
-  return decoder.decodeRect(r, encoding, framebuffer);
+  return decoder.decodeRect(r, encoding, framebuffer, getInStream(), &server);
 }
 
 void CConnection::serverCutText(const char* str)

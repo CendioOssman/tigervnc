@@ -14,7 +14,6 @@ class QMsgReader;
 class QMsgWriter;
 class QVNCPacketHandler;
 struct VeNCryptStatus;
-class DecodeManager;
 
 namespace rdr {
   class InStream;
@@ -27,6 +26,7 @@ namespace rfb {
   class ModifiablePixelBuffer;
   class PlainPasswd;
   class ScreenSet;
+  class DecodeManager;
 }
 namespace network {
   class Socket;
@@ -159,7 +159,7 @@ private:
   bool m_continuousUpdates;
   bool m_forceNonincremental;
   rfb::ModifiablePixelBuffer *m_framebuffer;
-  DecodeManager *m_decoder;
+  rfb::DecodeManager *m_decoder;
   QByteArray m_serverClipboard;
   bool m_hasLocalClipboard;
   bool m_unsolicitedClipboardAttempt;

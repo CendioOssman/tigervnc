@@ -3,7 +3,6 @@
 #endif
 
 #include <QDebug>
-#include <QMutex>
 #include <assert.h>
 #include <stdio.h>
 
@@ -28,18 +27,16 @@ using namespace rfb;
 
 QMsgReader::QMsgReader(QVNCConnection* /* CMsgHandler* */ handler_, rdr::InStream *is_)
   : imageBufIdealSize(0), handler(handler_), is(is_),
-    state(MSGSTATE_IDLE), cursorEncoding(-1), m_mutex(new QMutex)
+    state(MSGSTATE_IDLE), cursorEncoding(-1)
 {
 }
 
 QMsgReader::~QMsgReader()
 {
-  delete m_mutex;
 }
 
 bool QMsgReader::readServerInit()
 {
-  QMutexLocker locker(m_mutex);
   int width, height;
   rdr::U32 len;
 
@@ -68,7 +65,6 @@ bool QMsgReader::readServerInit()
 
 bool QMsgReader::readMsg()
 {
-  QMutexLocker locker(m_mutex);
   qDebug() << "QMsgReader::readMsg";
   if (state == MSGSTATE_IDLE) {
     if (!is->hasData(1))

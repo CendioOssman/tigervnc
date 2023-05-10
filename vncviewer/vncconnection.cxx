@@ -17,6 +17,7 @@
 #include "rfb/d3des.h"
 #include "rfb/encodings.h"
 #include "rfb/Decoder.h"
+#include "rfb/DecodeManager.h"
 #include "rfb/fenceTypes.h"
 #include "rfb/screenTypes.h"
 #include "rfb/clipboardTypes.h"
@@ -31,7 +32,6 @@
 #include "vncpackethandler.h"
 #include <QSocketNotifier>
 #include "network/TcpSocket.h"
-#include "DecodeManager.h"
 #include "PlatformPixelBuffer.h"
 #include "i18n.h"
 #include "abstractvncview.h"
@@ -222,7 +222,7 @@ QVNCConnection::QVNCConnection()
   , m_continuousUpdates(false)
   , m_forceNonincremental(true)
   , m_framebuffer(nullptr)
-  , m_decoder(new DecodeManager(this))
+  , m_decoder(new rfb::DecodeManager())
   , m_hasLocalClipboard(false)
   , m_unsolicitedClipboardAttempt(false)
   , m_pendingSocketEvent(false)
@@ -1394,7 +1394,7 @@ bool QVNCConnection::dataRect(const rfb::Rect& r, int encoding)
   if (encoding != rfb::encodingCopyRect)
     m_lastServerEncoding = encoding;
 
-  ret = m_decoder->decodeRect(r, encoding, m_framebuffer);
+  ret = m_decoder->decodeRect(r, encoding, m_framebuffer, istream(), server());
 
   if (ret)
     m_pixelCount += r.area();
@@ -1511,7 +1511,7 @@ void QVNCConnection::endOfContinuousUpdates()
 
 bool QVNCConnection::readAndDecodeRect(const rfb::Rect& r, int encoding, rfb::ModifiablePixelBuffer* pb)
 {
-  if (!m_decoder->decodeRect(r, encoding, pb))
+  if (!m_decoder->decodeRect(r, encoding, pb, istream(), server()))
     return false;
   m_decoder->flush();
   return true;
