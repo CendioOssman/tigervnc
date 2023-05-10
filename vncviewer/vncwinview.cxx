@@ -841,25 +841,6 @@ void QVNCWinView::setLEDState(unsigned int state)
   }
 }
 
-void QVNCWinView::handleClipboardData(const char* data)
-{
-  if (!hasFocus()) {
-    return;
-  }
-
-  size_t len = strlen(data);
-  vlog.debug("Got clipboard data (%d bytes)", (int)len);
-
-  len++; // increment for a string terminator.
-  HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len);
-  memcpy(GlobalLock(hMem), data, len);
-  GlobalUnlock(hMem);
-  OpenClipboard(0);
-  EmptyClipboard();
-  SetClipboardData(CF_TEXT, hMem);
-  CloseClipboard();
-}
-
 void QVNCWinView::maybeGrabKeyboard()
 {
   if (::fullscreenSystemKeys && isFullscreenEnabled() && hasFocus()) {

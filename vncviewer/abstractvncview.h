@@ -9,6 +9,7 @@ class QAction;
 class QCursor;
 class QLabel;
 class QScreen;
+class QClipboard;
 
 namespace rfb {
   class Region;
@@ -52,6 +53,7 @@ public slots:
   virtual void moveView(int x, int y);
 
 protected:
+  static QClipboard *m_clipboard;
   QByteArray m_geometry;
   double m_devicePixelRatio;
 

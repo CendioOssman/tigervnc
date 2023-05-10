@@ -85,14 +85,15 @@ public:
   void endOfContinuousUpdates();
   bool readAndDecodeRect(const rfb::Rect& r, int encoding, rfb::ModifiablePixelBuffer* pb);
   void serverCutText(const char* str);
-  void handleClipboardCaps(rdr::U32 flags, const rdr::U32* lengths);\
+  void handleClipboardCaps(rdr::U32 flags, const rdr::U32* lengths);
+  // Server requesting client to send client's clipboard data.
   void handleClipboardRequest();
   void handleClipboardRequest(rdr::U32 flags);
   void handleClipboardPeek(rdr::U32 flags);
   void handleClipboardNotify(rdr::U32 flags);
+  // Process clipboard data received from the server.
   void handleClipboardProvide(rdr::U32 flags, const size_t* lengths, const rdr::U8* const* data);
   void setPreferredEncoding(int encoding);
-
 
 signals:
   void socketNotified();
@@ -102,7 +103,7 @@ signals:
   void cursorPositionChanged(int x, int y);
   void ledStateChanged(unsigned int state);
   void clipboardAnnounced(bool available);
-  void clipboardChanged(const char *data);
+  void clipboardDataReceived(const char *data);
   void framebufferResized(int width, int height);
   void refreshFramebufferStarted();
   void refreshFramebufferEnded();
@@ -113,6 +114,7 @@ public slots:
   bool authenticate(QString user, QString password);
   void resetConnection();
   void startProcessing();
+  void sendClipboardData(QString text);
   void refreshFramebuffer();
   QString infoText();
   void requestClipboard();

@@ -23,7 +23,6 @@ public:
 public slots:
   void setQCursor(const QCursor &cursor) override;
   void setCursorPos(int x, int y) override;
-  void handleClipboardData(const char* data) override;
   void setLEDState(unsigned int state) override;
   void pushLEDState() override;
   void handleKeyPress(int keyCode, quint32 keySym) override;

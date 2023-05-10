@@ -11,6 +11,7 @@
 #include <QPainter>
 #include <QDebug>
 #include <QUrl>
+#include <QClipboard>
 #include <climits>
 #include "rfb/Exception.h"
 #include "rfb/ScreenSet.h"
@@ -35,6 +36,8 @@
 #endif
 
 static rfb::LogWriter vlog("VNCView");
+
+QClipboard *QAbstractVNCView::m_clipboard = nullptr;
 
 class QMenuSeparator : public QAction
 {
@@ -388,6 +391,14 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   , m_lastPos(new rfb::Point)
   , m_origPos(new rfb::Point)
 {
+  if (!m_clipboard) {
+    m_clipboard = QGuiApplication::clipboard();
+    connect(m_clipboard, &QClipboard::dataChanged, this, []() {
+      QString text = m_clipboard->text();
+      //qDebug() << "QClipboard::dataChanged" << text;
+      AppManager::instance()->connection()->sendClipboardData(text);
+    });
+  }
   setContentsMargins(0, 0, 0, 0);
   int radius = 5;
   m_overlayTip = new QLabel(QString::asprintf(_("Press %s to open the context menu"), (const char*)::menuKey), this, Qt::SplashScreen | Qt::WindowStaysOnTopHint);
@@ -444,7 +455,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorPositionChanged, this, &QAbstractVNCView::setCursorPos, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::ledStateChanged, this, &QAbstractVNCView::setLEDState, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::clipboardAnnounced, this, &QAbstractVNCView::handleClipboardAnnounce, Qt::QueuedConnection);
-  connect(AppManager::instance()->connection(), &QVNCConnection::clipboardChanged, this, &QAbstractVNCView::handleClipboardData, Qt::QueuedConnection);
+  connect(AppManager::instance()->connection(), &QVNCConnection::clipboardDataReceived, this, &QAbstractVNCView::handleClipboardData, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::bellRequested, this, &QAbstractVNCView::bell, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::refreshFramebufferEnded, this, &QAbstractVNCView::updateWindow, Qt::QueuedConnection);
   connect(AppManager::instance(), &AppManager::refreshRequested, this, &QAbstractVNCView::updateWindow, Qt::QueuedConnection);
@@ -562,8 +573,15 @@ void QAbstractVNCView::handleClipboardAnnounce(bool available)
   }
 }
 
-void QAbstractVNCView::handleClipboardData(const char*)
+void QAbstractVNCView::handleClipboardData(const char *data)
 {
+  if (!hasFocus()) {
+    return;
+  }
+  size_t len = strlen(data);
+  vlog.debug("Got clipboard data (%d bytes)", (int)len);
+
+  m_clipboard->setText(data);
 }
 
 void QAbstractVNCView::maybeGrabKeyboard()

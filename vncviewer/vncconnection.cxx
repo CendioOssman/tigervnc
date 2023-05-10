@@ -23,6 +23,7 @@
 #include "rfb/clipboardTypes.h"
 #include "rfb/DecodeManager.h"
 #include "rfb/encodings.h"
+#include "rfb/util.h"
 #include "vncstream.h"
 #include "viewerconfig.h"
 #include "vncconnection.h"
@@ -435,6 +436,33 @@ void QVNCConnection::resetConnection()
   m_state = rfb::CConnection::RFBSTATE_PROTOCOL_VERSION;
   m_inProcessing = false;
   m_blocking = false;
+}
+
+void QVNCConnection::sendClipboardData(QString text)
+{
+  QByteArray bytes = text.toUtf8();
+  const char *data = bytes.constData();
+  if (m_serverParams->clipboardFlags() & rfb::clipboardProvide) {
+    rfb::CharArray filtered(rfb::convertCRLF(data));
+    size_t sizes[1] = { strlen(filtered.buf) + 1 };
+    const rdr::U8* data[1] = { (const rdr::U8*)filtered.buf };
+
+    if (m_unsolicitedClipboardAttempt) {
+      m_unsolicitedClipboardAttempt = false;
+      if (sizes[0] > m_serverParams->clipboardSize(rfb::clipboardUTF8)) {
+        vlog.debug("Clipboard was too large for unsolicited clipboard transfer");
+        if (m_serverParams->clipboardFlags() & rfb::clipboardNotify) {
+          writer()->writeClipboardNotify(rfb::clipboardUTF8);
+        }
+        return;
+      }
+    }
+    writer()->writeClipboardProvide(rfb::clipboardUTF8, sizes, data);
+  }
+  else {
+    rfb::CharArray latin1(rfb::utf8ToLatin1(data));
+    writer()->writeClientCutText(latin1.buf);
+  }
 }
 
 void QVNCConnection::refreshFramebuffer()
@@ -1488,7 +1516,7 @@ void QVNCConnection::handleClipboardAnnounce(bool available)
 
 void QVNCConnection::handleClipboardData(const char* data)
 {
-  emit clipboardChanged(data);
+  emit clipboardDataReceived(data);
 }
 
 
