@@ -1,23 +1,23 @@
 #ifndef MSGREADER_H
 #define MSGREADER_H
 
-#include <QObject>
 #include "rdr/types.h"
-#include "rfb/Rect.h"
 
-class QMutex;
 class QVNCConnection;
 
 namespace rdr {
   class InStream;
 }
 
-class QMsgReader : public QObject
-{
-    Q_OBJECT
+namespace rdr {
+  class Rect;
+  class Point;
+}
 
+class QMsgReader
+{
 public:
-    QMsgReader(QVNCConnection* handler, rdr::InStream *is);
+    QMsgReader(QVNCConnection *handler, rdr::InStream *is);
     virtual ~QMsgReader();
 
     bool readServerInit();
@@ -69,7 +69,6 @@ private:
     int rectEncoding;
 
     int cursorEncoding;
-    QMutex *m_mutex;
 
     static const int maxCursorSize = 256;
 };

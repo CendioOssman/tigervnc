@@ -34,6 +34,7 @@ namespace os {
 namespace rdr {
   struct Exception;
   class MemOutStream;
+  class InStream;
 }
 
 namespace rfb {
@@ -44,11 +45,10 @@ namespace rfb {
 
   class DecodeManager {
   public:
-    DecodeManager(CConnection *conn);
+    DecodeManager();
     ~DecodeManager();
 
-    bool decodeRect(const Rect& r, int encoding,
-                    ModifiablePixelBuffer* pb);
+    bool decodeRect(const Rect &r, int encoding, ModifiablePixelBuffer *pb, rdr::InStream *is, ServerParams *server);
 
     void flush();
 
@@ -59,7 +59,6 @@ namespace rfb {
     void throwThreadException();
 
   private:
-    CConnection *conn;
     Decoder *decoders[encodingMax+1];
 
     struct DecoderStats {

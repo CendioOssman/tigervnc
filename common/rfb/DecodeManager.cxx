@@ -40,8 +40,8 @@ using namespace rfb;
 
 static LogWriter vlog("DecodeManager");
 
-DecodeManager::DecodeManager(CConnection *conn) :
-  conn(conn), threadException(nullptr)
+DecodeManager::DecodeManager()
+ : threadException(nullptr)
 {
   size_t cpuCount;
 
@@ -101,8 +101,7 @@ DecodeManager::~DecodeManager()
     delete decoder;
 }
 
-bool DecodeManager::decodeRect(const Rect& r, int encoding,
-                               ModifiablePixelBuffer* pb)
+bool DecodeManager::decodeRect(const Rect &r, int encoding, ModifiablePixelBuffer *pb, rdr::InStream *is, ServerParams *server)
 {
   Decoder *decoder;
   rdr::MemOutStream *bufferStream;
@@ -146,7 +145,7 @@ bool DecodeManager::decodeRect(const Rect& r, int encoding,
   // Read the rect
   bufferStream->clear();
   try {
-    if (!decoder->readRect(r, conn->getInStream(), conn->server, bufferStream))
+    if (!decoder->readRect(r, is, *server, bufferStream))
       return false;
   } catch (rdr::Exception& e) {
     throw Exception("Error reading rect: %s", e.str());
@@ -155,7 +154,7 @@ bool DecodeManager::decodeRect(const Rect& r, int encoding,
   stats[encoding].rects++;
   stats[encoding].bytes += 12 + bufferStream->length();
   stats[encoding].pixels += r.area();
-  equiv = 12 + r.area() * (conn->server.pf().bpp/8);
+  equiv = 12 + r.area() * (server->pf().bpp/8);
   stats[encoding].equivalent += equiv;
 
   // Then try to put it on the queue
@@ -165,12 +164,12 @@ bool DecodeManager::decodeRect(const Rect& r, int encoding,
   entry->rect = r;
   entry->encoding = encoding;
   entry->decoder = decoder;
-  entry->server = &conn->server;
+  entry->server = server;
   entry->pb = pb;
   entry->bufferStream = bufferStream;
 
   decoder->getAffectedRegion(r, bufferStream->data(),
-                             bufferStream->length(), conn->server,
+                             bufferStream->length(), *server,
                              &entry->affectedRegion);
 
   queueMutex->lock();
