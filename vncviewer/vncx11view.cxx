@@ -332,13 +332,6 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, long *
 //        ungrabPointer();
 //      }
     }
-#if 0
-    // seems not working.
-    else if (xcbEventType == XCB_BUTTON_PRESS) {
-      xcb_button_press_event_t* buttonPressEvent = static_cast<xcb_button_press_event_t*>(message);
-      qDebug() << "QVNCX11View::nativeEvent: XCB_BUTTON_PRESS: x=" << buttonPressEvent->root_x << ",y=" << buttonPressEvent->root_y << ",button=" << Qt::hex << buttonPressEvent->detail;
-    }
-#endif
     else if (xcbEventType == XCB_KEY_PRESS) {
       xcb_key_press_event_t* xevent = reinterpret_cast<xcb_key_press_event_t*>(message);
       //qDebug() << "QVNCX11View::nativeEvent: XCB_KEY_PRESS: keycode=0x" << Qt::hex << xevent->detail << ", state=0x" << xevent->state << ", mapped_keycode=0x" << code_map_keycode_to_qnum[xevent->detail];
@@ -435,28 +428,6 @@ void QVNCX11View::draw()
   if (!m_window || !AppManager::instance()->view()) {
     return;
   }
-  #if 0
-  rfb::Rect rect = m_region->get_bounding_rect();
-  int x0 = rect.tl.x;
-  int y0 = rect.tl.y;
-  int x1 = rect.br.x;
-  int y1 = rect.br.y;
-  int w = x1 - x0;
-  int h = y1 - y0;
-  if (w <= 0 || h <= 0) {
-    return;
-  }
-  //qDebug() << "QVNCX11View::draw: x=" << x0 << ", y=" << y0 << ", w=" << w << ", h=" << h;
-  //QVNCConnection *cc = AppManager::instance()->connection();
-  //PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-  //framebuffer->draw(x0, y0, x0, y0, w, h);
-//  Picture picture = framebuffer->picture();
-  Picture winPict = XRenderCreatePicture(m_display, m_window, m_visualFormat, 0, NULL);
-  XRenderComposite(m_display, PictOpSrc, m_picture, None, winPict, x0, y0, 0, 0, x0, y0, w, h);
-  XRenderFreePicture(m_display, winPict);
-
-  m_region->clear();
-  #else
   QVNCConnection *cc = AppManager::instance()->connection();
   PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
   rfb::Rect rect = framebuffer->getDamage();
@@ -488,7 +459,6 @@ void QVNCX11View::draw()
     XRenderComposite(m_display, PictOpSrc, m_picture, None, winPict, x, y, 0, 0, x, y, w, h);
     XRenderFreePicture(m_display, winPict);
   }
-  #endif
 }
 
 // Viewport::handle(int event)
