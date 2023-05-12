@@ -54,7 +54,6 @@ const int kVK_RightCommand = 0x36;
 const int kVK_Menu = 0x6E;
 
 static bool captured = false;
-static int mac_os_version = 0;
 
 //-----------------------------------------------------------------------
 @interface NSVNCView : NSView

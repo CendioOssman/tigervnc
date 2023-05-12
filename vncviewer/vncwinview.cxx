@@ -1,6 +1,5 @@
 #include <QEvent>
 #include <QResizeEvent>
-#include <QMutex>
 #include <QTimer>
 #include <QCursor>
 #include <qt_windows.h>
@@ -21,6 +20,9 @@
 #include "msgwriter.h"
 #include "win32.h"
 #include "i18n.h"
+#if WIN_LEGACY_TOUCH // Not necessary in Qt.
+#include "Win32TouchHandler.h"
+#endif
 #include "viewerconfig.h"
 #include "vncwinview.h"
 
@@ -39,17 +41,20 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
  , m_wndproc(0)
  , m_hwndowner(false)
  , m_hwnd(0)
- , m_mutex(new QMutex)
  , m_altGrArmed(false)
  , m_altGrCtrlTimer(new QTimer)
  , m_cursor(nullptr)
  , m_mouseTracking(false)
  , m_defaultCursor(LoadCursor(NULL, IDC_ARROW))
+#if WIN_LEGACY_TOUCH // Not necessary in Qt.
+ , m_touchHandler(nullptr)
+#endif
 {
   setAttribute(Qt::WA_NoBackground);
   setAttribute(Qt::WA_NoSystemBackground);
   setAttribute(Qt::WA_InputMethodTransparent);
   setAttribute(Qt::WA_NativeWindow);
+  setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
   connect(AppManager::instance()->connection(), &QVNCConnection::framebufferResized, this, [this](int width, int height) {
     SetWindowPos(m_hwnd, HWND_TOP, 0, 0, width, height, 0);
@@ -72,7 +77,9 @@ QVNCWinView::~QVNCWinView()
   if (m_hwnd && m_hwndowner) {
     DestroyWindow(m_hwnd);
   }
-  delete m_mutex;
+#if WIN_LEGACY_TOUCH // Not necessary in Qt.
+  delete m_touchHandler;
+#endif
 
   m_altGrCtrlTimer->stop();
   delete m_altGrCtrlTimer;
@@ -308,6 +315,9 @@ bool QVNCWinView::event(QEvent *e)
     if (!m_hwnd) {
       m_hwnd = createWindow(HWND(winId()), GetModuleHandle(0));
       fixParent();
+#if WIN_LEGACY_TOUCH // Not necessary in Qt.
+      m_touchHandler = new Win32TouchHandler(m_hwnd);
+#endif
       m_hwndowner = m_hwnd != 0;
     }
     if (m_hwnd && !m_wndproc && GetParent(m_hwnd) == (HWND)winId()) {
@@ -316,8 +326,9 @@ bool QVNCWinView::event(QEvent *e)
 
       LONG style;
       style = GetWindowLong(m_hwnd, GWL_STYLE);
-      if (style & WS_TABSTOP)
-	setFocusPolicy(Qt::FocusPolicy(focusPolicy() | Qt::StrongFocus));
+      if (style & WS_TABSTOP) {
+        setFocusPolicy(Qt::FocusPolicy(focusPolicy() | Qt::StrongFocus));
+      }
     }
     break;
   case QEvent::WindowBlocked:
@@ -408,13 +419,20 @@ bool QVNCWinView::nativeEvent(const QByteArray &eventType, void *message, long *
 {
   MSG *msg = (MSG *)message;
   switch (msg->message) {
-  case WM_SETFOCUS:
-    if (m_hwnd) {
-      ::SetFocus(m_hwnd);
-      return true;
-    }
-  default:
-    break;
+    case WM_SETFOCUS:
+      if (m_hwnd) {
+        ::SetFocus(m_hwnd);
+        return true;
+      }
+      break;
+#if WIN_LEGACY_TOUCH // Not necessary in Qt.
+    case WM_GESTURENOTIFY:
+    case WM_GESTURE:
+      m_touchHandler->processEvent(msg->message, msg->wParam, msg->lParam);
+      break;
+#endif
+    default:
+      break;
   }
   return QWidget::nativeEvent(eventType, message, result);
 }

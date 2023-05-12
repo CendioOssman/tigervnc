@@ -14,8 +14,10 @@
 #include "vncconnection.h"
 #include "PlatformPixelBuffer.h"
 #include "msgwriter.h"
-#include "touch.h"
 #include "vncx11view.h"
+#if X11_LEGACY_TOUCH // Not necessary in Qt.
+#include "XInputTouchHandler.h"
+#endif
 
 #include <X11/Xlib.h>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -32,11 +34,6 @@
 #include <X11/XKBlib.h>
 #include <X11/extensions/Xrender.h>
 #include <X11/extensions/XInput2.h>
-
-#define XK_LATIN1
-#define XK_MISCELLANY
-#define XK_XKB_KEYS
-#include "rfb/keysymdef.h"
 
 extern const struct _code_map_xkb_to_qnum {
   const char * from;
@@ -57,9 +54,14 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   , m_colorMap(0)
   , m_pixmap(0)
   , m_picture(0)
+#if X11_LEGACY_TOUCH // Not necessary in Qt.
+  , m_touchHandler(nullptr)
+  , m_ximajor(0)
+#endif
 {
   setAttribute(Qt::WA_NoBackground);
   setAttribute(Qt::WA_NoSystemBackground);
+  setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
   connect(AppManager::instance()->connection(), &QVNCConnection::framebufferResized, this, &QVNCX11View::resizePixmap, Qt::QueuedConnection);
   installEventFilter(this);
@@ -128,6 +130,9 @@ QVNCX11View::~QVNCX11View()
   if (m_pixmap) {
     XFreePixmap(m_display, m_pixmap);
   }
+#if X11_LEGACY_TOUCH // Not necessary in Qt.
+  delete m_touchHandler;
+#endif
 }
 
 qulonglong QVNCX11View::nativeWindowHandle() const
@@ -209,6 +214,9 @@ bool QVNCX11View::event(QEvent *e)
         XReparentWindow(m_display, m_window, winId(), 0, 0);
         XMapWindow(m_display, m_window);
         setMouseTracking(true);
+#if X11_LEGACY_TOUCH // Not necessary in Qt.
+	m_touchHandler = new XInputTouchHandler(m_window);
+#endif
       }
       break;
     case QEvent::KeyboardLayoutChange:
@@ -319,8 +327,8 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, long *
     uint16_t xcbEventType = ev->response_type;
     //qDebug() << "QVNCX11View::nativeEvent: xcbEventType=" << xcbEventType << ",eventType=" << eventType;
     if (xcbEventType == XCB_GE_GENERIC) {
-      xcb_ge_generic_event_t* genericEvent = static_cast<xcb_ge_generic_event_t*>(message);
-      quint16 geEventType = genericEvent->event_type;
+      //xcb_ge_generic_event_t* genericEvent = static_cast<xcb_ge_generic_event_t*>(message);
+      //quint16 geEventType = genericEvent->event_type;
       //qDebug() << "QVNCX11View::nativeEvent: XCB_GE_GENERIC: xcbEventType=" << xcbEventType << ", geEventType=" << geEventType;
       // XI_Inter/XI_Leave causes QEvent::WindowActivate/WindowDeactivate.
 //      if (geEventType == XI_Enter) {
@@ -331,6 +339,12 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, long *
 //        qDebug() << "######################################################### Leave ##############################################";
 //        ungrabPointer();
 //      }
+#if X11_LEGACY_TOUCH // Not necessary in Qt.
+      if (genericEvent->extension == m_ximajor) {
+        //m_touchHandler->processEvent(genericEvent);
+        return true;
+      }
+#endif
     }
     else if (xcbEventType == XCB_KEY_PRESS) {
       xcb_key_press_event_t* xevent = reinterpret_cast<xcb_key_press_event_t*>(message);
@@ -822,13 +836,17 @@ void QVNCX11View::ungrabKeyboard()
 
 void QVNCX11View::grabPointer()
 {
-  //x11_grab_pointer(nativeWindowHandle());
+#if X11_LEGACY_TOUCH // Not necessary in Qt.
+  x11_grab_pointer(nativeWindowHandle());
+#endif
   QAbstractVNCView::grabPointer();
 }
 
 void QVNCX11View::ungrabPointer()
 {
-  //x11_ungrab_pointer(nativeWindowHandle());
+#if X11_LEGACY_TOUCH // Not necessary in Qt.
+  x11_ungrab_pointer(nativeWindowHandle());
+#endif
   QAbstractVNCView::ungrabPointer();
 }
 
@@ -876,3 +894,73 @@ unsigned int QVNCX11View::getModifierMask(unsigned int keysym)
   XkbFreeKeyboard(xkb, XkbAllComponentsMask, True);
   return mask;
 }
+
+#if X11_LEGACY_TOUCH
+void QVNCX11View::enable_touch()
+{
+  int ev, err;
+  if (!XQueryExtension(m_display, "XInputExtension", &m_ximajor, &ev, &err)) {
+    AppManager::instance()->publishError(_("X Input extension not available."));
+    QGuiApplication::quit();
+  }
+
+  int major_ver = 2;
+  int minor_ver = 2;
+  if (XIQueryVersion(m_display, &major_ver, &minor_ver) != Success) {
+    AppManager::instance()->publishError(_("X Input 2 (or newer) is not available."));
+    QGuiApplication::quit();
+  }
+
+  if ((major_ver == 2) && (minor_ver < 2)) {
+    vlog.error(_("X Input 2.2 (or newer) is not available. Touch gestures will not be supported."));
+  }
+}
+
+void QVNCX11View::x11_change_touch_ownership(bool enable)
+{
+  unsigned char mask[XIMaskLen(XI_LASTEVENT)] = { 0 };
+  XIEventMask newmask;
+  newmask.mask = mask;
+  newmask.mask_len = sizeof(mask);
+
+  int num_masks;
+    XIEventMask *curmasks = XIGetSelectedEvents(m_display, m_window, &num_masks);
+    if (curmasks == nullptr) {
+      if (num_masks == -1) {
+        vlog.error(_("Unable to get X Input 2 event mask for window 0x%08lx"), m_window);
+        return;
+      }
+    }
+
+    // Our windows should only have a single mask, which allows us to
+    // simplify all the code handling the masks
+    if (num_masks > 1) {
+      XFree(curmasks);
+      vlog.error(_("Window 0x%08lx has more than one X Input 2 event mask"), m_window);
+      return;
+    }
+
+    newmask.deviceid = curmasks[0].deviceid;
+    assert(newmask.mask_len >= curmasks[0].mask_len);
+    memcpy(newmask.mask, curmasks[0].mask, curmasks[0].mask_len);
+    if (enable) {
+      XISetMask(newmask.mask, XI_TouchOwnership);
+    }
+    else {
+      XIClearMask(newmask.mask, XI_TouchOwnership);
+    }
+    XISelectEvents(m_display, m_window, &newmask, 1);
+
+    XFree(curmasks);
+}
+
+bool QVNCX11View::x11_grab_pointer(Window window)
+{
+  x11_change_touch_ownership(true);
+}
+
+void QVNCX11View::x11_ungrab_pointer(Window window)
+{
+  x11_change_touch_ownership(true);
+}
+#endif

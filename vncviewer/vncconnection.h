@@ -25,7 +25,7 @@ namespace rfb {
   class PixelFormat;
   class ModifiablePixelBuffer;
   class PlainPasswd;
-  class ScreenSet;
+  struct ScreenSet;
   class DecodeManager;
 }
 namespace network {

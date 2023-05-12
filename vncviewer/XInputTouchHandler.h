@@ -20,6 +20,7 @@
 #ifndef __XINPUTTOUCHHANDLER_H__
 #define __XINPUTTOUCHHANDLER_H__
 
+#include <X11/extensions/XInput2.h>
 #include "BaseTouchHandler.h"
 #include "GestureHandler.h"
 

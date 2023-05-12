@@ -5,8 +5,11 @@
 #include <map>
 #include "abstractvncview.h"
 
+//#define WIN_LEGACY_TOUCH 1
+#if WIN_LEGACY_TOUCH // Not necessary in Qt.
+class Win32TouchHandler;
+#endif
 class QTimer;
-class QMutex;
 
 class QVNCWinView : public QAbstractVNCView
 {
@@ -48,7 +51,6 @@ private:
   void *m_wndproc;
   bool m_hwndowner;
   HWND m_hwnd;
-  QMutex *m_mutex;
 
   bool m_altGrArmed;
   unsigned int m_altGrCtrlTime;
@@ -57,6 +59,10 @@ private:
   HCURSOR m_cursor;
   bool m_mouseTracking;
   HCURSOR m_defaultCursor;
+
+#if WIN_LEGACY_TOUCH // Not necessary in Qt.
+  Win32TouchHandler *m_touchHandler;
+#endif
 
   void fixParent();
   friend void *getWindowProc(QVNCWinView *host);

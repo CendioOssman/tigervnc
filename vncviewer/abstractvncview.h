@@ -12,8 +12,7 @@ class QScreen;
 class QClipboard;
 
 namespace rfb {
-  class Region;
-  class Point;
+  struct Point;
 }
 
 using DownMap = std::map<int, quint32>;
