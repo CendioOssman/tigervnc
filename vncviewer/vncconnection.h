@@ -8,7 +8,6 @@
 class QTimer;
 class QIODevice;
 class QMutex;
-class QVNCStream;
 class QSocketNotifier;
 class QMsgReader;
 class QMsgWriter;

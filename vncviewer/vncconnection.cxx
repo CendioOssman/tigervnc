@@ -2,6 +2,7 @@
 #include <QQmlEngine>
 #include <QLocalSocket>
 #include <QTcpSocket>
+#include <QDataStream>
 #include <QMutexLocker>
 #include <QTimer>
 #include <QCursor>
@@ -24,7 +25,6 @@
 #include "rfb/DecodeManager.h"
 #include "rfb/encodings.h"
 #include "rfb/util.h"
-#include "vncstream.h"
 #include "viewerconfig.h"
 #include "vncconnection.h"
 #include "parameters.h"

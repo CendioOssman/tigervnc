@@ -15,9 +15,6 @@
 #include "PlatformPixelBuffer.h"
 #include "msgwriter.h"
 #include "vncx11view.h"
-#if X11_LEGACY_TOUCH // Not necessary in Qt.
-#include "XInputTouchHandler.h"
-#endif
 
 #include <X11/Xlib.h>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -54,10 +51,6 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   , m_colorMap(0)
   , m_pixmap(0)
   , m_picture(0)
-#if X11_LEGACY_TOUCH // Not necessary in Qt.
-  , m_touchHandler(nullptr)
-  , m_ximajor(0)
-#endif
 {
   setAttribute(Qt::WA_NoBackground);
   setAttribute(Qt::WA_NoSystemBackground);
@@ -130,9 +123,6 @@ QVNCX11View::~QVNCX11View()
   if (m_pixmap) {
     XFreePixmap(m_display, m_pixmap);
   }
-#if X11_LEGACY_TOUCH // Not necessary in Qt.
-  delete m_touchHandler;
-#endif
 }
 
 qulonglong QVNCX11View::nativeWindowHandle() const
@@ -214,9 +204,6 @@ bool QVNCX11View::event(QEvent *e)
         XReparentWindow(m_display, m_window, winId(), 0, 0);
         XMapWindow(m_display, m_window);
         setMouseTracking(true);
-#if X11_LEGACY_TOUCH // Not necessary in Qt.
-	m_touchHandler = new XInputTouchHandler(m_window);
-#endif
       }
       break;
     case QEvent::KeyboardLayoutChange:
@@ -323,30 +310,9 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, long *
 {
   if (eventType == "xcb_generic_event_t") {
     xcb_generic_event_t* ev = static_cast<xcb_generic_event_t *>(message);
-    //uint16_t xcbEventType = ev->response_type & ~0x80;
     uint16_t xcbEventType = ev->response_type;
     //qDebug() << "QVNCX11View::nativeEvent: xcbEventType=" << xcbEventType << ",eventType=" << eventType;
-    if (xcbEventType == XCB_GE_GENERIC) {
-      //xcb_ge_generic_event_t* genericEvent = static_cast<xcb_ge_generic_event_t*>(message);
-      //quint16 geEventType = genericEvent->event_type;
-      //qDebug() << "QVNCX11View::nativeEvent: XCB_GE_GENERIC: xcbEventType=" << xcbEventType << ", geEventType=" << geEventType;
-      // XI_Inter/XI_Leave causes QEvent::WindowActivate/WindowDeactivate.
-//      if (geEventType == XI_Enter) {
-//        qDebug() << "######################################################### Enter ##############################################";
-//        grabPointer();
-//      }
-//      else if (geEventType == XI_Leave) {
-//        qDebug() << "######################################################### Leave ##############################################";
-//        ungrabPointer();
-//      }
-#if X11_LEGACY_TOUCH // Not necessary in Qt.
-      if (genericEvent->extension == m_ximajor) {
-        //m_touchHandler->processEvent(genericEvent);
-        return true;
-      }
-#endif
-    }
-    else if (xcbEventType == XCB_KEY_PRESS) {
+    if (xcbEventType == XCB_KEY_PRESS) {
       xcb_key_press_event_t* xevent = reinterpret_cast<xcb_key_press_event_t*>(message);
       //qDebug() << "QVNCX11View::nativeEvent: XCB_KEY_PRESS: keycode=0x" << Qt::hex << xevent->detail << ", state=0x" << xevent->state << ", mapped_keycode=0x" << code_map_keycode_to_qnum[xevent->detail];
 

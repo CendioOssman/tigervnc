@@ -6,11 +6,6 @@
 #include <X11/extensions/Xrender.h>
 #include "abstractvncview.h"
 
-//#define X11_LEGACY_TOUCH 1
-#if X11_LEGACY_TOUCH // Not necessary in Qt.
-class XInputTouchHandler;
-#endif
-
 class QVNCX11View : public QAbstractVNCView
 {
   Q_OBJECT
@@ -58,21 +53,9 @@ private:
   Colormap m_colorMap;
   Pixmap m_pixmap;
   Picture m_picture;
-  // Moved from touch.cxx
-#if X11_LEGACY_TOUCH // Not necessary in Qt.
-  XInputTouchHandler *m_touchHandler;
-  int m_ximajor;
-#endif
 
   Pixmap toPixmap(QBitmap &bitmap);
   unsigned int getModifierMask(unsigned int keysym);
-  // Moved from touch.h
-#if X11_LEGACY_TOUCH // Not necessary in Qt.
-  void enable_touch();
-  void x11_change_touch_ownership(bool enable);
-  bool x11_grab_pointer(Window window);
-  void x11_ungrab_pointer(Window window);
-#endif
 };
 
 #endif // VNCX11VIEW_H

@@ -6,7 +6,6 @@
 #include "rdr/Exception.h"
 #include "gettext.h"
 #include "i18n.h"
-#include "vncstream.h"
 #include "vncconnection.h"
 #include "viewerconfig.h"
 #include "abstractvncview.h"

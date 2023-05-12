@@ -20,9 +20,6 @@
 #include "msgwriter.h"
 #include "win32.h"
 #include "i18n.h"
-#if WIN_LEGACY_TOUCH // Not necessary in Qt.
-#include "Win32TouchHandler.h"
-#endif
 #include "viewerconfig.h"
 #include "vncwinview.h"
 
@@ -46,9 +43,6 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
  , m_cursor(nullptr)
  , m_mouseTracking(false)
  , m_defaultCursor(LoadCursor(NULL, IDC_ARROW))
-#if WIN_LEGACY_TOUCH // Not necessary in Qt.
- , m_touchHandler(nullptr)
-#endif
 {
   setAttribute(Qt::WA_NoBackground);
   setAttribute(Qt::WA_NoSystemBackground);
@@ -77,9 +71,6 @@ QVNCWinView::~QVNCWinView()
   if (m_hwnd && m_hwndowner) {
     DestroyWindow(m_hwnd);
   }
-#if WIN_LEGACY_TOUCH // Not necessary in Qt.
-  delete m_touchHandler;
-#endif
 
   m_altGrCtrlTimer->stop();
   delete m_altGrCtrlTimer;
@@ -315,9 +306,6 @@ bool QVNCWinView::event(QEvent *e)
     if (!m_hwnd) {
       m_hwnd = createWindow(HWND(winId()), GetModuleHandle(0));
       fixParent();
-#if WIN_LEGACY_TOUCH // Not necessary in Qt.
-      m_touchHandler = new Win32TouchHandler(m_hwnd);
-#endif
       m_hwndowner = m_hwnd != 0;
     }
     if (m_hwnd && !m_wndproc && GetParent(m_hwnd) == (HWND)winId()) {
@@ -425,12 +413,6 @@ bool QVNCWinView::nativeEvent(const QByteArray &eventType, void *message, long *
         return true;
       }
       break;
-#if WIN_LEGACY_TOUCH // Not necessary in Qt.
-    case WM_GESTURENOTIFY:
-    case WM_GESTURE:
-      m_touchHandler->processEvent(msg->message, msg->wParam, msg->lParam);
-      break;
-#endif
     default:
       break;
   }

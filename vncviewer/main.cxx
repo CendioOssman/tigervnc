@@ -5,7 +5,6 @@
 #include <QTranslator>
 #include <QMainWindow>
 #include <QDebug>
-#include "eventfilter.h"
 #include "config.h"
 #include "viewerconfig.h"
 #include "appmanager.h"
@@ -104,10 +103,6 @@ int main(int argc, char *argv[])
             QCoreApplication::exit(-1);
     }, Qt::QueuedConnection);
     engine.load(url);
-
-    EventListener eventListener;
-    QList<QObject*> qobjects = engine.rootObjects();
-    qobjects.first()->installEventFilter(&eventListener);
 
     return app.exec();
 }
