@@ -933,6 +933,9 @@ QScreen *QAbstractVNCView::getCurrentScreen()
 // EmulateMB::filterPointerEvent(const rfb::Point& pos, int buttonMask)
 void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
 {
+  if (::viewOnly) {
+    return;
+  }
   rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
 
   // Just pass through events if the emulate setting is disabled
@@ -1008,6 +1011,9 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
 //EmulateMB::sendAction(const rfb::Point& pos, int buttonMask, int action)
 void QAbstractVNCView::sendAction(const rfb::Point& pos, int buttonMask, int action)
 {
+  if (::viewOnly) {
+    return;
+  }
   assert(action != 0);
   if (action < 0) {
     m_emulatedButtonMask &= ~(1 << ((-action) - 1));
@@ -1033,6 +1039,9 @@ int QAbstractVNCView::createButtonMask(int buttonMask)
 // EmulateMB::handleTimeout(rfb::Timer *t)
 void QAbstractVNCView::handleMouseButtonEmulationTimeout()
 {
+  if (::viewOnly) {
+    return;
+  }
   if ((m_state > 10) || (m_state < 0)) {
     throw rfb::Exception(_("Invalid state for 3 button emulation"));
   }
