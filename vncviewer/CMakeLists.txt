@@ -10,7 +10,6 @@ find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Quick Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Quick Widgets REQUIRED)
 
 if (WIN32)
-  set(APP_ICONS "${CMAKE_CURRENT_SOURCE_DIR}/winvnc.ico")
   set(OS_DEP_SOURCES
       vncwinview.cxx
       vncwinview.h
@@ -66,12 +65,16 @@ set(PROJECT_SOURCES
         Surface.h
         Surface.cxx
         qml.qrc
-        ${APP_ICONS}
         ${OS_DEP_SOURCES}
 )
 
 if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
   set_target_properties(vncviewer PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
+
+if(WIN32)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+  configure_file(vncviewer.rc.in vncviewer.rc)
 endif()
 
 if(WIN32)
@@ -87,7 +90,7 @@ else()
 endif()
 
 if(QT_VERSION_MAJOR GREATER_EQUAL 6)
-    set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/vncviewer.rc")
+    set(app_icon_resource_windows "${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc")
     qt_add_executable(vncviewer
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
@@ -101,7 +104,7 @@ else()
         )
     else()
         if (WIN32)
-          set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_SOURCE_DIR}/vncviewer.rc")
+          set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc")
           add_executable(vncviewer
             ${PROJECT_SOURCES}
             ${APP_ICON_RESOURCE_WINDOWS}
