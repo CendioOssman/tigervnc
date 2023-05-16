@@ -77,9 +77,7 @@ extern rfb::BoolParameter fullscreenSystemKeys;
 extern rfb::BoolParameter alertOnFatalError;
 extern rfb::BoolParameter reconnectOnError;
 
-#ifndef WIN32
 extern rfb::StringParameter via;
-#endif
 
 void saveViewerParameters(const char *filename, const char *servername=nullptr);
 char* loadViewerParameters(const char *filename);

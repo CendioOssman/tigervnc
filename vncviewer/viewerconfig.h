@@ -48,10 +48,18 @@ class ViewerConfig : public QObject
   Q_PROPERTY(bool shared READ shared WRITE setShared NOTIFY sharedChanged)
   Q_PROPERTY(bool reconnectOnError READ reconnectOnError WRITE setReconnectOnError NOTIFY reconnectOnErrorChanged)
   //
+  Q_PROPERTY(bool listenModeEnabled READ listenModeEnabled CONSTANT)
   Q_PROPERTY(QStringList serverHistory READ serverHistory WRITE setServerHistory NOTIFY serverHistoryChanged)
+  Q_PROPERTY(QString aboutText READ aboutText CONSTANT)
+  Q_PROPERTY(QString serverName READ serverName CONSTANT)
+  Q_PROPERTY(QString serverHost READ serverHost CONSTANT)
+  Q_PROPERTY(int serverPort READ serverPort CONSTANT);
+  Q_PROPERTY(QString gatewayHost READ gatewayHost CONSTANT);
+  Q_PROPERTY(int gatewayLocalPort READ gatewayLocalPort CONSTANT);
 
 public:
   const char* SERVER_HISTORY="tigervnc.history";
+  static const int SERVER_PORT_OFFSET = 5900; // ??? 5500;
   enum FullScreenMode {
     FSCurrent,
     FSAll,
@@ -125,7 +133,7 @@ public:
   void setFullScreen(bool value);
   ViewerConfig::FullScreenMode fullScreenMode() const;
   void setFullScreenMode(ViewerConfig::FullScreenMode value);
-  QList<int> selectedScreens() const; // { return m_selectedScreens; }
+  QList<int> selectedScreens() const;
   void setSelectedScreens(QList<int> value);
   //
   bool shared() const;
@@ -135,6 +143,15 @@ public:
   //
   QStringList serverHistory() const { return m_serverHistory; }
   void setServerHistory(QStringList history);
+  QString serverName() const { return m_serverName; }
+  QString aboutText();
+  void usage();
+  bool listenModeEnabled() const;
+  QString serverHost() const { return m_serverHost; }
+  int serverPort() const { return m_serverPort; }
+  QString gatewayHost() const;
+  int gatewayLocalPort() const { return m_gatewayLocalPort; }
+  void setAccessPoint(QString accessPoint);
 
 signals:
   void openGLFBOenabledChanged(bool value);
@@ -175,6 +192,7 @@ signals:
   void reconnectOnErrorChanged(bool value);
   //
   void serverHistoryChanged(QStringList history);
+  void accessPointChanged(QString accessPoint);
 
 public slots:
   bool installedSecurity(int type) const;
@@ -199,7 +217,15 @@ private:
   bool m_authVNC;
   bool m_authPlain;
   QStringList m_serverHistory;
+  QString m_serverName;
+  QString m_serverHost;
+  int m_serverPort;
+  int m_gatewayLocalPort;
   ViewerConfig();
+  bool potentiallyLoadConfigurationFile(QString vncServerName);
+  QString getlocaledir();
+  void initializeLogger();
+  void parserServerName();
 };
 
 #endif // VIEWERCONFIG_H

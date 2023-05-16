@@ -1,8 +1,13 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <QQmlEngine>
 #include <QLocalSocket>
 #include <QTcpSocket>
 #include <QScreen>
 #include <QDeadlineTimer>
+#include <QProcess>
 #include "rdr/Exception.h"
 #include "gettext.h"
 #include "i18n.h"
@@ -10,6 +15,8 @@
 #include "viewerconfig.h"
 #include "abstractvncview.h"
 #include "appmanager.h"
+#include "network/TcpSocket.h"
+#include "parameters.h"
 
 #if defined(WIN32)
 #include "vncwinview.h"
@@ -21,46 +28,51 @@
 
 AppManager *AppManager::m_manager;
 
+#if defined(WIN32)
+PROCESS_INFORMATION pi;
+#endif
+
 AppManager::AppManager()
-    : QObject(nullptr)
-    , m_error(0)
-    , m_worker(new QVNCConnection)
-    , m_view(nullptr)
+ : QObject(nullptr)
+ , m_error(0)
+ , m_worker(new QVNCConnection)
+ , m_view(nullptr)
 {
-    m_worker->start();
-    connect(m_worker, &QVNCConnection::credentialRequested, this, [this](bool secured, bool userNeeded, bool passwordNeeded) {
-        emit credentialRequested(secured, userNeeded, passwordNeeded);
-    }, Qt::QueuedConnection);
-    connect(this, &AppManager::connectToServerRequested, m_worker, &QVNCConnection::connectToServer, Qt::QueuedConnection);
-    connect(this, &AppManager::authenticateRequested, m_worker, &QVNCConnection::authenticate, Qt::QueuedConnection);
-    connect(m_worker, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow, Qt::BlockingQueuedConnection);
-    connect(this, &AppManager::resetConnectionRequested, m_worker, &QVNCConnection::resetConnection, Qt::QueuedConnection);
+  m_worker->start();
+  connect(m_worker, &QVNCConnection::credentialRequested, this, [this](bool secured, bool userNeeded, bool passwordNeeded) {
+    emit credentialRequested(secured, userNeeded, passwordNeeded);
+  }, Qt::QueuedConnection);
+  connect(this, &AppManager::connectToServerRequested, m_worker, &QVNCConnection::connectToServer, Qt::QueuedConnection);
+  connect(this, &AppManager::authenticateRequested, m_worker, &QVNCConnection::authenticate, Qt::QueuedConnection);
+  connect(m_worker, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow, Qt::BlockingQueuedConnection);
+  connect(this, &AppManager::resetConnectionRequested, m_worker, &QVNCConnection::resetConnection, Qt::QueuedConnection);
 }
 
 AppManager::~AppManager()
 {
-    m_worker->exit();
+  m_worker->exit();
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-    m_worker->wait(QDeadlineTimer(1000));
+  m_worker->wait(QDeadlineTimer(1000));
 #else
-    m_worker->wait(1000);
+  m_worker->wait(1000);
 #endif
-    m_worker->deleteLater();
-    delete m_view;
+  m_worker->deleteLater();
+  delete m_view;
 }
 
 int AppManager::initialize()
 {
-    qRegisterMetaType<QAbstractSocket::SocketError>("QAbstractSocket::SocketError");
-    qRegisterMetaType<QAbstractSocket::SocketState>("QAbstractSocket::SocketState");
-    qmlRegisterType<QVNCConnection>("Qt.TigerVNC", 1, 0, "VNCConnection");
-    m_manager = new AppManager();
-    qmlRegisterSingletonType<AppManager>("Qt.TigerVNC", 1, 0, "AppManager", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
-        Q_UNUSED(engine)
-        Q_UNUSED(scriptEngine)
-        return m_manager;
-    });
-    return 0;
+  qRegisterMetaType<QAbstractSocket::SocketError>("QAbstractSocket::SocketError");
+  qRegisterMetaType<QAbstractSocket::SocketState>("QAbstractSocket::SocketState");
+  qRegisterMetaType<QProcess::ProcessError>("QProcess::ProcessError");
+  qmlRegisterType<QVNCConnection>("Qt.TigerVNC", 1, 0, "VNCConnection");
+  m_manager = new AppManager();
+  qmlRegisterSingletonType<AppManager>("Qt.TigerVNC", 1, 0, "AppManager", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
+    Q_UNUSED(engine)
+    Q_UNUSED(scriptEngine)
+    return m_manager;
+  });
+  return 0;
 }
 
 void AppManager::connectToServer(const QString addressport)
@@ -70,17 +82,17 @@ void AppManager::connectToServer(const QString addressport)
 
 void AppManager::authenticate(QString user, QString password)
 {
-    emit authenticateRequested(user, password);
+  emit authenticateRequested(user, password);
 }
 
 void AppManager::resetConnection()
 {
-    emit resetConnectionRequested();
+  emit resetConnectionRequested();
 }
 
-void AppManager::publishError(const QString &message)
+void AppManager::publishError(const QString &message, bool quit)
 {
-    emit errorOcurred(m_error++, message);
+  emit errorOcurred(m_error++, message, quit);
 }
 
 void AppManager::openVNCWindow(int width, int height, QString name)
@@ -96,7 +108,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
     m_view = new QVNCX11View();
   }
   else if (platform == "wayland") {
-    ; // TODO
+    ;
   }
 #endif
 
@@ -105,7 +117,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   }
 
   m_view->resize(width, height);
-  m_view->setWindowTitle(QString::asprintf("%.240s - TigerVNC", name.toStdString().c_str()));
+  m_view->setWindowTitle(QString(_("%1 - TigerVNC")).arg(name));
   m_view->show();
   if (ViewerConfig::config()->fullScreen()) {
     m_view->fullscreen(true);
@@ -145,7 +157,7 @@ void AppManager::openAboutDialog()
 }
 
 QVNCApplication::QVNCApplication(int &argc, char **argv)
-    : QApplication(argc, argv)
+  : QApplication(argc, argv)
 {
 }
 
@@ -155,23 +167,23 @@ QVNCApplication::~QVNCApplication()
 
 bool QVNCApplication::notify(QObject *receiver, QEvent *e)
 {
-    try {
-        return QApplication::notify(receiver, e);
+  try {
+    return QApplication::notify(receiver, e);
+  }
+  catch (rdr::Exception &e) {
+    qDebug() << "Error: " << e.str();
+    AppManager::instance()->publishError(e.str());
+    if (e.abort) {
+      quit();
     }
-    catch (rdr::Exception &e) {
-        qDebug() << "Error: " << e.str();
-        AppManager::instance()->publishError(e.str());
-        if (e.abort) {
-          quit();
-        }
-    }
-    catch (int &e) {
-        qDebug() << "Error: " << strerror(e);
-        AppManager::instance()->publishError(strerror(e));
-    }
-    catch (...) {
-        qDebug() << "Error: (unhandled)";
-    }
-    return true;
+  }
+  catch (int &e) {
+    qDebug() << "Error: " << strerror(e);
+    AppManager::instance()->publishError(strerror(e));
+  }
+  catch (...) {
+    qDebug() << "Error: (unhandled)";
+  }
+  return true;
 }
 

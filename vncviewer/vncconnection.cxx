@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <QGuiApplication>
 #include <QQmlEngine>
 #include <QLocalSocket>
@@ -6,6 +10,7 @@
 #include <QMutexLocker>
 #include <QTimer>
 #include <QCursor>
+#include <QProcess>
 #include <time.h>
 #include "rfb/Hostname.h"
 #include "rfb/CConnection.h"
@@ -63,7 +68,7 @@ class QVncAuthHandler : public QVNCPacketHandler
 {
 public:
   QVncAuthHandler(QVNCConnection *cc = nullptr)
-    : QVNCPacketHandler(cc)
+   : QVNCPacketHandler(cc)
   {
   }
   bool processMsg(int state) override
@@ -111,7 +116,7 @@ class QPlainAuthHandler : public QVNCPacketHandler
 {
 public:
   QPlainAuthHandler(QVNCConnection *cc = nullptr)
-    : QVNCPacketHandler(cc)
+   : QVNCPacketHandler(cc)
   {
   }
   bool processMsg(int state) override
@@ -181,64 +186,66 @@ struct VeNCryptStatus {
 };
 
 QVNCConnection::QVNCConnection()
-  : QThread(nullptr)
-  , m_inProcessing(false)
-  , m_blocking(false)
-  , m_mutex(new QMutex)
-  , m_socket(nullptr)
-  , m_alive(false)
-  , m_secured(false)
-  , m_host("")
-  , m_port(5900)
-  , m_shared(::shared)
-  , m_state(rfb::CConnection::RFBSTATE_PROTOCOL_VERSION)
-  , m_serverParams(new rfb::ServerParams())
-  , m_security(new rfb::SecurityClient())
-  , m_securityType(rfb::secTypeInvalid)
-  , m_socketNotifier(nullptr)
-  , m_socketErrorNotifier(nullptr)
-  , m_packetHandler(nullptr)
-  , m_encStatus(new VeNCryptStatus)
-  , m_istream(nullptr)
-  , m_ostream(nullptr)
-  , m_reader(nullptr)
-  , m_writer(nullptr)
-  , m_pendingPFChange(false)
-  , m_updateCount(0)
-  , m_pixelCount(0)
-  , m_pendingPF(new rfb::PixelFormat)
-  , m_serverPF(new rfb::PixelFormat)
+ : QThread(nullptr)
+ , m_inProcessing(false)
+ , m_blocking(false)
+ , m_mutex(new QMutex)
+ , m_socket(nullptr)
+ , m_alive(false)
+ , m_secured(false)
+ , m_host("")
+ , m_port(5900)
+ , m_shared(::shared)
+ , m_state(rfb::CConnection::RFBSTATE_PROTOCOL_VERSION)
+ , m_serverParams(new rfb::ServerParams())
+ , m_security(new rfb::SecurityClient())
+ , m_securityType(rfb::secTypeInvalid)
+ , m_socketNotifier(nullptr)
+ , m_socketErrorNotifier(nullptr)
+ , m_packetHandler(nullptr)
+ , m_encStatus(new VeNCryptStatus)
+ , m_istream(nullptr)
+ , m_ostream(nullptr)
+ , m_reader(nullptr)
+ , m_writer(nullptr)
+ , m_pendingPFChange(false)
+ , m_updateCount(0)
+ , m_pixelCount(0)
+ , m_pendingPF(new rfb::PixelFormat)
+ , m_serverPF(new rfb::PixelFormat)
 #if defined(__APPLE__)
-    , m_fullColourPF(new rfb::PixelFormat(32, 24, false, true, 255, 255, 255, 0, 8, 16))
+ , m_fullColourPF(new rfb::PixelFormat(32, 24, false, true, 255, 255, 255, 0, 8, 16))
 #else
-  , m_fullColourPF(new rfb::PixelFormat(32, 24, false, true, 255, 255, 255, 16, 8, 0))
+ , m_fullColourPF(new rfb::PixelFormat(32, 24, false, true, 255, 255, 255, 16, 8, 0))
 #endif
-  , m_nextPF(new rfb::PixelFormat)
-  , m_preferredEncoding(rfb::encodingTight)
-  , m_compressLevel(2)
-  , m_qualityLevel(-1)
-  , m_encodingChange(false)
-  , m_firstUpdate(true)
-  , m_pendingUpdate(false)
-  , m_continuousUpdates(false)
-  , m_forceNonincremental(true)
-  , m_framebuffer(nullptr)
-  , m_decoder(new rfb::DecodeManager())
-  , m_hasLocalClipboard(false)
-  , m_unsolicitedClipboardAttempt(false)
-  , m_pendingSocketEvent(false)
-  , m_user(nullptr)
-  , m_password(nullptr)
-  , m_formatChange(false)
-  , m_supportsLocalCursor(true)
-  , m_supportsCursorPosition(true)
-  , m_supportsDesktopResize(true)
-  , m_supportsLEDState(true)
-  , m_lastServerEncoding((unsigned int)-1)
-  , m_updateStartPos(0)
-  , m_bpsEstimate(20000000)
-  , m_updateTimer(nullptr)
-  , m_cursor(nullptr)
+ , m_nextPF(new rfb::PixelFormat)
+ , m_preferredEncoding(rfb::encodingTight)
+ , m_compressLevel(2)
+ , m_qualityLevel(-1)
+ , m_encodingChange(false)
+ , m_firstUpdate(true)
+ , m_pendingUpdate(false)
+ , m_continuousUpdates(false)
+ , m_forceNonincremental(true)
+ , m_framebuffer(nullptr)
+ , m_decoder(new rfb::DecodeManager())
+ , m_hasLocalClipboard(false)
+ , m_unsolicitedClipboardAttempt(false)
+ , m_pendingSocketEvent(false)
+ , m_user(nullptr)
+ , m_password(nullptr)
+ , m_formatChange(false)
+ , m_supportsLocalCursor(true)
+ , m_supportsCursorPosition(true)
+ , m_supportsDesktopResize(true)
+ , m_supportsLEDState(true)
+ , m_lastServerEncoding((unsigned int)-1)
+ , m_updateStartPos(0)
+ , m_bpsEstimate(20000000)
+ , m_updateTimer(nullptr)
+ , m_cursor(nullptr)
+ , m_tunnelFactory(nullptr)
+ , m_closing(false)
 {
   moveToThread(this);
   connect(this, &QVNCConnection::socketNotified, this, &QVNCConnection::startProcessing);
@@ -249,6 +256,10 @@ QVNCConnection::QVNCConnection()
 
   if (!::noJpeg) {
     setQualityLevel(::qualityLevel);
+  }
+
+  if (::listenMode) {
+    listen();
   }
 }
 
@@ -266,6 +277,16 @@ QVNCConnection::~QVNCConnection()
   delete m_fullColourPF;
   delete m_nextPF;
   delete m_cursor;
+  delete m_tunnelFactory;
+}
+
+void QVNCConnection::exit(int errorCode)
+{
+  m_closing = true;
+  if (m_tunnelFactory) {
+    m_tunnelFactory->close();
+  }
+  QThread::exit(errorCode);
 }
 
 void QVNCConnection::run()
@@ -273,9 +294,17 @@ void QVNCConnection::run()
   m_updateTimer = new QTimer;
   m_updateTimer->setSingleShot(true);
   connect(m_updateTimer, &QTimer::timeout, this, [this]() {
-    emit framebufferUpdateEnd();
+    framebufferUpdateEnd();
   });
   m_updateTimer->moveToThread(this);
+
+  QString gatewayHost = ViewerConfig::config()->gatewayHost();
+  QString remoteHost = ViewerConfig::config()->serverHost();
+  if (!gatewayHost.isEmpty() && !remoteHost.isEmpty()) {
+    m_tunnelFactory = new TunnelFactory;
+    m_tunnelFactory->start();
+    m_tunnelFactory->wait(QDeadlineTimer(20000));
+  }
 
   exec();
 }
@@ -293,9 +322,11 @@ void QVNCConnection::bind(int fd)
 
   delete m_socketErrorNotifier;
   m_socketErrorNotifier = new QSocketNotifier(fd, QSocketNotifier::Exception);
-  QObject::connect(m_socketErrorNotifier, &QSocketNotifier::activated, this, [](int fd) {
+  QObject::connect(m_socketErrorNotifier, &QSocketNotifier::activated, this, [this](int fd) {
     Q_UNUSED(fd)
-    throw rdr::Exception("CConnection::bind: socket error.");
+    if (!m_closing) {
+      throw rdr::Exception("CConnection::bind: socket error.");
+    }
   });
 }
 
@@ -388,6 +419,63 @@ void QVNCConnection::connectToServer(const QString addressport)
     bind(m_socket->getFd());
     delete m_encStatus;
     m_encStatus = new VeNCryptStatus;
+  }
+}
+
+void QVNCConnection::listen()
+{
+  std::list<network::SocketListener*> listeners;
+  try {
+    bool ok;
+    int port = ViewerConfig::config()->serverName().toInt(&ok);
+    if (!ok) {
+      port = 5500;
+    }
+    network::createTcpListeners(&listeners, 0, port);
+
+    vlog.info(_("Listening on port %d"), port);
+
+    /* Wait for a connection */
+    while (m_socket == nullptr) {
+      fd_set rfds;
+      FD_ZERO(&rfds);
+      for (network::SocketListener *listener : listeners) {
+        FD_SET(listener->getFd(), &rfds);
+      }
+
+      int n = select(FD_SETSIZE, &rfds, 0, 0, 0);
+      if (n < 0) {
+        if (errno == EINTR) {
+          vlog.debug("Interrupted select() system call");
+          continue;
+        }
+        else {
+          throw rdr::SystemException("select", errno);
+        }
+      }
+
+      for (network::SocketListener *listener : listeners) {
+        if (FD_ISSET(listener->getFd(), &rfds)) {
+          m_socket = listener->accept();
+          if (m_socket) {
+            /* Got a connection */
+            bind(m_socket->getFd());
+            delete m_encStatus;
+            m_encStatus = new VeNCryptStatus;
+            break;
+          }
+        }
+      }
+    }
+  }
+  catch (rdr::Exception &e) {
+    vlog.error("%s", e.str());
+    QCoreApplication::exit(1);
+  }
+
+  while (!listeners.empty()) {
+    delete listeners.back();
+    listeners.pop_back();
   }
 }
 
@@ -710,6 +798,9 @@ bool QVNCConnection::processSecurityMsg()
     setBlocking(true);
     emit credentialRequested(m_secured, userNeeded, passwordNeeded);
   }
+  else {
+    m_state = rfb::CConnection::RFBSTATE_SECURITY_RESULT;
+  }
   return true;
 }
 
@@ -989,9 +1080,12 @@ bool QVNCConnection::getCredentialProperties(bool &userNeeded, bool &passwordNee
 {
   // This method is based on common/rfb/SecurityClient.cxx
   switch (m_securityType) {
-    case rfb::secTypeNone:
     default:
       return false;
+    case rfb::secTypeNone:
+      userNeeded = false;
+      passwordNeeded = false;
+      return true;
     case rfb::secTypeVncAuth:
       userNeeded = false;
       passwordNeeded = true;
@@ -1660,23 +1754,23 @@ QString QVNCConnection::infoText()
   QString infoText;
   char pfStr[100];
 
-  infoText += QString::asprintf(_("Desktop name: %.80s\n"), m_serverParams->name());
-  infoText += QString::asprintf(_("Host: %.80s port: %d\n"), m_host.toStdString().c_str(), m_port);
-  infoText += QString::asprintf(_("Size: %d x %d\n"), m_serverParams->width(), m_serverParams->height());
+  infoText += QString(_("Desktop name: %1\n")).arg(m_serverParams->name());
+  infoText += QString(_("Host: %1 port: %2\n")).arg(m_host).arg(m_port);
+  infoText += QString(_("Size: %1 x %2\n")).arg(m_serverParams->width()).arg(m_serverParams->height());
 
   // TRANSLATORS: Will be filled in with a string describing the
   // protocol pixel format in a fairly language neutral way
   m_serverParams->pf().print(pfStr, 100);
-  infoText += QString::asprintf(_("Pixel format: %s\n"), pfStr);
+  infoText += QString(_("Pixel format: %1\n")).arg(pfStr);
 
   // TRANSLATORS: Similar to the earlier "Pixel format" string
   m_serverPF->print(pfStr, 100);
-  infoText += QString::asprintf(_("(server default %s)\n"), pfStr);
-  infoText += QString::asprintf(_("Requested encoding: %s\n"), rfb::encodingName(m_preferredEncoding));
-  infoText += QString::asprintf(_("Last used encoding: %s\n"), rfb::encodingName(m_lastServerEncoding));
-  infoText += QString::asprintf(_("Line speed estimate: %d kbit/s\n"), (int)(m_bpsEstimate/1000));
-  infoText += QString::asprintf(_("Protocol version: %d.%d\n"), m_serverParams->majorVersion, m_serverParams->minorVersion);
-  infoText += QString::asprintf(_("Security method: %s\n"), rfb::secTypeName(m_securityType));
+  infoText += QString(_("(server default %1)\n")).arg(pfStr);
+  infoText += QString(_("Requested encoding: %1\n")).arg(rfb::encodingName(m_preferredEncoding));
+  infoText += QString(_("Last used encoding: %1\n")).arg(rfb::encodingName(m_lastServerEncoding));
+  infoText += QString(_("Line speed estimate: %1 kbit/s\n")).arg((int)(m_bpsEstimate/1000));
+  infoText += QString(_("Protocol version: %1.%2\n")).arg(m_serverParams->majorVersion).arg(m_serverParams->minorVersion);
+  infoText += QString(_("Security method: %1\n")).arg(rfb::secTypeName(m_securityType));
 
   return infoText;
 }
@@ -1688,4 +1782,117 @@ void QVNCConnection::setCompressLevel(int level)
 
   m_compressLevel = level;
   m_encodingChange = true;
+}
+
+TunnelFactory::TunnelFactory()
+ : QThread(nullptr)
+ , m_errorOccurrrd(false)
+ , m_error(QProcess::FailedToStart)
+#if defined(WIN32)
+ , m_command(QString(qgetenv("SYSTEMROOT")) + "\\System32\\OpenSSH\\ssh.exe")
+#else
+ , m_command("/usr/bin/ssh")
+ , m_operationSocketName("vncviewer-tun-" + QString::number(QCoreApplication::applicationPid()))
+#endif
+ , m_process(nullptr)
+{
+}
+
+void TunnelFactory::run()
+{
+  QString gatewayHost = ViewerConfig::config()->gatewayHost();
+  if (gatewayHost.isEmpty()) {
+    return;
+  }
+  QString remoteHost = ViewerConfig::config()->serverHost();
+  if (remoteHost.isEmpty()) {
+    return;
+  }
+  int remotePort = ViewerConfig::config()->serverPort();
+  int localPort = ViewerConfig::config()->gatewayLocalPort();
+
+  QString viacmd(qgetenv("VNC_VIA_CMD"));
+  qputenv("G", gatewayHost.toUtf8());
+  qputenv("H", remoteHost.toUtf8());
+  qputenv("R", QString::number(remotePort).toUtf8());
+  qputenv("L", QString::number(localPort).toUtf8());
+
+  QStringList args;
+  if (viacmd.isEmpty()) {
+    args = QStringList({
+#if !defined(WIN32)
+                         "-fnNTM",
+                         "-S",
+                         m_operationSocketName,
+#endif
+                         "-L",
+                         QString::number(localPort) + ":" + remoteHost + ":" + QString::number(remotePort),
+                         gatewayHost,
+                       });
+  }
+  else {
+#if !defined(WIN32)
+    /* Compatibility with TigerVNC's method. */
+    viacmd.replace('%', '$');
+#endif
+    args = QProcess::splitCommand(viacmd);
+    m_command = args.length() > 0 ? args[0] : "";
+    args.removeFirst();
+  }
+  delete m_process;
+  m_process = new QProcess;
+
+#if !defined(WIN32)
+  if (!m_process->execute(m_command, args)) {
+    QString serverName = "localhost::" + QString::number(ViewerConfig::config()->gatewayLocalPort());
+    ViewerConfig::config()->setAccessPoint(serverName);
+  }
+  else {
+    m_errorOccurrrd = true;
+  }
+#else
+  connect(m_process, &QProcess::started, this, []() {
+    QString serverName = "localhost::" + QString::number(ViewerConfig::config()->gatewayLocalPort());
+    ViewerConfig::config()->setAccessPoint(serverName);
+  });
+  connect(m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError e) {
+    m_errorOccurrrd = true;
+    m_error = e;
+  });
+  m_process->start(m_command, args);
+  while (true) {
+    qDebug() << "state=" << m_process->state();
+    if (m_process->state() == QProcess::Running || m_errorOccurrrd) {
+      break;
+    }
+    QThread::usleep(10);
+  }
+#endif
+}
+
+TunnelFactory::~TunnelFactory()
+{
+  close();
+  delete m_process;
+}
+
+void TunnelFactory::close()
+{
+#if !defined(WIN32)
+  if (m_process) {
+    QString gatewayHost = ViewerConfig::config()->gatewayHost();
+    QStringList args({ "-S",
+                       m_operationSocketName,
+                       "-O",
+                       "exit",
+                       gatewayHost,
+                     });
+    QProcess process;
+    process.start(m_command, args);
+    QThread::msleep(500);
+  }
+#endif
+  if (m_process && m_process->state() != QProcess::NotRunning) {
+    m_process->kill();
+  }
 }

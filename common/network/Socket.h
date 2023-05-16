@@ -91,6 +91,9 @@ namespace network {
 
     // setFilter() applies the specified filter to all new connections
     void setFilter(ConnectionFilter* f) {filter = f;}
+#if defined(WIN32)
+    unsigned long long
+#endif
     int getFd() {return fd;}
 
   protected:

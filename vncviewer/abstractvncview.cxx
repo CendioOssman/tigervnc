@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <QDialog>
 #include <QMenu>
 #include <QPushButton>
@@ -43,7 +47,7 @@ class QMenuSeparator : public QAction
 {
 public:
   QMenuSeparator(QWidget *parent = nullptr)
-    : QAction(parent)
+   : QAction(parent)
   {
     setSeparator(true);
   }
@@ -53,7 +57,7 @@ class QCheckableAction : public QAction
 {
 public:
   QCheckableAction(const QString &text, QWidget *parent = nullptr)
-    : QAction(text, parent)
+   : QAction(text, parent)
   {
     setCheckable(true);
   }
@@ -63,7 +67,7 @@ class QFullScreenAction : public QCheckableAction
 {
 public:
   QFullScreenAction(const QString &text, QWidget *parent = nullptr)
-    : QCheckableAction(text, parent)
+   : QCheckableAction(text, parent)
   {
     connect(this, &QAction::toggled, this, [](bool checked) {
       AppManager::instance()->view()->fullscreen(checked);
@@ -80,7 +84,7 @@ class QRevertSizeAction : public QAction
 {
 public:
   QRevertSizeAction(const QString &text, QWidget *parent = nullptr)
-    : QAction(text, parent)
+   : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
       QAbstractVNCView *view = AppManager::instance()->view();
@@ -99,9 +103,9 @@ class QKeyToggleAction : public QCheckableAction
 {
 public:
   QKeyToggleAction(const QString &text, int keyCode, quint32 keySym, QWidget *parent = nullptr)
-    : QCheckableAction(text, parent)
-    , m_keyCode(keyCode)
-    , m_keySym(keySym)
+   : QCheckableAction(text, parent)
+   , m_keyCode(keyCode)
+   , m_keySym(keySym)
   {
     connect(this, &QAction::toggled, this, [this](bool checked) {
       QAbstractVNCView *view = AppManager::instance()->view();
@@ -123,7 +127,7 @@ class QMenuKeyAction : public QAction
 {
 public:
   QMenuKeyAction(const QString &text, QWidget *parent = nullptr)
-    : QAction(text, parent)
+   : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
       int dummy;
@@ -141,7 +145,7 @@ class QCtrlAltDelAction : public QAction
 {
 public:
   QCtrlAltDelAction(const QString &text, QWidget *parent = nullptr)
-    : QAction(text, parent)
+   : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
       QAbstractVNCView *view = AppManager::instance()->view();
@@ -159,7 +163,7 @@ class QMinimizeAction : public QAction
 {
 public:
   QMinimizeAction(const QString &text, QWidget *parent = nullptr)
-    : QAction(text, parent)
+   : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
       QAbstractVNCView *view = AppManager::instance()->view();
@@ -172,7 +176,7 @@ class QDisconnectAction : public QAction
 {
 public:
   QDisconnectAction(const QString &text, QWidget *parent = nullptr)
-    : QAction(text, parent)
+   : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
       QApplication::quit();
@@ -184,7 +188,7 @@ class QOptionDialogAction : public QAction
 {
 public:
   QOptionDialogAction(const QString &text, QWidget *parent = nullptr)
-    : QAction(text, parent)
+   : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
       AppManager::instance()->openOptionDialog();
@@ -196,7 +200,7 @@ class QRefreshAction : public QAction
 {
 public:
   QRefreshAction(const QString &text, QWidget *parent = nullptr)
-    : QAction(text, parent)
+   : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
 #if !defined(__APPLE__)
@@ -212,7 +216,7 @@ class QInfoDialogAction : public QAction
 {
 public:
   QInfoDialogAction(const QString &text, QWidget *parent = nullptr)
-    : QAction(text, parent)
+   : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
       AppManager::instance()->openInfoDialog();
@@ -224,7 +228,7 @@ class QAboutDialogAction : public QAction
 {
 public:
   QAboutDialogAction(const QString &text, QWidget *parent = nullptr)
-    : QAction(text, parent)
+   : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
       AppManager::instance()->openAboutDialog();
@@ -367,29 +371,29 @@ static const signed char stateTab[11][5][3] = {
 };
 
 QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
-  : QWidget(parent, f)
-  , m_devicePixelRatio(devicePixelRatioF())
-  , m_menuKeySym(XK_F8)
-  , m_contextMenu(nullptr)
-  , m_firstLEDState(false)
-  , m_pendingServerClipboard(false)
-  , m_pendingClientClipboard(false)
-  , m_clipboardSource(0)
-  , m_firstUpdate(true)
-  , m_delayedFullscreen(false)
-  , m_delayedDesktopSize(false)
-  , m_keyboardGrabbed(false)
-  , m_mouseGrabbed(false)
-  , m_resizeTimer(new QTimer)
-  , m_delayedInitializeTimer(new QTimer)
-  , m_overlayTipCloseTimer(new QTimer)
-  , m_fullscreenEnabled(false)
-  , m_mouseButtonEmulationTimer(new QTimer)
-  , m_state(0)
-  , m_emulatedButtonMask(0)
-  , m_lastButtonMask(0)
-  , m_lastPos(new rfb::Point)
-  , m_origPos(new rfb::Point)
+ : QWidget(parent, f)
+ , m_devicePixelRatio(devicePixelRatioF())
+ , m_menuKeySym(XK_F8)
+ , m_contextMenu(nullptr)
+ , m_firstLEDState(false)
+ , m_pendingServerClipboard(false)
+ , m_pendingClientClipboard(false)
+ , m_clipboardSource(0)
+ , m_firstUpdate(true)
+ , m_delayedFullscreen(false)
+ , m_delayedDesktopSize(false)
+ , m_keyboardGrabbed(false)
+ , m_mouseGrabbed(false)
+ , m_resizeTimer(new QTimer)
+ , m_delayedInitializeTimer(new QTimer)
+ , m_overlayTipCloseTimer(new QTimer)
+ , m_fullscreenEnabled(false)
+ , m_mouseButtonEmulationTimer(new QTimer)
+ , m_state(0)
+ , m_emulatedButtonMask(0)
+ , m_lastButtonMask(0)
+ , m_lastPos(new rfb::Point)
+ , m_origPos(new rfb::Point)
 {
   if (!m_clipboard) {
     m_clipboard = QGuiApplication::clipboard();
@@ -401,16 +405,16 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   }
   setContentsMargins(0, 0, 0, 0);
   int radius = 5;
-  m_overlayTip = new QLabel(QString::asprintf(_("Press %s to open the context menu"), (const char*)::menuKey), this, Qt::SplashScreen | Qt::WindowStaysOnTopHint);
+  m_overlayTip = new QLabel(QString(_("Press %1 to open the context menu")).arg((const char*)::menuKey), this, Qt::SplashScreen | Qt::WindowStaysOnTopHint);
   m_overlayTip->hide();
   m_overlayTip->setGeometry(0, 0, 300, 40);
-  m_overlayTip->setStyleSheet(QString::asprintf("QLabel {"
-                                                "border-radius: %dpx;"
-                                                "background-color: #50505050;"
-                                                "color: #e0ffffff;"
-                                                "font-size: 14px;"
-                                                "font-weight: bold;"
-                                                "}", radius));
+  m_overlayTip->setStyleSheet(QString("QLabel {"
+                                      "border-radius: %1px;"
+                                      "background-color: #50505050;"
+                                      "color: #e0ffffff;"
+                                      "font-size: 14px;"
+                                      "font-weight: bold;"
+                                      "}").arg(radius));
   m_overlayTip->setWindowOpacity(0.8);
   const QRect rect(QPoint(0,0), m_overlayTip->geometry().size());
   QBitmap b(rect.size());

@@ -2,6 +2,7 @@
 #define VNCCONNECTION_H
 
 #include <QThread>
+#include <QProcess>
 #include "rdr/types.h"
 #include "rfb/Rect.h"
 
@@ -31,6 +32,30 @@ namespace network {
   class Socket;
 }
 
+class TunnelFactory : public QThread
+{
+  Q_OBJECT
+
+public:
+  TunnelFactory();
+  virtual ~TunnelFactory();
+  void close();
+  bool errorOccurred() const { return m_errorOccurrrd; }
+  QProcess::ProcessError error() const { return m_error; }
+
+protected:
+  void run() override;
+
+private:
+  bool m_errorOccurrrd;
+  QProcess::ProcessError m_error;
+  QString m_command;
+#if !defined(WIN32)
+  QString m_operationSocketName;
+#endif
+  QProcess *m_process;
+};
+
 class QVNCConnection : public QThread
 {
   Q_OBJECT
@@ -56,6 +81,7 @@ public:
   rfb::ModifiablePixelBuffer *framebuffer();
   void setCompressLevel(int level);
   QCursor *cursor() const { return m_cursor; }
+  void exit(int errorCode = 0);
 
   // CMsgHandler.h
   void supportsQEMUKeyEvent();
@@ -77,7 +103,6 @@ public:
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* data);
   void updatePixelFormat();
-
 
   // CConnection.h
   void setFramebuffer(rfb::ModifiablePixelBuffer* fb);
@@ -109,6 +134,7 @@ signals:
   void bellRequested();
 
 public slots:
+  void listen();
   void connectToServer(const QString addressport);
   bool authenticate(QString user, QString password);
   void resetConnection();
@@ -181,6 +207,9 @@ private:
   QTimer *m_updateTimer;
   QCursor *m_cursor;
 
+  TunnelFactory *m_tunnelFactory;
+  bool m_closing;
+
   bool processMsg(int state);
   void bind(int fd);
   void setStreams(rdr::InStream *in, rdr::OutStream *out);
@@ -200,6 +229,7 @@ private:
   bool establishSecurityLayer(int securitySubType);
   void setBlocking(bool blocking);
   bool blocking();
+  int mktunnel();
 };
 
 #endif // VNCCONNECTION_H

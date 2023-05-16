@@ -23,7 +23,7 @@ public:
   QAbstractVNCView *view() const { return m_view; }
 
 signals:
-  void errorOcurred(int seq, QString message);
+  void errorOcurred(int seq, QString message, bool quit = false);
   void credentialRequested(bool secured, bool userNeeded, bool passwordNeeded);
   void dataReady(QByteArray bytes);
   void connectToServerRequested(const QString addressport);
@@ -39,7 +39,7 @@ signals:
   void vncWindowOpened();
 
 public slots:
-  void publishError(const QString &message);
+  void publishError(const QString &message, bool quit = false);
   void connectToServer(const QString addressport);
   void authenticate(QString user, QString password);
   void resetConnection();

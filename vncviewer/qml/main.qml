@@ -13,8 +13,9 @@ Item {
     Component.onCompleted: serverDialog.visible = true
     Connections {
         target: AppManager
-        function onErrorOcurred(seq, message) {
+        function onErrorOcurred(seq, message, quit) {
             alertDialog.text = message
+            alertDialog.quit = quit
             alertDialog.open()
         }
 
@@ -34,7 +35,7 @@ Item {
             aboutDialog.open();
         }
 
-        onErrorOcurred: onErrorOcurred(seq, message)
+        onErrorOcurred: onErrorOcurred(seq, message, quit)
         onVncWindowOpened: onVncWindowOpened()
         onInfoDialogRequested: onInfoDialogRequested()
         onOptionDialogRequested: onOptionDialogRequested()

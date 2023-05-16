@@ -1,5 +1,6 @@
 import QtQuick 2.12
 import QtQuick.Window 2.12
+import Qt.TigerVNC 1.0
 
 Window {
     id: root
@@ -41,7 +42,7 @@ Window {
         anchors.topMargin: 18
         anchors.bottomMargin: 10
         font.pixelSize: labelFontPixelSize
-        text: qsTr("TigerVNC Viewer v%1\nBuilt on: %2\nCopyright (C) 1999-%3 TigerVNC Team and many others (see README.rst)\nSee https://www.tigervnc.org for information on TigerVNC.".arg(PACKAGE_VERSION).arg(BUILD_TIMESTAMP).arg(COPYRIGHT_YEAR))
+        text: Config.aboutText
     }
     CButton {
         id: closeButton

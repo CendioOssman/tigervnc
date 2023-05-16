@@ -11,7 +11,7 @@ Window {
     maximumHeight: height
     minimumWidth: width
     minimumHeight: height
-    visible: true
+    visible: !Config.listenModeEnabled
     title: qsTr("VNC Viewer: Connection Details")
 
     property var servers: []
@@ -47,6 +47,14 @@ Window {
         //console.log("Config.serverHistory=" + Config.serverHistory)
     }
 
+    function createServerList() {
+        servers = []
+        for (var i = 0; i < Config.serverHistory.length; i++) {
+            servers.push(Config.serverHistory[i])
+        }
+        serversChanged()
+    }
+
     Connections {
         target: AppManager
 
@@ -58,6 +66,16 @@ Window {
         }
 
         onCredentialRequested: onCredentialRequested(secured, userNeeded, passwordNeeded)
+    }
+
+    Connections {
+        target: Config
+
+        function onServerHistoryChanged(serverList = []) {
+            createServerList()
+        }
+
+        onServerHistoryChanged: onServerHistoryChanged()
     }
 
     Rectangle {
@@ -85,13 +103,7 @@ Window {
             editable: true
             model: servers
             onTextModified: validateServerText(pendingText)
-            Component.onCompleted: {
-                servers = []
-                for (var i = 0; i < Config.serverHistory.length; i++) {
-                    servers.push(Config.serverHistory[i])
-                }
-                serversChanged()
-            }
+            Component.onCompleted: createServerList()
         }
 
         CButton {

@@ -5,6 +5,7 @@ import QtQuick.Layouts 1.12
 Window {
     id: root
 
+    property bool quit: false
     property alias text: messageText.text
     property real labelFontPixelSize: 12
     property real buttonFontPixelSize: 14
@@ -22,6 +23,9 @@ Window {
 
     function close() {
         visible = false
+        if (quit) {
+            Qt.quit()
+        }
     }
 
     GridLayout {

@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <QEvent>
 #include <QTextStream>
 #include <QDataStream>
@@ -80,23 +84,22 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   m_colorMap = XCreateColormap(m_display, RootWindow(m_display, m_screen), m_visualInfo->visual, AllocNone);
   m_visualFormat = XRenderFindVisualFormat(m_display, m_visualInfo->visual);
 
-  XkbDescPtr xkb;
-  Status status;
+  XkbSetDetectableAutoRepeat(m_display, True, nullptr); // ported from vncviewer.cxx.
 
-  xkb = XkbGetMap(m_display, 0, XkbUseCoreKbd);
-  if (!xkb)
+  XkbDescPtr xkb = XkbGetMap(m_display, 0, XkbUseCoreKbd);
+  if (!xkb) {
     throw rfb::Exception("XkbGetMap");
-
-  status = XkbGetNames(m_display, XkbKeyNamesMask, xkb);
-  if (status != Success)
+  }
+  Status status = XkbGetNames(m_display, XkbKeyNamesMask, xkb);
+  if (status != Success) {
     throw rfb::Exception("XkbGetNames");
-
+  }
   memset(code_map_keycode_to_qnum, 0, sizeof(code_map_keycode_to_qnum));
   for (KeyCode keycode = xkb->min_key_code; keycode < xkb->max_key_code; keycode++) {
     const char *keyname = xkb->names->keys[keycode].name;
-    if (keyname[0] == '\0')
+    if (keyname[0] == '\0') {
       continue;
-
+    }
     unsigned short rfbcode = 0;
     for (unsigned i = 0; i < code_map_xkb_to_qnum_len; i++) {
       if (strncmp(code_map_xkb_to_qnum[i].from, keyname, XkbKeyNameLength) == 0) {
@@ -104,8 +107,9 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
         break;
       }
     }
-    if (rfbcode != 0)
+    if (rfbcode != 0) {
       code_map_keycode_to_qnum[keycode] = rfbcode;
+    }
     else {
       code_map_keycode_to_qnum[keycode] = keycode;
       //vlog.debug("No key mapping for key %.4s", keyname);
