@@ -229,7 +229,6 @@ private:
   bool establishSecurityLayer(int securitySubType);
   void setBlocking(bool blocking);
   bool blocking();
-  int mktunnel();
 };
 
 #endif // VNCCONNECTION_H
