@@ -15,13 +15,13 @@
 #include "rfb/LogWriter.h"
 #include "rfb/ledStates.h"
 #include "rfb/ServerParams.h"
+#include "rfb/CMsgWriter.h"
 #include "rdr/Exception.h"
 
 #include "appmanager.h"
 #include "parameters.h"
 #include "vncconnection.h"
 #include "PlatformPixelBuffer.h"
-#include "msgwriter.h"
 #include "win32.h"
 #include "i18n.h"
 #include "viewerconfig.h"
@@ -145,7 +145,7 @@ void QVNCWinView::setWindow(HWND window)
 void QVNCWinView::postMouseMoveEvent(int x, int y, int mask)
 {
   rfb::Point p(x, y);
-  QMsgWriter *writer = AppManager::instance()->connection()->writer();
+  rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
   writer->writePointerEvent(p, mask);
 }
 
@@ -184,7 +184,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       int x, y, buttonMask, wheelMask;
       getMouseProperties(wParam, lParam, x, y, buttonMask, wheelMask);
       rfb::Point p(x, y);
-      QMsgWriter *writer = AppManager::instance()->connection()->writer();
+      rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
       writer->writePointerEvent(p, buttonMask | wheelMask);
       #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
       qDebug() << "QVNCWinView::eventHandler (button up/down): x=" << x << ", y=" << y << ", btn=" << Qt::hex << (buttonMask | wheelMask);
@@ -220,7 +220,8 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       window->handleKeyUpEvent(message, wParam, lParam);
       break;
     case WM_PAINT:
-      window->refresh(hWnd);
+      AppManager::instance()->connection()->refreshFramebuffer();
+      AppManager::instance()->view()->updateWindow();
       break;
     case WM_WINDOWPOSCHANGED: {
       // Use WM_WINDOWPOSCHANGED instead of WM_SIZE. WM_SIZE is being sent while the window size is changing, whereas
@@ -463,7 +464,7 @@ void QVNCWinView::handleKeyPress(int keyCode, quint32 keySym)
 
   try {
     // Fake keycode?
-    QMsgWriter *writer = AppManager::instance()->connection()->writer();
+    rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
     if (keyCode > 0xff)
       writer->writeKeyEvent(keySym, 0, true);
     else
@@ -494,7 +495,7 @@ void QVNCWinView::handleKeyRelease(int keyCode)
   vlog.debug("Key released: 0x%04x => 0x%04x", keyCode, iter->second);
 
   try {
-    QMsgWriter *writer = AppManager::instance()->connection()->writer();
+    rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
     if (keyCode > 0xff)
       writer->writeKeyEvent(iter->second, 0, false);
     else

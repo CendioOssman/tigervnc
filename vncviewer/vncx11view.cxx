@@ -12,12 +12,12 @@
 #include "rfb/ServerParams.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ledStates.h"
+#include "rfb/CMsgWriter.h"
 #include "i18n.h"
 #include "parameters.h"
 #include "appmanager.h"
 #include "vncconnection.h"
 #include "PlatformPixelBuffer.h"
-#include "msgwriter.h"
 #include "vncx11view.h"
 
 #include <X11/Xlib.h>

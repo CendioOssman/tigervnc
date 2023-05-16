@@ -83,9 +83,8 @@ namespace rfb {
     virtual void handleClipboardNotify(uint32_t flags);
     virtual void handleClipboardProvide(uint32_t flags,
                                         const size_t* lengths,
-                                        const uint8_t* const* data);
-
-    ServerParams server;
+                                        const ruint8_t* const* data);
+    virtual ServerParams *server() = 0;
   };
 }
 #endif

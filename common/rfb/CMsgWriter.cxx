@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 
+#include "os/Mutex.h"
 #include <rdr/OutStream.h>
 #include <rdr/MemOutStream.h>
 #include <rdr/ZlibOutStream.h>
@@ -41,22 +42,25 @@
 using namespace rfb;
 
 CMsgWriter::CMsgWriter(ServerParams* server_, rdr::OutStream* os_)
-  : server(server_), os(os_)
+ : server(server_), os(os_), m_mutex(new os::Mutex)
 {
 }
 
 CMsgWriter::~CMsgWriter()
 {
+  delete m_mutex;
 }
 
 void CMsgWriter::writeClientInit(bool shared)
 {
+  os::AutoMutex locker(m_mutex);
   os->writeU8(shared);
   endMsg();
 }
 
 void CMsgWriter::writeSetPixelFormat(const PixelFormat& pf)
 {
+  os::AutoMutex locker(m_mutex);
   startMsg(msgTypeSetPixelFormat);                                 
   os->pad(3);
   pf.write(os);
@@ -76,6 +80,7 @@ void CMsgWriter::writeSetEncodings(const std::list<uint32_t> encodings)
 void CMsgWriter::writeSetDesktopSize(int width, int height,
                                      const ScreenSet& layout)
 {
+  os::AutoMutex locker(m_mutex);
   if (!server->supportsSetDesktopSize)
     throw Exception("Server does not support SetDesktopSize");
 
@@ -103,6 +108,7 @@ void CMsgWriter::writeSetDesktopSize(int width, int height,
 
 void CMsgWriter::writeFramebufferUpdateRequest(const Rect& r, bool incremental)
 {
+  os::AutoMutex locker(m_mutex);
   startMsg(msgTypeFramebufferUpdateRequest);
   os->writeU8(incremental);
   os->writeU16(r.tl.x);
@@ -115,6 +121,7 @@ void CMsgWriter::writeFramebufferUpdateRequest(const Rect& r, bool incremental)
 void CMsgWriter::writeEnableContinuousUpdates(bool enable,
                                               int x, int y, int w, int h)
 {
+  os::AutoMutex locker(m_mutex);
   if (!server->supportsContinuousUpdates)
     throw Exception("Server does not support continuous updates");
 
@@ -132,6 +139,7 @@ void CMsgWriter::writeEnableContinuousUpdates(bool enable,
 
 void CMsgWriter::writeFence(uint32_t flags, unsigned len, const uint8_t data[])
 {
+  os::AutoMutex locker(m_mutex);
   if (!server->supportsFence)
     throw Exception("Server does not support fences");
   if (len > 64)
@@ -152,6 +160,7 @@ void CMsgWriter::writeFence(uint32_t flags, unsigned len, const uint8_t data[])
 
 void CMsgWriter::writeKeyEvent(uint32_t keysym, uint32_t keycode, bool down)
 {
+  os::AutoMutex locker(m_mutex);
   if (!server->supportsQEMUKeyEvent || !keycode) {
     /* This event isn't meaningful without a valid keysym */
     if (!keysym)
@@ -175,6 +184,7 @@ void CMsgWriter::writeKeyEvent(uint32_t keysym, uint32_t keycode, bool down)
 
 void CMsgWriter::writePointerEvent(const Point& pos, uint8_t buttonMask)
 {
+  os::AutoMutex locker(m_mutex);
   Point p(pos);
   if (p.x < 0) p.x = 0;
   if (p.y < 0) p.y = 0;
@@ -206,6 +216,7 @@ void CMsgWriter::writeClientCutText(const char* str)
 void CMsgWriter::writeClipboardCaps(uint32_t caps,
                                     const uint32_t* lengths)
 {
+  os::AutoMutex locker(m_mutex);
   size_t i, count;
 
   if (!(server->clipboardFlags() & clipboardCaps))
@@ -234,6 +245,7 @@ void CMsgWriter::writeClipboardCaps(uint32_t caps,
 
 void CMsgWriter::writeClipboardRequest(uint32_t flags)
 {
+  os::AutoMutex locker(m_mutex);
   if (!(server->clipboardFlags() & clipboardRequest))
     throw Exception("Server does not support clipboard \"request\" action");
 
@@ -246,6 +258,7 @@ void CMsgWriter::writeClipboardRequest(uint32_t flags)
 
 void CMsgWriter::writeClipboardPeek(uint32_t flags)
 {
+  os::AutoMutex locker(m_mutex);
   if (!(server->clipboardFlags() & clipboardPeek))
     throw Exception("Server does not support clipboard \"peek\" action");
 
@@ -258,6 +271,7 @@ void CMsgWriter::writeClipboardPeek(uint32_t flags)
 
 void CMsgWriter::writeClipboardNotify(uint32_t flags)
 {
+  os::AutoMutex locker(m_mutex);
   if (!(server->clipboardFlags() & clipboardNotify))
     throw Exception("Server does not support clipboard \"notify\" action");
 
@@ -272,6 +286,7 @@ void CMsgWriter::writeClipboardProvide(uint32_t flags,
                                       const size_t* lengths,
                                       const uint8_t* const* data)
 {
+  os::AutoMutex locker(m_mutex);
   rdr::MemOutStream mos;
   rdr::ZlibOutStream zos;
 

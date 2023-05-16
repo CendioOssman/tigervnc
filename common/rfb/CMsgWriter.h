@@ -27,6 +27,8 @@
 
 #include <stdint.h>
 
+namespace os { class Mutex; }
+
 namespace rdr { class OutStream; }
 
 namespace rfb {
@@ -71,6 +73,7 @@ namespace rfb {
 
     ServerParams* server;
     rdr::OutStream* os;
+    os::Mutex* m_mutex;
   };
 }
 #endif

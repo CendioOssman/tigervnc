@@ -5,13 +5,12 @@
 #include <QProcess>
 #include "rdr/types.h"
 #include "rfb/Rect.h"
+#include "rfb/CMsgHandler.h"
 
 class QTimer;
 class QIODevice;
 class QMutex;
 class QSocketNotifier;
-class QMsgReader;
-class QMsgWriter;
 class QVNCPacketHandler;
 struct VeNCryptStatus;
 
@@ -27,6 +26,8 @@ namespace rfb {
   class PlainPasswd;
   struct ScreenSet;
   class DecodeManager;
+  class CMsgReader;
+  class CMsgWriter;
 }
 namespace network {
   class Socket;
@@ -56,7 +57,7 @@ private:
   QProcess *m_process;
 };
 
-class QVNCConnection : public QThread
+class QVNCConnection : public QThread, public rfb::CMsgHandler
 {
   Q_OBJECT
 
@@ -67,13 +68,13 @@ public:
   bool isSecure() const { return m_secured; }
   QString host() const { return m_host; }
   int port() const { return m_port; }
-  rfb::ServerParams *server() const { return m_serverParams; }
+  rfb::ServerParams *server() override { return m_serverParams; }
   void setState(int state);
-  void serverInit(int width, int height, const rfb::PixelFormat& pf, const char* name);
+  void serverInit(int width, int height, const rfb::PixelFormat& pf, const char* name) override;
   rdr::InStream *istream() { return m_istream; }
   rdr::OutStream *ostream() { return m_ostream; }
-  QMsgReader* reader() { return m_reader; }
-  QMsgWriter* writer() { return m_writer; }
+  rfb::CMsgReader* reader() { return m_reader; }
+  rfb::CMsgWriter* writer() { return m_writer; }
   QString *user() { return m_user; }
   rfb::PlainPasswd *password() { return m_password; }
   void autoSelectFormatAndEncoding();
@@ -83,40 +84,42 @@ public:
   QCursor *cursor() const { return m_cursor; }
   void exit(int errorCode = 0);
 
+  // missing methods for CMsgHandler.
+  void setPixelFormat(const rfb::PixelFormat& pf) {}
+
   // CMsgHandler.h
-  void supportsQEMUKeyEvent();
+  void supportsQEMUKeyEvent() override;
     
   // CConn.h
   void resizeFramebuffer();
-  void setDesktopSize(int w, int h);
-  void setExtendedDesktopSize(unsigned reason, unsigned result, int w, int h, const rfb::ScreenSet& layout);
-  void setName(const char* name);
-  void setColourMapEntries(int firstColour, int nColours, rdr::U16* rgbs);
-  void bell();
-  void framebufferUpdateStart();
-  void framebufferUpdateEnd();
-  bool dataRect(const rfb::Rect& r, int encoding);
-  void setCursor(int width, int height, const rfb::Point& hotspot, const unsigned char* data);
-  void setCursorPos(const rfb::Point& pos);
-  void fence(rdr::U32 flags, unsigned len, const char data[]);
-  void setLEDState(unsigned int state);
+  void setDesktopSize(int w, int h) override;
+  void setExtendedDesktopSize(unsigned reason, unsigned result, int w, int h, const rfb::ScreenSet& layout) override;
+  void setName(const char* name) override;
+  void setColourMapEntries(int firstColour, int nColours, rdr::U16* rgbs) override;
+  void bell() override;
+  void framebufferUpdateStart() override;
+  void framebufferUpdateEnd() override;
+  bool dataRect(const rfb::Rect& r, int encoding) override;
+  void setCursor(int width, int height, const rfb::Point& hotspot, const unsigned char* data) override;
+  void setCursorPos(const rfb::Point& pos) override;
+  void fence(rdr::U32 flags, unsigned len, const char data[]) override;
+  void setLEDState(unsigned int state) override;
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* data);
   void updatePixelFormat();
 
   // CConnection.h
   void setFramebuffer(rfb::ModifiablePixelBuffer* fb);
-  void endOfContinuousUpdates();
-  bool readAndDecodeRect(const rfb::Rect& r, int encoding, rfb::ModifiablePixelBuffer* pb);
-  void serverCutText(const char* str);
-  void handleClipboardCaps(rdr::U32 flags, const rdr::U32* lengths);
+  void endOfContinuousUpdates() override;
+  bool readAndDecodeRect(const rfb::Rect& r, int encoding, rfb::ModifiablePixelBuffer* pb) override;
+  void serverCutText(const char* str) override;
+  void handleClipboardCaps(rdr::U32 flags, const rdr::U32* lengths) override;
   // Server requesting client to send client's clipboard data.
-  void handleClipboardRequest();
-  void handleClipboardRequest(rdr::U32 flags);
-  void handleClipboardPeek(rdr::U32 flags);
-  void handleClipboardNotify(rdr::U32 flags);
+  void handleClipboardRequest(rdr::U32 flags) override;
+  void handleClipboardPeek(rdr::U32 flags) override;
+  void handleClipboardNotify(rdr::U32 flags) override;
   // Process clipboard data received from the server.
-  void handleClipboardProvide(rdr::U32 flags, const size_t* lengths, const rdr::U8* const* data);
+  void handleClipboardProvide(rdr::U32 flags, const size_t* lengths, const rdr::U8* const* data) override;
   void setPreferredEncoding(int encoding);
 
 signals:
@@ -168,8 +171,8 @@ private:
   VeNCryptStatus *m_encStatus;
   rdr::InStream *m_istream;
   rdr::OutStream *m_ostream;
-  QMsgReader *m_reader;
-  QMsgWriter *m_writer;
+  rfb::CMsgReader *m_reader;
+  rfb::CMsgWriter *m_writer;
   bool m_pendingPFChange;
   unsigned m_updateCount;
   unsigned m_pixelCount;

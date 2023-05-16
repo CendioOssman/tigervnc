@@ -14,12 +14,12 @@
 #include "rfb/LogWriter.h"
 #include "rdr/Exception.h"
 #include "rfb/ledStates.h"
+#include "rfb/CMsgWriter.h"
 #include "i18n.h"
 #include "parameters.h"
 #include "appmanager.h"
 #include "vncconnection.h"
 #include "PlatformPixelBuffer.h"
-#include "msgwriter.h"
 #include "vncmacview.h"
 
 #include <QDebug>

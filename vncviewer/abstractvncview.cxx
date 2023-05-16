@@ -22,8 +22,8 @@
 #include "rfb/LogWriter.h"
 #include "rfb/ServerParams.h"
 #include "rfb/PixelBuffer.h"
+#include "rfb/CMsgWriter.h"
 #include "PlatformPixelBuffer.h"
-#include "msgwriter.h"
 #include "appmanager.h"
 #include "parameters.h"
 #include "menukey.h"
@@ -203,11 +203,8 @@ public:
    : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
-#if !defined(__APPLE__)
-      // Temporarily commented out, because refreshFramebuffer() causes crash.
       AppManager::instance()->connection()->refreshFramebuffer();
       AppManager::instance()->view()->updateWindow();
-#endif
     });
   }
 };
@@ -936,7 +933,7 @@ QScreen *QAbstractVNCView::getCurrentScreen()
 // EmulateMB::filterPointerEvent(const rfb::Point& pos, int buttonMask)
 void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
 {
-  QMsgWriter *writer = AppManager::instance()->connection()->writer();
+  rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
 
   // Just pass through events if the emulate setting is disabled
   if (!emulateMiddleButton) {
@@ -989,7 +986,7 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
   // sent once the timer fires or is abandoned.
   if ((action1 == 0) && (action2 == 0) && !m_mouseButtonEmulationTimer->isActive()) {
     mask = createButtonMask(mask);
-    QMsgWriter *writer = AppManager::instance()->connection()->writer();
+    rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
     writer->writePointerEvent(pos, mask);
   }
 
@@ -1019,7 +1016,7 @@ void QAbstractVNCView::sendAction(const rfb::Point& pos, int buttonMask, int act
     m_emulatedButtonMask |= (1 << (action - 1));
   }
   buttonMask = createButtonMask(buttonMask);
-  QMsgWriter *writer = AppManager::instance()->connection()->writer();
+  rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
   writer->writePointerEvent(pos, buttonMask);
 }
 
@@ -1058,7 +1055,7 @@ void QAbstractVNCView::handleMouseButtonEmulationTimeout()
   // the pointer has moved we have to send the latest position here.
   if (!m_origPos->equals(*m_lastPos)) {
     buttonMask = createButtonMask(buttonMask);
-    QMsgWriter *writer = AppManager::instance()->connection()->writer();
+    rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
     writer->writePointerEvent(*m_lastPos, buttonMask);
   }
 

@@ -33,8 +33,8 @@
 #include "viewerconfig.h"
 #include "vncconnection.h"
 #include "parameters.h"
-#include "msgreader.h"
-#include "msgwriter.h"
+#include "rfb/CMsgReader.h"
+#include "rfb/CMsgWriter.h"
 #include "vncpackethandler.h"
 #include <QSocketNotifier>
 #include "network/TcpSocket.h"
@@ -872,8 +872,8 @@ bool QVNCConnection::processInitMsg()
 void QVNCConnection::securityCompleted()
 {
   m_state = rfb::CConnection::RFBSTATE_INITIALISATION;
-  m_reader = new QMsgReader(this, m_istream);
-  m_writer = new QMsgWriter(m_serverParams, m_ostream);
+  m_reader = new rfb::CMsgReader(this, m_istream);
+  m_writer = new rfb::CMsgWriter(m_serverParams, m_ostream);
   vlog.debug("Authentication success!");
   authSuccess();
   m_writer->writeClientInit(m_shared);
@@ -1699,11 +1699,6 @@ void QVNCConnection::handleClipboardCaps(rdr::U32 flags, const rdr::U32* lengths
                                sizes);
 }
 
-void QVNCConnection::handleClipboardRequest()
-{
-  //  desktop->handleClipboardRequest();
-}
-
 void QVNCConnection::handleClipboardRequest(rdr::U32 flags)
 {
   if (!(flags & rfb::clipboardUTF8)) {
@@ -1714,7 +1709,7 @@ void QVNCConnection::handleClipboardRequest(rdr::U32 flags)
     vlog.debug("Ignoring unexpected clipboard request");
     return;
   }
-  handleClipboardRequest();
+  //handleClipboardRequest(); // seems not necessary.
 }
 
 void QVNCConnection::handleClipboardPeek(rdr::U32 flags)

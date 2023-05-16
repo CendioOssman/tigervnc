@@ -89,8 +89,8 @@ void CConnection::setFramebuffer(ModifiablePixelBuffer* fb)
   decoder.flush();
 
   if (fb) {
-    assert(fb->width() == server.width());
-    assert(fb->height() == server.height());
+    assert(fb->width() == server()->width());
+    assert(fb->height() == server()->height());
   }
 
   if ((framebuffer != nullptr) && (fb != nullptr)) {
@@ -175,33 +175,33 @@ bool CConnection::processVersionMsg()
     throw Exception("reading version failed: not an RFB server?");
   }
 
-  server.setVersion(majorVersion, minorVersion);
+  server()->setVersion(majorVersion, minorVersion);
 
   vlog.info("Server supports RFB protocol version %d.%d",
-            server.majorVersion, server.minorVersion);
+            server()->majorVersion, server()->minorVersion);
 
   // The only official RFB protocol versions are currently 3.3, 3.7 and 3.8
-  if (server.beforeVersion(3,3)) {
+  if (server()->beforeVersion(3,3)) {
     vlog.error("Server gave unsupported RFB protocol version %d.%d",
-               server.majorVersion, server.minorVersion);
+               server()->majorVersion, server()->minorVersion);
     state_ = RFBSTATE_INVALID;
     throw Exception("Server gave unsupported RFB protocol version %d.%d",
-                    server.majorVersion, server.minorVersion);
-  } else if (server.beforeVersion(3,7)) {
-    server.setVersion(3,3);
-  } else if (server.afterVersion(3,8)) {
-    server.setVersion(3,8);
+                    server()->majorVersion, server()->minorVersion);
+  } else if (server()->beforeVersion(3,7)) {
+    server()->setVersion(3,3);
+  } else if (server()->afterVersion(3,8)) {
+    server()->setVersion(3,8);
   }
 
   sprintf(verStr, "RFB %03d.%03d\n",
-          server.majorVersion, server.minorVersion);
+          server()->majorVersion, server()->minorVersion);
   os->writeBytes((const uint8_t*)verStr, 12);
   os->flush();
 
   state_ = RFBSTATE_SECURITY_TYPES;
 
   vlog.info("Using RFB protocol version %d.%d",
-            server.majorVersion, server.minorVersion);
+            server()->majorVersion, server()->minorVersion);
 
   return true;
 }
@@ -216,7 +216,7 @@ bool CConnection::processSecurityTypesMsg()
   std::list<uint8_t> secTypes;
   secTypes = security.GetEnabledSecTypes();
 
-  if (server.isVersion(3,3)) {
+  if (server()->isVersion(3,3)) {
 
     // legacy 3.3 server may only offer "vnc authentication" or "none"
 
@@ -308,7 +308,7 @@ bool CConnection::processSecurityResultMsg()
   vlog.debug("processing security result message");
   int result;
 
-  if (server.beforeVersion(3,8) && csecurity->getType() == secTypeNone) {
+  if (server()->beforeVersion(3,8) && csecurity->getType() == secTypeNone) {
     result = secResultOK;
   } else {
     if (!is->hasData(4))
@@ -330,7 +330,7 @@ bool CConnection::processSecurityResultMsg()
     throw Exception("Unknown security result from server");
   }
 
-  if (server.beforeVersion(3,8)) {
+  if (server()->beforeVersion(3,8)) {
     state_ = RFBSTATE_INVALID;
     throw AuthFailureException("Authentication failed");
   }
@@ -371,7 +371,7 @@ void CConnection::securityCompleted()
 {
   state_ = RFBSTATE_INITIALISATION;
   reader_ = new CMsgReader(this, is);
-  writer_ = new CMsgWriter(&server, os);
+  writer_ = new CMsgWriter(&m_server, os);
   vlog.debug("Authentication success!");
   authSuccess();
   writer_->writeClientInit(shared);
@@ -408,13 +408,13 @@ void CConnection::setDesktopSize(int w, int h)
 
   if (continuousUpdates)
     writer()->writeEnableContinuousUpdates(true, 0, 0,
-                                           server.width(),
-                                           server.height());
+                                           server()->width(),
+                                           server()->height());
 
   resizeFramebuffer();
   assert(framebuffer != nullptr);
-  assert(framebuffer->width() == server.width());
-  assert(framebuffer->height() == server.height());
+  assert(framebuffer->width() == server()->width());
+  assert(framebuffer->height() == server()->height());
 }
 
 void CConnection::setExtendedDesktopSize(unsigned reason,
@@ -428,13 +428,13 @@ void CConnection::setExtendedDesktopSize(unsigned reason,
 
   if (continuousUpdates)
     writer()->writeEnableContinuousUpdates(true, 0, 0,
-                                           server.width(),
-                                           server.height());
+                                           server()->width(),
+                                           server()->height());
 
   resizeFramebuffer();
   assert(framebuffer != nullptr);
-  assert(framebuffer->width() == server.width());
-  assert(framebuffer->height() == server.height());
+  assert(framebuffer->width() == server()->width());
+  assert(framebuffer->height() == server()->height());
 }
 
 void CConnection::endOfContinuousUpdates()
@@ -444,7 +444,7 @@ void CConnection::endOfContinuousUpdates()
   // We've gotten the marker for a format change, so make the pending
   // one active
   if (pendingPFChange) {
-    server.setPF(pendingPF);
+    server()->setPF(pendingPF);
     pendingPFChange = false;
 
     // We might have another change pending
@@ -464,8 +464,8 @@ void CConnection::serverInit(int width, int height,
 
   initDone();
   assert(framebuffer != nullptr);
-  assert(framebuffer->width() == server.width());
-  assert(framebuffer->height() == server.height());
+  assert(framebuffer->width() == server()->width());
+  assert(framebuffer->height() == server()->height());
 
   // We want to make sure we call SetEncodings at least once
   encodingChange = true;
@@ -475,7 +475,7 @@ void CConnection::serverInit(int width, int height,
   // This initial update request is a bit of a corner case, so we need
   // to help out setting the correct format here.
   if (pendingPFChange) {
-    server.setPF(pendingPF);
+    server()->setPF(pendingPF);
     pendingPFChange = false;
   }
 }
@@ -483,7 +483,7 @@ void CConnection::serverInit(int width, int height,
 bool CConnection::readAndDecodeRect(const Rect& r, int encoding,
                                     ModifiablePixelBuffer* pb)
 {
-  if (!decoder.decodeRect(r, encoding, pb, getInStream(), &server))
+  if (!decoder.decodeRect(r, encoding, pb, getInStream(), &m_server))
     return false;
   decoder.flush();
   return true;
@@ -510,17 +510,17 @@ void CConnection::framebufferUpdateEnd()
   // A format change has been scheduled and we are now past the update
   // with the old format. Time to active the new one.
   if (pendingPFChange && !continuousUpdates) {
-    server.setPF(pendingPF);
+    server()->setPF(pendingPF);
     pendingPFChange = false;
   }
 
   if (firstUpdate) {
-    if (server.supportsContinuousUpdates) {
+    if (server()->supportsContinuousUpdates) {
       vlog.info("Enabling continuous updates");
       continuousUpdates = true;
       writer()->writeEnableContinuousUpdates(true, 0, 0,
-                                             server.width(),
-                                             server.height());
+                                             server()->width(),
+                                             server()->height());
     }
 
     firstUpdate = false;
@@ -529,7 +529,7 @@ void CConnection::framebufferUpdateEnd()
 
 bool CConnection::dataRect(const Rect& r, int encoding)
 {
-  return decoder.decodeRect(r, encoding, framebuffer, getInStream(), &server);
+  return decoder.decodeRect(r, encoding, framebuffer, getInStream(), &m_server);
 }
 
 void CConnection::serverCutText(const char* str)
@@ -572,7 +572,7 @@ void CConnection::handleClipboardRequest(uint32_t flags)
 
 void CConnection::handleClipboardPeek()
 {
-  if (server.clipboardFlags() & rfb::clipboardNotify)
+  if (server()->clipboardFlags() & rfb::clipboardNotify)
     writer()->writeClipboardNotify(hasLocalClipboard ? rfb::clipboardUTF8 : 0);
 }
 
@@ -641,7 +641,7 @@ void CConnection::requestClipboard()
     return;
   }
 
-  if (server.clipboardFlags() & rfb::clipboardRequest)
+  if (server()->clipboardFlags() & rfb::clipboardRequest)
     writer()->writeClipboardRequest(rfb::clipboardUTF8);
 }
 
@@ -652,15 +652,15 @@ void CConnection::announceClipboard(bool available)
 
   // Attempt an unsolicited transfer?
   if (available &&
-      (server.clipboardSize(rfb::clipboardUTF8) > 0) &&
-      (server.clipboardFlags() & rfb::clipboardProvide)) {
+      (server()->clipboardSize(rfb::clipboardUTF8) > 0) &&
+      (server()->clipboardFlags() & rfb::clipboardProvide)) {
     vlog.debug("Attempting unsolicited clipboard transfer...");
     unsolicitedClipboardAttempt = true;
     handleClipboardRequest();
     return;
   }
 
-  if (server.clipboardFlags() & rfb::clipboardNotify) {
+  if (server()->clipboardFlags() & rfb::clipboardNotify) {
     writer()->writeClipboardNotify(available ? rfb::clipboardUTF8 : 0);
     return;
   }
@@ -671,7 +671,7 @@ void CConnection::announceClipboard(bool available)
 
 void CConnection::sendClipboardData(const char* data)
 {
-  if (server.clipboardFlags() & rfb::clipboardProvide) {
+  if (server()->clipboardFlags() & rfb::clipboardProvide) {
     // FIXME: This conversion magic should be in CMsgWriter
     std::string filtered(convertCRLF(data));
     size_t sizes[1] = { filtered.size() + 1 };
@@ -679,9 +679,9 @@ void CConnection::sendClipboardData(const char* data)
 
     if (unsolicitedClipboardAttempt) {
       unsolicitedClipboardAttempt = false;
-      if (sizes[0] > server.clipboardSize(rfb::clipboardUTF8)) {
+      if (sizes[0] > server()->clipboardSize(rfb::clipboardUTF8)) {
         vlog.debug("Clipboard was too large for unsolicited clipboard transfer");
-        if (server.clipboardFlags() & rfb::clipboardNotify)
+        if (server()->clipboardFlags() & rfb::clipboardNotify)
           writer()->writeClipboardNotify(rfb::clipboardUTF8);
         return;
       }
@@ -737,7 +737,7 @@ void CConnection::setQualityLevel(int level)
 
 void CConnection::setPF(const PixelFormat& pf)
 {
-  if (server.pf() == pf && !formatChange)
+  if (server()->pf() == pf && !formatChange)
     return;
 
   nextPF = pf;
@@ -782,8 +782,8 @@ void CConnection::requestNewUpdate()
 
     if (continuousUpdates)
       writer()->writeEnableContinuousUpdates(true, 0, 0,
-                                             server.width(),
-                                             server.height());
+                                             server()->width(),
+                                             server()->height());
 
     formatChange = false;
   }
@@ -796,8 +796,8 @@ void CConnection::requestNewUpdate()
   if (forceNonincremental || !continuousUpdates) {
     pendingUpdate = true;
     writer()->writeFramebufferUpdateRequest(Rect(0, 0,
-                                                 server.width(),
-                                                 server.height()),
+                                                 server()->width(),
+                                                 server()->height()),
                                             !forceNonincremental);
   }
 
