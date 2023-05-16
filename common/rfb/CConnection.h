@@ -226,6 +226,8 @@ namespace rfb {
 
     bool isSecure() const { return csecurity ? csecurity->isSecure() : false; }
 
+    rfb::ServerParams *server() { return &m_server; }
+
     enum stateEnum {
       RFBSTATE_UNINITIALISED,
       RFBSTATE_PROTOCOL_VERSION,
@@ -312,6 +314,8 @@ namespace rfb {
     bool hasRemoteClipboard;
     bool hasLocalClipboard;
     bool unsolicitedClipboardAttempt;
+
+    ServerParams m_server;
   };
 }
 #endif
