@@ -10,6 +10,7 @@ class QCursor;
 class QLabel;
 class QScreen;
 class QClipboard;
+class QMoveEvent;
 
 namespace rfb {
   struct Point;
@@ -94,6 +95,7 @@ protected:
   void sendAction(const rfb::Point &pos, int buttonMask, int action);
   int createButtonMask(int buttonMask);
   void handleMouseButtonEmulationTimeout();
+  void moveEvent(QMoveEvent *e) override;
 };
 
 #endif // ABSTRACTVNCVIEW_H

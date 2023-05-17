@@ -16,6 +16,7 @@
 #include <QDebug>
 #include <QUrl>
 #include <QClipboard>
+#include <QMoveEvent>
 #include <climits>
 #include "rfb/Exception.h"
 #include "rfb/ScreenSet.h"
@@ -1056,4 +1057,12 @@ void QAbstractVNCView::handleMouseButtonEmulationTimeout()
   }
 
   m_state = stateTab[m_state][4][2];
+}
+
+void QAbstractVNCView::moveEvent(QMoveEvent *e)
+{
+  if (m_overlayTip->isVisible()) {
+    m_overlayTip->move(e->pos().x() + (width() - m_overlayTip->width()) / 2, y() + 50);
+  }
+  QWidget::moveEvent(e);
 }
