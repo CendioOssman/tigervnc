@@ -385,6 +385,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
  , m_delayedInitializeTimer(new QTimer)
  , m_overlayTipCloseTimer(new QTimer)
  , m_fullscreenEnabled(false)
+ , m_pendingFullscreen(false)
  , m_mouseButtonEmulationTimer(new QTimer)
  , m_state(0)
  , m_emulatedButtonMask(0)
@@ -814,6 +815,7 @@ void QAbstractVNCView::fullscreen(bool enabled)
   qDebug() << "QAbstractVNCView::fullscreen: enabled=" << enabled;
   // TODO: Flag m_fullscreenEnabled seems have to be disabled before executing fullscreen(). Need clarification.
   m_fullscreenEnabled = false;
+  m_pendingFullscreen = enabled;
   m_resizeTimer->stop();
   QApplication *app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
@@ -884,9 +886,14 @@ void QAbstractVNCView::fullscreen(bool enabled)
     handleDesktopSize();
   }
   m_fullscreenEnabled = enabled;
+  m_pendingFullscreen = false;
   setFocus();
   activateWindow();
   raise();
+
+  if (!enabled) {
+    ViewerConfig::config()->setFullScreen(false);
+  }
 }
 
 void QAbstractVNCView::moveView(int x, int y)

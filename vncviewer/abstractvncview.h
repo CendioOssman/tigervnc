@@ -77,6 +77,7 @@ protected:
   QTimer *m_delayedInitializeTimer;
   QTimer *m_overlayTipCloseTimer;
   bool m_fullscreenEnabled;
+  bool m_pendingFullscreen;
 
   DownMap m_downKeySym;
   QTimer *m_mouseButtonEmulationTimer;

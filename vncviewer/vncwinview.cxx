@@ -235,7 +235,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       LPWINDOWPOS pos = (LPWINDOWPOS)lParam;
       int lw = pos->cx;
       int lh = pos->cy;
-      qDebug() << "VNCWinView::eventHandler(): WM_WINDOWPOSCHANGED: w=" << lw << ", h=" << lh << "current w=" << AppManager::instance()->view()->width() << "current h=" << AppManager::instance()->view()->height();
+      qDebug() << "VNCWinView::eventHandler(): WM_WINDOWPOSCHANGED: w=" << lw << ", h=" << lh << "current w=" << AppManager::instance()->view()->width() << "current h=" << AppManager::instance()->view()->height() << "devicePixelRatio=" << AppManager::instance()->view()->devicePixelRatio();
       // Do not rely on the lParam's geometry, because it's sometimes incorrect, especially when the fullscreen is activated.
       // See the following URL for more information.
       // https://stackoverflow.com/questions/52157587/why-qresizeevent-qwidgetsize-gives-different-when-fullscreen
@@ -243,7 +243,6 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       int h = AppManager::instance()->view()->height() * AppManager::instance()->view()->devicePixelRatio() + 0.5;
       SetWindowPos(hWnd, HWND_TOP, 0, 0, w, h, 0);
       qDebug() << "VNCWinView::eventHandler(): SetWindowPos: w=" << w << ", h=" << h;
-      AppManager::instance()->view()->adjustSize();
     }
       break;
     default:
@@ -376,7 +375,6 @@ void QVNCWinView::showEvent(QShowEvent *e)
     int h = height() * m_devicePixelRatio;
     SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, SWP_SHOWWINDOW);
     qDebug() << "VNCWinView::showEvent(): SetWindowPos: w=" << w << ", h=" << h;
-    adjustSize();
   }
 }
 
@@ -394,9 +392,6 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
   qDebug() << "QVNCWinView::resizeEvent: w=" << e->size().width() << ", h=" << e->size().height();
 
   if (m_hwnd) {
-    QSize size = e->size();
-    QWidget::resize(size.width(), size.height());
-    
     // Try to get the remote size to match our window size, provided
     // the following conditions are true:
     //
@@ -405,7 +400,7 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
     // c) We're not still waiting for startup fullscreen to kick in
     //
     QVNCConnection *cc = AppManager::instance()->connection();
-    if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize) {
+    if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize && !m_fullscreenEnabled && !m_pendingFullscreen) {
       postRemoteResizeRequest();
     }
     // Some systems require a grab after the window size has been changed.

@@ -78,7 +78,7 @@ Window {
         }
         else {
             var newFullScreenMode = displayFullScreenOnAllMonitors.checked ? Config.FSAll : displayFullScreenOnSelectedMonitors.checked ? Config.FSSelected : Config.FSCurrent
-            if (newFullScreenMode !== Config.fullScreenMode || (newFullScreenMode === Config.FSSelected && (Config.fullScreenMode !== Config.FSSelected || selectedScreensChanged))) {
+            if (!Config.fullScreen || newFullScreenMode !== Config.fullScreenMode || (newFullScreenMode === Config.FSSelected && (Config.fullScreenMode !== Config.FSSelected || selectedScreensChanged))) {
                 Config.fullScreenMode = newFullScreenMode
                 // To reconfigure the fullscreen mode, set Config.fullScreen to false once, then set it to true.
                 Config.fullScreen = false
