@@ -529,6 +529,9 @@ void QVNCConnection::resetConnection()
 
 void QVNCConnection::announceClipboard(bool available)
 {
+  if (::viewOnly) {
+    return;
+  }
   m_hasLocalClipboard = available;
   m_unsolicitedClipboardAttempt = false;
 
@@ -554,6 +557,9 @@ void QVNCConnection::announceClipboard(bool available)
 
 void QVNCConnection::sendClipboardData(QString text)
 {
+  if (::viewOnly) {
+    return;
+  }
   QByteArray bytes = text.toUtf8();
   const char *data = bytes.constData();
   if (m_serverParams->clipboardFlags() & rfb::clipboardProvide) {
