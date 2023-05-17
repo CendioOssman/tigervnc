@@ -11,6 +11,7 @@
 #include <QTimer>
 #include <QCursor>
 #include <QProcess>
+#include <QClipboard>
 #include <time.h>
 #include "rfb/Hostname.h"
 #include "rfb/CConnection.h"
@@ -524,6 +525,31 @@ void QVNCConnection::resetConnection()
   m_state = rfb::CConnection::RFBSTATE_PROTOCOL_VERSION;
   m_inProcessing = false;
   m_blocking = false;
+}
+
+void QVNCConnection::announceClipboard(bool available)
+{
+  m_hasLocalClipboard = available;
+  m_unsolicitedClipboardAttempt = false;
+
+  // Attempt an unsolicited transfer?
+  if (available &&
+      (m_serverParams->clipboardSize(rfb::clipboardUTF8) > 0) &&
+      (m_serverParams->clipboardFlags() & rfb::clipboardProvide)) {
+    vlog.debug("Attempting unsolicited clipboard transfer...");
+    m_unsolicitedClipboardAttempt = true;
+    sendClipboardData();
+    return;
+  }
+
+  if (m_serverParams->clipboardFlags() & rfb::clipboardNotify) {
+    writer()->writeClipboardNotify(available ? rfb::clipboardUTF8 : 0);
+    return;
+  }
+
+  if (available) {
+    sendClipboardData();
+  }
 }
 
 void QVNCConnection::sendClipboardData(QString text)
@@ -1699,6 +1725,12 @@ void QVNCConnection::handleClipboardCaps(rdr::U32 flags, const rdr::U32* lengths
                                sizes);
 }
 
+void QVNCConnection::sendClipboardData()
+{
+  QString text = QGuiApplication::clipboard()->text();
+  sendClipboardData(text);
+}
+
 void QVNCConnection::handleClipboardRequest(rdr::U32 flags)
 {
   if (!(flags & rfb::clipboardUTF8)) {
@@ -1709,7 +1741,7 @@ void QVNCConnection::handleClipboardRequest(rdr::U32 flags)
     vlog.debug("Ignoring unexpected clipboard request");
     return;
   }
-  //handleClipboardRequest(); // seems not necessary.
+  sendClipboardData();
 }
 
 void QVNCConnection::handleClipboardPeek(rdr::U32 flags)

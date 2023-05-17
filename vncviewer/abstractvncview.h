@@ -26,8 +26,11 @@ public:
   virtual void resize(int width, int height);
   void popupContextMenu();
   virtual qulonglong nativeWindowHandle() const;
+  virtual bool hasViewFocus() const { return true; }
+  bool hasFocus() const { return hasViewFocus() || QWidget::hasFocus(); }
   double devicePixelRatio() const { return m_devicePixelRatio; }
   QScreen *getCurrentScreen();
+  QClipboard *clipboard() const { return m_clipboard; }
 
 public slots:
   virtual void handleKeyPress(int keyCode, quint32 keySym);
@@ -36,7 +39,6 @@ public slots:
   virtual void setCursorPos(int x, int y);
   virtual void pushLEDState();
   virtual void setLEDState(unsigned int state);
-  virtual void handleClipboardAnnounce(bool available);
   virtual void handleClipboardData(const char* data);
   virtual void maybeGrabKeyboard();
   virtual void grabKeyboard();

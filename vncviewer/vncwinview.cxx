@@ -214,7 +214,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
     case WM_KILLFOCUS:
       qDebug() << "VNCWinView::eventHandler(): WM_KILLFOCUS";
       if (fullscreenSystemKeys) {
-	window->ungrabKeyboard();
+        window->ungrabKeyboard();
       }
       break;
     case WM_KEYDOWN:
@@ -748,7 +748,7 @@ void QVNCWinView::setCursorPos(int x, int y)
   SetCursorPos(x, y);
 }
 
-bool QVNCWinView::hasFocus() const
+bool QVNCWinView::hasViewFocus() const
 {
   return GetFocus() == m_hwnd;
 }

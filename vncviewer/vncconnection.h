@@ -113,9 +113,11 @@ public:
   void endOfContinuousUpdates() override;
   bool readAndDecodeRect(const rfb::Rect& r, int encoding, rfb::ModifiablePixelBuffer* pb) override;
   void serverCutText(const char* str) override;
+  void announceClipboard(bool available);
   void handleClipboardCaps(rdr::U32 flags, const rdr::U32* lengths) override;
   // Server requesting client to send client's clipboard data.
   void handleClipboardRequest(rdr::U32 flags) override;
+  void handleClipboardRequest();
   void handleClipboardPeek(rdr::U32 flags) override;
   void handleClipboardNotify(rdr::U32 flags) override;
   // Process clipboard data received from the server.
@@ -143,6 +145,7 @@ public slots:
   void resetConnection();
   void startProcessing();
   void sendClipboardData(QString text);
+  void sendClipboardData();
   void refreshFramebuffer();
   QString infoText();
   void requestClipboard();

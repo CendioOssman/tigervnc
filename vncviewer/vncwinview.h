@@ -16,7 +16,7 @@ public:
 
   void setWindow(HWND);
   void postMouseMoveEvent(int x, int y, int mask);
-  bool hasFocus() const;
+  bool hasViewFocus() const override;
   qulonglong nativeWindowHandle() const override;
 
 public slots:

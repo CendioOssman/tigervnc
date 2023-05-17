@@ -395,9 +395,13 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   if (!m_clipboard) {
     m_clipboard = QGuiApplication::clipboard();
     connect(m_clipboard, &QClipboard::dataChanged, this, []() {
-      QString text = m_clipboard->text();
-      //qDebug() << "QClipboard::dataChanged" << text;
-      AppManager::instance()->connection()->sendClipboardData(text);
+      if (!::sendClipboard) {
+        return;
+      }
+      qDebug() << "QClipboard::dataChanged: owns=" << m_clipboard->ownsClipboard() << ", text=" << m_clipboard->text();
+      if (!m_clipboard->ownsClipboard()) {
+        AppManager::instance()->connection()->announceClipboard(true);
+      }
     });
   }
   setContentsMargins(0, 0, 0, 0);
@@ -455,7 +459,6 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorChanged, this, &QAbstractVNCView::setQCursor, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorPositionChanged, this, &QAbstractVNCView::setCursorPos, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::ledStateChanged, this, &QAbstractVNCView::setLEDState, Qt::QueuedConnection);
-  connect(AppManager::instance()->connection(), &QVNCConnection::clipboardAnnounced, this, &QAbstractVNCView::handleClipboardAnnounce, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::clipboardDataReceived, this, &QAbstractVNCView::handleClipboardData, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::bellRequested, this, &QAbstractVNCView::bell, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::refreshFramebufferEnded, this, &QAbstractVNCView::updateWindow, Qt::QueuedConnection);
@@ -556,32 +559,9 @@ void QAbstractVNCView::setLEDState(unsigned int)
 {
 }
 
-void QAbstractVNCView::handleClipboardAnnounce(bool available)
-{
-  if (!::acceptClipboard) {
-    return;
-  }
-
-  if (!available) {
-    m_pendingServerClipboard = false;
-    return;
-  }
-
-  m_pendingClientClipboard = false;
-
-  if (!hasFocus()) {
-    m_pendingServerClipboard = true;
-  }
-}
-
 void QAbstractVNCView::handleClipboardData(const char *data)
 {
-  if (!hasFocus()) {
-    return;
-  }
-  size_t len = strlen(data);
-  vlog.debug("Got clipboard data (%d bytes)", (int)len);
-
+  vlog.debug("Got clipboard data (%d bytes)", (int)strlen(data));
   m_clipboard->setText(data);
 }
 
