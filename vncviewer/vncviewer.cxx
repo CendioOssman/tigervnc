@@ -24,6 +24,10 @@ int main(int argc, char *argv[])
 
   QVNCApplication app(argc, argv);
 
+  app.setOrganizationName("TigerVNC Team");
+  app.setOrganizationDomain("tigervnc.org");
+  app.setApplicationName("TigerVNC Viewer");
+
   ViewerConfig::initialize();
   AppManager::initialize();
 
