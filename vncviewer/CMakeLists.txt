@@ -96,7 +96,7 @@ if(QT_VERSION_MAJOR GREATER_EQUAL 6)
 else()
     if(ANDROID)
         add_library(vncviewer SHARED
-            ${PROJECT_SOURCES}
+          ${PROJECT_SOURCES}
         )
     else()
         if (WIN32)
@@ -108,11 +108,16 @@ else()
         endif()
         if(APPLE)
           set(MACOSX_BUNDLE_BUNDLE_NAME "TigerVNC Viewer")
+          set(MACOSX_BUNDLE_BUNDLE_VERSION "${VERSION}${BUILD}")
+          set(MACOSX_BUNDLE_COPYRIGHT "Copyright © 1998-2022 [many holders]")
+          set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.tigervnc.tigervnc")
           set(MACOSX_BUNDLE_ICON_FILE tigervnc.icns)
+          set(MACOSX_BUNDLE_INFO_STRING "${VERSION}, Copyright © 1998-2022 [many holders]")
+          set(MACOSX_BUNDLE_LONG_VERSION_STRING "TigerVNC Viewer ${VERSION}")
+          set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${VERSION}")
           set(APP_ICON_MACOSX ${CMAKE_CURRENT_SOURCE_DIR}/../media/icons/tigervnc.icns)
           set_source_files_properties(${APP_ICON_MACOSX} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
           add_executable(vncviewer
-            MACOSX_BUNDLE
             ${PROJECT_SOURCES}
             ${APP_ICON_MACOSX}
           )
