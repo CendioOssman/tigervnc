@@ -28,7 +28,7 @@ public:
   void popupContextMenu();
   virtual qulonglong nativeWindowHandle() const;
   virtual bool hasViewFocus() const { return true; }
-  bool hasFocus() const { return hasViewFocus() || QWidget::hasFocus(); }
+  bool hasFocus() const { return hasViewFocus() || QWidget::hasFocus() || isActiveWindow(); }
   double devicePixelRatio() const { return m_devicePixelRatio; }
   QScreen *getCurrentScreen();
   QClipboard *clipboard() const { return m_clipboard; }
@@ -53,6 +53,9 @@ public slots:
   virtual void handleDesktopSize();
   virtual void fullscreen(bool enabled);
   virtual void moveView(int x, int y);
+
+signals:
+  void fullscreenChanged(bool enabled);
 
 protected:
   static QClipboard *m_clipboard;
