@@ -410,6 +410,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   int radius = 5;
   m_overlayTip = new QLabel(QString(_("Press %1 to open the context menu")).arg((const char*)::menuKey), this, Qt::SplashScreen | Qt::WindowStaysOnTopHint);
   m_overlayTip->hide();
+  m_overlayTip->setWindowModality(Qt::NonModal);
   m_overlayTip->setGeometry(0, 0, 300, 40);
   m_overlayTip->setStyleSheet(QString("QLabel {"
                                       "border-radius: %1px;"
@@ -815,6 +816,7 @@ void QAbstractVNCView::fullscreen(bool enabled)
 {
   qDebug() << "QAbstractVNCView::fullscreen: enabled=" << enabled;
   // TODO: Flag m_fullscreenEnabled seems have to be disabled before executing fullscreen(). Need clarification.
+  bool fullscreenEnabled0 = m_fullscreenEnabled;
   m_fullscreenEnabled = false;
   m_pendingFullscreen = enabled;
   m_resizeTimer->stop();
@@ -894,6 +896,9 @@ void QAbstractVNCView::fullscreen(bool enabled)
 
   if (!enabled) {
     ViewerConfig::config()->setFullScreen(false);
+  }
+  if (m_fullscreenEnabled != fullscreenEnabled0) {
+    emit fullscreenChanged(m_fullscreenEnabled);
   }
 }
 
