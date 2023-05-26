@@ -143,7 +143,7 @@ void QVNCX11View::resizePixmap(int width, int height)
     XFreePixmap(m_display, m_pixmap);
   }
   m_pixmap = XCreatePixmap(m_display, RootWindow(m_display, m_screen), width, height, 32);
-  qDebug() << "Surface::alloc: XCreatePixmap: w=" << width << ", h=" << height << ", pixmap=" << m_pixmap;
+  //qDebug() << "Surface::alloc: XCreatePixmap: w=" << width << ", h=" << height << ", pixmap=" << m_pixmap;
 
   // Our code assumes a BGRA byte order, regardless of what the endian
   // of the machine is or the native byte order of XImage, so make sure
@@ -418,7 +418,7 @@ void QVNCX11View::draw()
   int w = rect.br.x - x;
   int h = rect.br.y - y;
   if (!rect.is_empty()) {
-    qDebug() << "QVNCX11View::draw: x=" << x << ", y=" << y << ", w=" << w << ", h=" << h;
+    //qDebug() << "QVNCX11View::draw: x=" << x << ", y=" << y << ", w=" << w << ", h=" << h;
     // copy the specified region in XImage (== data in framebuffer) to Pixmap.
     XGCValues gcvalues;
     GC gc = XCreateGC(m_display, m_pixmap, 0, &gcvalues);
@@ -535,9 +535,9 @@ void QVNCX11View::handleKeyPress(int keyCode, quint32 keySym)
     QVNCConnection *cc = AppManager::instance()->connection();
     // Fake keycode?
     if (keyCode > 0xff)
-      cc->writer()->writeKeyEvent(keySym, 0, true);
+      emit cc->writeKeyEvent(keySym, 0, true);
     else
-      cc->writer()->writeKeyEvent(keySym, keyCode, true);
+      emit cc->writeKeyEvent(keySym, keyCode, true);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
     e.abort = true;
@@ -565,9 +565,9 @@ void QVNCX11View::handleKeyRelease(int keyCode)
   try {
     QVNCConnection *cc = AppManager::instance()->connection();
     if (keyCode > 0xff)
-      cc->writer()->writeKeyEvent(iter->second, 0, false);
+      emit cc->writeKeyEvent(iter->second, 0, false);
     else
-      cc->writer()->writeKeyEvent(iter->second, keyCode, false);
+      emit cc->writeKeyEvent(iter->second, keyCode, false);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
     e.abort = true;
@@ -662,7 +662,7 @@ void QVNCX11View::handleClipboardData(const char*)
 
 void QVNCX11View::setLEDState(unsigned int state)
 {
-  qDebug() << "QVNCX11View::setLEDState";
+  //qDebug() << "QVNCX11View::setLEDState";
   vlog.debug("Got server LED state: 0x%08x", state);
 
   // The first message is just considered to be the server announcing
@@ -706,7 +706,7 @@ void QVNCX11View::setLEDState(unsigned int state)
 
 void QVNCX11View::pushLEDState()
 {
-  qDebug() << "QVNCX11View::pushLEDState";
+  //qDebug() << "QVNCX11View::pushLEDState";
   QVNCConnection *cc = AppManager::instance()->connection();
   // Server support?
   rfb::ServerParams *server = AppManager::instance()->connection()->server();

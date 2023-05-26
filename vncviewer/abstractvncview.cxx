@@ -23,7 +23,6 @@
 #include "rfb/LogWriter.h"
 #include "rfb/ServerParams.h"
 #include "rfb/PixelBuffer.h"
-#include "rfb/CMsgWriter.h"
 #include "PlatformPixelBuffer.h"
 #include "appmanager.h"
 #include "parameters.h"
@@ -205,8 +204,7 @@ public:
    : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
-      AppManager::instance()->connection()->refreshFramebuffer();
-      AppManager::instance()->view()->updateWindow();
+      emit AppManager::instance()->connection()->qRefreshFramebuffer();
     });
   }
 };
@@ -478,9 +476,9 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
       if (!::sendClipboard) {
         return;
       }
-      qDebug() << "QClipboard::dataChanged: owns=" << m_clipboard->ownsClipboard() << ", text=" << m_clipboard->text();
+      //qDebug() << "QClipboard::dataChanged: owns=" << m_clipboard->ownsClipboard() << ", text=" << m_clipboard->text();
       if (!m_clipboard->ownsClipboard()) {
-        AppManager::instance()->connection()->announceClipboard(true);
+        AppManager::instance()->connection()->qAnnounceClipboard(true);
       }
     });
   }
@@ -493,10 +491,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   m_delayedInitializeTimer->setInterval(1000);
   m_delayedInitializeTimer->setSingleShot(true);
   connect(m_delayedInitializeTimer, &QTimer::timeout, this, [this]() {
-    AppManager::instance()->connection()->refreshFramebuffer();
-#if !defined(__APPLE__)
-    AppManager::instance()->view()->updateWindow();
-#endif
+    emit AppManager::instance()->connection()->qRefreshFramebuffer();
     emit delayedInitialized();
   });
   m_delayedInitializeTimer->start();
@@ -544,7 +539,7 @@ void QAbstractVNCView::resize(int width, int height)
   if (cc->server()->supportsSetDesktopSize) {
     handleDesktopSize();
   }
-  qDebug() << "QWidget::resize: width=" << width << ", height=" << height;
+  //qDebug() << "QWidget::resize: width=" << width << ", height=" << height;
 }
 
 void QAbstractVNCView::popupContextMenu()
@@ -790,8 +785,8 @@ void QAbstractVNCView::remoteResize(int w, int h)
   else {
     vlog.debug("%s", buffer);
   }
-  qDebug() << "QAbstractVNCView::remoteResize: w=" << w << ", h=" << h << ", layout=" << buffer;
-  AppManager::instance()->connection()->writer()->writeSetDesktopSize(w, h, layout);
+  //qDebug() << "QAbstractVNCView::remoteResize: w=" << w << ", h=" << h << ", layout=" << buffer;
+  emit AppManager::instance()->connection()->writeSetDesktopSize(w, h, layout);
 }
 
 // Copy the areas of the framebuffer that have been changed (damaged)
@@ -827,13 +822,13 @@ void QAbstractVNCView::handleDesktopSize()
       return;
     }
     remoteResize(w * f, h * f);
-    qDebug() << "QAbstractVNCView::handleDesktopSize(explicit): width=" << w << ", height=" << h;
+    //qDebug() << "QAbstractVNCView::handleDesktopSize(explicit): width=" << w << ", height=" << h;
   }
   else if (::remoteResize) {
     // No explicit size, but remote resizing is on so make sure it
     // matches whatever size the window ended up being
     remoteResize(width() * f, height() * f);
-    qDebug() << "QAbstractVNCView::handleDesktopSize(implicit): width=" << width() << ", height=" << height();
+    //qDebug() << "QAbstractVNCView::handleDesktopSize(implicit): width=" << width() << ", height=" << height();
   }
 }
 
@@ -860,7 +855,7 @@ QList<int> QAbstractVNCView::fullscreenScreens()
 
 void QAbstractVNCView::fullscreen(bool enabled)
 {
-  qDebug() << "QAbstractVNCView::fullscreen: enabled=" << enabled;
+  //qDebug() << "QAbstractVNCView::fullscreen: enabled=" << enabled;
   // TODO: Flag m_fullscreenEnabled seems have to be disabled before executing fullscreen(). Need clarification.
   bool fullscreenEnabled0 = m_fullscreenEnabled;
   m_fullscreenEnabled = false;
@@ -901,7 +896,7 @@ void QAbstractVNCView::fullscreen(bool enabled)
       }
       int w = xmax - xmin;
       int h = ymax - ymin;
-      qDebug() << "Fullsize Geometry=" << QRect(xmin, ymin, w, h);
+      //qDebug() << "Fullsize Geometry=" << QRect(xmin, ymin, w, h);
 
       if (selectedScreens.length() == 1) {
         setWindowFlag(Qt::BypassWindowManagerHint, true);
@@ -956,12 +951,12 @@ void QAbstractVNCView::moveView(int x, int y)
 QScreen *QAbstractVNCView::getCurrentScreen()
 {
   QPoint globalCursorPos = QCursor::pos();
-  qDebug() << "QAbstractVNCView::getCurrentScreen: pos=" << globalCursorPos;
+  //qDebug() << "QAbstractVNCView::getCurrentScreen: pos=" << globalCursorPos;
   QApplication *app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
   for (QScreen *&screen : screens) {
     if (screen->geometry().contains(globalCursorPos)) {
-      qDebug() << "QAbstractVNCView::getCurrentScreen: found screen isPrimary=" << (screen == app->primaryScreen());
+      //qDebug() << "QAbstractVNCView::getCurrentScreen: found screen isPrimary=" << (screen == app->primaryScreen());
       return screen;
     }
   }
@@ -975,11 +970,10 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
   if (::viewOnly) {
     return;
   }
-  rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
 
   // Just pass through events if the emulate setting is disabled
   if (!emulateMiddleButton) {
-    writer->writePointerEvent(pos, mask);
+    emit AppManager::instance()->connection()->writePointerEvent(pos, mask);
     return;
   }
 
@@ -1028,8 +1022,7 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
   // sent once the timer fires or is abandoned.
   if ((action1 == 0) && (action2 == 0) && !m_mouseButtonEmulationTimer->isActive()) {
     mask = createButtonMask(mask);
-    rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
-    writer->writePointerEvent(pos, mask);
+    emit AppManager::instance()->connection()->writePointerEvent(pos, mask);
   }
 
   int lastState = m_state;
@@ -1061,8 +1054,7 @@ void QAbstractVNCView::sendAction(const rfb::Point& pos, int buttonMask, int act
     m_emulatedButtonMask |= (1 << (action - 1));
   }
   buttonMask = createButtonMask(buttonMask);
-  rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
-  writer->writePointerEvent(pos, buttonMask);
+  emit AppManager::instance()->connection()->writePointerEvent(pos, buttonMask);
 }
 
 // EmulateMB:createButtonMask(int buttonMask)
@@ -1103,8 +1095,7 @@ void QAbstractVNCView::handleMouseButtonEmulationTimeout()
   // the pointer has moved we have to send the latest position here.
   if (!m_origPos->equals(*m_lastPos)) {
     buttonMask = createButtonMask(buttonMask);
-    rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
-    writer->writePointerEvent(*m_lastPos, buttonMask);
+    emit AppManager::instance()->connection()->writePointerEvent(*m_lastPos, buttonMask);
   }
 
   m_state = stateTab[m_state][4][2];

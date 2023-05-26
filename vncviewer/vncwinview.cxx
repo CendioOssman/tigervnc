@@ -15,7 +15,6 @@
 #include "rfb/LogWriter.h"
 #include "rfb/ledStates.h"
 #include "rfb/ServerParams.h"
-#include "rfb/CMsgWriter.h"
 #include "rdr/Exception.h"
 
 #include "appmanager.h"
@@ -148,8 +147,7 @@ void QVNCWinView::postMouseMoveEvent(int x, int y, int mask)
     return;
   }
   rfb::Point p(x, y);
-  rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
-  writer->writePointerEvent(p, mask);
+  emit AppManager::instance()->connection()->writePointerEvent(p, mask);
 }
 
 void *getWindowProc(QVNCWinView *host)
@@ -190,8 +188,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       int x, y, buttonMask, wheelMask;
       getMouseProperties(wParam, lParam, x, y, buttonMask, wheelMask);
       rfb::Point p(x, y);
-      rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
-      writer->writePointerEvent(p, buttonMask | wheelMask);
+      emit AppManager::instance()->connection()->writePointerEvent(p, buttonMask | wheelMask);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
       qDebug() << "QVNCWinView::eventHandler (button up/down): x=" << x << ", y=" << y << ", btn=" << Qt::hex << (buttonMask | wheelMask);
 #endif
@@ -465,11 +462,10 @@ void QVNCWinView::handleKeyPress(int keyCode, quint32 keySym)
 
   try {
     // Fake keycode?
-    rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
     if (keyCode > 0xff)
-      writer->writeKeyEvent(keySym, 0, true);
+      emit AppManager::instance()->connection()->writeKeyEvent(keySym, 0, true);
     else
-      writer->writeKeyEvent(keySym, keyCode, true);
+      emit AppManager::instance()->connection()->writeKeyEvent(keySym, keyCode, true);
   }
   catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
@@ -496,11 +492,11 @@ void QVNCWinView::handleKeyRelease(int keyCode)
   vlog.debug("Key released: 0x%04x => 0x%04x", keyCode, iter->second);
 
   try {
-    rfb::CMsgWriter *writer = AppManager::instance()->connection()->writer();
     if (keyCode > 0xff)
-      writer->writeKeyEvent(iter->second, 0, false);
+      emit AppManager::instance()->connection()->writeKeyEvent(iter->second, 0, false);
     else
-      writer->writeKeyEvent(iter->second, keyCode, false);
+      emit AppManager::instance()->connection()->writeKeyEvent(iter->second, keyCode, false);
+
   }
   catch (rdr::Exception& e) {
     vlog.error("%s", e.str());

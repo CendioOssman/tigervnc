@@ -15,7 +15,6 @@
 #include "rfb/LogWriter.h"
 #include "rdr/Exception.h"
 #include "rfb/ledStates.h"
-#include "rfb/CMsgWriter.h"
 #include "i18n.h"
 #include "parameters.h"
 #include "appmanager.h"
@@ -368,9 +367,9 @@ void QVNCMacView::handleKeyPress(int keyCode, quint32 keySym)
     QVNCConnection *cc = AppManager::instance()->connection();
     // Fake keycode?
     if (keyCode > 0xff)
-      cc->writer()->writeKeyEvent(keySym, 0, true);
+      emit cc->writeKeyEvent(keySym, 0, true);
     else
-      cc->writer()->writeKeyEvent(keySym, keyCode, true);
+      emit cc->writeKeyEvent(keySym, keyCode, true);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
     e.abort = true;
@@ -398,9 +397,9 @@ void QVNCMacView::handleKeyRelease(int keyCode)
   try {
     QVNCConnection *cc = AppManager::instance()->connection();
     if (keyCode > 0xff)
-      cc->writer()->writeKeyEvent(iter->second, 0, false);
+      emit cc->writeKeyEvent(iter->second, 0, false);
     else
-      cc->writer()->writeKeyEvent(iter->second, keyCode, false);
+      emit cc->writeKeyEvent(iter->second, keyCode, false);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
     e.abort = true;

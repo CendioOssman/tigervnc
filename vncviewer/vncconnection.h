@@ -28,7 +28,10 @@ namespace rfb {
   class DecodeManager;
   class CMsgReader;
   class CMsgWriter;
+  struct Point;
 }
+Q_DECLARE_METATYPE(rfb::ScreenSet)
+Q_DECLARE_METATYPE(rfb::Point)
 namespace network {
   class Socket;
 }
@@ -137,6 +140,12 @@ signals:
   void refreshFramebufferStarted();
   void refreshFramebufferEnded();
   void bellRequested();
+
+  void writePointerEvent(const rfb::Point &pos, int buttonMask);
+  void writeSetDesktopSize(int width, int height, const rfb::ScreenSet &layout);
+  void writeKeyEvent(rdr::U32 keysym, rdr::U32 keycode, bool down);
+  void qRefreshFramebuffer();
+  void qAnnounceClipboard(bool available);
 
 public slots:
   void listen();

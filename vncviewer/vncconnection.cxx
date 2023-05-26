@@ -248,6 +248,22 @@ QVNCConnection::QVNCConnection()
   moveToThread(this);
   connect(this, &QVNCConnection::socketNotified, this, &QVNCConnection::startProcessing);
 
+  connect(this, &QVNCConnection::writePointerEvent, this, [this](const rfb::Point &pos, int buttonMask) {
+    m_writer->writePointerEvent(pos, buttonMask);
+  }, Qt::QueuedConnection);
+  connect(this, &QVNCConnection::writeSetDesktopSize, this, [this](int width, int height, const rfb::ScreenSet &layout) {
+    m_writer->writeSetDesktopSize(width, height, layout);
+  }, Qt::QueuedConnection);
+  connect(this, &QVNCConnection::writeKeyEvent, this, [this](rdr::U32 keysym, rdr::U32 keycode, bool down) {
+    m_writer->writeKeyEvent(keysym, keycode, down);
+  }, Qt::QueuedConnection);
+  connect(this, &QVNCConnection::qRefreshFramebuffer, this, [this]() {
+    refreshFramebuffer();
+  }, Qt::QueuedConnection);
+  connect(this, &QVNCConnection::qAnnounceClipboard, this, [this](bool available) {
+    announceClipboard(available);
+  }, Qt::QueuedConnection);
+  
   if (customCompressLevel) {
     setCompressLevel(::compressLevel);
   }
