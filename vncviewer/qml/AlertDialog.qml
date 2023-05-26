@@ -1,4 +1,5 @@
 import QtQuick 2.12
+import QtQuick.Controls 2.12
 import QtQuick.Window 2.12
 import QtQuick.Layouts 1.12
 
@@ -7,15 +8,13 @@ Window {
 
     property bool quit: false
     property alias text: messageText.text
-    property real labelFontPixelSize: 12
-    property real buttonFontPixelSize: 14
 
     width: container.implicitWidth
     height: container.implicitHeight
     flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint
     modality: Qt.ApplicationModal
     title: qsTr("TigerVNC Viewer")
-    color: "#ffdcdcdc"
+    //color: "#ffdcdcdc"
 
     function open() {
         visible = true
@@ -53,19 +52,17 @@ Window {
             Layout.leftMargin: 10
             Layout.rightMargin: 15
             verticalAlignment: Text.AlignVCenter
-            font.pixelSize: labelFontPixelSize
         }
-        CButton {
+        Button {
             id: closeButton
             Layout.row: 1
             Layout.column: 1
             Layout.rightMargin: 15
             Layout.topMargin: 5
-            Layout.bottomMargin: 40
+            Layout.bottomMargin: 10
             Layout.alignment: Qt.AlignRight | Qt.AlignBottom
             Layout.preferredWidth: 72
             focus: true
-            font.pixelSize: buttonFontPixelSize
             text: qsTr("Close")
             onClicked: close()
         }

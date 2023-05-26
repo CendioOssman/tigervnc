@@ -7,18 +7,15 @@ import Qt.TigerVNC 1.0
 Window {
     id: root
 
-    property real labelFontPixelSize: 12
-    property real buttonFontPixelSize: 14
     property bool screenLaid: false
     property var screenSelectionButtons: []
     property var selectedScreens: []
 
-    width: 570
-    height: 440
+    width: categoryContainer.width + contentStack.width
+    height: contentStack.height + buttonBox.height
     flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint
     modality: Qt.ApplicationModal
     title: qsTr("TigerVNC Options")
-    color: "#ff8f8f8f"
 
     function open() {
         visible = true
@@ -207,8 +204,7 @@ Window {
             var lw = rw * availableWidth
             var lh = rh * availableHeight
             //console.log("screen[" + j + "] lx=" + lx + ",ly=" + ly + ",lw=" + lw + ",lh=" +lh)
-            var comp = Qt.createComponent("CButton.qml", Component.PreferSynchronous)
-            var button = comp.createObject(displaySelectionView, { x: lx, y: ly, width: lw, height: lh, checkable: true })
+            var button = screenButtonComponent.createObject(displaySelectionView, { x: lx, y: ly, width: lw, height: lh, checkable: true })
             var handler = selectionHandlerFactory.createObject(this, { buttonIndex: j })
             button.toggled.connect(handler.validateDisplaySelection)
             screenSelectionButtons.push(button)
@@ -243,6 +239,61 @@ Window {
         }
     }
 
+    Component {
+        id: screenButtonComponent
+        Button {
+            id: button
+
+            property alias source: icon.source
+
+            width: 116
+            height: 26
+            background: Rectangle {
+                id: bgrect
+                radius: 3
+                border.width: button.focus ? 2 : 1
+                border.color: "#ff6e6e6e"
+                color: "#ffdcdcdc"
+            }
+            Image {
+                id: icon
+                anchors.fill: parent
+                fillMode: Image.PreserveAspectFit
+            }
+
+            states: [
+                State {
+                    when: !button.checkable && button.pressed
+                    PropertyChanges {
+                        target: bgrect
+                        color: "#ff808080"
+                    }
+                },
+                State {
+                    when: button.checkable && button.checked && button.enabled
+                    PropertyChanges {
+                        target: bgrect
+                        color: "#ff5454ff"
+                    }
+                },
+                State {
+                    when: button.checkable && !button.checked
+                    PropertyChanges {
+                        target: bgrect
+                        color: "#fff3f3f3"
+                    }
+                },
+                State {
+                    when: button.checkable && button.checked && !button.enabled
+                    PropertyChanges {
+                        target: bgrect
+                        color: "#ffafafe7"
+                    }
+                }
+            ]
+        }
+    }
+
     function reportScreenSelection() { // For debugging purpose.
         for (var i = 0; i < screenSelectionButtons.length; i++) {
             console.log("screenSelectionButtons[" + i + "]=" + screenSelectionButtons[i].checked)
@@ -257,13 +308,10 @@ Window {
 
     Rectangle {
         id: categoryContainer
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.bottom: buttonBox.top
-        anchors.topMargin: 1
-        anchors.bottomMargin: 1
+          anchors.right: contentStack.left
+          anchors.top: contentStack.top
+          anchors.bottom: contentStack.bottom
         width: 145
-        color: "#ffffffff"
 
         ListView {
             id: categoryList
@@ -274,13 +322,8 @@ Window {
                 contentItem: Label {
                     anchors.fill: parent
                     text: modelData
-                    font.pixelSize: labelFontPixelSize
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
-                    color: highlighted ? "#ffffffff" : "#ff000000"
-                    background: Rectangle {
-                        color: highlighted ? "#ff000080" : "#ffffffff"
-                    }
                     MouseArea {
                         anchors.fill: parent
                         onClicked: categoryList.currentIndex = index
@@ -293,90 +336,91 @@ Window {
 
     StackLayout {
         id: contentStack
-        anchors.left: categoryContainer.right
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.bottom: buttonBox.top
-        anchors.leftMargin: 1
-        anchors.topMargin: 1
-        anchors.bottomMargin: 1
+        width: childrenRect.width
+        height: childrenRect.height
+        x: categoryContainer.width
         currentIndex: categoryList.currentIndex
         onCurrentIndexChanged: reportScreenSelection()
         Rectangle {
             id: compressionTab
-            color: "#ffdcdcdc"
-            Column {
+            implicitWidth: childrenRect.width + childrenRect.x
+            implicitHeight: childrenRect.height + childrenRect.y
+            ColumnLayout {
                 id: compressionContainer
-                anchors.fill: parent
-                anchors.leftMargin: 10
-                anchors.topMargin: 10
+                x: 10
+                y: 10
                 spacing: 5
-                CCheckBox {
+                CheckBox {
                     id: compressionAutoSelect
-                    width: parent.width
+                    Layout.preferredWidth: compressionAutoSelectEditor.implicitWidth
                     font.bold: true
                     text: qsTr("Auto select")
                 }
-                Grid {
+                GridLayout {
                     id: compressionAutoSelectEditor
                     enabled: !compressionAutoSelect.checked
                     rows: 2
                     columns: 2
                     rowSpacing: 0
-                    columnSpacing: 0
-                    leftPadding: 6
-                    Text {
-                        width: compressionContainer.width / 2
-                        font.pixelSize: labelFontPixelSize
+                    columnSpacing: 40
+                    Label {
+                        id: preferredEncodingLabel
+                        Layout.leftMargin: 6
+                        Layout.preferredWidth: Math.max(preferredEncodingLabel.implicitWidth, colorLevelLabel.implicitWidth)
+                        Layout.alignment: Qt.AlignLeft
                         font.bold: true
-                        color: compressionAutoSelectEditor.enabled ? "#ff000000" : "#ff939393"
                         text: qsTr("Preferred encoding")
                     }
-                    Text {
-                        width: compressionContainer.width / 2
-                        font.pixelSize: labelFontPixelSize
+                    Label {
+                        id: colorLevelLabel
+                        Layout.leftMargin: 6
+                        Layout.preferredWidth: Math.max(preferredEncodingLabel.implicitWidth, colorLevelLabel.implicitWidth)
+                        Layout.alignment: Qt.AlignLeft
                         font.bold: true
-                        color: compressionAutoSelectEditor.enabled ? "#ff000000" : "#ff939393"
                         text: qsTr("Color level")
                     }
-                    Column {
+                    ColumnLayout {
                         id: compressionEncodingTypes
-                        CRadioButton {
+                        Layout.leftMargin: 12
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                        RadioButton {
                             id: compressionEncodingTight
                             text: qsTr("Tight")
                         }
-                        CRadioButton {
+                        RadioButton {
                             id: compressionEncodingZRLE
                             text: qsTr("ZRLE")
                         }
-                        CRadioButton {
+                        RadioButton {
                             id: compressionEncodingHextile
                             text: qsTr("Hextile")
                         }
-                        CRadioButton {
+                        RadioButton {
                             id: compressionEncodingH264
                             text: qsTr("H.264")
                         }
-                        CRadioButton {
+                        RadioButton {
                             id: compressionEncodingRaw
                             text: qsTr("Raw")
                         }
                     }
-                    Column {
+                    ColumnLayout {
                         id: compressionColorLevels
-                        CRadioButton {
+                        Layout.leftMargin: 12
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                        RadioButton {
                             id: compressionColorLevelFull
                             text: qsTr("Full")
                         }
-                        CRadioButton {
+                        RadioButton {
                             id: compressionColorLevelMedium
                             text: qsTr("Medium")
                         }
-                        CRadioButton {
+                        RadioButton {
                             id: compressionColorLevelLow
                             text: qsTr("Low")
                         }
-                        CRadioButton {
+                        RadioButton {
                             id: compressionColorLevelVeryLow
                             text: qsTr("Very low")
                         }
@@ -384,60 +428,52 @@ Window {
                     ButtonGroup { buttons: compressionEncodingTypes.children }
                     ButtonGroup { buttons: compressionColorLevels.children }
                 }
-                CCheckBox {
+                CheckBox {
                     id: compressionCustomCompressionLevel
-                    width: parent.width
+                    Layout.preferredWidth: compressionAutoSelectEditor.implicitWidth
+                    Layout.leftMargin: 6
                     font.bold: true
                     text: qsTr("Custom compression level:")
                 }
-                Row {
+                RowLayout {
                     id: compressionCustomCompressionLevelEditor
+                    Layout.leftMargin: 24
                     enabled: compressionCustomCompressionLevel.checked
                     spacing: 2
-                    leftPadding: 12
                     TextField {
                         id: compressionCustomCompressionLevelTextEdit
-                        width: 24
-                        height: 24
-                        font.pixelSize: labelFontPixelSize
+                        Layout.preferredWidth: 24
                         validator: IntValidator {
                             bottom: 0
                             top: 9
                         }
                     }
-                    Text {
-                        height: 24
-                        font.pixelSize: labelFontPixelSize
-                        color: compressionCustomCompressionLevelEditor.enabled ? "#ff000000" : "#ff939393"
+                    Label {
                         text: qsTr("level (0=fast, 9=best)")
                         verticalAlignment: Text.AlignVCenter
                     }
                 }
-                CCheckBox {
+                CheckBox {
                     id: compressionJPEGCompression
-                    width: parent.width
+                    Layout.preferredWidth: compressionAutoSelectEditor.implicitWidth
+                    Layout.leftMargin: 6
                     font.bold: true
                     text: qsTr("Allow JPEG compression:")
                 }
-                Row {
+                RowLayout {
                     id: compressionJPEGCompressionEditor
-                    enabled: !compressionJPEGCompression.checked
+                    enabled: compressionJPEGCompression.checked
                     spacing: 2
-                    leftPadding: 12
+                    Layout.leftMargin: 24
                     TextField {
                         id: compressionJPEGCompressionTextEdit
-                        width: 24
-                        height: 24
-                        font.pixelSize: labelFontPixelSize
+                        Layout.preferredWidth: 24
                         validator: IntValidator {
                             bottom: 0
                             top: 9
                         }
                     }
-                    Text {
-                        height: 24
-                        font.pixelSize: labelFontPixelSize
-                        color: compressionJPEGCompressionEditor.enabled ? "#ff000000" : "#ff939393"
+                    Label {
                         text: qsTr("quality (0=poor, 9=best)")
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -446,250 +482,226 @@ Window {
         }
         Rectangle {
             id: securityTab
-            color: "#ffdcdcdc"
-            Column {
+            implicitWidth: childrenRect.width + childrenRect.x
+            implicitHeight: childrenRect.height + childrenRect.y
+            ColumnLayout {
                 id: securityContainer
-                anchors.fill: parent
-                anchors.leftMargin: 10
-                anchors.topMargin: 10
+                x: 10
+                y: 10
                 spacing: 0
                 Text {
-                    font.pixelSize: labelFontPixelSize
                     font.bold: true
                     text: qsTr("Encryption")
                 }
-                CCheckBox {
+                CheckBox {
                     id: securityEncryptionNone
-                    width: parent.width
-                    leftPadding: 10
+                    Layout.leftMargin: 10
                     text: qsTr("None")
                 }
-                CCheckBox {
+                CheckBox {
                     id: securityEncryptionTLSWithAnonymousCerts
-                    width: parent.width
-                    leftPadding: 10
+                    Layout.leftMargin: 10
                     text: qsTr("TLS with anonymous certificates")
                 }
-                CCheckBox {
+                CheckBox {
                     id: securityEncryptionTLSWithX509Certs
-                    width: parent.width
-                    leftPadding: 10
+                    Layout.leftMargin: 10
                     text: qsTr("TLS with X509 certificates")
                 }
-                Text {
-                    leftPadding: 20
-                    font.pixelSize: labelFontPixelSize
-                    color: securityEncryptionTLSWithX509Certs.checked ? "#ff000000" : "#ff939393"
+                Label {
+                    Layout.leftMargin: 40
+                    enabled: securityEncryptionTLSWithX509Certs.checked
                     text: qsTr("Path to X509 CA certificate")
                 }
                 TextField {
                     id: securityEncryptionTLSWithX509CATextEdit
-                    height: 24
-                    leftPadding: 24
-                    leftInset: 20
-                    width: parent.width - leftPadding
+                    Layout.preferredWidth: 250
+                    Layout.leftMargin: 44
                     enabled: securityEncryptionTLSWithX509Certs.checked
-                    font.pixelSize: labelFontPixelSize
                 }
-                Text {
-                    leftPadding: 20
-                    font.pixelSize: labelFontPixelSize
-                    color: securityEncryptionTLSWithX509Certs.checked ? "#ff000000" : "#ff939393"
+                Label {
+                    Layout.leftMargin: 40
+                    enabled: securityEncryptionTLSWithX509Certs.checked
                     text: qsTr("Path to X509 CRL file")
                 }
                 TextField {
                     id: securityEncryptionTLSWithX509CRLTextEdit
-                    height: 24
-                    leftPadding: 24
-                    leftInset: 20
-                    width: parent.width - leftPadding
+                    Layout.preferredWidth: 250
+                    Layout.leftMargin: 44
                     enabled: securityEncryptionTLSWithX509Certs.checked
-                    font.pixelSize: labelFontPixelSize
                 }
-                CCheckBox {
+                CheckBox {
                     id: securityEncryptionAES
-                    width: parent.width
-                    leftPadding: 10
+                    Layout.leftMargin: 10
                     text: qsTr("RSA-AES")
                 }
                 Text {
-                    font.pixelSize: labelFontPixelSize
+                    Layout.topMargin: 10
                     font.bold: true
                     text: qsTr("Authentication")
                 }
-                CCheckBox {
+                CheckBox {
                     id: securityAuthenticationNone
-                    width: parent.width
-                    leftPadding: 10
+                    Layout.leftMargin: 10
                     text: qsTr("None")
                 }
-                CCheckBox {
+                CheckBox {
                     id: securityAuthenticationStandard
-                    width: parent.width
-                    leftPadding: 10
+                    Layout.leftMargin: 10
                     text: qsTr("Standard VNC (insecure without encryption)")
                 }
-                CCheckBox {
+                CheckBox {
                     id: securityAuthenticationUsernameAndPassword
-                    width: parent.width
-                    leftPadding: 10
+                    Layout.leftMargin: 10
                     text: qsTr("Username and password (insecure without encryption)")
                 }
             }
         }
         Rectangle {
             id: inputTab
-            color: "#ffdcdcdc"
-            Column {
+            implicitWidth: childrenRect.width + childrenRect.x
+            implicitHeight: childrenRect.height + childrenRect.y
+            ColumnLayout {
                 id: inputContainer
-                anchors.fill: parent
-                anchors.leftMargin: 10
-                anchors.topMargin: 10
+                x: 10
+                y: 10
                 spacing: 0
-                CCheckBox {
+                CheckBox {
                     id: inputViewOnly
-                    width: parent.width
                     text: qsTr("View only (ignore mouse and keyboard)")
                 }
                 Text {
-                    leftPadding: 5
-                    height: 20
-                    font.pixelSize: labelFontPixelSize
+                    Layout.leftMargin: 5
+                    Layout.topMargin: 10
                     font.bold: true
                     verticalAlignment: Text.AlignBottom
                     text: qsTr("Mouse")
                 }
-                CCheckBox {
+                CheckBox {
                     id: inputMouseEmulateMiddleButton
-                    width: parent.width
-                    leftPadding: 20
+                    Layout.leftMargin: 20
                     text: qsTr("Emulate middle mouse button")
                 }
-                CCheckBox {
+                CheckBox {
                     id: inputMouseShowDot
-                    width: parent.width
-                    leftPadding: 20
+                    Layout.leftMargin: 20
                     text: qsTr("Show dot when no cursor")
                 }
                 Text {
-                    leftPadding: 5
-                    height: 20
-                    font.pixelSize: labelFontPixelSize
+                    Layout.leftMargin: 5
+                    Layout.topMargin: 10
                     font.bold: true
                     verticalAlignment: Text.AlignBottom
                     text: qsTr("Keyboard")
                 }
-                CCheckBox {
+                CheckBox {
                     id: inputKeyboardPassSystemKeys
-                    width: parent.width
-                    leftPadding: 20
+                    Layout.leftMargin: 20
                     text: qsTr("Pass system keys directly to server (full screen)")
                 }
-                Row {
-                    leftPadding: 20
+                RowLayout {
+                    Layout.leftMargin: 20
                     spacing: 3
                     Text {
-                        height: 24
-                        font.pixelSize: labelFontPixelSize
                         text: qsTr("Menu key")
-                        verticalAlignment: Text.AlignVCenter
                     }
-                    CComboBox {
+                    ComboBox {
                         id: inputKeyboardMenuKeyCombo
-                        width: 90
+                        Layout.preferredWidth: 90
                         model: Config.menuKeys
                     }
                 }
                 Text {
-                    leftPadding: 5
-                    height: 20
-                    font.pixelSize: labelFontPixelSize
+                    Layout.leftMargin: 5
+                    Layout.topMargin: 10
                     font.bold: true
                     verticalAlignment: Text.AlignBottom
                     text: qsTr("Clipboard")
                 }
-                CCheckBox {
+                CheckBox {
                     id: inputClipboardFromServer
-                    width: parent.width
-                    leftPadding: 20
+                    Layout.leftMargin: 20
                     text: qsTr("Accept clipboard from server")
                 }
-                CCheckBox {
+                CheckBox {
                     id: inputClipboardToServer
-                    width: parent.width
-                    leftPadding: 20
+                    Layout.leftMargin: 20
                     text: qsTr("Send clipboard to server")
                 }
             }
         }
         Rectangle {
             id: displayTab
-            color: "#ffdcdcdc"
-            Text {
-                id: displayDesc
-                anchors.left: parent.left
-                anchors.top: parent.top
-                anchors.leftMargin: 12
-                anchors.topMargin: 10
-                font.pixelSize: labelFontPixelSize
-                font.bold: true
-                text: qsTr("Display mode")
-            }
-            Column {
-                id: displayContainer
-                anchors.left: parent.left
-                anchors.top: displayDesc.bottom
-                CRadioButton {
+            implicitWidth: childrenRect.width + childrenRect.x
+            implicitHeight: childrenRect.height + childrenRect.y
+            ButtonGroup { id: displayButtonGroup }
+            ColumnLayout {
+                id: displayDescContainer
+                x: 10
+                y: 10
+                spacing: 0
+                Text {
+                    id: displayDesc
+                    Layout.leftMargin: 12
+                    font.bold: true
+                    text: qsTr("Display mode")
+                }
+                RadioButton {
                     id: displayWindowed
+                    Layout.leftMargin: 12
+                    ButtonGroup.group: displayButtonGroup
                     text: qsTr("Windowed")
                 }
-                CRadioButton {
+                RadioButton {
                     id: displayFullScreenOnCurrentMonitor
+                    Layout.leftMargin: 12
+                    ButtonGroup.group: displayButtonGroup
                     text: qsTr("Full screen on current monitor")
                 }
-                CRadioButton {
+                RadioButton {
                     id: displayFullScreenOnAllMonitors
+                    Layout.leftMargin: 12
+                    ButtonGroup.group: displayButtonGroup
                     text: qsTr("Full screen on all monitors")
                 }
-                CRadioButton {
+                RadioButton {
                     id: displayFullScreenOnSelectedMonitors
+                    Layout.leftMargin: 12
+                    ButtonGroup.group: displayButtonGroup
                     text: qsTr("Full screen on selected monitor(s)")
                 }
-            }
-            ButtonGroup { buttons: displayContainer.children }
-            Rectangle {
-                id: displaySelectionView
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: displayContainer.bottom
-                anchors.leftMargin: 35
-                anchors.rightMargin: 10
-                anchors.topMargin: 5
-                height: 150
-                enabled: displayFullScreenOnSelectedMonitors.checked
-                color: "#ffe7e7e7"
-                border.width: 1
-                border.color: "#ff737373"
-                onWidthChanged: {
-                    if (width > 0) {
-                        layoutScreens()
+                Rectangle {
+                    id: displaySelectionView
+                    Layout.preferredWidth: 300
+                    Layout.preferredHeight: 150
+                    Layout.leftMargin: 35
+                    Layout.rightMargin: 10
+                    Layout.topMargin: 5
+                    enabled: displayFullScreenOnSelectedMonitors.checked
+                    color: "#ffe7e7e7"
+                    border.width: 1
+                    border.color: "#ff737373"
+                    onWidthChanged: {
+                        if (width > 0) {
+                            layoutScreens()
+                        }
                     }
                 }
             }
         }
         Rectangle {
             id: miscTab
-            color: "#ffdcdcdc"
-            Column {
+            implicitWidth: childrenRect.width + childrenRect.x
+            implicitHeight: childrenRect.height + childrenRect.y
+            ColumnLayout {
                 id: miscContainer
-                anchors.fill: parent
-                anchors.leftMargin: 10
-                anchors.topMargin: 10
-                CCheckBox {
+                x: 10
+                y: 10
+                CheckBox {
                     id: miscShared
                     text: qsTr("Shared (don't disconnect other viewers)")
                 }
-                CCheckBox {
+                CheckBox {
                     id: miscReconnectQuery
                     text: qsTr("Ask to reconnect on connection errors")
                 }
@@ -699,13 +711,12 @@ Window {
 
     Rectangle {
         id: buttonBox
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
+        anchors.left: contentStack.left
+        anchors.right: contentStack.right
+        anchors.top: contentStack.bottom
         height: 52
-        color: "#ffdcdcdc"
 
-        CButton {
+        Button {
             id: cancelButton
             anchors.right: okButton.left
             anchors.bottom: okButton.bottom
@@ -713,7 +724,7 @@ Window {
             text: qsTr("Cancel")
             onClicked: close()
         }
-        CButton {
+        Button {
             id: okButton
             anchors.right: parent.right
             anchors.bottom: parent.bottom

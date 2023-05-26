@@ -2,9 +2,6 @@ import QtQuick 2.12
 import Qt.TigerVNC 1.0
 
 Item {
-    property real labelFontPixelSize: 12
-    property real buttonFontPixelSize: 14
-
     function alert(message) {
         alertDialog.text = message
         alertDialog.open()

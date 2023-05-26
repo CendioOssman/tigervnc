@@ -6,18 +6,15 @@ import QtQuick.Window 2.12
 Window {
     id: root
 
-    property real labelFontPixelSize: 12
-    property real buttonFontPixelSize: 14
     property bool secured: false
     property alias userNeeded: userText.visible
     property alias passwordNeeded: passwordText.visible
 
-    width: 420
-    height: 170
+    width: container.childrenRect.width
+    height: container.childrenRect.height
     flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint
     modality: Qt.ApplicationModal
-    title: qsTr("VNC Authentication")
-    color: "#ffdcdcdc"
+    title: qsTr("VNC authentication")
 
     signal commit(string user, string password)
     signal abort()
@@ -53,139 +50,135 @@ Window {
         }
     }
 
-    Rectangle {
-        id: statusArea
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        height: statusContent.height
-        color: "#ffff0000"
+    ColumnLayout {
+        id: container
+        spacing: 0
 
-        Item {
-            id: statusContent
-            anchors.horizontalCenter: statusArea.horizontalCenter
-            width: statusIcon.width + statusMessage.width + statusMessage.anchors.leftMargin
-            height: 20
-            Image {
-                id: statusIcon
+        Rectangle {
+            id: statusArea
+            Layout.fillWidth: true
+            Layout.preferredHeight: statusContent.height + 6
+            color: "#ffff0000"
+
+            RowLayout {
+                id: statusContent
                 y: 3
-                width: 14
-                height: 14
-                fillMode: Image.PreserveAspectFit
-                source: "qrc:/images/lock_48px.png"
-                Rectangle {
-                    id: insecureBar
-                    x: parent.width / 2
-                    y: parent.width / 4
-                    width: 2
-                    height: parent.height
-                    rotation: 50
-                    transformOrigin: Item.Center
-                    color: "#ffff0000"
+                anchors.horizontalCenter: statusArea.horizontalCenter
+                spacing: 3
+                Image {
+                    id: statusIcon
+                    Layout.topMargin: 3
+                    Layout.preferredWidth: statusMessage.implicitHeight
+                    Layout.preferredHeight: statusMessage.implicitHeight
+                    fillMode: Image.PreserveAspectFit
+                    source: "qrc:/images/lock_48px.png"
+                    Rectangle {
+                        id: insecureBar
+                        x: parent.width / 2
+                        y: parent.width / 4
+                        width: 2
+                        height: parent.height
+                        rotation: 50
+                        transformOrigin: Item.Center
+                        color: "#ffff0000"
+                    }
+                }
+                Text {
+                    id: statusMessage
+                    text: qsTr("This connection is not secure")
                 }
             }
-            Text {
-                id: statusMessage
-                anchors.left: statusIcon.right
-                anchors.leftMargin: 3
-                anchors.verticalCenter: statusIcon.verticalCenter
-                height: statusIcon.height
-                text: qsTr("This connection is not secure")
-                verticalAlignment: Text.AlignVCenter
+            states: [
+                State {
+                    when: secured
+                    PropertyChanges {
+                        target: statusArea
+                        color: "#ff00ff00"
+                    }
+                    PropertyChanges {
+                        target: statusMessage
+                        text: qsTr("This connection is secure")
+                    }
+                    PropertyChanges {
+                        target: insecureBar
+                        visible: false
+                    }
+                }
+            ]
+        }
+
+        RowLayout {
+            spacing: 0
+
+            Image {
+                id: authIcon
+                Layout.leftMargin: 15
+                Layout.topMargin: 20
+                Layout.alignment: Qt.AlignVCenter
+                source: "qrc:/images/help_48px.png"
+            }
+            GridLayout {
+                Layout.leftMargin: 10
+                Layout.rightMargin: 10
+                Layout.topMargin: 20
+                Layout.bottomMargin: 20
+                columns: 2
+                rows: 2
+                rowSpacing: 3
+                columnSpacing: 5
+
+                Text {
+                    id: userLabel
+                    Layout.leftMargin: 10
+                    visible: userText.visible
+                    text: qsTr("Username:")
+                }
+                TextField {
+                    id: userText
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 25
+                    Layout.preferredHeight: 25
+                }
+                Text {
+                    id: passwordLabel
+                    Layout.leftMargin: 10
+                    visible: passwordText.visible
+                    text: qsTr("Password:")
+                }
+                TextField {
+                    id: passwordText
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 10
+                    Layout.rightMargin: 25
+                    Layout.preferredHeight: 25
+                    echoMode: TextInput.Password
+                    Keys.onEnterPressed: accept()
+                    Keys.onReturnPressed: accept()
+                }
             }
         }
-        states: [
-            State {
-                when: secured
-                PropertyChanges {
-                    target: statusArea
-                    color: "#ff00ff00"
-                }
-                PropertyChanges {
-                    target: statusMessage
-                    text: qsTr("This connection is secure")
-                }
-                PropertyChanges {
-                    target: insecureBar
-                    visible: false
-                }
+
+        RowLayout {
+            Layout.alignment: Qt.AlignRight
+            Button {
+                id: cancelButton
+                Layout.bottomMargin: 10
+                Layout.topMargin: 5
+                Layout.preferredWidth: 110
+                text: qsTr("Cancel")
+                onClicked: cancel()
             }
-        ]
-    }
-
-    Image {
-        id: authIcon
-        anchors.left: parent.left
-        anchors.top: statusArea.bottom
-        anchors.leftMargin: 15
-        anchors.topMargin: 20
-        source: "qrc:/images/help_48px.png"
-    }
-    GridLayout {
-        anchors.left: authIcon.right
-        anchors.right: parent.right
-        anchors.top: statusArea.bottom
-        anchors.leftMargin: 10
-        anchors.topMargin: 20
-        columns: 2
-        rows: 2
-        rowSpacing: 3
-        columnSpacing: 5
-
-        Text {
-            id: userLabel
-            Layout.leftMargin: 10
-            visible: userText.visible
-            font.pixelSize: labelFontPixelSize
-            text: qsTr("User:")
+            Button {
+                id: okButton
+                Layout.leftMargin: 10
+                Layout.rightMargin: 15
+                Layout.topMargin: 5
+                Layout.bottomMargin: 10
+                Layout.preferredWidth: 110
+                text: qsTr("OK")
+                onClicked: accept()
+            }
         }
-        TextField {
-            id: userText
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 25
-            Layout.preferredHeight: 25
-            font.pixelSize: labelFontPixelSize
-        }
-        Text {
-            id: passwordLabel
-            Layout.leftMargin: 10
-            visible: passwordText.visible
-            font.pixelSize: labelFontPixelSize
-            text: qsTr("Password:")
-        }
-        TextField {
-            id: passwordText
-            Layout.fillWidth: true
-            Layout.leftMargin: 10
-            Layout.rightMargin: 25
-            Layout.preferredHeight: 25
-            echoMode: TextInput.Password
-            font.pixelSize: labelFontPixelSize
-            Keys.onEnterPressed: accept()
-            Keys.onReturnPressed: accept()
-        }
-    }
-
-    CButton {
-        id: cancelButton
-        anchors.right: okButton.left
-        anchors.bottom: okButton.bottom
-        anchors.rightMargin: 10
-        width: 110
-        font.pixelSize: buttonFontPixelSize
-        text: qsTr("Cancel")
-        onClicked: cancel()
-    }
-    CButton {
-        id: okButton
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.rightMargin: 15
-        anchors.bottomMargin: 10
-        width: 110
-        font.pixelSize: buttonFontPixelSize
-        text: qsTr("OK")
-        onClicked: accept()
     }
 }

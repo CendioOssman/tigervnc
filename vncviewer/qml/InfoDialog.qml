@@ -1,4 +1,5 @@
 import QtQuick 2.12
+import QtQuick.Controls 2.12
 import QtQuick.Window 2.12
 import QtQuick.Layouts 1.12
 import Qt.TigerVNC 1.0
@@ -6,15 +7,11 @@ import Qt.TigerVNC 1.0
 Window {
     id: root
 
-    property real labelFontPixelSize: 12
-    property real buttonFontPixelSize: 14
-
     width: container.implicitWidth
     height: container.implicitHeight
     flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint
     modality: Qt.ApplicationModal
     title: qsTr("VNC connection info")
-    color: "#ffdcdcdc"
 
     function open() {
         infoText.text = AppManager.connection.infoText()
@@ -22,7 +19,16 @@ Window {
     }
 
     function close() {
+        infoText.text = ""
         visible = false
+    }
+
+    Timer {
+        id: refreshTimer
+        running: root.visible
+        interval: 500
+        repeat: true
+        onTriggered: infoText.text = AppManager.connection.infoText()
     }
 
     GridLayout {
@@ -51,9 +57,8 @@ Window {
             Layout.rightMargin: 15
             Layout.topMargin: 18
             verticalAlignment: Text.AlignVCenter
-            font.pixelSize: labelFontPixelSize
         }
-        CButton {
+        Button {
             id: closeButton
             Layout.row: 1
             Layout.column: 1
@@ -63,7 +68,6 @@ Window {
             Layout.alignment: Qt.AlignRight | Qt.AlignBottom
             Layout.preferredWidth: 72
             focus: true
-            font.pixelSize: buttonFontPixelSize
             text: qsTr("Close")
             onClicked: close()
         }
