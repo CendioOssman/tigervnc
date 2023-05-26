@@ -2,6 +2,7 @@
 #define ABSTRACTVNCVIEW_H
 
 #include <QWidget>
+#include <QScrollArea>
 #include <QList>
 
 class QMenu;
@@ -18,9 +19,28 @@ namespace rfb {
 
 using DownMap = std::map<int, quint32>;
 
+class QVNCWindow : public QScrollArea
+{
+  Q_OBJECT
+public:
+  QVNCWindow(QWidget *parent = nullptr);
+  virtual ~QVNCWindow();
+
+public slots:
+  void popupOverlayTip();
+
+protected:
+  void moveEvent(QMoveEvent *e) override;
+
+private:
+  QTimer *m_overlayTipCloseTimer;
+  QLabel *m_overlayTip;
+};
+
 class QAbstractVNCView : public QWidget
 {
   Q_OBJECT
+
 public:
   QAbstractVNCView(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~QAbstractVNCView();
@@ -56,6 +76,7 @@ public slots:
 
 signals:
   void fullscreenChanged(bool enabled);
+  void delayedInitialized();
 
 protected:
   static QClipboard *m_clipboard;
@@ -65,7 +86,6 @@ protected:
   quint32 m_menuKeySym;
   QMenu *m_contextMenu;
   QList<QAction*> m_actions;
-  QLabel *m_overlayTip;
 
   bool m_firstLEDState;
   bool m_pendingServerClipboard;
@@ -79,7 +99,6 @@ protected:
 
   QTimer *m_resizeTimer;
   QTimer *m_delayedInitializeTimer;
-  QTimer *m_overlayTipCloseTimer;
   bool m_fullscreenEnabled;
   bool m_pendingFullscreen;
 
@@ -98,7 +117,6 @@ protected:
   void sendAction(const rfb::Point &pos, int buttonMask, int action);
   int createButtonMask(int buttonMask);
   void handleMouseButtonEmulationTimeout();
-  void moveEvent(QMoveEvent *e) override;
 };
 
 #endif // ABSTRACTVNCVIEW_H

@@ -37,6 +37,7 @@ endif()
 
 set(PROJECT_SOURCES
         vncviewer.cxx
+        vnctranslator.h
         appmanager.h
         appmanager.cxx
         viewerconfig.h
@@ -76,7 +77,7 @@ endif()
 if(WIN32)
   set(OS_DEPENDENT_LIBRARIES msimg32)
 elseif(APPLE)
-  set(OS_DEPENDENT_LIBRARIES "-framework Cocoa -framework Carbon -framework IOKit")
+  set(OS_DEPENDENT_LIBRARIES "-framework Cocoa -framework Carbon -framework IOKit -framework QuartzCore")
 else()
   set(OS_DEPENDENT_LIBRARIES ${X11_XiLIB} "-lXi" "-lXrender" "-lXext" "-lX11")
   if(X11_Xrandr_LIB)
@@ -229,20 +230,39 @@ if(UNIX)
 endif()
 
 if(WIN32)
-    set(DEPLOY_DIR ${CMAKE_SOURCE_DIR}/deploy CACHE PATH "Package directory")
+    set(DEPLOY_DIR ${CMAKE_CURRENT_BINARY_DIR}/deploy CACHE PATH "Package directory")
     get_target_property(LOCAL_QMAKE_PATH Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
     get_filename_component(LOCAL_QTBIN_PATH ${LOCAL_QMAKE_PATH} DIRECTORY)
     find_program(DEPLOYQT NAMES windeployqt HINTS "${LOCAL_QTBIN_PATH}")
     add_custom_command(
         TARGET vncviewer
         POST_BUILD
-        COMMAND ${DEPLOYQT} --dir $<TARGET_FILE_DIR:vncviewer> --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer>)
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<SHELL_PATH:${DEPLOY_DIR}/locale>")
     add_custom_command(
         TARGET vncviewer
         POST_BUILD
-        COMMAND cp -f $<TARGET_FILE_DIR:vncviewer>/$<TARGET_FILE_NAME:vncviewer> "${DEPLOY_DIR}")
+        COMMAND ${CMAKE_COMMAND} -E copy $<SHELL_PATH:$<TARGET_FILE:vncviewer>> "$<SHELL_PATH:${DEPLOY_DIR}>")
+    add_custom_command(
+        TARGET vncviewer
+        POST_BUILD
+        COMMAND ${DEPLOYQT} --dir ${DEPLOY_DIR} --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE:vncviewer>)
+
+    file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/../po/LINGUAS po_FILES)
+    foreach(lang ${po_FILES})
+      set(mo "${CMAKE_CURRENT_BINARY_DIR}/../po/${lang}.mo")
+      add_custom_command(
+          TARGET vncviewer
+          POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E make_directory $<SHELL_PATH:${DEPLOY_DIR}/locale/${lang}>)
+      add_custom_command(
+          TARGET vncviewer
+          POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy $<SHELL_PATH:${mo}> $<SHELL_PATH:${DEPLOY_DIR}/locale/${lang}/LC_MESSAGES/tigervnc.mo>)
+    endforeach(lang)
 endif()
 if(APPLE AND CMAKE_BUILD_TYPE MATCHES Release)
+    set(DEPLOY_DIR $<TARGET_FILE_DIR:vncviewer>/../../../vncviewer.app CACHE PATH "Package directory")
+    set(LOCALE_DIR $<TARGET_FILE_DIR:vncviewer>/../Resources/locale CACHE PATH "Locale directory")
     get_target_property(LOCAL_QMAKE_PATH Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
     get_filename_component(LOCAL_QTBIN_PATH ${LOCAL_QMAKE_PATH} DIRECTORY)
     find_program(DEPLOYQT NAMES macdeployqt HINTS "${LOCAL_QTBIN_PATH}")
@@ -250,10 +270,51 @@ if(APPLE AND CMAKE_BUILD_TYPE MATCHES Release)
     add_custom_command(
         TARGET vncviewer
         POST_BUILD
-        COMMAND rm -rf "$<TARGET_FILE_DIR:vncviewer>/../Resources/qml")
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "$<TARGET_FILE_DIR:vncviewer>/../Resources/qml")
     add_custom_command(
         TARGET vncviewer
         POST_BUILD
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/deploy"
-        COMMAND ${DEPLOYQT} "$<TARGET_FILE_DIR:vncviewer>/../../../vncviewer.app" "-dmg" "-always-overwrite" "-qmldir=${CMAKE_SOURCE_DIR}/vncviewer/qml" "-verbose=2")
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${DEPLOY_DIR}")
+    add_custom_command(
+        TARGET vncviewer
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${LOCALE_DIR}")
+    add_custom_command(
+        TARGET vncviewer
+        POST_BUILD
+        WORKING_DIRECTORY "${DEPLOY_DIR}"
+        COMMAND ${DEPLOYQT} "${DEPLOY_DIR}" "-dmg" "-always-overwrite" "-qmldir=${CMAKE_SOURCE_DIR}/vncviewer/qml" "-verbose=2")
+
+        file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/../po/LINGUAS po_FILES)
+        foreach(lang ${po_FILES})
+          set(mo "${CMAKE_CURRENT_BINARY_DIR}/../po/${lang}.mo")
+          add_custom_command(
+              TARGET vncviewer
+              POST_BUILD
+              COMMAND ${CMAKE_COMMAND} -E make_directory ${LOCALE_DIR}/${lang})
+          add_custom_command(
+              TARGET vncviewer
+              POST_BUILD
+              COMMAND ${CMAKE_COMMAND} -E copy ${mo} ${LOCALE_DIR}/${lang}/LC_MESSAGES/tigervnc.mo)
+        endforeach(lang)
+endif()
+if(UNIX)
+    set(DEPLOY_DIR ${CMAKE_CURRENT_BINARY_DIR}/deploy CACHE PATH "Package directory")
+    add_custom_command(
+        TARGET vncviewer
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<SHELL_PATH:${DEPLOY_DIR}/locale>")
+
+    file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/../po/LINGUAS po_FILES)
+    foreach(lang ${po_FILES})
+      set(mo "${CMAKE_CURRENT_BINARY_DIR}/../po/${lang}.mo")
+      add_custom_command(
+          TARGET vncviewer
+          POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E make_directory $<SHELL_PATH:${DEPLOY_DIR}/locale/${lang}>)
+      add_custom_command(
+          TARGET vncviewer
+          POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy $<SHELL_PATH:${mo}> $<SHELL_PATH:${DEPLOY_DIR}/locale/${lang}/LC_MESSAGES/tigervnc.mo>)
+    endforeach(lang)
 endif()

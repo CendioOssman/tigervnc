@@ -194,9 +194,8 @@ bool QVNCX11View::event(QEvent *e)
   switch(e->type()) {
     case QEvent::Polish:
       if (!m_window) {
-        int screenNumber = DefaultScreen(m_display);
-        int w = width();
-        int h = height();
+        int w = width() > 0 ? width() : parentWidget()->width();
+        int h = height() > 0 ? height() : parentWidget()->height();
         int borderWidth = 0;
         XSetWindowAttributes xattr;
         xattr.override_redirect = False;
@@ -204,8 +203,7 @@ bool QVNCX11View::event(QEvent *e)
         xattr.border_pixel = 0;
         xattr.colormap = m_colorMap;
         unsigned int wattr = CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWColormap;
-        m_window = XCreateWindow(m_display, RootWindow(m_display, screenNumber), 0, 0, w, h, borderWidth, 32, InputOutput, m_visualInfo->visual, wattr, &xattr);
-        XReparentWindow(m_display, m_window, winId(), 0, 0);
+        m_window = XCreateWindow(m_display, winId(), 0, 0, w, h, borderWidth, 32, InputOutput, m_visualInfo->visual, wattr, &xattr);
         XMapWindow(m_display, m_window);
         setMouseTracking(true);
       }

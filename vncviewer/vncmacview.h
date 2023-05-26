@@ -1,6 +1,7 @@
 #ifndef VNCMACVIEW_H
 #define VNCMACVIEW_H
 
+#include <QAbstractNativeEventFilter>
 #include "abstractvncview.h"
 
 class QWindow;
@@ -31,20 +32,32 @@ public slots:
 
 protected:
   bool event(QEvent *e) override;
-  bool nativeEvent(const QByteArray &eventType, void *message, long *result) override;
   void showEvent(QShowEvent *) override;
   void focusInEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
   void paintEvent(QPaintEvent *event) override;
   void handleMouseButtonEvent(QMouseEvent*);
   void handleMouseWheelEvent(QWheelEvent*);
+  void installNativeEventHandler();
 
 signals:
   void message(const QString &msg, int timeout);
 
 private:
+  class MacEventFilter : public QAbstractNativeEventFilter
+  {
+  public:
+      MacEventFilter(QVNCMacView *view);
+      virtual ~MacEventFilter();
+      bool nativeEventFilter(const QByteArray &eventType, void *message, long *result) override;
+
+  private:
+      QVNCMacView *m_view;
+  };
+
   NSView *m_view;
   NSCursor *m_cursor;
+  MacEventFilter *m_filter;
 };
 
 #endif // VNCMACVIEW_H

@@ -8,15 +8,14 @@
 #include <QScreen>
 #include <QDeadlineTimer>
 #include <QProcess>
+#include <QAction>
 #include "rdr/Exception.h"
-#include "gettext.h"
 #include "i18n.h"
 #include "vncconnection.h"
 #include "viewerconfig.h"
 #include "abstractvncview.h"
 #include "appmanager.h"
-#include "network/TcpSocket.h"
-#include "parameters.h"
+#undef asprintf
 
 #if defined(WIN32)
 #include "vncwinview.h"
@@ -32,11 +31,22 @@ AppManager *AppManager::m_manager;
 PROCESS_INFORMATION pi;
 #endif
 
+class QMenuSeparator : public QAction
+{
+public:
+  QMenuSeparator(QWidget *parent = nullptr)
+   : QAction(parent)
+  {
+    setSeparator(true);
+  }
+};
+
 AppManager::AppManager()
  : QObject(nullptr)
  , m_error(0)
  , m_worker(new QVNCConnection)
  , m_view(nullptr)
+ , m_scroll(new QVNCWindow)
 {
   m_worker->start();
   connect(m_worker, &QVNCConnection::credentialRequested, this, [this](bool secured, bool userNeeded, bool passwordNeeded) {
@@ -57,7 +67,9 @@ AppManager::~AppManager()
   m_worker->wait(1000);
 #endif
   m_worker->deleteLater();
+  m_scroll->takeWidget();
   delete m_view;
+  delete m_scroll;
 }
 
 int AppManager::initialize()
@@ -97,15 +109,16 @@ void AppManager::publishError(const QString &message, bool quit)
 
 void AppManager::openVNCWindow(int width, int height, QString name)
 {
+  m_scroll->takeWidget();
   delete m_view;
 #if defined(WIN32)
-  m_view = new QVNCWinView();
+  m_view = new QVNCWinView(m_scroll);
 #elif defined(__APPLE__)
-  m_view = new QVNCMacView();
+  m_view = new QVNCMacView(m_scroll);
 #elif defined(Q_OS_UNIX)
   QString platform = QGuiApplication::platformName();
   if (platform == "xcb") {
-    m_view = new QVNCX11View();
+    m_view = new QVNCX11View(m_scroll);
   }
   else if (platform == "wayland") {
     ;
@@ -115,10 +128,18 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   if (!m_view) {
     throw rdr::Exception(_("Platform not supported."));
   }
+  connect(m_view, &QAbstractVNCView::fullscreenChanged, this, [this](bool enabled) {
+    m_scroll->setHorizontalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
+    m_scroll->setVerticalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
+  }, Qt::QueuedConnection);
+  connect(m_view, &QAbstractVNCView::delayedInitialized, m_scroll, &QVNCWindow::popupOverlayTip);
 
+  m_scroll->setWidget(m_view);
+  m_scroll->resize(width, height);
   m_view->resize(width, height);
-  m_view->setWindowTitle(QString(_("%1 - TigerVNC")).arg(name));
-  m_view->show();
+  m_scroll->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+  m_scroll->show();
+
   if (ViewerConfig::config()->fullScreen()) {
     m_view->fullscreen(true);
   }

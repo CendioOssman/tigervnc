@@ -6,6 +6,7 @@
 class QIODevice;
 class QVNCConnection;
 class QAbstractVNCView;
+class QVNCWindow;
 
 class AppManager : public QObject
 {
@@ -64,6 +65,7 @@ private:
   int m_error;
   QVNCConnection *m_worker;
   QAbstractVNCView *m_view;
+  QVNCWindow *m_scroll;
   AppManager();
 };
 

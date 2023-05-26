@@ -10,6 +10,7 @@
 #include <QImage>
 #include <QBitmap>
 #include <QLabel>
+#include <QAbstractEventDispatcher>
 #include "rfb/ServerParams.h"
 #include "rfb/LogWriter.h"
 #include "rdr/Exception.h"
@@ -25,11 +26,9 @@
 #include <QDebug>
 #include <QMouseEvent>
 
-#ifdef __APPLE__
 #include "cocoa.h"
 extern const unsigned short code_map_osx_to_qnum[];
 extern const unsigned int code_map_osx_to_qnum_len;
-#endif
 
 #ifndef XK_VoidSymbol
 #define XK_LATIN1
@@ -44,10 +43,79 @@ extern const unsigned int code_map_osx_to_qnum_len;
 
 static rfb::LogWriter vlog("QVNCMacView");
 
+QVNCMacView::MacEventFilter::MacEventFilter(QVNCMacView *view)
+ : m_view(view)
+{
+}
+
+QVNCMacView::MacEventFilter::~MacEventFilter()
+{
+}
+
+/**
+* Native event handler must be installed with QAbstractEventDispatcher::installNativeEventFilter()
+* because QWidget::nativeEvent() doesn't get called on macOS if the widget does not have a native
+* window handle. See QTBUG-40116 or QWidget document (https://doc.qt.io/qt-6.4/qwidget.html#nativeEvent)
+* for more details.
+* 
+* @param eventType 
+* @param message 
+* @param result 
+* 
+* @return 
+*/
+bool QVNCMacView::MacEventFilter::nativeEventFilter(const QByteArray &eventType, void *message, long *result)
+{
+  if (eventType == "mac_generic_NSEvent") {
+    if (QApplication::activePopupWidget()) { // F8 popup menu
+      return false;
+    }
+    if (QApplication::activeWindow() != m_view->window()) { // QML dialog windows
+      return false;
+    }
+    if (cocoa_is_keyboard_sync(message)) {
+      while (!m_view->m_downKeySym.empty()) {
+        m_view->handleKeyRelease(m_view->m_downKeySym.begin()->first);
+      }
+      return true;
+    }
+    if (cocoa_is_keyboard_event(message)) {
+      int keyCode = cocoa_event_keycode(message);
+      //qDebug() << "nativeEvent: keyEvent: keyCode=" << keyCode << ", hexKeyCode=" << Qt::hex << keyCode;
+      if ((unsigned)keyCode >= code_map_osx_to_qnum_len) {
+        keyCode = 0;
+      }
+      else {
+        keyCode = code_map_osx_to_qnum[keyCode];
+      }
+      if (cocoa_is_key_press(message)) {
+        rdr::U32 keySym = cocoa_event_keysym(message);
+        if (keySym == NoSymbol) {
+          vlog.error(_("No symbol for key code 0x%02x (in the current state)"), (int)keyCode);
+        }
+
+        m_view->handleKeyPress(keyCode, keySym);
+
+        // We don't get any release events for CapsLock, so we have to
+        // send the release right away.
+        if (keySym == XK_Caps_Lock) {
+          m_view->handleKeyRelease(keyCode);
+        }
+      }
+      else {
+        m_view->handleKeyRelease(keyCode);
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
  : QAbstractVNCView(parent, f)
  , m_view(0)
  , m_cursor(nullptr)
+ , m_filter(nullptr)
 {
   setAttribute(Qt::WA_NoBackground);
   setAttribute(Qt::WA_NoSystemBackground);
@@ -57,12 +125,13 @@ QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
     PlatformPixelBuffer *framebuffer = (PlatformPixelBuffer*)AppManager::instance()->connection()->framebuffer();
     cocoa_resize(m_view, framebuffer->bitmap());
   }, Qt::QueuedConnection);
-
-  m_overlayTip->hide();
 }
 
 QVNCMacView::~QVNCMacView()
 {
+  // m_cursor is autorelease.
+  QAbstractEventDispatcher::instance()->removeNativeEventFilter(m_filter);
+  delete m_filter;
 }
 
 qulonglong QVNCMacView::nativeWindowHandle() const
@@ -76,6 +145,15 @@ void QVNCMacView::updateWindow()
   draw();
 }
 
+void QVNCMacView::installNativeEventHandler()
+{
+  QAbstractEventDispatcher::instance()->removeNativeEventFilter(m_filter);
+  delete m_filter;
+
+  m_filter = new MacEventFilter(this);
+  QAbstractEventDispatcher::instance()->installNativeEventFilter(m_filter);
+}
+
 bool QVNCMacView::event(QEvent *e)
 {
   switch(e->type()) {
@@ -87,7 +165,8 @@ bool QVNCMacView::event(QEvent *e)
       CGImage *bitmap = framebuffer->bitmap();
       m_view = cocoa_create_view(this, bitmap);
       // Do not invoke #fromWinId(), otherwise NSView won't be shown.
-      // QWindow *w = windowHandle()->fromWinId((WId)m_view);
+      //QWindow *w = windowHandle()->fromWinId((WId)m_view);
+      installNativeEventHandler();
       setMouseTracking(true);
     }
     break;
@@ -97,53 +176,40 @@ bool QVNCMacView::event(QEvent *e)
   case QEvent::MouseButtonPress:
   case QEvent::MouseButtonRelease:
   case QEvent::MouseButtonDblClick:
-    qDebug() << "QVNCMacView::event: MouseButton event";
+    //qDebug() << "QVNCMacView::event: MouseButton event";
     handleMouseButtonEvent((QMouseEvent*)e);
     break;
   case QEvent::Wheel:
     handleMouseWheelEvent((QWheelEvent*)e);
-  case QEvent::WindowBlocked:
-    //      if (m_hwnd)
-    //        EnableWindow(m_hwnd, false);
-    break;
-  case QEvent::WindowUnblocked:
-    //      if (m_hwnd)
-    //        EnableWindow(m_hwnd, true);
-    break;
   case QEvent::WindowActivate:
-    qDebug() << "WindowActivate";
+    //qDebug() << "WindowActivate";
     grabPointer();
     break;
   case QEvent::WindowDeactivate:
-    qDebug() << "WindowDeactivate";
+    //qDebug() << "WindowDeactivate";
     ungrabPointer();
     break;
-#if 0 // On macOS, this block is never used.
   case QEvent::Enter:
-    qDebug() << "Enter";
+  case QEvent::FocusIn:
+    //qDebug() << "Enter/FocusIn";
     setFocus();
     grabPointer();
     break;
   case QEvent::Leave:
-    qDebug() << "Leave";
+  case QEvent::FocusOut:
+    //qDebug() << "Leave/FocusOut";
     clearFocus();
     ungrabPointer();
     break;
-#endif
   case QEvent::CursorChange:
     //qDebug() << "CursorChange";
     e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
     return true;
-//  case QEvent::Paint:
-//    //qDebug() << "QEvent::Paint";
-//    draw();
-//    e->setAccepted(true);
-//    return true;
   case QEvent::MetaCall:
     // qDebug() << "QEvent::MetaCall (signal-slot call)";
     break;
   default:
-    qDebug() << "Unprocessed Event: " << e->type();
+    //qDebug() << "Unprocessed Event: " << e->type();
     break;
   }
   return QWidget::event(e);
@@ -187,74 +253,6 @@ void QVNCMacView::paintEvent(QPaintEvent *event)
   draw();
 }
 
-bool QVNCMacView::nativeEvent(const QByteArray &eventType, void *message, long *result)
-{
-  if (eventType == "NSEvent") {
-    // Special event that means we temporarily lost some input
-    if (cocoa_is_mouse_entered(message)) {
-      qDebug() << "nativeEvent: mouseEntered";
-      setFocus();
-      grabPointer();
-      return true;
-    }
-    else if (cocoa_is_mouse_exited(message)) {
-      qDebug() << "nativeEvent: mouseExited";
-      clearFocus();
-      ungrabPointer();
-      return true;
-    }
-    else if (cocoa_is_mouse_moved(message)) {
-      int x = 0;
-      int y = 0;
-      int buttonMask = 0;
-      cocoa_get_mouse_properties(message, &x, &y, &buttonMask);
-      y = height() - y;
-      qDebug() << "nativeEvent: mouseMoved: x=" << x << ",y=" << y << ",buttonMask=0x" << Qt::hex << buttonMask;
-      filterPointerEvent(rfb::Point(x, y), buttonMask);
-      return true;
-    }
-
-    if (cocoa_is_keyboard_sync(message)) {
-      while (!m_downKeySym.empty()) {
-        handleKeyRelease(m_downKeySym.begin()->first);
-      }
-      return true;
-    }
-
-    if (cocoa_is_keyboard_event(message)) {
-      int keyCode = cocoa_event_keycode(message);
-      qDebug() << "nativeEvent: keyEvent: keyCode=" << keyCode << ", hexKeyCode=" << Qt::hex << keyCode;
-      if ((unsigned)keyCode >= code_map_osx_to_qnum_len) {
-        keyCode = 0;
-      }
-      else {
-        keyCode = code_map_osx_to_qnum[keyCode];
-      }
-      if (cocoa_is_key_press(message)) {
-        rdr::U32 keySym = cocoa_event_keysym(message);
-        if (keySym == NoSymbol) {
-          vlog.error(_("No symbol for key code 0x%02x (in the current state)"), (int)keyCode);
-        }
-
-        handleKeyPress(keyCode, keySym);
-
-        // We don't get any release events for CapsLock, so we have to
-        // send the release right away.
-        if (keySym == XK_Caps_Lock) {
-          handleKeyRelease(keyCode);
-        }
-      }
-      else {
-        handleKeyRelease(keyCode);
-      }
-
-      return true;
-    }
-  }
-  qDebug() << "nativeEvent: eventType=" << eventType;
-  return QWidget::nativeEvent(eventType, message, result);
-}
-
 void QVNCMacView::bell()
 {
   cocoa_beep();
@@ -292,7 +290,7 @@ void QVNCMacView::handleMouseButtonEvent(QMouseEvent *e)
     buttonMask |= 4;
   }
 
-  qDebug() << "handleMouseButtonEvent: x=" << e->x() << ",y=" << e->y();
+  //qDebug() << "handleMouseButtonEvent: x=" << e->x() << ",y=" << e->y();
   filterPointerEvent(rfb::Point(e->x(), e->y()), buttonMask);
 }
 
@@ -429,7 +427,7 @@ void QVNCMacView::handleClipboardData(const char* data)
 
 void QVNCMacView::setLEDState(unsigned int state)
 {
-  qDebug() << "QVNCMacView::setLEDState";
+  //qDebug() << "QVNCMacView::setLEDState";
   vlog.debug("Got server LED state: 0x%08x", state);
 
   // The first message is just considered to be the server announcing
@@ -460,7 +458,7 @@ void QVNCMacView::setLEDState(unsigned int state)
 
 void QVNCMacView::pushLEDState()
 {
-  qDebug() << "QVNCMacView::pushLEDState";
+  //qDebug() << "QVNCMacView::pushLEDState";
   QVNCConnection *cc = AppManager::instance()->connection();
   // Server support?
   rfb::ServerParams *server = AppManager::instance()->connection()->server();
@@ -517,5 +515,6 @@ void QVNCMacView::grabKeyboard()
 
 void QVNCMacView::ungrabKeyboard()
 {
+  cocoa_release_displays(this);
   QAbstractVNCView::ungrabKeyboard();
 }

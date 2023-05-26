@@ -85,7 +85,7 @@ public:
   void exit(int errorCode = 0);
 
   // missing methods for CMsgHandler.
-  void setPixelFormat(const rfb::PixelFormat& pf) {}
+  void setPixelFormat(const rfb::PixelFormat& pf) override {}
 
   // CMsgHandler.h
   void supportsQEMUKeyEvent() override;
