@@ -33,6 +33,8 @@
 #include "rfb/Exception.h"
 #include "network/TcpSocket.h"
 #include "i18n.h"
+#undef asprintf
+
 
 static rfb::LogWriter vlog("viewerconfig");
 extern int getvnchomedir(char **dirp);
@@ -40,7 +42,6 @@ ViewerConfig *ViewerConfig::m_config;
 
 ViewerConfig::ViewerConfig()
  : QObject(nullptr)
- , m_openGLFBOenabled(QString(qgetenv("TIGERVNC_OPENGL_ENABLED")) == "1")
  , m_encNone(false)
  , m_encTLSAnon(false)
  , m_encTLSX509(false)
@@ -50,6 +51,7 @@ ViewerConfig::ViewerConfig()
  , m_authPlain(false)
  , m_serverPort(SERVER_PORT_OFFSET)
  , m_gatewayLocalPort(0)
+ , m_messageDir(nullptr)
 {
   connect(this, &ViewerConfig::accessPointChanged, this, [this](QString accessPoint) {
     m_serverHistory.push_front(accessPoint);
@@ -194,6 +196,9 @@ ViewerConfig::ViewerConfig()
 
 ViewerConfig::~ViewerConfig()
 {
+  if (m_messageDir) {
+    free(m_messageDir);
+  }
 }
 
 int ViewerConfig::initialize()
@@ -338,14 +343,6 @@ void ViewerConfig::saveServerHistory()
   stream.flush();
   fclose(f);
 #endif
-}
-
-void ViewerConfig::setOpenGLFBOenabled(bool value)
-{
-  if (m_openGLFBOenabled != value) {
-    m_openGLFBOenabled = value;
-    emit openGLFBOenabledChanged(value);
-  }
 }
 
 bool ViewerConfig::autoSelect() const
@@ -794,6 +791,14 @@ bool ViewerConfig::potentiallyLoadConfigurationFile(QString vncServerName)
   return true;
 }
 
+QString ViewerConfig::aboutText()
+{
+  return QString::asprintf(_("TigerVNC Viewer v%s\n"
+                   "Built on: %s\n"
+                   "Copyright (C) 1999-%d TigerVNC Team and many others (see README.rst)\n"
+                   "See https://www.tigervnc.org for information on TigerVNC."), PACKAGE_VERSION, BUILD_TIMESTAMP, 2022);
+}
+
 void ViewerConfig::usage()
 {
 #if 0
@@ -855,6 +860,14 @@ QString ViewerConfig::getlocaledir()
 #if defined(WIN32)
   QFileInfo app(QCoreApplication::applicationFilePath());
   QString locale = QDir::toNativeSeparators(app.absoluteDir().path()) + QDir::separator() + "locale";
+#if defined(QT_DEBUG)
+  if (!QFileInfo::exists(locale)) {
+    QFileInfo deploy(app.absoluteDir().path() + "/deploy/locale");
+    if (deploy.exists()) {
+      locale = QDir::toNativeSeparators(deploy.absoluteFilePath());
+    }
+  }
+#endif
   return locale;
 #elif defined(__APPLE__)
   CFBundleRef bundle;
@@ -884,19 +897,42 @@ QString ViewerConfig::getlocaledir()
 
   return localebuf;
 #else
-  return CMAKE_INSTALL_FULL_LOCALEDIR;
+  QString locale(CMAKE_INSTALL_FULL_LOCALEDIR);
+#if defined(QT_DEBUG)
+  if (!QFileInfo::exists(locale)) {
+    QFileInfo app(QCoreApplication::applicationFilePath());
+    QFileInfo deploy(app.absoluteDir().path() + "/deploy/locale");
+    if (deploy.exists()) {
+      locale = QDir::toNativeSeparators(deploy.absoluteFilePath());
+    }
+  }
+#endif
+  return locale;
 #endif
 }
 
 void ViewerConfig::initializeLogger()
 {
-//  setlocale(LC_ALL, "");
+  setlocale(LC_ALL, "");
+#if defined(WIN32) && ENABLE_NLS
+  // Quick workaround for the defect of gettext on Windows. Read the discussion at https://github.com/msys2/MINGW-packages/issues/4059 for details.
+  QString elang = QString(qgetenv("LANGUAGE")).trimmed();
+  if (elang.length() == 0) {
+    qputenv("LANGUAGE", "en:C");
+  }
+#endif
 
   QString localedir = getlocaledir();
   if (localedir.isEmpty())
     fprintf(stderr, "Failed to determine locale directory\n");
-  else
-    bindtextdomain(PACKAGE_NAME, localedir.toStdString().c_str());
+  else {
+    QFileInfo locale(localedir);
+    // According to the linux document, trailing '/locale' of the message directory path must be removed for passing it to bindtextdomain()
+    // but in reallity '/locale' must be given to make gettext() work properly.
+    m_messageDir = strdup(locale.absoluteFilePath().toStdString().c_str());
+    bindtextdomain(PACKAGE_NAME, m_messageDir);
+  }
+  textdomain(PACKAGE_NAME);
 
   // Write about text to console, still using normal locale codeset
   QString about = aboutText();
@@ -910,19 +946,19 @@ void ViewerConfig::initializeLogger()
 
   rfb::initStdIOLoggers();
 #ifdef WIN32
-  rfb::initFileLogger("C:\\temp\\vncviewer.log");
+  QString tmp = "C:\\temp";
+  if (!QFileInfo::exists(tmp)) {
+    tmp = QString(qgetenv("TMP"));
+    if (!QFileInfo::exists(tmp)) {
+      tmp = QString(qgetenv("TEMP"));
+    }
+  }
+  QString log = tmp + "\\vncviewer.log";
+  rfb::initFileLogger(log.toStdString().c_str());
 #else
   rfb::initFileLogger("/tmp/vncviewer.log");
 #endif
   rfb::LogWriter::setLogParams("*:stderr:30");
-}
-
-QString ViewerConfig::aboutText()
-{
-  return QString(_("TigerVNC Viewer v%1\n"
-                   "Built on: %2\n"
-                   "Copyright (C) 1999-%3 TigerVNC Team and many others (see README.rst)\n"
-                   "See https://www.tigervnc.org for information on TigerVNC.")).arg(PACKAGE_VERSION, BUILD_TIMESTAMP).arg(2022);
 }
 
 bool ViewerConfig::listenModeEnabled() const

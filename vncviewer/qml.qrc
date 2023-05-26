@@ -8,10 +8,6 @@
         <file>qml/AboutDialog.qml</file>
         <file>qml/AlertDialog.qml</file>
         <file>qml/AuthDialog.qml</file>
-        <file>qml/CButton.qml</file>
-        <file>qml/CCheckBox.qml</file>
-        <file>qml/CComboBox.qml</file>
-        <file>qml/CRadioButton.qml</file>
         <file>qml/ConfigLoadDialog.qml</file>
         <file>qml/ConfigSaveDialog.qml</file>
         <file>qml/OptionDialog.qml</file>

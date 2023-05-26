@@ -42,6 +42,7 @@
 #include "PlatformPixelBuffer.h"
 #include "i18n.h"
 #include "abstractvncview.h"
+#undef asprintf
 
 #if !defined(Q_OS_WIN)
   #include "network/UnixSocket.h"
@@ -1787,23 +1788,23 @@ QString QVNCConnection::infoText()
   QString infoText;
   char pfStr[100];
 
-  infoText += QString(_("Desktop name: %1\n")).arg(m_serverParams->name());
-  infoText += QString(_("Host: %1 port: %2\n")).arg(m_host).arg(m_port);
-  infoText += QString(_("Size: %1 x %2\n")).arg(m_serverParams->width()).arg(m_serverParams->height());
+  infoText += QString::asprintf(_("Desktop name: %.80s"), m_serverParams->name()) + "\n";
+  infoText += QString::asprintf(_("Host: %.80s port: %d"), m_host.toStdString().c_str(), m_port) + "\n";
+  infoText += QString::asprintf(_("Size: %d x %d"), m_serverParams->width(), m_serverParams->height()) + "\n";
 
   // TRANSLATORS: Will be filled in with a string describing the
   // protocol pixel format in a fairly language neutral way
   m_serverParams->pf().print(pfStr, 100);
-  infoText += QString(_("Pixel format: %1\n")).arg(pfStr);
+  infoText += QString::asprintf(_("Pixel format: %s"), pfStr) + "\n";
 
   // TRANSLATORS: Similar to the earlier "Pixel format" string
   m_serverPF->print(pfStr, 100);
-  infoText += QString(_("(server default %1)\n")).arg(pfStr);
-  infoText += QString(_("Requested encoding: %1\n")).arg(rfb::encodingName(m_preferredEncoding));
-  infoText += QString(_("Last used encoding: %1\n")).arg(rfb::encodingName(m_lastServerEncoding));
-  infoText += QString(_("Line speed estimate: %1 kbit/s\n")).arg((int)(m_bpsEstimate/1000));
-  infoText += QString(_("Protocol version: %1.%2\n")).arg(m_serverParams->majorVersion).arg(m_serverParams->minorVersion);
-  infoText += QString(_("Security method: %1\n")).arg(rfb::secTypeName(m_securityType));
+  infoText += QString::asprintf(_("(server default %s)"), pfStr) + "\n";
+  infoText += QString::asprintf(_("Requested encoding: %s"), rfb::encodingName(m_preferredEncoding)) + "\n";
+  infoText += QString::asprintf(_("Last used encoding: %s"), rfb::encodingName(m_lastServerEncoding)) + "\n";
+  infoText += QString::asprintf(_("Line speed estimate: %d kbit/s"), (int)(m_bpsEstimate/1000)) + "\n";
+  infoText += QString::asprintf(_("Protocol version: %d.%d"), m_serverParams->majorVersion, m_serverParams->minorVersion) + "\n";
+  infoText += QString::asprintf(_("Security method: %s"), rfb::secTypeName(m_securityType)) + "\n";
 
   return infoText;
 }

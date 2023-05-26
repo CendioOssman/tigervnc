@@ -8,8 +8,6 @@
 class ViewerConfig : public QObject
 {
   Q_OBJECT
-  // Qt viewer specific properties
-  Q_PROPERTY(bool openGLFBOenabled READ openGLFBOenabled WRITE setOpenGLFBOenabled NOTIFY openGLFBOenabledChanged)
   // Compression properties
   Q_PROPERTY(bool autoSelect READ autoSelect WRITE setAutoSelect NOTIFY autoSelectChanged)
   Q_PROPERTY(bool fullColour READ fullColour WRITE setFullColour NOTIFY fullColourChanged)
@@ -54,8 +52,8 @@ class ViewerConfig : public QObject
   Q_PROPERTY(QString serverName READ serverName CONSTANT)
   Q_PROPERTY(QString serverHost READ serverHost CONSTANT)
   Q_PROPERTY(int serverPort READ serverPort CONSTANT);
-  Q_PROPERTY(QString gatewayHost READ gatewayHost CONSTANT);
-  Q_PROPERTY(int gatewayLocalPort READ gatewayLocalPort CONSTANT);
+  Q_PROPERTY(QString gatewayHost READ gatewayHost CONSTANT)
+  Q_PROPERTY(int gatewayLocalPort READ gatewayLocalPort CONSTANT)
 
 public:
   const char* SERVER_HISTORY="tigervnc.history";
@@ -70,9 +68,6 @@ public:
   virtual ~ViewerConfig();
   static ViewerConfig *config() { return m_config; };
   static int initialize();
-  //
-  bool openGLFBOenabled() const { return m_openGLFBOenabled; }
-  void setOpenGLFBOenabled(bool value);
   //
   bool autoSelect() const;
   void setAutoSelect(bool value);
@@ -144,7 +139,6 @@ public:
   QStringList serverHistory() const { return m_serverHistory; }
   void setServerHistory(QStringList history);
   QString serverName() const { return m_serverName; }
-  QString aboutText();
   void usage();
   bool listenModeEnabled() const;
   QString serverHost() const { return m_serverHost; }
@@ -154,8 +148,6 @@ public:
   void setAccessPoint(QString accessPoint);
 
 signals:
-  void openGLFBOenabledChanged(bool value);
-  //
   void autoSelectChanged(bool value);
   void fullColourChanged(bool value);
   void lowColourLevelChanged(int value);
@@ -203,10 +195,10 @@ public slots:
   void loadServerHistory();
   void saveServerHistory();
   void handleOptions(); // <- CConn::handleOptions()
+  QString aboutText();
 
 private:
   static ViewerConfig *m_config;
-  bool m_openGLFBOenabled;
   QHash<int, bool> m_availableSecurityTypes; // Each element is a pair of (availableSecurityId, userPreferenceToUseIt).
   QStringList m_menuKeys;
   bool m_encNone;
@@ -221,6 +213,7 @@ private:
   QString m_serverHost;
   int m_serverPort;
   int m_gatewayLocalPort;
+  char *m_messageDir;
   ViewerConfig();
   bool potentiallyLoadConfigurationFile(QString vncServerName);
   QString getlocaledir();

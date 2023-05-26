@@ -3,10 +3,12 @@
 #endif
 #include <QApplication>
 #include <QQmlApplicationEngine>
+#include <QFont>
 #include <QDebug>
 #include "viewerconfig.h"
 #include "appmanager.h"
 #include "vncconnection.h"
+#include "vnctranslator.h"
 
 int main(int argc, char *argv[])
 {
@@ -28,8 +30,22 @@ int main(int argc, char *argv[])
   app.setOrganizationDomain("tigervnc.org");
   app.setApplicationName("TigerVNC Viewer");
 
+//#if 0
+//  QFont font("Arial");
+//  font.setStyleStrategy(QFont::NoAntialias);
+//  //font.setStyleHint(QFont::Monospace);
+//  QVNCApplication::setFont(font);
+//#else
+//  QFont font = QVNCApplication::font();
+//  font.setStyleHint(QFont::Helvetica, (QFont::StyleStrategy)(QFont::PreferAntialias | QFont::PreferQuality));
+//  QVNCApplication::setFont(font);
+//#endif
+
   ViewerConfig::initialize();
   AppManager::initialize();
+
+  VNCTranslator translator;
+  app.installTranslator(&translator);
 
   QQmlApplicationEngine engine;
   const QUrl url(QStringLiteral("qrc:/qml/main.qml"));
