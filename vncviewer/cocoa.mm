@@ -26,11 +26,9 @@
 #include <QCursor>
 #include <QPixmap>
 #include <QImage>
-#include <QElapsedTimer>
-#include <QDebug>
 
-#import <Cocoa/Cocoa.h>
-#import <Carbon/Carbon.h>
+#include <Cocoa/Cocoa.h>
+#include <Carbon/Carbon.h>
 
 #include <IOKit/hidsystem/IOHIDLib.h>
 #include <IOKit/hidsystem/IOHIDParameter.h>
@@ -56,14 +54,13 @@ const int kVK_Menu = 0x6E;
 static bool captured = false;
 
 //-----------------------------------------------------------------------
-@interface NSVNCView : NSView
+@interface NSVNCView : NSView <CALayerDelegate>
 
 @property int width;
 @property int height;
 @property(nonatomic, assign) unsigned char *framebuffer;
 @property(nonatomic, retain) NSImage *image;
 @property(nonatomic, assign) NSCursor *cursor;
-@property(atomic) QElapsedTimer *elapsed;
 @property(atomic) int nframes;
 
 
@@ -83,15 +80,15 @@ static bool captured = false;
     [self setCanDrawConcurrently:NO];
     NSTrackingArea *trackingArea = [[[NSTrackingArea alloc] initWithRect:frameRect options: NSTrackingActiveInActiveApp | NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved owner:self userInfo:nil] autorelease];
     [self addTrackingArea:trackingArea];
-    _elapsed = new QElapsedTimer;
     _nframes = 0;
+    self.layer.delegate = self;
+    self.layer.contentsFormat = kCAContentsFormatRGBA8Uint;
   }
   return self;
 }
 
 - (void)dealloc
 {
-  delete _elapsed;
   [_image release];
 #if 0
   [_bitmap release];
@@ -101,13 +98,11 @@ static bool captured = false;
 
 - (void)mouseEntered:(NSEvent*)event
 {
-  //qDebug() << "-mouseEntered";
   [[NSApplication sharedApplication] activateIgnoringOtherApps:true];
 }
 
 - (void)mouseExited:(NSEvent*)event
 {
-  //qDebug() << "-mouseExited";
   [[NSApplication sharedApplication] activateIgnoringOtherApps:true];
 }
 
@@ -165,15 +160,15 @@ static bool captured = false;
   _image = [[NSImage alloc] initWithCGImage:iref size:NSMakeSize(_width, _height)];
   [_image setCacheMode:NSImageCacheNever];
   self.layer.contents = _image;
+  self.layer.contentsFormat = kCAContentsFormatRGBA8Uint;
 }
 
 - (void)drawRect:(NSRect)destRect
 {
-  //qDebug() << "drawRect: x=" << destRect.origin.x << ",y=" << destRect.origin.y << ",w=" << destRect.size.width << ",h=" << destRect.size.height;
   NSRect r = NSRect(destRect);
   r.origin.y = _height - r.origin.y - r.size.height;
-  [_image drawAtPoint:NSMakePoint(r.origin.x, r.origin.y) fromRect:r operation:NSCompositingOperationCopy fraction:1.0];
-  self.needsDisplay = YES;
+  [_image drawAtPoint:r.origin fromRect:r operation:NSCompositingOperationCopy fraction:1.0];
+  [super setNeedsDisplayInRect:r];
 }
 
 - (void)setNeedsDisplayInRect:(NSRect)rect
@@ -181,6 +176,10 @@ static bool captured = false;
   NSRect r = NSRect(rect);
   r.origin.y = _height - r.origin.y - r.size.height;
   [super setNeedsDisplayInRect:r];
+}
+
+- (void)layerWillDraw:(CALayer*)later
+{
 }
 
 @end
@@ -208,14 +207,12 @@ NSView *cocoa_create_view(QWidget *parent, CGImageRef iref)
 
 void cocoa_draw(NSView *view, int x, int y, int w, int h)
 {
-  //qDebug() << "cocoa_draw: x=" << x << ",y=" << y << ",w=" << w << ",h=" << h;
   NSRect r = NSMakeRect(x, y, w, h);
   [view drawRect:r];
 }
 
 void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h)
 {
-  //qDebug() << "cocoa_invalidate_region: x=" << x << ",y=" << y << ",w=" << w << ",h=" << h;
   NSRect r = NSMakeRect(x, y, w, h);
   [view setNeedsDisplayInRect:r];
 }
@@ -236,7 +233,6 @@ void cocoa_resize(NSView *view, CGImageRef iref)
   [view setFrameSize:size];
   [view setBounds:NSMakeRect(0, 0, width, height)];
   [view setNeedsDisplay:YES];
-  qDebug() << "cocoa_resize: w=" << width << ", h=" << height;
 }
 
 NSCursor *cocoa_set_cursor(NSView *view, const QCursor *cursor)
@@ -290,8 +286,10 @@ CGImageRef cocoa_create_bitmap(int width, int height, unsigned char *data)
   CGDataProviderRef provider = CGDataProviderCreateWithData(NULL, data, bufferLength, NULL);
   size_t bitsPerComponent = 8;
   size_t bitsPerPixel = bytesPerPixel * 8;
-  CGColorSpaceRef colorSpaceRef = CGColorSpaceCreateDeviceRGB();
-  CGBitmapInfo bitmapInfo = kCGBitmapByteOrderDefault | kCGImageAlphaNoneSkipLast;
+  CGColorSpaceRef colorSpaceRef = CGDisplayCopyColorSpace(CGMainDisplayID());
+  // Note: macOS's default byte order is 'BGRA', but the frameuffer's byte order must be 'RGB+padding_byte' (by code maintainer's request).
+  // To align these mismatches, make macOS read a pixel data in reverse order. (Instead of 'kCGBitmapByteOrderDefault | kCGImageAlphaNoneSkipLast')
+  CGBitmapInfo bitmapInfo = kCGBitmapByteOrder32Little | kCGImageAlphaNoneSkipFirst;
   CGColorRenderingIntent renderingIntent = kCGRenderingIntentDefault;
 
   CGImageRef iref = CGImageCreate(width, 
@@ -305,6 +303,8 @@ CGImageRef cocoa_create_bitmap(int width, int height, unsigned char *data)
                                   NULL,       // decode
                                   YES,        // should interpolate
                                   renderingIntent);
+  CGColorSpaceRelease(colorSpaceRef);
+  CGDataProviderRelease(provider);
   return iref;
 }
 
@@ -389,36 +389,6 @@ void cocoa_release_displays(QWidget *parent)
   if ([window level] != newlevel) {
     [window setLevel:newlevel];
   }
-}
-
-CGColorSpaceRef cocoa_win_color_space(NSView *view)
-{
-  NSWindow *window = [view window];
-  NSColorSpace *nscs = [window colorSpace];
-  if (nscs == nil) {
-    // Offscreen, so return standard SRGB color space
-    assert(false);
-    return CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-  }
-
-  CGColorSpaceRef lut = [nscs CGColorSpace];
-
-  // We want a permanent reference, not an autorelease
-  CGColorSpaceRetain(lut);
-
-  return lut;
-}
-
-bool cocoa_win_is_zoomed(QWidget *parent)
-{
-  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
-  return [window isZoomed];
-}
-
-void cocoa_win_zoom(QWidget *parent)
-{
-  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
-  [window zoom:window];
 }
 
 int cocoa_is_keyboard_sync(const void *event)

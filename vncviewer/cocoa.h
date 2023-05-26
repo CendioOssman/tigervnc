@@ -38,13 +38,6 @@ void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h);
 int cocoa_capture_displays(QWidget *parent);
 void cocoa_release_displays(QWidget *parent);
 
-typedef struct CGColorSpace *CGColorSpaceRef;
-
-CGColorSpaceRef cocoa_win_color_space(NSView *view);
-
-bool cocoa_win_is_zoomed(QWidget *parent);
-void cocoa_win_zoom(QWidget *parent);
-
 int cocoa_is_keyboard_sync(const void *event);
 int cocoa_is_keyboard_event(const void *event);
 

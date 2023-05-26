@@ -215,11 +215,7 @@ QVNCConnection::QVNCConnection()
  , m_pixelCount(0)
  , m_pendingPF(new rfb::PixelFormat)
  , m_serverPF(new rfb::PixelFormat)
-#if defined(__APPLE__)
- , m_fullColourPF(new rfb::PixelFormat(32, 24, false, true, 255, 255, 255, 0, 8, 16))
-#else
  , m_fullColourPF(new rfb::PixelFormat(32, 24, false, true, 255, 255, 255, 16, 8, 0))
-#endif
  , m_nextPF(new rfb::PixelFormat)
  , m_preferredEncoding(rfb::encodingTight)
  , m_compressLevel(2)
@@ -588,7 +584,7 @@ void QVNCConnection::sendClipboardData(QString text)
 
 void QVNCConnection::refreshFramebuffer()
 {
-  qDebug() << "QVNCConnection::refreshFramebuffer: m_continuousUpdates=" << m_continuousUpdates;
+  //qDebug() << "QVNCConnection::refreshFramebuffer: m_continuousUpdates=" << m_continuousUpdates;
   emit refreshFramebufferStarted();
   m_forceNonincremental = true;
 
@@ -650,7 +646,7 @@ bool QVNCConnection::processMsg(int state)
       return true;
     }
   }
-  qDebug() << "QVNCConnection::processMsg: state=" << state;
+  //qDebug() << "QVNCConnection::processMsg: state=" << state;
   switch (state) {
     case rfb::CConnection::RFBSTATE_INVALID:          return true;                       // Stand-by state.
     case rfb::CConnection::RFBSTATE_PROTOCOL_VERSION: return processVersionMsg();        // #1
@@ -1017,7 +1013,7 @@ void QVNCConnection::requestNewUpdate()
                                                  m_serverParams->width(),
                                                  m_serverParams->height()),
                                             !m_forceNonincremental);
-    qDebug() << "QVNCConnection::requestNewUpdate: w=" << m_serverParams->width() << ", h=" << m_serverParams->height();
+    //qDebug() << "QVNCConnection::requestNewUpdate: w=" << m_serverParams->width() << ", h=" << m_serverParams->height();
   }
 
   m_forceNonincremental = false;
@@ -1338,7 +1334,7 @@ bool QVNCConnection::establishSecurityLayer(int securitySubType)
 //
 void QVNCConnection::autoSelectFormatAndEncoding()
 {
-  qDebug() << "QVNCConnection::autoSelectFormatAndEncoding";
+  //qDebug() << "QVNCConnection::autoSelectFormatAndEncoding";
   // Always use Tight
   setPreferredEncoding(rfb::encodingTight);
 
@@ -1398,7 +1394,7 @@ void QVNCConnection::supportsQEMUKeyEvent()
 // CConn.h
 void QVNCConnection::resizeFramebuffer()
 {
-  qDebug() << "QVNCConnection::resizeFramebuffer(): width=" << m_serverParams->width() << ",height=" << m_serverParams->height();
+  //qDebug() << "QVNCConnection::resizeFramebuffer(): width=" << m_serverParams->width() << ",height=" << m_serverParams->height();
   PlatformPixelBuffer *framebuffer = new PlatformPixelBuffer(m_serverParams->width(), m_serverParams->height());
   setFramebuffer(framebuffer);
 
@@ -1409,7 +1405,7 @@ void QVNCConnection::resizeFramebuffer()
 
 void QVNCConnection::setDesktopSize(int w, int h)
 {
-  qDebug() << "QVNCConnection::QVNCConnection::setDesktopSize: w=" << w << ", h=" << h;
+  //qDebug() << "QVNCConnection::QVNCConnection::setDesktopSize: w=" << w << ", h=" << h;
   m_decoder->flush();
 
   server()->setDimensions(w, h);
@@ -1425,7 +1421,7 @@ void QVNCConnection::setDesktopSize(int w, int h)
 
 void QVNCConnection::setExtendedDesktopSize(unsigned reason, unsigned result, int w, int h, const rfb::ScreenSet& layout)
 {
-  qDebug() << "QVNCConnection::QVNCConnection::setExtendedDesktopSize: w=" << w << ", h=" << h;
+  //qDebug() << "QVNCConnection::QVNCConnection::setExtendedDesktopSize: w=" << w << ", h=" << h;
   m_decoder->flush();
 
   server()->supportsSetDesktopSize = true;
@@ -1504,7 +1500,7 @@ void QVNCConnection::framebufferUpdateEnd()
 
   if (m_firstUpdate) {
     if (server()->supportsContinuousUpdates) {
-      qDebug() << "QVNCConnection::framebufferUpdateEnd: m_continuousUpdates=true";
+      //qDebug() << "QVNCConnection::framebufferUpdateEnd: m_continuousUpdates=true";
       vlog.info("Enabling continuous updates");
       m_continuousUpdates = true;
       writer()->writeEnableContinuousUpdates(true, 0, 0,
@@ -1591,7 +1587,7 @@ void QVNCConnection::setCursor(int width, int height, const rfb::Point& hotspot,
     }
   }
   else {
-    qDebug() << "QVNCConnection::setCursor: w=" << width << ", h=" << height << ", data=" << data;
+    //qDebug() << "QVNCConnection::setCursor: w=" << width << ", h=" << height << ", data=" << data;
     QImage image(data, width, height, QImage::Format_RGBA8888);
     delete m_cursor;
     m_cursor = new QCursor(QPixmap::fromImage(image), hotspot.x, hotspot.y);
@@ -1895,7 +1891,7 @@ void TunnelFactory::run()
   });
   m_process->start(m_command, args);
   while (true) {
-    qDebug() << "state=" << m_process->state();
+    //qDebug() << "state=" << m_process->state();
     if (m_process->state() == QProcess::Running || m_errorOccurrrd) {
       break;
     }

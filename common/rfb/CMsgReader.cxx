@@ -598,11 +598,7 @@ bool CMsgReader::readSetCursorWithAlpha(int width, int height, const Point& hots
   if (width > maxCursorSize || height > maxCursorSize)
     throw Exception("Too big cursor");
 
-#if defined(__APPLE__)
-  const PixelFormat rgbaPF(32, 32, false, true, 255, 255, 255, 0, 8, 16);
-#else
   const PixelFormat rgbaPF(32, 32, false, true, 255, 255, 255, 16, 8, 0);
-#endif
   ManagedPixelBuffer pb(rgbaPF, width, height);
   PixelFormat origPF;
 
