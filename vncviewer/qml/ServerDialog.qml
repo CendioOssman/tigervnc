@@ -29,23 +29,20 @@ Window {
         Config.saveViewerParameters(Config.toLocalFile(url), addressInput.currentText)
     }
 
-    function authenticate(user, password) {
-        authDialog.close()
-        AppManager.authenticate(user, password)
-    }
-
     function validateServerText(serverText) {
         var index = addressInput.indexOfValue(serverText)
         if (index >= 0) {
             addressInput.currentIndex = index
         }
         else {
+            var servers0 = servers
+            servers = []
             servers.push(serverText)
-            serversChanged()
-            addressInput.currentIndex = servers.length - 1
+            for (var i = 0; i < servers0.length; i++) {
+                servers.push(servers0[i])
+            }
             Config.serverHistory = servers
         }
-        //console.log("Config.serverHistory=" + Config.serverHistory)
     }
 
     function createServerList() {
@@ -96,7 +93,7 @@ Window {
                 Layout.leftMargin: 5
                 Layout.rightMargin: 15
                 Layout.topMargin: 15
-                Layout.minimumWidth: 350
+                Layout.fillWidth: true
                 editable: true
                 model: servers
                 onAccepted: validateServerText(editText)
@@ -115,7 +112,7 @@ Window {
 
             Button {
                 id: loadButton
-                Layout.leftMargin: 10
+                Layout.leftMargin: 30
                 Layout.topMargin: 10
                 text: qsTr("Load...")
                 onClicked: configLoadDialog.open()
@@ -172,7 +169,10 @@ Window {
                 Layout.bottomMargin: 15
                 enabled: addressInput.currentText.length > 0
                 text: qsTr("Connect")
-                onClicked: AppManager.connectToServer(addressInput.currentText)
+                onClicked: {
+                    validateServerText(addressInput.editText)
+                    AppManager.connectToServer(addressInput.currentText)
+                }
             }
         }
     }
@@ -181,8 +181,8 @@ Window {
         active: false
         AuthDialog {
             id: authDialog
-            onCommit: authenticate(user, password)
-            onAbort: AppManager.resetConnection()
+            onCommit: AppManager.authenticate(user, password)
+            onAbort: AppManager.cancelAuth()
         }
     }
 

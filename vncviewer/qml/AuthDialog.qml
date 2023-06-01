@@ -71,17 +71,7 @@ Window {
                     Layout.preferredWidth: statusMessage.implicitHeight
                     Layout.preferredHeight: statusMessage.implicitHeight
                     fillMode: Image.PreserveAspectFit
-                    source: "qrc:/images/lock_48px.png"
-                    Rectangle {
-                        id: insecureBar
-                        x: parent.width / 2
-                        y: parent.width / 4
-                        width: 2
-                        height: parent.height
-                        rotation: 50
-                        transformOrigin: Item.Center
-                        color: "#ffff0000"
-                    }
+                    source: "qrc:/../media/insecure.svg"
                 }
                 Text {
                     id: statusMessage
@@ -96,12 +86,12 @@ Window {
                         color: "#ff00ff00"
                     }
                     PropertyChanges {
-                        target: statusMessage
-                        text: qsTr("This connection is secure")
+                        target: statusIcon
+                        source: "qrc:/../media/secure.svg"
                     }
                     PropertyChanges {
-                        target: insecureBar
-                        visible: false
+                        target: statusMessage
+                        text: qsTr("This connection is secure")
                     }
                 }
             ]
@@ -115,7 +105,7 @@ Window {
                 Layout.leftMargin: 15
                 Layout.topMargin: 20
                 Layout.alignment: Qt.AlignVCenter
-                source: "qrc:/images/help_48px.png"
+                source: "image://qticons/SP_MessageBoxQuestion"
             }
             GridLayout {
                 Layout.leftMargin: 10
@@ -139,6 +129,7 @@ Window {
                     Layout.leftMargin: 10
                     Layout.rightMargin: 25
                     Layout.preferredHeight: 25
+                    Layout.minimumWidth: 200
                 }
                 Text {
                     id: passwordLabel
@@ -152,6 +143,7 @@ Window {
                     Layout.leftMargin: 10
                     Layout.rightMargin: 25
                     Layout.preferredHeight: 25
+                    Layout.minimumWidth: 200
                     echoMode: TextInput.Password
                     Keys.onEnterPressed: accept()
                     Keys.onReturnPressed: accept()

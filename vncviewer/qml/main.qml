@@ -32,11 +32,19 @@ Item {
             aboutDialog.open();
         }
 
+        function onMessageDialogRequested(flags, title, text) {
+            messageDialog.setting = flags
+            messageDialog.title = title
+            messageDialog.text = text
+            messageDialog.open()
+        }
+
         onErrorOcurred: onErrorOcurred(seq, message, quit)
         onVncWindowOpened: onVncWindowOpened()
         onInfoDialogRequested: onInfoDialogRequested()
         onOptionDialogRequested: onOptionDialogRequested()
         onAboutDialogRequested: onAboutDialogRequested()
+        onMessageDialogRequested: onMessageDialogRequested(flags, title, text)
     }
 
     ServerDialog {
@@ -70,6 +78,13 @@ Item {
         active: false
         AboutDialog {
             id: aboutDialog
+        }
+    }
+
+    Loader {
+        active: false
+        MessageDialog {
+            id: messageDialog
         }
     }
 }

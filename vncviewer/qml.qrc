@@ -1,10 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>images/alert_48px.png</file>
-        <file>images/dropdown_24px.png</file>
-        <file>images/help_48px.png</file>
-        <file>images/info_48px.png</file>
-        <file>images/lock_48px.png</file>
         <file>qml/AboutDialog.qml</file>
         <file>qml/AlertDialog.qml</file>
         <file>qml/AuthDialog.qml</file>
@@ -14,5 +9,8 @@
         <file>qml/main.qml</file>
         <file>qml/ServerDialog.qml</file>
         <file>qml/InfoDialog.qml</file>
+        <file>qml/MessageDialog.qml</file>
+        <file>../media/insecure.svg</file>
+        <file>../media/secure.svg</file>
     </qresource>
 </RCC>

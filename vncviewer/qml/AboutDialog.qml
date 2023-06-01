@@ -39,7 +39,7 @@ Window {
             Layout.column: 0
             Layout.leftMargin: 10
             Layout.topMargin: 20
-            source: "qrc:/images/info_48px.png"
+            source: "image://qticons/SP_MessageBoxInformation"
         }
         Text {
             id: aboutText

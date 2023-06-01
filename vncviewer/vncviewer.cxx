@@ -3,12 +3,36 @@
 #endif
 #include <QApplication>
 #include <QQmlApplicationEngine>
-#include <QFont>
-#include <QDebug>
+#include <QQuickImageProvider>
+#include <QStyle>
 #include "viewerconfig.h"
 #include "appmanager.h"
 #include "vncconnection.h"
 #include "vnctranslator.h"
+
+
+class StandardIconProvider : public QQuickImageProvider
+{
+public:
+  StandardIconProvider(QStyle *style)
+    : QQuickImageProvider(Pixmap)
+    , m_style(style)
+  {}
+
+  QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) override
+  {
+    Q_UNUSED(size)
+    const int defaultWidth = 48;
+    const int defaultHeight = 48;
+    QSize imageSize = { requestedSize.width() > 0 ? requestedSize.width() : defaultWidth, requestedSize.height() > 0 ? requestedSize.height() : defaultHeight };
+    static const auto metaobject = QMetaEnum::fromType<QStyle::StandardPixmap>();
+    const int value = metaobject.keyToValue(id.toLatin1());
+    QIcon icon = m_style->standardIcon(static_cast<QStyle::StandardPixmap>(value));
+    return icon.pixmap(imageSize);
+  }
+private:
+  QStyle *m_style;
+};
 
 int main(int argc, char *argv[])
 {
@@ -30,17 +54,6 @@ int main(int argc, char *argv[])
   app.setOrganizationDomain("tigervnc.org");
   app.setApplicationName("TigerVNC Viewer");
 
-//#if 0
-//  QFont font("Arial");
-//  font.setStyleStrategy(QFont::NoAntialias);
-//  //font.setStyleHint(QFont::Monospace);
-//  QVNCApplication::setFont(font);
-//#else
-//  QFont font = QVNCApplication::font();
-//  font.setStyleHint(QFont::Helvetica, (QFont::StyleStrategy)(QFont::PreferAntialias | QFont::PreferQuality));
-//  QVNCApplication::setFont(font);
-//#endif
-
   ViewerConfig::initialize();
   AppManager::initialize();
 
@@ -48,6 +61,7 @@ int main(int argc, char *argv[])
   app.installTranslator(&translator);
 
   QQmlApplicationEngine engine;
+  engine.addImageProvider(QLatin1String("qticons"), new StandardIconProvider(app.style()));
   const QUrl url(QStringLiteral("qrc:/qml/main.qml"));
   QObject::connect(&engine, &QQmlApplicationEngine::objectCreated, &app, [url](QObject *obj, const QUrl &objUrl) {
     if (!obj && url == objUrl) {
