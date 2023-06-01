@@ -3,17 +3,15 @@
 #endif
 
 #include <QQmlEngine>
-#include <QLocalSocket>
 #include <QTcpSocket>
 #include <QScreen>
-#include <QDeadlineTimer>
 #include <QProcess>
-#include <QAction>
 #include "rdr/Exception.h"
 #include "i18n.h"
 #include "vncconnection.h"
 #include "viewerconfig.h"
 #include "abstractvncview.h"
+#include "parameters.h"
 #include "appmanager.h"
 #undef asprintf
 
@@ -27,49 +25,24 @@
 
 AppManager *AppManager::m_manager;
 
-#if defined(WIN32)
-PROCESS_INFORMATION pi;
-#endif
-
-class QMenuSeparator : public QAction
-{
-public:
-  QMenuSeparator(QWidget *parent = nullptr)
-   : QAction(parent)
-  {
-    setSeparator(true);
-  }
-};
-
 AppManager::AppManager()
  : QObject(nullptr)
  , m_error(0)
- , m_worker(new QVNCConnection)
+ , m_facade(new QVNCConnection)
  , m_view(nullptr)
  , m_scroll(new QVNCWindow)
 {
-  m_worker->start();
-  connect(m_worker, &QVNCConnection::credentialRequested, this, [this](bool secured, bool userNeeded, bool passwordNeeded) {
-    emit credentialRequested(secured, userNeeded, passwordNeeded);
-  }, Qt::QueuedConnection);
-  connect(this, &AppManager::connectToServerRequested, m_worker, &QVNCConnection::connectToServer, Qt::QueuedConnection);
-  connect(this, &AppManager::authenticateRequested, m_worker, &QVNCConnection::authenticate, Qt::QueuedConnection);
-  connect(m_worker, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow, Qt::BlockingQueuedConnection);
-  connect(this, &AppManager::resetConnectionRequested, m_worker, &QVNCConnection::resetConnection, Qt::QueuedConnection);
+  connect(this, &AppManager::connectToServerRequested, m_facade, &QVNCConnection::connectToServer);
+  connect(m_facade, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
+  connect(this, &AppManager::resetConnectionRequested, m_facade, &QVNCConnection::resetConnection);
 }
 
 AppManager::~AppManager()
 {
-  m_worker->exit();
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-  m_worker->wait(QDeadlineTimer(1000));
-#else
-  m_worker->wait(1000);
-#endif
-  m_worker->deleteLater();
+  m_facade->deleteLater();
   m_scroll->takeWidget();
-  delete m_view;
   delete m_scroll;
+  delete m_view;
 }
 
 int AppManager::initialize()
@@ -97,28 +70,37 @@ void AppManager::authenticate(QString user, QString password)
   emit authenticateRequested(user, password);
 }
 
+void AppManager::cancelAuth()
+{
+  emit cancelAuthRequested();
+}
+
 void AppManager::resetConnection()
 {
   emit resetConnectionRequested();
 }
 
-void AppManager::publishError(const QString &message, bool quit)
+void AppManager::publishError(const QString message, bool quit)
 {
   emit errorOcurred(m_error++, message, quit);
 }
 
 void AppManager::openVNCWindow(int width, int height, QString name)
 {
-  m_scroll->takeWidget();
+  QWidget *parent = nullptr;
+  if (!::remoteResize) {
+    m_scroll->takeWidget();
+    parent = m_scroll;
+  }
   delete m_view;
 #if defined(WIN32)
-  m_view = new QVNCWinView(m_scroll);
+  m_view = new QVNCWinView(parent);
 #elif defined(__APPLE__)
-  m_view = new QVNCMacView(m_scroll);
+  m_view = new QVNCMacView(parent);
 #elif defined(Q_OS_UNIX)
   QString platform = QGuiApplication::platformName();
   if (platform == "xcb") {
-    m_view = new QVNCX11View(m_scroll);
+    m_view = new QVNCX11View(parent);
   }
   else if (platform == "wayland") {
     ;
@@ -132,19 +114,37 @@ void AppManager::openVNCWindow(int width, int height, QString name)
     m_scroll->setHorizontalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
     m_scroll->setVerticalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
   }, Qt::QueuedConnection);
-  connect(m_view, &QAbstractVNCView::delayedInitialized, m_scroll, &QVNCWindow::popupOverlayTip);
 
-  m_scroll->setWidget(m_view);
-  m_scroll->resize(width, height);
-  m_view->resize(width, height);
-  m_scroll->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
-  m_scroll->show();
+  if (!::remoteResize) {
+    connect(m_view, &QAbstractVNCView::delayedInitialized, m_scroll, &QVNCWindow::popupToast);
+    m_view->resize(width, height);
+    m_scroll->setWidget(m_view);
+    m_scroll->resize(width, height);
+    m_scroll->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+    m_scroll->show();
+  }
+  else {
+    connect(m_view, &QAbstractVNCView::delayedInitialized, m_view, &QAbstractVNCView::popupToast);
+    m_view->resize(width, height);
+    m_view->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+    m_view->show();
+  }
 
   if (ViewerConfig::config()->fullScreen()) {
     m_view->fullscreen(true);
   }
 
   emit vncWindowOpened();
+}
+
+void AppManager::setWindowName(QString name)
+{
+  if (!::remoteResize) {
+    m_scroll->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+  }
+  else {
+    m_view->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+  }
 }
 
 void AppManager::invalidate(int x0, int y0, int x1, int y1)
@@ -177,6 +177,11 @@ void AppManager::openAboutDialog()
   emit aboutDialogRequested();
 }
 
+void AppManager::respondToMessage(int response)
+{
+  emit messageResponded(response);
+}
+
 QVNCApplication::QVNCApplication(int &argc, char **argv)
   : QApplication(argc, argv)
 {
@@ -193,18 +198,24 @@ bool QVNCApplication::notify(QObject *receiver, QEvent *e)
   }
   catch (rdr::Exception &e) {
     qDebug() << "Error: " << e.str();
-    AppManager::instance()->publishError(e.str());
-    if (e.abort) {
-      quit();
-    }
+    //AppManager::instance()->publishError(e.str());
+    // Above 'emit' code is functional only when VNC connection class is running on a thread
+    // other than GUI main thread.
+    // Now, VNC connection class is running on GUI main thread, by the customer's request.
+    // Because GUI main thread cannot use exceptions at all (by Qt spec), the application
+    // must exit when the exception is received.
+    // To avoid the undesired application exit, all exceptions must be handled in each points
+    // where an exception may occurr.
+    QCoreApplication::exit(1);
   }
   catch (int &e) {
     qDebug() << "Error: " << strerror(e);
-    AppManager::instance()->publishError(strerror(e));
+    //AppManager::instance()->publishError(strerror(e));
+    QCoreApplication::exit(1);
   }
   catch (...) {
     qDebug() << "Error: (unhandled)";
+    QCoreApplication::exit(1);
   }
   return true;
 }
-

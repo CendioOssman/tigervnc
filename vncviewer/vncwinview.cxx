@@ -282,9 +282,9 @@ void QVNCWinView::getMouseProperties(WPARAM wParam, LPARAM lParam, int &x, int &
   y = ((lParam & 0xffff0000) >> 16);
 }
 
-void QVNCWinView::refresh(HWND hWnd)
+void QVNCWinView::draw()
 {
-  qDebug() << "VNCWinView::refresh(): hWnd=" << hWnd;
+  qDebug() << "VNCWinView::refresh(): hWnd=" << m_hwnd;
   PlatformPixelBuffer *framebuffer = (PlatformPixelBuffer *)AppManager::instance()->connection()->framebuffer();
   rfb::Rect r = framebuffer->getDamage();
   int x = r.tl.x;
@@ -295,7 +295,7 @@ void QVNCWinView::refresh(HWND hWnd)
   InvalidateRect(m_hwnd, &rect, false);
 
   PAINTSTRUCT ps;
-  HDC hDC = BeginPaint(hWnd, &ps);
+  HDC hDC = BeginPaint(m_hwnd, &ps);
   HBITMAP hBitmap = framebuffer->hbitmap();
   BITMAP bitmap;
   GetObject(hBitmap, sizeof(BITMAP), (LPSTR)&bitmap);
@@ -303,7 +303,7 @@ void QVNCWinView::refresh(HWND hWnd)
   SelectObject(hDCBits, hBitmap);
   BitBlt(hDC, x, y, width, height, hDCBits, x, y, SRCCOPY);
   DeleteDC(hDCBits);
-  EndPaint(hWnd, &ps);
+  EndPaint(m_hwnd, &ps);
 }
 
 bool QVNCWinView::event(QEvent *e)
@@ -910,5 +910,5 @@ void QVNCWinView::moveView(int x, int y)
 void QVNCWinView::updateWindow()
 {
   QAbstractVNCView::updateWindow();
-  refresh(m_hwnd);
+  draw();
 }

@@ -125,7 +125,6 @@ ViewerConfig::ViewerConfig()
     // TRANSLATORS: "Parameters" are command line arguments, or settings
     // from a file or the Windows registry.
     vlog.error(_("Parameters -listen and -via are incompatible"));
-    qWarning() << _("Parameters -listen and -via are incompatible");
     QGuiApplication::exit(1);
   }
 
@@ -784,7 +783,6 @@ bool ViewerConfig::potentiallyLoadConfigurationFile(QString vncServerName)
     }
     catch (rfb::Exception& e) {
       vlog.error("%s", e.str());
-      qWarning() << _("Unable to load the specified configuration file:") << e.str();
       return false;
     }
   }

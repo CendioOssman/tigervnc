@@ -42,6 +42,7 @@ protected:
   void showEvent(QShowEvent *) override;
   void focusInEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
+  bool bypassWMHintingEnabled() const override { return true; }
 
 private:
   void *m_wndproc;
@@ -63,7 +64,7 @@ private:
   int handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam);
   void startMouseTracking();
   void stopMouseTracking();
-  void refresh(HWND hWnd);
+  void draw();
 };
 
 #endif // VNCWINVIEW_H

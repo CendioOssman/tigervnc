@@ -44,7 +44,8 @@ set(PROJECT_SOURCES
         viewerconfig.cxx
         vncconnection.h
         vncconnection.cxx
-        vncpackethandler.h
+        vnccredential.cxx
+        vnccredential.h
         abstractvncview.h
         abstractvncview.cxx
         keysym2ucs.c
@@ -61,6 +62,10 @@ set(PROJECT_SOURCES
         PlatformPixelBuffer.cxx
         Surface.h
         Surface.cxx
+        EmulateMB.h
+        EmulateMB.cxx
+        CConn.h
+        CConn.cxx
         qml.qrc
         ${OS_DEP_SOURCES}
 )
