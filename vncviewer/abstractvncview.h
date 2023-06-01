@@ -4,6 +4,8 @@
 #include <QWidget>
 #include <QScrollArea>
 #include <QList>
+#include <QLabel>
+#include "EmulateMB.h"
 
 class QMenu;
 class QAction;
@@ -19,6 +21,28 @@ namespace rfb {
 
 using DownMap = std::map<int, quint32>;
 
+class QMBEmu : public EmulateMB
+{
+public:
+  QMBEmu(QTimer *);
+  ~QMBEmu();
+
+protected:
+  virtual void sendPointerEvent(const rfb::Point& pos, int buttonMask);
+};
+
+class QVNCToast : public QLabel
+{
+  Q_OBJECT
+public:
+  QVNCToast(QWidget *parent = nullptr);
+  virtual ~QVNCToast();
+  void show();
+
+private:
+  QTimer *m_closeTimer;
+};
+
 class QVNCWindow : public QScrollArea
 {
   Q_OBJECT
@@ -27,14 +51,13 @@ public:
   virtual ~QVNCWindow();
 
 public slots:
-  void popupOverlayTip();
+  void popupToast();
 
 protected:
   void moveEvent(QMoveEvent *e) override;
 
 private:
-  QTimer *m_overlayTipCloseTimer;
-  QLabel *m_overlayTip;
+  QVNCToast *m_toast;
 };
 
 class QAbstractVNCView : public QWidget
@@ -73,6 +96,7 @@ public slots:
   virtual void handleDesktopSize();
   virtual void fullscreen(bool enabled);
   virtual void moveView(int x, int y);
+  virtual void popupToast();
 
 signals:
   void fullscreenChanged(bool enabled);
@@ -80,6 +104,7 @@ signals:
 
 protected:
   static QClipboard *m_clipboard;
+  QVNCToast *m_toast;
   QByteArray m_geometry;
   double m_devicePixelRatio;
 
@@ -104,19 +129,23 @@ protected:
 
   DownMap m_downKeySym;
   QTimer *m_mouseButtonEmulationTimer;
-  int m_state;
-  int m_emulatedButtonMask;
-  int m_lastButtonMask;
-  rfb::Point *m_lastPos;
-  rfb::Point *m_origPos;
+  QMBEmu *m_mbemu;
+////  int m_state;
+////  int m_emulatedButtonMask;
+////  int m_lastButtonMask;
+////  rfb::Point *m_lastPos;
+////  rfb::Point *m_origPos;
 
   void createContextMenu();
   void postRemoteResizeRequest();
   QList<int> fullscreenScreens();
   void filterPointerEvent(const rfb::Point &pos, int buttonMask);
-  void sendAction(const rfb::Point &pos, int buttonMask, int action);
-  int createButtonMask(int buttonMask);
+////  void sendAction(const rfb::Point &pos, int buttonMask, int action);
+////  int createButtonMask(int buttonMask);
   void handleMouseButtonEmulationTimeout();
+  void moveEvent(QMoveEvent *e) override;
+  void sendPointerEvent(const rfb::Point& pos, int buttonMask);
+  virtual bool bypassWMHintingEnabled() const { return false; }
 };
 
 #endif // ABSTRACTVNCVIEW_H
