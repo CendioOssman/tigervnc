@@ -45,17 +45,17 @@ protected:
   bool bypassWMHintingEnabled() const override { return true; }
 
 private:
-  void *m_wndproc;
-  bool m_hwndowner;
-  HWND m_hwnd;
+  void *wndproc_;
+  bool hwndowner_;
+  HWND hwnd_;
 
-  bool m_altGrArmed;
-  unsigned int m_altGrCtrlTime;
-  QTimer *m_altGrCtrlTimer;
+  bool altGrArmed_;
+  unsigned int altGrCtrlTime_;
+  QTimer *altGrCtrlTimer_;
 
-  HCURSOR m_cursor;
-  bool m_mouseTracking;
-  HCURSOR m_defaultCursor;
+  HCURSOR cursor_;
+  bool mouseTracking_;
+  HCURSOR defaultCursor_;
 
   void fixParent();
   friend void *getWindowProc(QVNCWinView *host);

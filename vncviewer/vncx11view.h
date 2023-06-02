@@ -45,14 +45,14 @@ signals:
   void message(const QString &msg, int timeout);
 
 private:
-  Window m_window;
-  Display *m_display;
-  int m_screen;
-  XVisualInfo *m_visualInfo;
-  XRenderPictFormat *m_visualFormat;
-  Colormap m_colorMap;
-  Pixmap m_pixmap;
-  Picture m_picture;
+  Window window_;
+  Display *display_;
+  int screen_;
+  XVisualInfo *visualInfo_;
+  XRenderPictFormat *visualFormat_;
+  Colormap colorMap_;
+  Pixmap pixmap_;
+  Picture picture_;
 
   Pixmap toPixmap(QBitmap &bitmap);
   unsigned int getModifierMask(unsigned int keysym);

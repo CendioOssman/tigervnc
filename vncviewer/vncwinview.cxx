@@ -38,14 +38,14 @@ static const WORD NoSymbol = 0;
 
 QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
  : QAbstractVNCView(parent, f)
- , m_wndproc(0)
- , m_hwndowner(false)
- , m_hwnd(0)
- , m_altGrArmed(false)
- , m_altGrCtrlTimer(new QTimer)
- , m_cursor(nullptr)
- , m_mouseTracking(false)
- , m_defaultCursor(LoadCursor(NULL, IDC_ARROW))
+ , wndproc_(0)
+ , hwndowner_(false)
+ , hwnd_(0)
+ , altGrArmed_(false)
+ , altGrCtrlTimer_(new QTimer)
+ , cursor_(nullptr)
+ , mouseTracking_(false)
+ , defaultCursor_(LoadCursor(NULL, IDC_ARROW))
 {
   setAttribute(Qt::WA_NoBackground);
   setAttribute(Qt::WA_NoSystemBackground);
@@ -54,36 +54,36 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
   connect(AppManager::instance()->connection(), &QVNCConnection::framebufferResized, this, [this](int width, int height) {
-    SetWindowPos(m_hwnd, HWND_TOP, 0, 0, width, height, 0);
+    SetWindowPos(hwnd_, HWND_TOP, 0, 0, width, height, 0);
   }, Qt::QueuedConnection);
 
-  m_altGrCtrlTimer->setInterval(100);
-  m_altGrCtrlTimer->setSingleShot(true);
-  connect(m_altGrCtrlTimer, &QTimer::timeout, this, [this]() {
-    m_altGrArmed = false;
+  altGrCtrlTimer_->setInterval(100);
+  altGrCtrlTimer_->setSingleShot(true);
+  connect(altGrCtrlTimer_, &QTimer::timeout, this, [this]() {
+    altGrArmed_ = false;
     handleKeyPress(0x1d, XK_Control_L);
   });
 }
 
 QVNCWinView::~QVNCWinView()
 {
-  if (m_wndproc) {
-    SetWindowLongPtr(m_hwnd, GWLP_WNDPROC, (LONG_PTR)m_wndproc);
+  if (wndproc_) {
+    SetWindowLongPtr(hwnd_, GWLP_WNDPROC, (LONG_PTR)wndproc_);
   }
 
-  if (m_hwnd && m_hwndowner) {
-    DestroyWindow(m_hwnd);
+  if (hwnd_ && hwndowner_) {
+    DestroyWindow(hwnd_);
   }
 
-  m_altGrCtrlTimer->stop();
-  delete m_altGrCtrlTimer;
+  altGrCtrlTimer_->stop();
+  delete altGrCtrlTimer_;
 
-  DestroyIcon(m_cursor);
+  DestroyIcon(cursor_);
 }
 
 qulonglong QVNCWinView::nativeWindowHandle() const
 {
-  return (qulonglong)m_hwnd;
+  return (qulonglong)hwnd_;
 }
 
 HWND QVNCWinView::createWindow(HWND parent, HINSTANCE instance)
@@ -113,32 +113,32 @@ HWND QVNCWinView::createWindow(HWND parent, HINSTANCE instance)
 
 void QVNCWinView::fixParent()
 {
-  if (!m_hwnd) {
+  if (!hwnd_) {
     return;
   }
-  if (!::IsWindow(m_hwnd)) {
-    m_hwnd = 0;
+  if (!::IsWindow(hwnd_)) {
+    hwnd_ = 0;
     return;
   }
-  if (::GetParent(m_hwnd) == (HWND)winId()) {
+  if (::GetParent(hwnd_) == (HWND)winId()) {
     return;
   }
-  long style = GetWindowLong(m_hwnd, GWL_STYLE);
+  long style = GetWindowLong(hwnd_, GWL_STYLE);
   if (style & WS_OVERLAPPED) {
     return;
   }
-  ::SetParent(m_hwnd, (HWND)winId());
+  ::SetParent(hwnd_, (HWND)winId());
 }
 
 void QVNCWinView::setWindow(HWND window)
 {
-  if (m_hwnd && m_hwndowner) {
-    DestroyWindow(m_hwnd);
+  if (hwnd_ && hwndowner_) {
+    DestroyWindow(hwnd_);
   }
-  m_hwnd = window;
+  hwnd_ = window;
   fixParent();
 
-  m_hwndowner = false;
+  hwndowner_ = false;
 }
 
 void QVNCWinView::postMouseMoveEvent(int x, int y, int mask)
@@ -152,7 +152,7 @@ void QVNCWinView::postMouseMoveEvent(int x, int y, int mask)
 
 void *getWindowProc(QVNCWinView *host)
 {
-  return host ? host->m_wndproc : 0;
+  return host ? host->wndproc_ : 0;
 }
 
 LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -198,7 +198,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
 	// so we may need to try again when the button is released.
 	// (We do it here rather than handle() because a window does not
 	// see FL_RELEASE events if a child widget grabs it first)
-	if (window->m_keyboardGrabbed && !window->m_mouseGrabbed) {
+	if (window->keyboardGrabbed_ && !window->mouseGrabbed_) {
 	  window->grabPointer();
 	}
       }
@@ -284,7 +284,7 @@ void QVNCWinView::getMouseProperties(WPARAM wParam, LPARAM lParam, int &x, int &
 
 void QVNCWinView::draw()
 {
-  qDebug() << "VNCWinView::refresh(): hWnd=" << m_hwnd;
+  qDebug() << "VNCWinView::refresh(): hWnd=" << hwnd_;
   PlatformPixelBuffer *framebuffer = (PlatformPixelBuffer *)AppManager::instance()->connection()->framebuffer();
   rfb::Rect r = framebuffer->getDamage();
   int x = r.tl.x;
@@ -292,10 +292,10 @@ void QVNCWinView::draw()
   int width = r.br.x - x;
   int height = r.br.y - y;
   RECT rect{x, y, x + width, y + height};
-  InvalidateRect(m_hwnd, &rect, false);
+  InvalidateRect(hwnd_, &rect, false);
 
   PAINTSTRUCT ps;
-  HDC hDC = BeginPaint(m_hwnd, &ps);
+  HDC hDC = BeginPaint(hwnd_, &ps);
   HBITMAP hBitmap = framebuffer->hbitmap();
   BITMAP bitmap;
   GetObject(hBitmap, sizeof(BITMAP), (LPSTR)&bitmap);
@@ -303,36 +303,36 @@ void QVNCWinView::draw()
   SelectObject(hDCBits, hBitmap);
   BitBlt(hDC, x, y, width, height, hDCBits, x, y, SRCCOPY);
   DeleteDC(hDCBits);
-  EndPaint(m_hwnd, &ps);
+  EndPaint(hwnd_, &ps);
 }
 
 bool QVNCWinView::event(QEvent *e)
 {
   switch(e->type()) {
   case QEvent::Polish:
-    if (!m_hwnd) {
-      m_hwnd = createWindow(HWND(winId()), GetModuleHandle(0));
+    if (!hwnd_) {
+      hwnd_ = createWindow(HWND(winId()), GetModuleHandle(0));
       fixParent();
-      m_hwndowner = m_hwnd != 0;
+      hwndowner_ = hwnd_ != 0;
     }
-    if (m_hwnd && !m_wndproc && GetParent(m_hwnd) == (HWND)winId()) {
-      m_wndproc = (void*)GetWindowLongPtr(m_hwnd, GWLP_WNDPROC);
-      SetWindowLongPtr(m_hwnd, GWLP_WNDPROC, (LONG_PTR)eventHandler);
+    if (hwnd_ && !wndproc_ && GetParent(hwnd_) == (HWND)winId()) {
+      wndproc_ = (void*)GetWindowLongPtr(hwnd_, GWLP_WNDPROC);
+      SetWindowLongPtr(hwnd_, GWLP_WNDPROC, (LONG_PTR)eventHandler);
 
       LONG style;
-      style = GetWindowLong(m_hwnd, GWL_STYLE);
+      style = GetWindowLong(hwnd_, GWL_STYLE);
       if (style & WS_TABSTOP) {
         setFocusPolicy(Qt::FocusPolicy(focusPolicy() | Qt::StrongFocus));
       }
     }
     break;
   case QEvent::WindowBlocked:
-    if (m_hwnd)
-      EnableWindow(m_hwnd, false);
+    if (hwnd_)
+      EnableWindow(hwnd_, false);
     break;
   case QEvent::WindowUnblocked:
-    if (m_hwnd)
-      EnableWindow(m_hwnd, true);
+    if (hwnd_)
+      EnableWindow(hwnd_, true);
     break;
   case QEvent::WindowActivate:
     //qDebug() << "WindowActivate";
@@ -367,10 +367,10 @@ void QVNCWinView::showEvent(QShowEvent *e)
 {
   QWidget::showEvent(e);
 
-  if (m_hwnd) {
-    int w = width() * m_devicePixelRatio;
-    int h = height() * m_devicePixelRatio;
-    SetWindowPos(m_hwnd, HWND_TOP, 0, 0, w, h, SWP_SHOWWINDOW);
+  if (hwnd_) {
+    int w = width() * devicePixelRatio_;
+    int h = height() * devicePixelRatio_;
+    SetWindowPos(hwnd_, HWND_TOP, 0, 0, w, h, SWP_SHOWWINDOW);
     qDebug() << "VNCWinView::showEvent(): SetWindowPos: w=" << w << ", h=" << h;
   }
 }
@@ -379,8 +379,8 @@ void QVNCWinView::focusInEvent(QFocusEvent *e)
 {
   QWidget::focusInEvent(e);
 
-  if (m_hwnd) {
-    ::SetFocus(m_hwnd);
+  if (hwnd_) {
+    ::SetFocus(hwnd_);
   }
 }
 
@@ -388,7 +388,7 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
 {
   qDebug() << "QVNCWinView::resizeEvent: w=" << e->size().width() << ", h=" << e->size().height();
 
-  if (m_hwnd) {
+  if (hwnd_) {
     // Try to get the remote size to match our window size, provided
     // the following conditions are true:
     //
@@ -397,7 +397,7 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
     // c) We're not still waiting for startup fullscreen to kick in
     //
     QVNCConnection *cc = AppManager::instance()->connection();
-    if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize && !m_fullscreenEnabled && !m_pendingFullscreen) {
+    if (!firstUpdate_ && ::remoteResize && cc->server()->supportsSetDesktopSize && !fullscreenEnabled_ && !pendingFullscreen_) {
       postRemoteResizeRequest();
     }
     // Some systems require a grab after the window size has been changed.
@@ -411,8 +411,8 @@ bool QVNCWinView::nativeEvent(const QByteArray &eventType, void *message, long *
   MSG *msg = (MSG *)message;
   switch (msg->message) {
     case WM_SETFOCUS:
-      if (m_hwnd) {
-        ::SetFocus(m_hwnd);
+      if (hwnd_) {
+        ::SetFocus(hwnd_);
         return true;
       }
       break;
@@ -424,8 +424,8 @@ bool QVNCWinView::nativeEvent(const QByteArray &eventType, void *message, long *
 
 void QVNCWinView::resolveAltGrDetection(bool isAltGrSequence)
 {
-  m_altGrArmed = false;
-  m_altGrCtrlTimer->stop();
+  altGrArmed_ = false;
+  altGrCtrlTimer_->stop();
   // when it's not an AltGr sequence we can't supress the Ctrl anymore
   if (!isAltGrSequence)
     handleKeyPress(0x1d, XK_Control_L);
@@ -437,7 +437,7 @@ void QVNCWinView::handleKeyPress(int keyCode, quint32 keySym)
 
   // Prevent recursion if the menu wants to send its own
   // activation key.
-  if (m_menuKeySym && (keySym == m_menuKeySym) && !menuRecursion) {
+  if (menuKeySym_ && (keySym == menuKeySym_) && !menuRecursion) {
     menuRecursion = true;
     popupContextMenu();
     menuRecursion = false;
@@ -456,7 +456,7 @@ void QVNCWinView::handleKeyPress(int keyCode, quint32 keySym)
   // symbol on release as when pressed. This breaks the VNC protocol however,
   // so we need to keep track of what keysym a key _code_ generated on press
   // and send the same on release.
-  m_downKeySym[keyCode] = keySym;
+  downKeySym_[keyCode] = keySym;
 
   vlog.debug("Key pressed: 0x%04x => 0x%04x", keyCode, keySym);
 
@@ -481,8 +481,8 @@ void QVNCWinView::handleKeyRelease(int keyCode)
   if (::viewOnly)
     return;
 
-  iter = m_downKeySym.find(keyCode);
-  if (iter == m_downKeySym.end()) {
+  iter = downKeySym_.find(keyCode);
+  if (iter == downKeySym_.end()) {
     // These occur somewhat frequently so let's not spam them unless
     // logging is turned up.
     vlog.debug("Unexpected release of key code %d", keyCode);
@@ -504,7 +504,7 @@ void QVNCWinView::handleKeyRelease(int keyCode)
     throw;
   }
 
-  m_downKeySym.erase(iter);
+  downKeySym_.erase(iter);
 }
 
 int QVNCWinView::handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lParam)
@@ -527,11 +527,11 @@ int QVNCWinView::handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lParam)
   // to merge those in to a single AltGr event. We detect this case
   // by seeing the two key events directly after each other with a very
   // short time between them (<50ms) and supress the Ctrl event.
-  if (m_altGrArmed) {
+  if (altGrArmed_) {
     bool altPressed = isExtended &&
         (keyCode == 0x38) &&
         (vKey == VK_MENU) &&
-        ((timestamp - m_altGrCtrlTime) < 50);
+        ((timestamp - altGrCtrlTime_) < 50);
     resolveAltGrDetection(altPressed);
   }
 
@@ -605,9 +605,9 @@ int QVNCWinView::handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lParam)
     }
     // Possible start of AltGr sequence?
     if ((keyCode == 0x1d) && (keySym == XK_Control_L)) {
-      m_altGrArmed = true;
-      m_altGrCtrlTime = timestamp;
-      m_altGrCtrlTimer->start();
+      altGrArmed_ = true;
+      altGrCtrlTime_ = timestamp;
+      altGrCtrlTimer_->start();
       return 1;
     }
   }
@@ -642,7 +642,7 @@ int QVNCWinView::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam)
 
   // We can't get a release in the middle of an AltGr sequence, so
   // abort that detection
-  if (m_altGrArmed) {
+  if (altGrArmed_) {
     resolveAltGrDetection(false);
   }
   if (keyCode == SCAN_FAKE) {
@@ -671,10 +671,10 @@ int QVNCWinView::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam)
   // Windows has a rather nasty bug where it won't send key release
   // events for a Shift button if the other Shift is still pressed
   if ((keyCode == 0x2a) || (keyCode == 0x36)) {
-    if (m_downKeySym.count(0x2a)) {
+    if (downKeySym_.count(0x2a)) {
       handleKeyRelease(0x2a);
     }
-    if (m_downKeySym.count(0x36)) {
+    if (downKeySym_.count(0x36)) {
       handleKeyRelease(0x36);
     }
   }
@@ -702,7 +702,7 @@ void QVNCWinView::setQCursor(const QCursor &cursor)
   header.bV5BlueMask = 0x000000FF;
   header.bV5AlphaMask = 0xFF000000;
 
-  HDC hdc = GetDC(m_hwnd);
+  HDC hdc = GetDC(hwnd_);
   quint32 *bits = nullptr;
   HBITMAP bitmap = CreateDIBSection(hdc, (BITMAPINFO*)&header, DIB_RGB_COLORS, (void**)&bits, nullptr, 0);
   ReleaseDC(nullptr, hdc);
@@ -722,17 +722,17 @@ void QVNCWinView::setQCursor(const QCursor &cursor)
   icon_info.hbmMask = empty_mask;
   icon_info.hbmColor = bitmap;
 
-  DestroyIcon(m_cursor);
-  m_cursor = CreateIconIndirect(&icon_info);
+  DestroyIcon(cursor_);
+  cursor_ = CreateIconIndirect(&icon_info);
   DeleteObject(bitmap);
   DeleteObject(empty_mask);
 
-  SetCursor(m_cursor);
+  SetCursor(cursor_);
 }
 
 void QVNCWinView::setCursorPos(int x, int y)
 {
-  if (!m_mouseGrabbed) {
+  if (!mouseGrabbed_) {
     // Do nothing if we do not have the mouse captured.
     return;
   }
@@ -741,7 +741,7 @@ void QVNCWinView::setCursorPos(int x, int y)
 
 bool QVNCWinView::hasViewFocus() const
 {
-  return GetFocus() == m_hwnd;
+  return GetFocus() == hwnd_;
 }
 
 void QVNCWinView::pushLEDState()
@@ -790,8 +790,8 @@ void QVNCWinView::setLEDState(unsigned int state)
   // support for this extension. We will push our state to sync up the
   // server when we get focus. If we already have focus we need to push
   // it here though.
-  if (m_firstLEDState) {
-    m_firstLEDState = false;
+  if (firstLEDState_) {
+    firstLEDState_ = false;
     if (hasFocus()) {
       pushLEDState();
     }
@@ -852,7 +852,7 @@ void QVNCWinView::maybeGrabKeyboard()
 
 void QVNCWinView::grabKeyboard()
 {
-  int ret = win32_enable_lowlevel_keyboard(m_hwnd);
+  int ret = win32_enable_lowlevel_keyboard(hwnd_);
   if (ret != 0) {
     vlog.error(_("Failure grabbing keyboard"));
     return;
@@ -866,7 +866,7 @@ void QVNCWinView::ungrabKeyboard()
   // maybe unnecessary
   ungrabPointer();
 #endif
-  win32_disable_lowlevel_keyboard(m_hwnd);
+  win32_disable_lowlevel_keyboard(hwnd_);
   QAbstractVNCView::ungrabKeyboard();
 }
 
@@ -877,20 +877,20 @@ void QVNCWinView::bell()
 
 void QVNCWinView::startMouseTracking()
 {
-  if (!m_mouseTracking) {
+  if (!mouseTracking_) {
     // Enable mouse tracking.
     TRACKMOUSEEVENT tme;
     tme.cbSize = sizeof(tme);
-    tme.hwndTrack = m_hwnd;
+    tme.hwndTrack = hwnd_;
     tme.dwFlags = TME_HOVER | TME_LEAVE;
     tme.dwHoverTime = HOVER_DEFAULT;
     TrackMouseEvent(&tme);
-    m_mouseTracking = true;
+    mouseTracking_ = true;
 
     SetCursor(NULL);
     qDebug() << "SetCursor(NULL)";
 
-    if (m_keyboardGrabbed) {
+    if (keyboardGrabbed_) {
       grabPointer();
     }
   }
@@ -898,8 +898,8 @@ void QVNCWinView::startMouseTracking()
 
 void QVNCWinView::stopMouseTracking()
 {
-  m_mouseTracking = false;
-  SetCursor(m_defaultCursor);
+  mouseTracking_ = false;
+  SetCursor(defaultCursor_);
 }
 
 void QVNCWinView::moveView(int x, int y)

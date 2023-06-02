@@ -43,7 +43,7 @@ public:
   HBITMAP hbitmap() { return bitmap; }
   RGBQUAD *framebuffer() { return data; }
 #elif defined(__APPLE__)
-  CGImage *bitmap() { return m_bitmap; }
+  CGImage *bitmap() { return bitmap_; }
   unsigned char *framebuffer() { return data; }
 #else
   XImage *ximage() { return xim; }
@@ -57,14 +57,14 @@ protected:
 
 protected:
   int w, h;
-  QQuickWindow *m_window;
+  QQuickWindow *window_;
 
 #if defined(WIN32)
   RGBQUAD* data;
   HBITMAP bitmap;
 #elif defined(__APPLE__)
   unsigned char* data;
-  CGImage *m_bitmap;
+  CGImage *bitmap_;
 #else
   XShmSegmentInfo *shminfo;
   XImage *xim;

@@ -27,9 +27,9 @@ Surface::Surface(int width, int height)
   , h(height)
 #if !defined(__APPLE__) && !defined(WIN32)
   #if 0
-  , m_pixmap(0)
-  , m_picture(0)
-  , m_display(nullptr)
+  , pixmap_(0)
+  , picture_(0)
+  , display_(nullptr)
   #endif
   , shminfo(nullptr)
   , xim(nullptr)

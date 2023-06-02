@@ -44,12 +44,6 @@
 
 using namespace rdr;
 
-//Exception::Exception(QString message)
-//{
-//    strncpy(str_, message.toUtf8(), len-1);
-//    str_[len-1] = 0;
-//}
-    
 Exception::Exception(const char *format, ...) {
 	va_list ap;
 

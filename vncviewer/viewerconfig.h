@@ -66,7 +66,7 @@ public:
   Q_ENUM(FullScreenMode)
 
   virtual ~ViewerConfig();
-  static ViewerConfig *config() { return m_config; };
+  static ViewerConfig *config() { return config_; };
   static int initialize();
   //
   bool autoSelect() const;
@@ -88,19 +88,19 @@ public:
   int qualityLevel() const;
   void setQualityLevel(int value);
   //
-  bool encNone() const { return m_encNone; }
+  bool encNone() const { return encNone_; }
   void setEncNone(bool value);
-  bool encTLSAnon() const { return m_encTLSAnon; }
+  bool encTLSAnon() const { return encTLSAnon_; }
   void setEncTLSAnon(bool value);
-  bool encTLSX509() const { return m_encTLSX509; }
+  bool encTLSX509() const { return encTLSX509_; }
   void setEncTLSX509(bool value);
-  bool encAES() const { return m_encAES; }
+  bool encAES() const { return encAES_; }
   void setEncAES(bool value);
-  bool authNone() const { return m_authNone; }
+  bool authNone() const { return authNone_; }
   void setAuthNone(bool value);
-  bool authVNC() const { return m_authVNC; }
+  bool authVNC() const { return authVNC_; }
   void setAuthVNC(bool value);
-  bool authPlain() const { return m_authPlain; }
+  bool authPlain() const { return authPlain_; }
   void setAuthPlain(bool value);
   QString x509CA() const;
   void setX509CA(QString value);
@@ -118,7 +118,7 @@ public:
   QString menuKey() const;
   void setMenuKey(QString value);
   int menuKeyIndex() const;
-  QStringList menuKeys() const { return m_menuKeys; }
+  QStringList menuKeys() const { return menuKeys_; }
   bool acceptClipboard() const;
   void setAcceptClipboard(bool value);
   bool sendClipboard() const;
@@ -136,15 +136,15 @@ public:
   bool reconnectOnError() const;
   void setReconnectOnError(bool value);
   //
-  QStringList serverHistory() const { return m_serverHistory; }
+  QStringList serverHistory() const { return serverHistory_; }
   void setServerHistory(QStringList history);
-  QString serverName() const { return m_serverName; }
+  QString serverName() const { return serverName_; }
   void usage();
   bool listenModeEnabled() const;
-  QString serverHost() const { return m_serverHost; }
-  int serverPort() const { return m_serverPort; }
+  QString serverHost() const { return serverHost_; }
+  int serverPort() const { return serverPort_; }
   QString gatewayHost() const;
-  int gatewayLocalPort() const { return m_gatewayLocalPort; }
+  int gatewayLocalPort() const { return gatewayLocalPort_; }
   void setAccessPoint(QString accessPoint);
 
 signals:
@@ -198,22 +198,22 @@ public slots:
   QString aboutText();
 
 private:
-  static ViewerConfig *m_config;
-  QHash<int, bool> m_availableSecurityTypes; // Each element is a pair of (availableSecurityId, userPreferenceToUseIt).
-  QStringList m_menuKeys;
-  bool m_encNone;
-  bool m_encTLSAnon;
-  bool m_encTLSX509;
-  bool m_encAES;
-  bool m_authNone;
-  bool m_authVNC;
-  bool m_authPlain;
-  QStringList m_serverHistory;
-  QString m_serverName;
-  QString m_serverHost;
-  int m_serverPort;
-  int m_gatewayLocalPort;
-  char *m_messageDir;
+  static ViewerConfig *config_;
+  QHash<int, bool> availableSecurityTypes_; // Each element is a pair of (availableSecurityId, userPreferenceToUseIt).
+  QStringList menuKeys_;
+  bool encNone_;
+  bool encTLSAnon_;
+  bool encTLSX509_;
+  bool encAES_;
+  bool authNone_;
+  bool authVNC_;
+  bool authPlain_;
+  QStringList serverHistory_;
+  QString serverName_;
+  QString serverHost_;
+  int serverPort_;
+  int gatewayLocalPort_;
+  char *messageDir_;
   ViewerConfig();
   bool potentiallyLoadConfigurationFile(QString vncServerName);
   QString getlocaledir();

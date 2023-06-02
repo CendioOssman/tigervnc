@@ -22,7 +22,7 @@
 void Surface::alloc()
 {
   data = new unsigned char[width() * height() * 4];
-  m_bitmap = cocoa_create_bitmap(width(), height(), data);
+  bitmap_ = cocoa_create_bitmap(width(), height(), data);
 }
 
 void Surface::dealloc()

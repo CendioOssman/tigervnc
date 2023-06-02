@@ -11,6 +11,7 @@
 #include "vncconnection.h"
 #include "viewerconfig.h"
 #include "abstractvncview.h"
+#include "vncwindow.h"
 #include "parameters.h"
 #include "appmanager.h"
 #undef asprintf
@@ -23,26 +24,26 @@
 #include "vncx11view.h"
 #endif
 
-AppManager *AppManager::m_manager;
+AppManager *AppManager::manager_;
 
 AppManager::AppManager()
  : QObject(nullptr)
- , m_error(0)
- , m_facade(new QVNCConnection)
- , m_view(nullptr)
- , m_scroll(new QVNCWindow)
+ , error_(0)
+ , facade_(new QVNCConnection)
+ , view_(nullptr)
+ , scroll_(new QVNCWindow)
 {
-  connect(this, &AppManager::connectToServerRequested, m_facade, &QVNCConnection::connectToServer);
-  connect(m_facade, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
-  connect(this, &AppManager::resetConnectionRequested, m_facade, &QVNCConnection::resetConnection);
+  connect(this, &AppManager::connectToServerRequested, facade_, &QVNCConnection::connectToServer);
+  connect(facade_, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
+  connect(this, &AppManager::resetConnectionRequested, facade_, &QVNCConnection::resetConnection);
 }
 
 AppManager::~AppManager()
 {
-  m_facade->deleteLater();
-  m_scroll->takeWidget();
-  delete m_scroll;
-  delete m_view;
+  facade_->deleteLater();
+  scroll_->takeWidget();
+  delete scroll_;
+  delete view_;
 }
 
 int AppManager::initialize()
@@ -51,11 +52,11 @@ int AppManager::initialize()
   qRegisterMetaType<QAbstractSocket::SocketState>("QAbstractSocket::SocketState");
   qRegisterMetaType<QProcess::ProcessError>("QProcess::ProcessError");
   qmlRegisterType<QVNCConnection>("Qt.TigerVNC", 1, 0, "VNCConnection");
-  m_manager = new AppManager();
+  manager_ = new AppManager();
   qmlRegisterSingletonType<AppManager>("Qt.TigerVNC", 1, 0, "AppManager", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
-    return m_manager;
+    return manager_;
   });
   return 0;
 }
@@ -82,56 +83,56 @@ void AppManager::resetConnection()
 
 void AppManager::publishError(const QString message, bool quit)
 {
-  emit errorOcurred(m_error++, message, quit);
+  emit errorOcurred(error_++, message, quit);
 }
 
 void AppManager::openVNCWindow(int width, int height, QString name)
 {
   QWidget *parent = nullptr;
   if (!::remoteResize) {
-    m_scroll->takeWidget();
-    parent = m_scroll;
+    scroll_->takeWidget();
+    parent = scroll_;
   }
-  delete m_view;
+  delete view_;
 #if defined(WIN32)
-  m_view = new QVNCWinView(parent);
+  view_ = new QVNCWinView(parent);
 #elif defined(__APPLE__)
-  m_view = new QVNCMacView(parent);
+  view_ = new QVNCMacView(parent);
 #elif defined(Q_OS_UNIX)
   QString platform = QGuiApplication::platformName();
   if (platform == "xcb") {
-    m_view = new QVNCX11View(parent);
+    view_ = new QVNCX11View(parent);
   }
   else if (platform == "wayland") {
     ;
   }
 #endif
 
-  if (!m_view) {
+  if (!view_) {
     throw rdr::Exception(_("Platform not supported."));
   }
-  connect(m_view, &QAbstractVNCView::fullscreenChanged, this, [this](bool enabled) {
-    m_scroll->setHorizontalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
-    m_scroll->setVerticalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
+  connect(view_, &QAbstractVNCView::fullscreenChanged, this, [this](bool enabled) {
+    scroll_->setHorizontalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
+    scroll_->setVerticalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
   }, Qt::QueuedConnection);
 
   if (!::remoteResize) {
-    connect(m_view, &QAbstractVNCView::delayedInitialized, m_scroll, &QVNCWindow::popupToast);
-    m_view->resize(width, height);
-    m_scroll->setWidget(m_view);
-    m_scroll->resize(width, height);
-    m_scroll->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
-    m_scroll->show();
+    connect(view_, &QAbstractVNCView::delayedInitialized, scroll_, &QVNCWindow::popupToast);
+    view_->resize(width, height);
+    scroll_->setWidget(view_);
+    scroll_->resize(width, height);
+    scroll_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+    scroll_->show();
   }
   else {
-    connect(m_view, &QAbstractVNCView::delayedInitialized, m_view, &QAbstractVNCView::popupToast);
-    m_view->resize(width, height);
-    m_view->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
-    m_view->show();
+    connect(view_, &QAbstractVNCView::delayedInitialized, view_, &QAbstractVNCView::popupToast);
+    view_->resize(width, height);
+    view_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+    view_->show();
   }
 
   if (ViewerConfig::config()->fullScreen()) {
-    m_view->fullscreen(true);
+    view_->fullscreen(true);
   }
 
   emit vncWindowOpened();
@@ -140,10 +141,10 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 void AppManager::setWindowName(QString name)
 {
   if (!::remoteResize) {
-    m_scroll->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+    scroll_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
   }
   else {
-    m_view->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+    view_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
   }
 }
 
@@ -180,42 +181,4 @@ void AppManager::openAboutDialog()
 void AppManager::respondToMessage(int response)
 {
   emit messageResponded(response);
-}
-
-QVNCApplication::QVNCApplication(int &argc, char **argv)
-  : QApplication(argc, argv)
-{
-}
-
-QVNCApplication::~QVNCApplication()
-{
-}
-
-bool QVNCApplication::notify(QObject *receiver, QEvent *e)
-{
-  try {
-    return QApplication::notify(receiver, e);
-  }
-  catch (rdr::Exception &e) {
-    qDebug() << "Error: " << e.str();
-    //AppManager::instance()->publishError(e.str());
-    // Above 'emit' code is functional only when VNC connection class is running on a thread
-    // other than GUI main thread.
-    // Now, VNC connection class is running on GUI main thread, by the customer's request.
-    // Because GUI main thread cannot use exceptions at all (by Qt spec), the application
-    // must exit when the exception is received.
-    // To avoid the undesired application exit, all exceptions must be handled in each points
-    // where an exception may occurr.
-    QCoreApplication::exit(1);
-  }
-  catch (int &e) {
-    qDebug() << "Error: " << strerror(e);
-    //AppManager::instance()->publishError(strerror(e));
-    QCoreApplication::exit(1);
-  }
-  catch (...) {
-    qDebug() << "Error: (unhandled)";
-    QCoreApplication::exit(1);
-  }
-  return true;
 }

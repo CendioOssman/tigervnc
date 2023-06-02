@@ -1,8 +1,6 @@
 #ifndef VNCCONNECTION_H
 #define VNCCONNECTION_H
 
-#include <QThread>
-#include <QProcess>
 #include "rdr/types.h"
 #include "rfb/Rect.h"
 #include "CConn.h"
@@ -10,6 +8,7 @@
 class QTimer;
 class QCursor;
 class QSocketNotifier;
+class TunnelFactory;
 
 namespace rdr {
   class InStream;
@@ -32,33 +31,6 @@ namespace network {
   class Socket;
 }
 
-class TunnelFactory : public QThread
-{
-  Q_OBJECT
-
-public:
-  TunnelFactory();
-  virtual ~TunnelFactory();
-  void close();
-  bool errorOccurred() const { return m_errorOccurrrd; }
-  QProcess::ProcessError error() const { return m_error; }
-
-protected:
-  void run() override;
-
-private:
-  bool m_errorOccurrrd;
-  QProcess::ProcessError m_error;
-  QString m_command;
-#if !defined(WIN32)
-  QString m_operationSocketName;
-#endif
-  QProcess *m_process;
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-  QStringList splitCommand(QStringView command);
-#endif
-};
-
 class QVNCConnection : public QObject
 {
   Q_OBJECT
@@ -66,19 +38,19 @@ class QVNCConnection : public QObject
 public:
   QVNCConnection();
   virtual ~QVNCConnection();
-  rfb::ServerParams *server() { return m_rfbcon->server(); }
+  rfb::ServerParams *server() { return rfbcon_->server(); }
   void setState(int state);
-  rdr::InStream *istream() { return m_rfbcon->getInStream(); }
-  rdr::OutStream *ostream() { return m_rfbcon->getOutStream(); }
-  rfb::CMsgReader* reader() { return m_rfbcon->reader(); }
-  rfb::CMsgWriter* writer() { return m_rfbcon->writer(); }
-  void setQualityLevel(int level) { m_rfbcon->setQualityLevel(level); }
-  rfb::ModifiablePixelBuffer *framebuffer() { return m_rfbcon->framebuffer(); }
-  void setCompressLevel(int level) { m_rfbcon->setCompressLevel(level); }
-  QTimer *updateTimer() const { return m_updateTimer; }
-  void updatePixelFormat() { m_rfbcon->updatePixelFormat(); }
+  rdr::InStream *istream() { return rfbcon_->getInStream(); }
+  rdr::OutStream *ostream() { return rfbcon_->getOutStream(); }
+  rfb::CMsgReader* reader() { return rfbcon_->reader(); }
+  rfb::CMsgWriter* writer() { return rfbcon_->writer(); }
+  void setQualityLevel(int level) { rfbcon_->setQualityLevel(level); }
+  rfb::ModifiablePixelBuffer *framebuffer() { return rfbcon_->framebuffer(); }
+  void setCompressLevel(int level) { rfbcon_->setCompressLevel(level); }
+  QTimer *updateTimer() const { return updateTimer_; }
+  void updatePixelFormat() { rfbcon_->updatePixelFormat(); }
   void announceClipboard(bool available);
-  void setPreferredEncoding(int encoding) { m_rfbcon->setPreferredEncoding(encoding); }
+  void setPreferredEncoding(int encoding) { rfbcon_->setPreferredEncoding(encoding); }
 
 signals:
   void socketNotified();
@@ -103,21 +75,21 @@ public slots:
   void resetConnection();
   void startProcessing();
   void refreshFramebuffer();
-  QString infoText() { return m_rfbcon->connectionInfo(); }
-  QString host() { return m_rfbcon->host(); }
+  QString infoText() { return rfbcon_->connectionInfo(); }
+  QString host() { return rfbcon_->host(); }
 
 private:
-  CConn *m_rfbcon;
-  network::Socket *m_socket;
-  QSocketNotifier *m_socketNotifier;
-  QSocketNotifier *m_socketErrorNotifier;
-  QTimer *m_updateTimer;
-  TunnelFactory *m_tunnelFactory;
-  bool m_closing;
+  CConn *rfbcon_;
+  network::Socket *socket_;
+  QSocketNotifier *socketNotifier_;
+  QSocketNotifier *socketErrorNotifier_;
+  QTimer *updateTimer_;
+  TunnelFactory *tunnelFactory_;
+  bool closing_;
 
   void bind(int fd);
-  void setHost(QString host) { m_rfbcon->setHost(host); }
-  void setPort(int port) { m_rfbcon->setPort(port); }
+  void setHost(QString host) { rfbcon_->setHost(host); }
+  void setPort(int port) { rfbcon_->setPort(port); }
 };
 
 #endif // VNCCONNECTION_H

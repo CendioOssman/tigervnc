@@ -40,6 +40,12 @@ set(PROJECT_SOURCES
         vnctranslator.h
         appmanager.h
         appmanager.cxx
+        vncapplication.cxx
+        vncapplication.h
+        vnctoast.cxx
+        vnctoast.h
+        vncwindow.cxx
+        vncwindow.h
         viewerconfig.h
         viewerconfig.cxx
         vncconnection.h
@@ -53,6 +59,8 @@ set(PROJECT_SOURCES
         gettext.h
         parameters.h
         parameters.cxx
+        tunnelfactory.cxx
+        tunnelfactory.h
         i18n.h
         menukey.h
         menukey.cxx
@@ -70,7 +78,7 @@ set(PROJECT_SOURCES
         ${OS_DEP_SOURCES}
 )
 
-if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND ((QT_VERSION_MAJOR GREATER_EQUAL 6) OR ((QT_VERSION_MAJOR GREATER_EQUAL 5) AND (QT_VERSION_MAJOR GREATER_EQUAL 15))))
   set_target_properties(vncviewer PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 

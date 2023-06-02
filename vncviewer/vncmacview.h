@@ -52,12 +52,12 @@ private:
       bool nativeEventFilter(const QByteArray &eventType, void *message, long *result) override;
 
   private:
-      QVNCMacView *m_view;
+      QVNCMacView *view_;
   };
 
-  NSView *m_view;
-  NSCursor *m_cursor;
-  MacEventFilter *m_filter;
+  NSView *view_;
+  NSCursor *cursor_;
+  MacEventFilter *filter_;
 };
 
 #endif // VNCMACVIEW_H

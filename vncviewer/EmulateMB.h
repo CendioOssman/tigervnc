@@ -29,7 +29,7 @@ public:
 
   void filterPointerEvent(const rfb::Point& pos, int buttonMask);
 
-  virtual void sendPointerEvent(const rfb::Point& pos, int buttonMask)=0;
+  void sendPointerEvent(const rfb::Point& pos, int buttonMask);
 
   virtual void handleTimeout();
 

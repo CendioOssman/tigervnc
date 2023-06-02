@@ -2,6 +2,7 @@
 #include "config.h"
 #endif
 
+#include <QApplication>
 #include <QMenu>
 #include <QPushButton>
 #include <QCheckBox>
@@ -9,8 +10,6 @@
 #include <QTimer>
 #include <QScreen>
 #include <QWindow>
-#include <QBitmap>
-#include <QPainter>
 #include <QDebug>
 #include <QUrl>
 #include <QClipboard>
@@ -26,6 +25,7 @@
 #include "vncconnection.h"
 #include "i18n.h"
 #include "viewerconfig.h"
+#include "vnctoast.h"
 #include "abstractvncview.h"
 #undef asprintf
 
@@ -36,7 +36,7 @@
 
 static rfb::LogWriter vlog("VNCView");
 
-QClipboard *QAbstractVNCView::m_clipboard = nullptr;
+QClipboard *QAbstractVNCView::clipboard_ = nullptr;
 
 class QMenuSeparator : public QAction
 {
@@ -99,23 +99,23 @@ class QKeyToggleAction : public QCheckableAction
 public:
   QKeyToggleAction(const QString &text, int keyCode, quint32 keySym, QWidget *parent = nullptr)
    : QCheckableAction(text, parent)
-   , m_keyCode(keyCode)
-   , m_keySym(keySym)
+   , keyCode_(keyCode)
+   , keySym_(keySym)
   {
     connect(this, &QAction::toggled, this, [this](bool checked) {
       QAbstractVNCView *view = AppManager::instance()->view();
       if (checked) {
-        view->handleKeyPress(m_keyCode, m_keySym);
+        view->handleKeyPress(keyCode_, keySym_);
       }
       else {
-        view->handleKeyRelease(m_keyCode);
+        view->handleKeyRelease(keyCode_);
       }
     });
   }
 
 private:
-  int m_keyCode;
-  quint32 m_keySym;
+  int keyCode_;
+  quint32 keySym_;
 };
 
 class QMenuKeyAction : public QAction
@@ -227,163 +227,57 @@ public:
   }
 };
 
-QMBEmu::QMBEmu(QTimer *qtimer)
- : EmulateMB(qtimer)
-{
-}
-
-QMBEmu::~QMBEmu()
-{
-}
-
-void QMBEmu::sendPointerEvent(const rfb::Point& pos, int buttonMask)
-{
-  emit AppManager::instance()->connection()->writePointerEvent(pos, buttonMask);
-}
-
-QVNCToast::QVNCToast(QWidget *parent)
- : QLabel(QString::asprintf(_("Press %s to open the context menu"), (const char*)::menuKey), parent, Qt::SplashScreen | Qt::WindowStaysOnTopHint)
- , m_closeTimer(new QTimer)
-{
-  int radius = 5;
-  hide();
-  setWindowModality(Qt::NonModal);
-  setGeometry(0, 0, 300, 40);
-  setStyleSheet(QString("QLabel {"
-                        "border-radius: %1px;"
-                        "background-color: #50505050;"
-                        "color: #e0ffffff;"
-                        "font-size: 14px;"
-                        "font-weight: bold;"
-                        "}").arg(radius));
-  setWindowOpacity(0.8);
-  const QRect rect(QPoint(0,0), geometry().size());
-  QBitmap b(rect.size());
-  b.fill(QColor(Qt::color0));
-  QPainter painter(&b);
-  painter.setRenderHint(QPainter::Antialiasing);
-  painter.setBrush(Qt::color1);
-  painter.drawRoundedRect(rect, radius, radius, Qt::AbsoluteSize);
-  painter.end();
-  setMask(b);
-  setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-
-  m_closeTimer->setInterval(5000);
-  m_closeTimer->setSingleShot(true);
-  connect(m_closeTimer, &QTimer::timeout, this, &QWidget::hide);
-}
-
-QVNCToast::~QVNCToast()
-{
-  delete m_closeTimer;
-}
-
-void QVNCToast::show()
-{
-  m_closeTimer->start();
-  QLabel::show();
-}
-
-QVNCWindow::QVNCWindow(QWidget *parent)
- : QScrollArea(parent)
- , m_toast(new QVNCToast(this))
-{
-  setWidgetResizable(::remoteResize);
-  setContentsMargins(0, 0, 0, 0);
-  setFrameStyle(QFrame::NoFrame);
-
-  // Support for -geometry option. Note that although we do support
-  // negative coordinates, we do not support -XOFF-YOFF (ie
-  // coordinates relative to the right edge / bottom edge) at this
-  // time.
-  int geom_x = 0, geom_y = 0;
-  if (strcmp(::geometry, "") != 0) {
-    int nfields = sscanf((const char*)::geometry, "+%d+%d", &geom_x, &geom_y);
-    if (nfields != 2) {
-      int geom_w, geom_h;
-      nfields = sscanf((const char*)::geometry, "%dx%d+%d+%d", &geom_w, &geom_h, &geom_x, &geom_y);
-      if (nfields != 4) {
-        vlog.error(_("Invalid geometry specified!"));
-      }
-    }
-    if (nfields == 2 || nfields == 4) {
-      move(geom_x, geom_y);
-    }
-  }
-}
-
-QVNCWindow::~QVNCWindow()
-{
-  delete m_toast;
-}
-
-void QVNCWindow::popupToast()
-{
-  QPoint point = mapToGlobal(QPoint(0, 0));
-  m_toast->move(point.x() + (width() - m_toast->width()) / 2, point.y() + 50);
-  m_toast->show();
-}
-
-void QVNCWindow::moveEvent(QMoveEvent *e)
-{
-  QWidget::moveEvent(e);
-  if (m_toast->isVisible()) {
-    QPoint point = mapToGlobal(QPoint(0, 0));
-    m_toast->move(point.x() + (width() - m_toast->width()) / 2, point.y() + 50);
-  }
-}
-
 QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
  : QWidget(parent, f)
- , m_toast(new QVNCToast(this))
- , m_devicePixelRatio(devicePixelRatioF())
- , m_menuKeySym(XK_F8)
- , m_contextMenu(nullptr)
- , m_firstLEDState(false)
- , m_pendingServerClipboard(false)
- , m_pendingClientClipboard(false)
- , m_clipboardSource(0)
- , m_firstUpdate(true)
- , m_delayedFullscreen(false)
- , m_delayedDesktopSize(false)
- , m_keyboardGrabbed(false)
- , m_mouseGrabbed(false)
- , m_resizeTimer(new QTimer)
- , m_delayedInitializeTimer(new QTimer)
- , m_fullscreenEnabled(false)
- , m_pendingFullscreen(false)
- , m_mouseButtonEmulationTimer(new QTimer)
- , m_mbemu(new QMBEmu(m_mouseButtonEmulationTimer))
+ , toast_(new QVNCToast(this))
+ , devicePixelRatio_(devicePixelRatioF())
+ , menuKeySym_(XK_F8)
+ , contextMenu_(nullptr)
+ , firstLEDState_(false)
+ , pendingServerClipboard_(false)
+ , pendingClientClipboard_(false)
+ , clipboardSource_(0)
+ , firstUpdate_(true)
+ , delayedFullscreen_(false)
+ , delayedDesktopSize_(false)
+ , keyboardGrabbed_(false)
+ , mouseGrabbed_(false)
+ , resizeTimer_(new QTimer)
+ , delayedInitializeTimer_(new QTimer)
+ , fullscreenEnabled_(false)
+ , pendingFullscreen_(false)
+ , mouseButtonEmulationTimer_(new QTimer)
+ , mbemu_(new EmulateMB(mouseButtonEmulationTimer_))
 {
-  if (!m_clipboard) {
-    m_clipboard = QGuiApplication::clipboard();
-    connect(m_clipboard, &QClipboard::dataChanged, this, []() {
+  if (!clipboard_) {
+    clipboard_ = QGuiApplication::clipboard();
+    connect(clipboard_, &QClipboard::dataChanged, this, []() {
       if (!::sendClipboard) {
         return;
       }
-      //qDebug() << "QClipboard::dataChanged: owns=" << m_clipboard->ownsClipboard() << ", text=" << m_clipboard->text();
-      if (!m_clipboard->ownsClipboard()) {
+      //qDebug() << "QClipboard::dataChanged: owns=" << clipboard_->ownsClipboard() << ", text=" << clipboard_->text();
+      if (!clipboard_->ownsClipboard()) {
         AppManager::instance()->connection()->announceClipboard(true);
       }
     });
   }
   setContentsMargins(0, 0, 0, 0);
 
-  m_resizeTimer->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
-  m_resizeTimer->setSingleShot(true);
-  connect(m_resizeTimer, &QTimer::timeout, this, &QAbstractVNCView::handleDesktopSize);
+  resizeTimer_->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
+  resizeTimer_->setSingleShot(true);
+  connect(resizeTimer_, &QTimer::timeout, this, &QAbstractVNCView::handleDesktopSize);
 
-  m_delayedInitializeTimer->setInterval(1000);
-  m_delayedInitializeTimer->setSingleShot(true);
-  connect(m_delayedInitializeTimer, &QTimer::timeout, this, [this]() {
+  delayedInitializeTimer_->setInterval(1000);
+  delayedInitializeTimer_->setSingleShot(true);
+  connect(delayedInitializeTimer_, &QTimer::timeout, this, [this]() {
     AppManager::instance()->connection()->refreshFramebuffer();
     emit delayedInitialized();
   });
-  m_delayedInitializeTimer->start();
+  delayedInitializeTimer_->start();
 
-  m_mouseButtonEmulationTimer->setInterval(50);
-  m_mouseButtonEmulationTimer->setSingleShot(true);
-  connect(m_mouseButtonEmulationTimer, &QTimer::timeout, this, &QAbstractVNCView::handleMouseButtonEmulationTimeout);
+  mouseButtonEmulationTimer_->setInterval(50);
+  mouseButtonEmulationTimer_->setSingleShot(true);
+  connect(mouseButtonEmulationTimer_, &QTimer::timeout, this, &QAbstractVNCView::handleMouseButtonEmulationTimeout);
 
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorChanged, this, &QAbstractVNCView::setQCursor, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorPositionChanged, this, &QAbstractVNCView::setCursorPos, Qt::QueuedConnection);
@@ -396,27 +290,27 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
 
 QAbstractVNCView::~QAbstractVNCView()
 {
-  for (QAction *&action: m_actions) {
+  for (QAction *&action: actions_) {
     delete action;
   }
-  delete m_contextMenu;
-  delete m_resizeTimer;
-  delete m_delayedInitializeTimer;
-  delete m_mouseButtonEmulationTimer;
-  delete m_toast;
+  delete contextMenu_;
+  delete resizeTimer_;
+  delete delayedInitializeTimer_;
+  delete mouseButtonEmulationTimer_;
+  delete toast_;
 }
 
 void QAbstractVNCView::postRemoteResizeRequest()
 {
-  m_resizeTimer->start();
+  resizeTimer_->start();
 }
 
 void QAbstractVNCView::resize(int width, int height)
 {
-  m_resizeTimer->stop();
+  resizeTimer_->stop();
 #if !defined(__APPLE__)
-  width /= m_devicePixelRatio;
-  height /= m_devicePixelRatio;
+  width /= devicePixelRatio_;
+  height /= devicePixelRatio_;
 #endif
   QWidget::resize(width, height);
   QVNCConnection *cc = AppManager::instance()->connection();
@@ -429,31 +323,31 @@ void QAbstractVNCView::resize(int width, int height)
 void QAbstractVNCView::popupContextMenu()
 {
   createContextMenu();
-  m_contextMenu->exec(QCursor::pos());
+  contextMenu_->exec(QCursor::pos());
 }
 
 void QAbstractVNCView::createContextMenu()
 {
-  if (!m_contextMenu) {
-    m_actions << new QDisconnectAction(p_("ContextMenu|", "Dis&connect"));
-    m_actions << new QMenuSeparator();
-    m_actions << new QFullScreenAction(p_("ContextMenu|", "&Full screen"));
-    m_actions << new QMinimizeAction(p_("ContextMenu|", "Minimi&ze"));
-    m_actions << new QRevertSizeAction(p_("ContextMenu|", "Resize &window to session"));
-    m_actions << new QMenuSeparator();
-    m_actions << new QKeyToggleAction(p_("ContextMenu|", "&Ctrl"), 0x1d, XK_Control_L);
-    m_actions << new QKeyToggleAction(p_("ContextMenu|", "&Alt"), 0x38, XK_Alt_L);
-    m_actions << new QAction(QString::asprintf(p_("ContextMenu|", "Send %s"), (const char*)::menuKey));
-    m_actions << new QCtrlAltDelAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"));
-    m_actions << new QMenuSeparator();
-    m_actions << new QRefreshAction(p_("ContextMenu|", "&Refresh screen"));
-    m_actions << new QMenuSeparator();
-    m_actions << new QOptionDialogAction(p_("ContextMenu|", "&Options..."));
-    m_actions << new QInfoDialogAction(p_("ContextMenu|", "Connection &info..."));
-    m_actions << new QAboutDialogAction(p_("ContextMenu|", "About &TigerVNC viewer..."));
-    m_contextMenu = new QMenu();
-    for (QAction *&action: m_actions) {
-      m_contextMenu->addAction(action);
+  if (!contextMenu_) {
+    actions_ << new QDisconnectAction(p_("ContextMenu|", "Dis&connect"));
+    actions_ << new QMenuSeparator();
+    actions_ << new QFullScreenAction(p_("ContextMenu|", "&Full screen"));
+    actions_ << new QMinimizeAction(p_("ContextMenu|", "Minimi&ze"));
+    actions_ << new QRevertSizeAction(p_("ContextMenu|", "Resize &window to session"));
+    actions_ << new QMenuSeparator();
+    actions_ << new QKeyToggleAction(p_("ContextMenu|", "&Ctrl"), 0x1d, XK_Control_L);
+    actions_ << new QKeyToggleAction(p_("ContextMenu|", "&Alt"), 0x38, XK_Alt_L);
+    actions_ << new QAction(QString::asprintf(p_("ContextMenu|", "Send %s"), (const char*)::menuKey));
+    actions_ << new QCtrlAltDelAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"));
+    actions_ << new QMenuSeparator();
+    actions_ << new QRefreshAction(p_("ContextMenu|", "&Refresh screen"));
+    actions_ << new QMenuSeparator();
+    actions_ << new QOptionDialogAction(p_("ContextMenu|", "&Options..."));
+    actions_ << new QInfoDialogAction(p_("ContextMenu|", "Connection &info..."));
+    actions_ << new QAboutDialogAction(p_("ContextMenu|", "About &TigerVNC viewer..."));
+    contextMenu_ = new QMenu();
+    for (QAction *&action: actions_) {
+      contextMenu_->addAction(action);
     }
   }
 }
@@ -490,7 +384,7 @@ void QAbstractVNCView::setLEDState(unsigned int)
 void QAbstractVNCView::handleClipboardData(const char *data)
 {
   vlog.debug("Got clipboard data (%d bytes)", (int)strlen(data));
-  m_clipboard->setText(data);
+  clipboard_->setText(data);
 }
 
 void QAbstractVNCView::maybeGrabKeyboard()
@@ -499,7 +393,7 @@ void QAbstractVNCView::maybeGrabKeyboard()
 
 void QAbstractVNCView::grabKeyboard()
 {
-  m_keyboardGrabbed = true;
+  keyboardGrabbed_ = true;
 
   QPoint gpos = QCursor::pos();
   QPoint lpos = mapFromGlobal(gpos);
@@ -511,24 +405,24 @@ void QAbstractVNCView::grabKeyboard()
 
 void QAbstractVNCView::ungrabKeyboard()
 {
-  m_keyboardGrabbed = true;
+  keyboardGrabbed_ = true;
 }
 
 void QAbstractVNCView::grabPointer()
 {
   setMouseTracking(true);
-  m_mouseGrabbed = true;
+  mouseGrabbed_ = true;
 }
 
 void QAbstractVNCView::ungrabPointer()
 {
   setMouseTracking(false);
-  m_mouseGrabbed = false;
+  mouseGrabbed_ = false;
 }
 
 bool QAbstractVNCView::isFullscreenEnabled()
 {
-  return m_fullscreenEnabled;
+  return fullscreenEnabled_;
 }
 
 void QAbstractVNCView::bell()
@@ -543,9 +437,9 @@ void QAbstractVNCView::remoteResize(int w, int h)
 #if defined(__APPLE__)
   double f = 1.0;
 #else
-  double f = m_devicePixelRatio;
+  double f = devicePixelRatio_;
 #endif
-  if (!m_fullscreenEnabled || (w > width() * f) || (h > height() * f)) {
+  if (!fullscreenEnabled_ || (w > width() * f) || (h > height() * f)) {
     // In windowed mode (or the framebuffer is so large that we need
     // to scroll) we just report a single virtual screen that covers
     // the entire framebuffer.
@@ -679,16 +573,16 @@ void QAbstractVNCView::updateWindow()
 {
   // copied from DesktopWindow.cxx.
   QVNCConnection *cc = AppManager::instance()->connection();
-  if (m_firstUpdate) {
+  if (firstUpdate_) {
     if (cc->server()->supportsSetDesktopSize) {
       // Hack: Wait until we're in the proper mode and position until
       // resizing things, otherwise we might send the wrong thing.
-      if (m_delayedFullscreen)
-        m_delayedDesktopSize = true;
+      if (delayedFullscreen_)
+        delayedDesktopSize_ = true;
       else
         handleDesktopSize();
     }
-    m_firstUpdate = false;
+    firstUpdate_ = false;
   }
 }
 
@@ -697,7 +591,7 @@ void QAbstractVNCView::handleDesktopSize()
 #if defined(__APPLE__)
   double f = 1.0;
 #else
-  double f = m_devicePixelRatio;
+  double f = devicePixelRatio_;
 #endif
   if (strcmp(::desktopSize, "") != 0) {
     int w, h;
@@ -741,17 +635,17 @@ void QAbstractVNCView::fullscreen(bool enabled)
 {
   bool bypassWMHintingNeeded = bypassWMHintingEnabled();
   //qDebug() << "QAbstractVNCView::fullscreen: enabled=" << enabled;
-  // TODO: Flag m_fullscreenEnabled seems have to be disabled before executing fullscreen().
-  bool fullscreenEnabled0 = m_fullscreenEnabled;
-  m_fullscreenEnabled = false;
-  m_pendingFullscreen = enabled;
-  m_resizeTimer->stop();
+  // TODO: Flag fullscreenEnabled_ seems have to be disabled before executing fullscreen().
+  bool fullscreenEnabled0 = fullscreenEnabled_;
+  fullscreenEnabled_ = false;
+  pendingFullscreen_ = enabled;
+  resizeTimer_->stop();
   QApplication *app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
   if (enabled) {
     // cf. DesktopWindow::fullscreen_on()
     if (!isFullscreenEnabled()) {
-      m_geometry = saveGeometry();
+      geometry_ = saveGeometry();
     }
 
     auto mode = ViewerConfig::config()->fullScreenMode();
@@ -819,11 +713,11 @@ void QAbstractVNCView::fullscreen(bool enabled)
     setWindowFlag(Qt::FramelessWindowHint, false);
     setWindowFlag(Qt::Window, true);
     showNormal();
-    restoreGeometry(m_geometry);
+    restoreGeometry(geometry_);
     handleDesktopSize();
   }
-  m_fullscreenEnabled = enabled;
-  m_pendingFullscreen = false;
+  fullscreenEnabled_ = enabled;
+  pendingFullscreen_ = false;
   setFocus();
   activateWindow();
   raise();
@@ -831,8 +725,8 @@ void QAbstractVNCView::fullscreen(bool enabled)
   if (!enabled) {
     ViewerConfig::config()->setFullScreen(false);
   }
-  if (m_fullscreenEnabled != fullscreenEnabled0) {
-    emit fullscreenChanged(m_fullscreenEnabled);
+  if (fullscreenEnabled_ != fullscreenEnabled0) {
+    emit fullscreenChanged(fullscreenEnabled_);
   }
 }
 
@@ -861,7 +755,7 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
   if (::viewOnly) {
     return;
   }
-  m_mbemu->filterPointerEvent(pos, mask);
+  mbemu_->filterPointerEvent(pos, mask);
 }
 
 void QAbstractVNCView::handleMouseButtonEmulationTimeout()
@@ -869,21 +763,21 @@ void QAbstractVNCView::handleMouseButtonEmulationTimeout()
   if (::viewOnly) {
     return;
   }
-  m_mbemu->handleTimeout();
+  mbemu_->handleTimeout();
 }
 
 void QAbstractVNCView::popupToast()
 {
   QPoint point = mapToGlobal(QPoint(0, 0));
-  m_toast->move(point.x() + (width() - m_toast->width()) / 2, point.y() + 50);
-  m_toast->show();
+  toast_->move(point.x() + (width() - toast_->width()) / 2, point.y() + 50);
+  toast_->show();
 }
 
 void QAbstractVNCView::moveEvent(QMoveEvent *e)
 {
   QWidget::moveEvent(e);
-  if (m_toast->isVisible()) {
+  if (toast_->isVisible()) {
     QPoint point = mapToGlobal(QPoint(0, 0));
-    m_toast->move(point.x() + (width() - m_toast->width()) / 2, point.y() + 50);
+    toast_->move(point.x() + (width() - toast_->width()) / 2, point.y() + 50);
   }
 }

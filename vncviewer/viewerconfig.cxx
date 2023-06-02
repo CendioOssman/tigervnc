@@ -2,6 +2,7 @@
 #include "config.h"
 #endif
 
+#include <QApplication>
 #include <QQmlEngine>
 #include <QDir>
 #include <QTextStream>
@@ -11,6 +12,7 @@
 #else
 #include <winsock2.h>
 #include <windows.h>
+#include <QThread>
 #endif
 #if defined(__APPLE__)
 #include <Carbon/Carbon.h>
@@ -35,28 +37,27 @@
 #include "i18n.h"
 #undef asprintf
 
-
 static rfb::LogWriter vlog("viewerconfig");
 extern int getvnchomedir(char **dirp);
-ViewerConfig *ViewerConfig::m_config;
+ViewerConfig *ViewerConfig::config_;
 
 ViewerConfig::ViewerConfig()
  : QObject(nullptr)
- , m_encNone(false)
- , m_encTLSAnon(false)
- , m_encTLSX509(false)
- , m_encAES(false)
- , m_authNone(false)
- , m_authVNC(false)
- , m_authPlain(false)
- , m_serverPort(SERVER_PORT_OFFSET)
- , m_gatewayLocalPort(0)
- , m_messageDir(nullptr)
+ , encNone_(false)
+ , encTLSAnon_(false)
+ , encTLSX509_(false)
+ , encAES_(false)
+ , authNone_(false)
+ , authVNC_(false)
+ , authPlain_(false)
+ , serverPort_(SERVER_PORT_OFFSET)
+ , gatewayLocalPort_(0)
+ , messageDir_(nullptr)
 {
   connect(this, &ViewerConfig::accessPointChanged, this, [this](QString accessPoint) {
-    m_serverHistory.push_front(accessPoint);
+    serverHistory_.push_front(accessPoint);
     parserServerName();
-    emit serverHistoryChanged(m_serverHistory);
+    emit serverHistoryChanged(serverHistory_);
   }, Qt::QueuedConnection);
   initializeLogger();
 
@@ -114,11 +115,11 @@ ViewerConfig::ViewerConfig()
       usage();
     }
 
-    m_serverName = argv[i];
+    serverName_ = argv[i];
     i++;
   }
   // Check if the server name in reality is a configuration file
-  potentiallyLoadConfigurationFile(m_serverName);
+  potentiallyLoadConfigurationFile(serverName_);
 
   /* Specifying -via and -listen together is nonsense */
   if (::listenMode && strlen(::via.getValueStr()) > 0) {
@@ -129,7 +130,7 @@ ViewerConfig::ViewerConfig()
   }
 
   loadServerHistory();
-  m_serverName = m_serverHistory.length() > 0 ? m_serverHistory[0] : "";
+  serverName_ = serverHistory_.length() > 0 ? serverHistory_[0] : "";
   parserServerName();
 
   rfb::Security security(rfb::SecurityClient::secTypes);
@@ -137,12 +138,12 @@ ViewerConfig::ViewerConfig()
   for (auto iter = secTypes.begin(); iter != secTypes.end(); ++iter) {
     switch (*iter) {
     case rfb::secTypeNone:
-      m_encNone = true;
-      m_authNone = true;
+      encNone_ = true;
+      authNone_ = true;
       break;
     case rfb::secTypeVncAuth:
-      m_encNone = true;
-      m_authVNC = true;
+      encNone_ = true;
+      authVNC_ = true;
       break;
     }
   }
@@ -150,77 +151,77 @@ ViewerConfig::ViewerConfig()
   for (auto iterExt = secTypesExt.begin(); iterExt != secTypesExt.end(); ++iterExt) {
     switch (*iterExt) {
     case rfb::secTypePlain:
-      m_encNone = true;
-      m_authPlain = true;
+      encNone_ = true;
+      authPlain_ = true;
       break;
     case rfb::secTypeTLSNone:
-      m_encTLSAnon = true;
-      m_authNone = true;
+      encTLSAnon_ = true;
+      authNone_ = true;
       break;
     case rfb::secTypeTLSVnc:
-      m_encTLSAnon = true;
-      m_authVNC = true;
+      encTLSAnon_ = true;
+      authVNC_ = true;
       break;
     case rfb::secTypeTLSPlain:
-      m_encTLSAnon = true;
-      m_authPlain = true;
+      encTLSAnon_ = true;
+      authPlain_ = true;
       break;
     case rfb::secTypeX509None:
-      m_encTLSX509 = true;
-      m_authNone = true;
+      encTLSX509_ = true;
+      authNone_ = true;
       break;
     case rfb::secTypeX509Vnc:
-      m_encTLSX509 = true;
-      m_authVNC = true;
+      encTLSX509_ = true;
+      authVNC_ = true;
       break;
     case rfb::secTypeX509Plain:
-      m_encTLSX509 = true;
-      m_authPlain = true;
+      encTLSX509_ = true;
+      authPlain_ = true;
       break;
     case rfb::secTypeRA2:
     case rfb::secTypeRA256:
-      m_encAES = true;
+      encAES_ = true;
     case rfb::secTypeRA2ne:
     case rfb::secTypeRAne256:
-      m_authVNC = true;
-      m_authPlain = true;
+      authVNC_ = true;
+      authPlain_ = true;
       break;
     }
   }
   auto keysyms = getMenuKeySymbols();
   for (int i = 0; i < getMenuKeySymbolCount(); i++) {
-    m_menuKeys.append(keysyms[i].name);
+    menuKeys_.append(keysyms[i].name);
   }
 }
 
 ViewerConfig::~ViewerConfig()
 {
-  if (m_messageDir) {
-    free(m_messageDir);
+  if (messageDir_) {
+    free(messageDir_);
   }
 }
 
 int ViewerConfig::initialize()
 {
-  m_config = new ViewerConfig();
+  config_ = new ViewerConfig();
   qRegisterMetaType<ViewerConfig::FullScreenMode>("ViewerConfig::FullScreenMode");
   qmlRegisterSingletonType<ViewerConfig>("Qt.TigerVNC", 1, 0, "Config", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
-    return m_config;
+    return config_;
   });
   return 0;
 }
 
 bool ViewerConfig::installedSecurity(int type) const
 {
-  return m_availableSecurityTypes.contains(type);
+  return availableSecurityTypes_.contains(type);
 }
 
 bool ViewerConfig::enabledSecurity(int type) const
 {
-  auto found = m_availableSecurityTypes.find(type);
-  return found != m_availableSecurityTypes.end() && *found;
+  auto found = availableSecurityTypes_.find(type);
+  return found != availableSecurityTypes_.end() && *found;
 }
 
 QString ViewerConfig::toLocalFile(const QUrl url) const
@@ -240,10 +241,10 @@ QString ViewerConfig::loadViewerParameters(QString path)
 
 void ViewerConfig::loadServerHistory()
 {
-  m_serverHistory.clear();
+  serverHistory_.clear();
 
 #ifdef _WIN32
-  loadHistoryFromRegKey(m_serverHistory);
+  loadHistoryFromRegKey(serverHistory_);
   return;
 #endif
 
@@ -298,7 +299,7 @@ void ViewerConfig::loadServerHistory()
     if (len == 0)
       continue;
 
-    m_serverHistory.push_back(line);
+    serverHistory_.push_back(line);
   }
 
   fclose(f);
@@ -306,8 +307,8 @@ void ViewerConfig::loadServerHistory()
 
 void ViewerConfig::setServerHistory(QStringList history)
 {
-  if (m_serverHistory != history) {
-    m_serverHistory = history;
+  if (serverHistory_ != history) {
+    serverHistory_ = history;
     saveServerHistory();
     emit serverHistoryChanged(history);
   }
@@ -315,10 +316,10 @@ void ViewerConfig::setServerHistory(QStringList history)
 
 void ViewerConfig::saveServerHistory()
 {
-  m_serverName = m_serverHistory.length() > 0 ? m_serverHistory[0] : "";
+  serverName_ = serverHistory_.length() > 0 ? serverHistory_[0] : "";
   parserServerName();
 #ifdef _WIN32
-  saveHistoryToRegKey(m_serverHistory);
+  saveHistoryToRegKey(serverHistory_);
 #else
   char* homeDir = nullptr;
   if (getvnchomedir(&homeDir) == -1) {
@@ -336,8 +337,8 @@ void ViewerConfig::saveServerHistory()
   QTextStream stream(f, QIODevice::WriteOnly | QIODevice::WriteOnly);
 
   // Save the last X elements to the config file.
-  for(int i = 0; i < m_serverHistory.size() && i <= SERVER_HISTORY_SIZE; i++) {
-    stream << m_serverHistory[i] << "\n";
+  for(int i = 0; i < serverHistory_.size() && i <= SERVER_HISTORY_SIZE; i++) {
+    stream << serverHistory_[i] << "\n";
   }
   stream.flush();
   fclose(f);
@@ -462,56 +463,56 @@ void ViewerConfig::setQualityLevel(int value)
 
 void ViewerConfig::setEncNone(bool value)
 {
-  if (m_encNone != value) {
-    m_encNone = value;
+  if (encNone_ != value) {
+    encNone_ = value;
     emit encNoneChanged(value);
   }
 }
 
 void ViewerConfig::setEncTLSAnon(bool value)
 {
-  if (m_encTLSAnon != value) {
-    m_encTLSAnon = value;
+  if (encTLSAnon_ != value) {
+    encTLSAnon_ = value;
     emit encTLSAnonChanged(value);
   }
 }
 
 void ViewerConfig::setEncTLSX509(bool value)
 {
-  if (m_encTLSX509 != value) {
-    m_encTLSX509 = value;
+  if (encTLSX509_ != value) {
+    encTLSX509_ = value;
     emit encTLSX509Changed(value);
   }
 }
 
 void ViewerConfig::setEncAES(bool value)
 {
-  if (m_encAES != value) {
-    m_encAES = value;
+  if (encAES_ != value) {
+    encAES_ = value;
     emit encAESChanged(value);
   }
 }
 
 void ViewerConfig::setAuthNone(bool value)
 {
-  if (m_authNone != value) {
-    m_authNone = value;
+  if (authNone_ != value) {
+    authNone_ = value;
     emit authNoneChanged(value);
   }
 }
 
 void ViewerConfig::setAuthVNC(bool value)
 {
-  if (m_authVNC != value) {
-    m_authVNC = value;
+  if (authVNC_ != value) {
+    authVNC_ = value;
     emit authVNCChanged(value);
   }
 }
 
 void ViewerConfig::setAuthPlain(bool value)
 {
-  if (m_authPlain != value) {
-    m_authPlain = value;
+  if (authPlain_ != value) {
+    authPlain_ = value;
     emit authPlainChanged(value);
   }
 }
@@ -626,8 +627,8 @@ void ViewerConfig::setMenuKey(QString value)
 
 int ViewerConfig::menuKeyIndex() const
 {
-  for (int i = 0; i < m_menuKeys.size(); i++) {
-    if (m_menuKeys[i] == ::menuKey) {
+  for (int i = 0; i < menuKeys_.size(); i++) {
+    if (menuKeys_[i] == ::menuKey) {
       return i;
     }
   }
@@ -779,7 +780,7 @@ bool ViewerConfig::potentiallyLoadConfigurationFile(QString vncServerName)
 #endif
 
     try {
-      m_serverName = loadViewerParameters(vncServerName);
+      serverName_ = loadViewerParameters(vncServerName);
     }
     catch (rfb::Exception& e) {
       vlog.error("%s", e.str());
@@ -927,8 +928,8 @@ void ViewerConfig::initializeLogger()
     QFileInfo locale(localedir);
     // According to the linux document, trailing '/locale' of the message directory path must be removed for passing it to bindtextdomain()
     // but in reallity '/locale' must be given to make gettext() work properly.
-    m_messageDir = strdup(locale.absoluteFilePath().toStdString().c_str());
-    bindtextdomain(PACKAGE_NAME, m_messageDir);
+    messageDir_ = strdup(locale.absoluteFilePath().toStdString().c_str());
+    bindtextdomain(PACKAGE_NAME, messageDir_);
   }
   textdomain(PACKAGE_NAME);
 
@@ -971,32 +972,32 @@ QString ViewerConfig::gatewayHost() const
 
 void ViewerConfig::parserServerName()
 {
-  if (!QString(::via).isEmpty() && !m_gatewayLocalPort) {
+  if (!QString(::via).isEmpty() && !gatewayLocalPort_) {
     network::initSockets();
-    m_gatewayLocalPort = network::findFreeTcpPort();
+    gatewayLocalPort_ = network::findFreeTcpPort();
   }
   bool ok;
-  int ix = m_serverName.indexOf(':');
+  int ix = serverName_.indexOf(':');
   if (ix >= 0) {
-    int ix2 = m_serverName.indexOf("::");
+    int ix2 = serverName_.indexOf("::");
     if (ix2 < 0) {
-      int port = SERVER_PORT_OFFSET + m_serverName.midRef(ix + 1).toInt(&ok, 10);
+      int port = SERVER_PORT_OFFSET + serverName_.midRef(ix + 1).toInt(&ok, 10);
       if (ok) {
-        m_serverPort = port;
+        serverPort_ = port;
       }
     }
     else {
-      int port = m_serverName.midRef(ix + 2).toInt(&ok, 10);
+      int port = serverName_.midRef(ix + 2).toInt(&ok, 10);
       if (ok) {
-        m_serverPort = port;
+        serverPort_ = port;
       }
     }
-    m_serverHost = m_serverName.left(ix);
+    serverHost_ = serverName_.left(ix);
   }
   else {
-    int port = m_serverName.toInt(&ok, 10);
+    int port = serverName_.toInt(&ok, 10);
     if (ok) {
-      m_serverPort = port;
+      serverPort_ = port;
     }
   }
 }

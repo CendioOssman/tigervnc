@@ -1,10 +1,8 @@
 #ifndef APPMANAGER_H
 #define APPMANAGER_H
 
-#include <QApplication>
+#include <QString>
 
-class QIODevice;
-class QTimer;
 class QVNCConnection;
 class QAbstractVNCView;
 class QVNCWindow;
@@ -18,11 +16,11 @@ class AppManager : public QObject
 
 public:
   virtual ~AppManager();
-  static AppManager *instance() { return m_manager; }
+  static AppManager *instance() { return manager_; }
   static int initialize();
-  QVNCConnection *connection() const { return m_facade; }
-  int error() const { return m_error; }
-  QAbstractVNCView *view() const { return m_view; }
+  QVNCConnection *connection() const { return facade_; }
+  int error() const { return error_; }
+  QAbstractVNCView *view() const { return view_; }
 
 signals:
   void errorOcurred(int seq, QString message, bool quit = false);
@@ -68,22 +66,12 @@ public slots:
   void respondToMessage(int response);
 
 private:
-  static AppManager *m_manager;
-  int m_error;
-  QVNCConnection *m_facade;
-  QAbstractVNCView *m_view;
-  QVNCWindow *m_scroll;
+  static AppManager *manager_;
+  int error_;
+  QVNCConnection *facade_;
+  QAbstractVNCView *view_;
+  QVNCWindow *scroll_;
   AppManager();
-};
-
-class QVNCApplication : public QApplication
-{
-  Q_OBJECT
-
-public:
-  QVNCApplication(int &argc, char **argv);
-  virtual ~QVNCApplication();
-  bool notify(QObject *receiver, QEvent *e) override;
 };
 
 #endif // APPMANAGER_H

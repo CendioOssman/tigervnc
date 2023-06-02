@@ -59,6 +59,8 @@
 #include <QTimer>
 #include "parameters.h"
 #include "i18n.h"
+#include "appmanager.h"
+#include "vncconnection.h"
 #include "EmulateMB.h"
 
 /*
@@ -198,6 +200,11 @@ static const signed char stateTab[11][5][3] = {
 EmulateMB::EmulateMB(QTimer *qtimer)
   : state(0), emulatedButtonMask(0), timer(qtimer)
 {
+}
+
+void EmulateMB::sendPointerEvent(const rfb::Point& pos, int buttonMask)
+{
+  emit AppManager::instance()->connection()->writePointerEvent(pos, buttonMask);
 }
 
 void EmulateMB::filterPointerEvent(const rfb::Point& pos, int buttonMask)

@@ -7,6 +7,7 @@
 #include <QStyle>
 #include "viewerconfig.h"
 #include "appmanager.h"
+#include "vncapplication.h"
 #include "vncconnection.h"
 #include "vnctranslator.h"
 
@@ -16,7 +17,7 @@ class StandardIconProvider : public QQuickImageProvider
 public:
   StandardIconProvider(QStyle *style)
     : QQuickImageProvider(Pixmap)
-    , m_style(style)
+    , style_(style)
   {}
 
   QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) override
@@ -27,11 +28,11 @@ public:
     QSize imageSize = { requestedSize.width() > 0 ? requestedSize.width() : defaultWidth, requestedSize.height() > 0 ? requestedSize.height() : defaultHeight };
     static const auto metaobject = QMetaEnum::fromType<QStyle::StandardPixmap>();
     const int value = metaobject.keyToValue(id.toLatin1());
-    QIcon icon = m_style->standardIcon(static_cast<QStyle::StandardPixmap>(value));
+    QIcon icon = style_->standardIcon(static_cast<QStyle::StandardPixmap>(value));
     return icon.pixmap(imageSize);
   }
 private:
-  QStyle *m_style;
+  QStyle *style_;
 };
 
 int main(int argc, char *argv[])

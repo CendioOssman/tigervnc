@@ -2,6 +2,7 @@
 #include "config.h"
 #endif
 
+#include <QApplication>
 #include <QLocalSocket>
 #include <QTcpSocket>
 #include <QSocketNotifier>
@@ -17,6 +18,7 @@
 #include "appmanager.h"
 #include "i18n.h"
 #include "abstractvncview.h"
+#include "tunnelfactory.h"
 #include "CConn.h"
 #include "vncconnection.h"
 #undef asprintf
@@ -35,77 +37,77 @@ static rfb::LogWriter vlog("CConnection");
 
 QVNCConnection::QVNCConnection()
  : QObject(nullptr)
- , m_rfbcon(new CConn(this))
- , m_socket(nullptr)
- , m_socketNotifier(nullptr)
- , m_socketErrorNotifier(nullptr)
- , m_updateTimer(nullptr)
- , m_tunnelFactory(nullptr)
- , m_closing(false)
+ , rfbcon_(new CConn(this))
+ , socket_(nullptr)
+ , socketNotifier_(nullptr)
+ , socketErrorNotifier_(nullptr)
+ , updateTimer_(nullptr)
+ , tunnelFactory_(nullptr)
+ , closing_(false)
 {
   connect(this, &QVNCConnection::socketNotified, this, &QVNCConnection::startProcessing);
 
   connect(this, &QVNCConnection::writePointerEvent, this, [this](const rfb::Point &pos, int buttonMask) {
-    m_rfbcon->writer()->writePointerEvent(pos, buttonMask);
+    rfbcon_->writer()->writePointerEvent(pos, buttonMask);
   });
   connect(this, &QVNCConnection::writeSetDesktopSize, this, [this](int width, int height, const rfb::ScreenSet &layout) {
-    m_rfbcon->writer()->writeSetDesktopSize(width, height, layout);
+    rfbcon_->writer()->writeSetDesktopSize(width, height, layout);
   });
   connect(this, &QVNCConnection::writeKeyEvent, this, [this](rdr::U32 keysym, rdr::U32 keycode, bool down) {
-    m_rfbcon->writer()->writeKeyEvent(keysym, keycode, down);
+    rfbcon_->writer()->writeKeyEvent(keysym, keycode, down);
   });
   
   if (ViewerConfig::config()->listenModeEnabled()) {
     listen();
   }
 
-  m_updateTimer = new QTimer;
-  m_updateTimer->setSingleShot(true);
-  connect(m_updateTimer, &QTimer::timeout, this, [this]() {
-    m_rfbcon->framebufferUpdateEnd();
+  updateTimer_ = new QTimer;
+  updateTimer_->setSingleShot(true);
+  connect(updateTimer_, &QTimer::timeout, this, [this]() {
+    rfbcon_->framebufferUpdateEnd();
   });
 
   QString gatewayHost = ViewerConfig::config()->gatewayHost();
   QString remoteHost = ViewerConfig::config()->serverHost();
   if (!gatewayHost.isEmpty() && !remoteHost.isEmpty()) {
-    m_tunnelFactory = new TunnelFactory;
-    m_tunnelFactory->start();
+    tunnelFactory_ = new TunnelFactory;
+    tunnelFactory_->start();
 #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-    m_tunnelFactory->wait(20000);
+    tunnelFactory_->wait(20000);
 #else
-    m_tunnelFactory->wait(QDeadlineTimer(20000));
+    tunnelFactory_->wait(QDeadlineTimer(20000));
 #endif
   }
 }
 
 QVNCConnection::~QVNCConnection()
 {
-  m_closing = true;
-  if (m_tunnelFactory) {
-    m_tunnelFactory->close();
+  closing_ = true;
+  if (tunnelFactory_) {
+    tunnelFactory_->close();
   }
   resetConnection();
-  m_updateTimer->stop();
-  delete m_updateTimer;
-  delete m_tunnelFactory;
+  updateTimer_->stop();
+  delete updateTimer_;
+  delete tunnelFactory_;
 }
 
 void QVNCConnection::bind(int fd)
 {
-  m_rfbcon->setStreams(&m_socket->inStream(), &m_socket->outStream());
+  rfbcon_->setStreams(&socket_->inStream(), &socket_->outStream());
 
-  delete m_socketNotifier;
-  m_socketNotifier = new QSocketNotifier(fd, QSocketNotifier::Read);
-  QObject::connect(m_socketNotifier, &QSocketNotifier::activated, this, [this](int fd) {
+  delete socketNotifier_;
+  socketNotifier_ = new QSocketNotifier(fd, QSocketNotifier::Read);
+  QObject::connect(socketNotifier_, &QSocketNotifier::activated, this, [this](int fd) {
     Q_UNUSED(fd)
     emit socketNotified();
   });
 
-  delete m_socketErrorNotifier;
-  m_socketErrorNotifier = new QSocketNotifier(fd, QSocketNotifier::Exception);
-  QObject::connect(m_socketErrorNotifier, &QSocketNotifier::activated, this, [this](int fd) {
+  delete socketErrorNotifier_;
+  socketErrorNotifier_ = new QSocketNotifier(fd, QSocketNotifier::Exception);
+  QObject::connect(socketErrorNotifier_, &QSocketNotifier::activated, this, [this](int fd) {
     Q_UNUSED(fd)
-    if (!m_closing) {
+    if (!closing_) {
       resetConnection();
       throw rdr::Exception("CConnection::bind: socket error.");
     }
@@ -118,11 +120,11 @@ void QVNCConnection::connectToServer(const QString addressport)
     ViewerConfig::config()->saveViewerParameters("", addressport);
     if (addressport.contains("/")) {
 #ifndef Q_OS_WIN
-      delete m_socket;
-      m_socket = new network::UnixSocket(addressport.toStdString().c_str());
-      setHost(m_socket->getPeerAddress());
+      delete socket_;
+      socket_ = new network::UnixSocket(addressport.toStdString().c_str());
+      setHost(socket_->getPeerAddress());
       vlog.info("Connected to socket %s", host().toStdString().c_str());
-      bind(m_socket->getFd());
+      bind(socket_->getFd());
 #endif
     }
     else {
@@ -131,9 +133,9 @@ void QVNCConnection::connectToServer(const QString addressport)
       rfb::getHostAndPort(addressport.toStdString().c_str(), &shost, &port);
       setHost(shost.c_str());
       setPort(port);
-      delete m_socket;
-      m_socket = new network::TcpSocket(shost.c_str(), port);
-      bind(m_socket->getFd());
+      delete socket_;
+      socket_ = new network::TcpSocket(shost.c_str(), port);
+      bind(socket_->getFd());
     }
   }
   catch (rdr::Exception &e) {
@@ -160,7 +162,7 @@ void QVNCConnection::listen()
     vlog.info(_("Listening on port %d"), port);
 
     /* Wait for a connection */
-    while (m_socket == nullptr) {
+    while (socket_ == nullptr) {
       fd_set rfds;
       FD_ZERO(&rfds);
       for (network::SocketListener *listener : listeners) {
@@ -180,10 +182,10 @@ void QVNCConnection::listen()
 
       for (network::SocketListener *listener : listeners) {
         if (FD_ISSET(listener->getFd(), &rfds)) {
-          m_socket = listener->accept();
-          if (m_socket) {
+          socket_ = listener->accept();
+          if (socket_) {
             /* Got a connection */
-            bind(m_socket->getFd());
+            bind(socket_->getFd());
             break;
           }
         }
@@ -203,17 +205,17 @@ void QVNCConnection::listen()
 
 void QVNCConnection::resetConnection()
 {
-  delete m_socketNotifier;
-  m_socketNotifier = nullptr;
-  delete m_socketErrorNotifier;
-  m_socketErrorNotifier = nullptr;
-  if (m_socket) {
-    m_socket->shutdown();
+  delete socketNotifier_;
+  socketNotifier_ = nullptr;
+  delete socketErrorNotifier_;
+  socketErrorNotifier_ = nullptr;
+  if (socket_) {
+    socket_->shutdown();
   }
-  delete m_socket;
-  m_socket = nullptr;
+  delete socket_;
+  socket_ = nullptr;
 
-  m_rfbcon->resetConnection();
+  rfbcon_->resetConnection();
 }
 
 void QVNCConnection::announceClipboard(bool available)
@@ -222,7 +224,7 @@ void QVNCConnection::announceClipboard(bool available)
     return;
   }
   try {
-    m_rfbcon->announceClipboard(available);
+    rfbcon_->announceClipboard(available);
   }
   catch (rdr::Exception &e) {
     AppManager::instance()->publishError(e.str());
@@ -235,9 +237,9 @@ void QVNCConnection::announceClipboard(bool available)
 void QVNCConnection::refreshFramebuffer()
 {
   try {
-    //qDebug() << "QVNCConnection::refreshFramebuffer: m_continuousUpdates=" << m_continuousUpdates;
+    //qDebug() << "QVNCConnection::refreshFramebuffer: continuousUpdates_=" << continuousUpdates_;
     emit refreshFramebufferStarted();
-    m_rfbcon->refreshFramebuffer();
+    rfbcon_->refreshFramebuffer();
   }
   catch (rdr::Exception &e) {
     resetConnection();
@@ -252,7 +254,7 @@ void QVNCConnection::refreshFramebuffer()
 void QVNCConnection::setState(int state)
 {
   try {
-    m_rfbcon->setProcessState(state);
+    rfbcon_->setProcessState(state);
   }
   catch (rdr::Exception &e) {
     resetConnection();
@@ -266,21 +268,21 @@ void QVNCConnection::setState(int state)
 
 void QVNCConnection::startProcessing()
 {
-  if (!m_socket) {
+  if (!socket_) {
     return;
   }
   try {
     size_t navailables0;
-    size_t navailables = m_socket->inStream().avail();
+    size_t navailables = socket_->inStream().avail();
     do {
       navailables0 = navailables;
 
-      m_rfbcon->processMsg();
+      rfbcon_->processMsg();
 
       //qDebug() << "pre-avail()  navailables=" << navailables;
-      navailables = m_socket->inStream().avail();
+      navailables = socket_->inStream().avail();
       //qDebug() << "post-avail() navailables=" << navailables;
-    } while (navailables > 0 && navailables != navailables0 && m_socket);
+    } while (navailables > 0 && navailables != navailables0 && socket_);
   }
   catch (rdr::Exception &e) {
     resetConnection();
@@ -291,160 +293,3 @@ void QVNCConnection::startProcessing()
     AppManager::instance()->publishError(strerror(e));
   }
 }
-
-TunnelFactory::TunnelFactory()
- : QThread(nullptr)
- , m_errorOccurrrd(false)
- , m_error(QProcess::FailedToStart)
-#if defined(WIN32)
- , m_command(QString(qgetenv("SYSTEMROOT")) + "\\System32\\OpenSSH\\ssh.exe")
-#else
- , m_command("/usr/bin/ssh")
- , m_operationSocketName("vncviewer-tun-" + QString::number(QCoreApplication::applicationPid()))
-#endif
- , m_process(nullptr)
-{
-}
-
-void TunnelFactory::run()
-{
-  QString gatewayHost = ViewerConfig::config()->gatewayHost();
-  if (gatewayHost.isEmpty()) {
-    return;
-  }
-  QString remoteHost = ViewerConfig::config()->serverHost();
-  if (remoteHost.isEmpty()) {
-    return;
-  }
-  int remotePort = ViewerConfig::config()->serverPort();
-  int localPort = ViewerConfig::config()->gatewayLocalPort();
-
-  QString viacmd(qgetenv("VNC_VIA_CMD"));
-  qputenv("G", gatewayHost.toUtf8());
-  qputenv("H", remoteHost.toUtf8());
-  qputenv("R", QString::number(remotePort).toUtf8());
-  qputenv("L", QString::number(localPort).toUtf8());
-
-  QStringList args;
-  if (viacmd.isEmpty()) {
-    args = QStringList({
-#if !defined(WIN32)
-                         "-fnNTM",
-                         "-S",
-                         m_operationSocketName,
-#endif
-                         "-L",
-                         QString::number(localPort) + ":" + remoteHost + ":" + QString::number(remotePort),
-                         gatewayHost,
-                       });
-  }
-  else {
-#if !defined(WIN32)
-    /* Compatibility with TigerVNC's method. */
-    viacmd.replace('%', '$');
-#endif
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-    args = splitCommand(viacmd);
-#else
-    args = QProcess::splitCommand(viacmd);
-#endif
-    m_command = args.length() > 0 ? args[0] : "";
-    args.removeFirst();
-  }
-  delete m_process;
-  m_process = new QProcess;
-
-#if !defined(WIN32)
-  if (!m_process->execute(m_command, args)) {
-    QString serverName = "localhost::" + QString::number(ViewerConfig::config()->gatewayLocalPort());
-    ViewerConfig::config()->setAccessPoint(serverName);
-  }
-  else {
-    m_errorOccurrrd = true;
-  }
-#else
-  connect(m_process, &QProcess::started, this, []() {
-    QString serverName = "localhost::" + QString::number(ViewerConfig::config()->gatewayLocalPort());
-    ViewerConfig::config()->setAccessPoint(serverName);
-  });
-  connect(m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError e) {
-    m_errorOccurrrd = true;
-    m_error = e;
-  });
-  m_process->start(m_command, args);
-  while (true) {
-    //qDebug() << "state=" << m_process->state();
-    if (m_process->state() == QProcess::Running || m_errorOccurrrd) {
-      break;
-    }
-    QThread::usleep(10);
-  }
-#endif
-}
-
-TunnelFactory::~TunnelFactory()
-{
-  close();
-  delete m_process;
-}
-
-void TunnelFactory::close()
-{
-#if !defined(WIN32)
-  if (m_process) {
-    QString gatewayHost = ViewerConfig::config()->gatewayHost();
-    QStringList args({ "-S",
-                       m_operationSocketName,
-                       "-O",
-                       "exit",
-                       gatewayHost,
-                     });
-    QProcess process;
-    process.start(m_command, args);
-    QThread::msleep(500);
-  }
-#endif
-  if (m_process && m_process->state() != QProcess::NotRunning) {
-    m_process->kill();
-  }
-}
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-QStringList TunnelFactory::splitCommand(QStringView command)
-{
-    QStringList args;
-    QString tmp;
-    int quoteCount = 0;
-    bool inQuote = false;
-    // handle quoting. tokens can be surrounded by double quotes
-    // "hello world". three consecutive double quotes represent
-    // the quote character itself.
-    for (int i = 0; i < command.size(); ++i) {
-        if (command.at(i) == QLatin1Char('"')) {
-            ++quoteCount;
-            if (quoteCount == 3) {
-                // third consecutive quote
-                quoteCount = 0;
-                tmp += command.at(i);
-            }
-            continue;
-        }
-        if (quoteCount) {
-            if (quoteCount == 1)
-                inQuote = !inQuote;
-            quoteCount = 0;
-        }
-        if (!inQuote && command.at(i).isSpace()) {
-            if (!tmp.isEmpty()) {
-                args += tmp;
-                tmp.clear();
-            }
-        } else {
-            tmp += command.at(i);
-        }
-    }
-    if (!tmp.isEmpty())
-        args += tmp;
-    return args;
-}
-#endif

@@ -189,7 +189,7 @@ void CConn::initDone()
   *serverPF = server()->pf();
 
   setFramebuffer(new PlatformPixelBuffer(server()->width(), server()->height()));
-  emit facade->newVncWindowRequested(server()->width(), server()->height(), server()->name() /*, m_serverPF, this */);
+  emit facade->newVncWindowRequested(server()->width(), server()->height(), server()->name() /*, serverPF_, this */);
   *fullColourPF = getFramebuffer()->getPF();
 
   // Force a switch to the format and encoding we'd like

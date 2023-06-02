@@ -48,13 +48,13 @@ static rfb::LogWriter vlog("QVNCX11View");
 
 QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   : QAbstractVNCView(parent, f)
-  , m_window(0)
-  , m_display(nullptr)
-  , m_screen(0)
-  , m_visualInfo(nullptr)
-  , m_colorMap(0)
-  , m_pixmap(0)
-  , m_picture(0)
+  , window_(0)
+  , display_(nullptr)
+  , screen_(0)
+  , visualInfo_(nullptr)
+  , colorMap_(0)
+  , pixmap_(0)
+  , picture_(0)
 {
   setAttribute(Qt::WA_NoBackground);
   setAttribute(Qt::WA_NoSystemBackground);
@@ -64,14 +64,14 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   installEventFilter(this);
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  m_display = QX11Info::display();
+  display_ = QX11Info::display();
 #else
-  m_display = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->m_display;
+  display_ = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display_;
 #endif
-  m_screen = DefaultScreen(m_display);
+  screen_ = DefaultScreen(display_);
   XVisualInfo vtemplate;
   int nvinfo;
-  XVisualInfo *visualList = XGetVisualInfo(m_display, 0, &vtemplate, &nvinfo);
+  XVisualInfo *visualList = XGetVisualInfo(display_, 0, &vtemplate, &nvinfo);
   XVisualInfo *found = 0;
   for (int i = 0; i < nvinfo; i++) {
     if (visualList[i].c_class == StaticColor || visualList[i].c_class == TrueColor) {
@@ -80,17 +80,17 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
       }
     }
   }
-  m_visualInfo = found;
-  m_colorMap = XCreateColormap(m_display, RootWindow(m_display, m_screen), m_visualInfo->visual, AllocNone);
-  m_visualFormat = XRenderFindVisualFormat(m_display, m_visualInfo->visual);
+  visualInfo_ = found;
+  colorMap_ = XCreateColormap(display_, RootWindow(display_, screen_), visualInfo_->visual, AllocNone);
+  visualFormat_ = XRenderFindVisualFormat(display_, visualInfo_->visual);
 
-  XkbSetDetectableAutoRepeat(m_display, True, nullptr); // ported from vncviewer.cxx.
+  XkbSetDetectableAutoRepeat(display_, True, nullptr); // ported from vncviewer.cxx.
 
-  XkbDescPtr xkb = XkbGetMap(m_display, 0, XkbUseCoreKbd);
+  XkbDescPtr xkb = XkbGetMap(display_, 0, XkbUseCoreKbd);
   if (!xkb) {
     throw rfb::Exception("XkbGetMap");
   }
-  Status status = XkbGetNames(m_display, XkbKeyNamesMask, xkb);
+  Status status = XkbGetNames(display_, XkbKeyNamesMask, xkb);
   if (status != Success) {
     throw rfb::Exception("XkbGetNames");
   }
@@ -121,29 +121,29 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
 
 QVNCX11View::~QVNCX11View()
 {
-  if (m_picture) {
-    XRenderFreePicture(m_display, m_picture);
+  if (picture_) {
+    XRenderFreePicture(display_, picture_);
   }
-  if (m_pixmap) {
-    XFreePixmap(m_display, m_pixmap);
+  if (pixmap_) {
+    XFreePixmap(display_, pixmap_);
   }
 }
 
 qulonglong QVNCX11View::nativeWindowHandle() const
 {
-  return (qulonglong)m_window;
+  return (qulonglong)window_;
 }
 
 void QVNCX11View::resizePixmap(int width, int height)
 {
-  if (m_picture) {
-    XRenderFreePicture(m_display, m_picture);
+  if (picture_) {
+    XRenderFreePicture(display_, picture_);
   }
-  if (m_pixmap) {
-    XFreePixmap(m_display, m_pixmap);
+  if (pixmap_) {
+    XFreePixmap(display_, pixmap_);
   }
-  m_pixmap = XCreatePixmap(m_display, RootWindow(m_display, m_screen), width, height, 32);
-  //qDebug() << "Surface::alloc: XCreatePixmap: w=" << width << ", h=" << height << ", pixmap=" << m_pixmap;
+  pixmap_ = XCreatePixmap(display_, RootWindow(display_, screen_), width, height, 32);
+  //qDebug() << "Surface::alloc: XCreatePixmap: w=" << width << ", h=" << height << ", pixmap=" << pixmap_;
 
   // Our code assumes a BGRA byte order, regardless of what the endian
   // of the machine is or the native byte order of XImage, so make sure
@@ -151,7 +151,7 @@ void QVNCX11View::resizePixmap(int width, int height)
   XRenderPictFormat templ;
   templ.type = PictTypeDirect;
   templ.depth = 32;
-  if (XImageByteOrder(m_display) == MSBFirst) {
+  if (XImageByteOrder(display_) == MSBFirst) {
     templ.direct.alpha = 0;
     templ.direct.red   = 8;
     templ.direct.green = 16;
@@ -168,7 +168,7 @@ void QVNCX11View::resizePixmap(int width, int height)
   templ.direct.greenMask = 0xff;
   templ.direct.blueMask = 0xff;
 
-  XRenderPictFormat *format = XRenderFindFormat(m_display, PictFormatType | PictFormatDepth |
+  XRenderPictFormat *format = XRenderFindFormat(display_, PictFormatType | PictFormatDepth |
                                                 PictFormatRed | PictFormatRedMask |
                                                 PictFormatGreen | PictFormatGreenMask |
                                                 PictFormatBlue | PictFormatBlueMask |
@@ -177,7 +177,7 @@ void QVNCX11View::resizePixmap(int width, int height)
   if (!format) {
     throw rdr::Exception("XRenderFindFormat");
   }
-  m_picture = XRenderCreatePicture(m_display, m_pixmap, format, 0, NULL);
+  picture_ = XRenderCreatePicture(display_, pixmap_, format, 0, NULL);
 }
 
 void QVNCX11View::updateWindow()
@@ -193,7 +193,7 @@ bool QVNCX11View::event(QEvent *e)
 {
   switch(e->type()) {
     case QEvent::Polish:
-      if (!m_window) {
+      if (!window_) {
         int w = width() > 0 ? width() : parentWidget()->width();
         int h = height() > 0 ? height() : parentWidget()->height();
         int borderWidth = 0;
@@ -201,10 +201,10 @@ bool QVNCX11View::event(QEvent *e)
         xattr.override_redirect = False;
         xattr.background_pixel = 0;
         xattr.border_pixel = 0;
-        xattr.colormap = m_colorMap;
+        xattr.colormap = colorMap_;
         unsigned int wattr = CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWColormap;
-        m_window = XCreateWindow(m_display, winId(), 0, 0, w, h, borderWidth, 32, InputOutput, m_visualInfo->visual, wattr, &xattr);
-        XMapWindow(m_display, m_window);
+        window_ = XCreateWindow(display_, winId(), 0, 0, w, h, borderWidth, 32, InputOutput, visualInfo_->visual, wattr, &xattr);
+        XMapWindow(display_, window_);
         setMouseTracking(true);
       }
       break;
@@ -219,12 +219,12 @@ bool QVNCX11View::event(QEvent *e)
     case QEvent::Wheel:
       handleMouseWheelEvent((QWheelEvent*)e);
     case QEvent::WindowBlocked:
-      //      if (m_hwnd)
-      //        EnableWindow(m_hwnd, false);
+      //      if (hwnd_)
+      //        EnableWindow(hwnd_, false);
       break;
     case QEvent::WindowUnblocked:
-      //      if (m_hwnd)
-      //        EnableWindow(m_hwnd, true);
+      //      if (hwnd_)
+      //        EnableWindow(hwnd_, true);
       break;
     case QEvent::WindowActivate:
       //qDebug() << "WindowActivate";
@@ -264,7 +264,7 @@ bool QVNCX11View::event(QEvent *e)
 void QVNCX11View::showEvent(QShowEvent *e)
 {
   QWidget::showEvent(e);
-  //XSelectInput(m_display, m_window, SubstructureNotifyMask);
+  //XSelectInput(display_, window_, SubstructureNotifyMask);
 }
 
 /*!
@@ -280,11 +280,11 @@ void QVNCX11View::focusInEvent(QFocusEvent *e)
 */
 void QVNCX11View::resizeEvent(QResizeEvent *e)
 {
-  if (m_window) {
+  if (window_) {
     QSize size = e->size();
-    int w = size.width() * m_devicePixelRatio;
-    int h = size.height() * m_devicePixelRatio;
-    XResizeWindow(m_display, m_window, w, h);
+    int w = size.width() * devicePixelRatio_;
+    int h = size.height() * devicePixelRatio_;
+    XResizeWindow(display_, window_, w, h);
     QWidget::resizeEvent(e);
     adjustSize();
 
@@ -296,7 +296,7 @@ void QVNCX11View::resizeEvent(QResizeEvent *e)
     // c) We're not still waiting for startup fullscreen to kick in
     //
     QVNCConnection *cc = AppManager::instance()->connection();
-    if (!m_firstUpdate && ::remoteResize && cc->server()->supportsSetDesktopSize) {
+    if (!firstUpdate_ && ::remoteResize && cc->server()->supportsSetDesktopSize) {
       postRemoteResizeRequest();
     }
     // Some systems require a grab after the window size has been changed.
@@ -333,7 +333,7 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, long *
       kev.type = xevent->response_type;
       kev.serial = xevent->sequence;
       kev.send_event = false;
-      kev.display = m_display;
+      kev.display = display_;
       kev.window = xevent->event;
       kev.root = xevent->root;
       kev.subwindow = xevent->child;
@@ -402,12 +402,12 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, long *
 
 void QVNCX11View::bell()
 {
-  XBell(m_display, 0 /* volume */);
+  XBell(display_, 0 /* volume */);
 }
 
 void QVNCX11View::draw()
 {
-  if (!m_window || !AppManager::instance()->view()) {
+  if (!window_ || !AppManager::instance()->view()) {
     return;
   }
   QVNCConnection *cc = AppManager::instance()->connection();
@@ -421,25 +421,25 @@ void QVNCX11View::draw()
     //qDebug() << "QVNCX11View::draw: x=" << x << ", y=" << y << ", w=" << w << ", h=" << h;
     // copy the specified region in XImage (== data in framebuffer) to Pixmap.
     XGCValues gcvalues;
-    GC gc = XCreateGC(m_display, m_pixmap, 0, &gcvalues);
+    GC gc = XCreateGC(display_, pixmap_, 0, &gcvalues);
     XImage *xim = framebuffer->ximage();
     XShmSegmentInfo *shminfo = framebuffer->shmSegmentInfo();
     if (shminfo) {
-      XShmPutImage(m_display, m_pixmap, gc, xim, x, y, x, y, w, h, False);
+      XShmPutImage(display_, pixmap_, gc, xim, x, y, x, y, w, h, False);
       // Need to make sure the X server has finished reading the
       // shared memory before we return
-      XSync(m_display, False);
+      XSync(display_, False);
     }
     else {
-      XPutImage(m_display, m_pixmap, gc, xim, x, y, x, y, w, h);
+      XPutImage(display_, pixmap_, gc, xim, x, y, x, y, w, h);
     }
 
-    XFreeGC(m_display, gc);
+    XFreeGC(display_, gc);
 
   
-    Picture winPict = XRenderCreatePicture(m_display, m_window, m_visualFormat, 0, NULL);
-    XRenderComposite(m_display, PictOpSrc, m_picture, None, winPict, x, y, 0, 0, x, y, w, h);
-    XRenderFreePicture(m_display, winPict);
+    Picture winPict = XRenderCreatePicture(display_, window_, visualFormat_, 0, NULL);
+    XRenderComposite(display_, PictOpSrc, picture_, None, winPict, x, y, 0, 0, x, y, w, h);
+    XRenderFreePicture(display_, winPict);
   }
 }
 
@@ -508,7 +508,7 @@ void QVNCX11View::handleKeyPress(int keyCode, quint32 keySym)
 
   // Prevent recursion if the menu wants to send its own
   // activation key.
-  if (m_menuKeySym && (keySym == m_menuKeySym) && !menuRecursion) {
+  if (menuKeySym_ && (keySym == menuKeySym_) && !menuRecursion) {
     menuRecursion = true;
     popupContextMenu();
     menuRecursion = false;
@@ -527,7 +527,7 @@ void QVNCX11View::handleKeyPress(int keyCode, quint32 keySym)
   // symbol on release as when pressed. This breaks the VNC protocol however,
   // so we need to keep track of what keysym a key _code_ generated on press
   // and send the same on release.
-  m_downKeySym[keyCode] = keySym;
+  downKeySym_[keyCode] = keySym;
 
   vlog.debug("Key pressed: 0x%04x => XK_%s (0x%04x)", keyCode, XKeysymToString(keySym), keySym);
 
@@ -552,8 +552,8 @@ void QVNCX11View::handleKeyRelease(int keyCode)
   if (viewOnly)
     return;
 
-  iter = m_downKeySym.find(keyCode);
-  if (iter == m_downKeySym.end()) {
+  iter = downKeySym_.find(keyCode);
+  if (iter == downKeySym_.end()) {
     // These occur somewhat frequently so let's not spam them unless
     // logging is turned up.
     vlog.debug("Unexpected release of key code %d", keyCode);
@@ -574,7 +574,7 @@ void QVNCX11View::handleKeyRelease(int keyCode)
     throw;
   }
 
-  m_downKeySym.erase(iter);
+  downKeySym_.erase(iter);
 }
 
 Pixmap QVNCX11View::toPixmap(QBitmap &bitmap)
@@ -592,7 +592,7 @@ Pixmap QVNCX11View::toPixmap(QBitmap &bitmap)
     dst += xbytes;
   }
 
-  Pixmap pixmap = XCreateBitmapFromData(m_display, nativeWindowHandle(), data, image.width(), image.height());
+  Pixmap pixmap = XCreateBitmapFromData(display_, nativeWindowHandle(), data, image.width(), image.height());
 
   delete[] data;
   return pixmap;
@@ -613,27 +613,27 @@ void QVNCX11View::setQCursor(const QCursor &cursor)
   int hotX = cursor.hotSpot().x();
   int hotY = cursor.hotSpot().y();
 
-  int screen = DefaultScreen(m_display);
+  int screen = DefaultScreen(display_);
 
   Pixmap cursorPixmap = toPixmap(cursorBitmap);
   Pixmap maskPixmap = toPixmap(maskBitmap);
 
   XColor color;
-  color.pixel = BlackPixel(m_display, screen);
+  color.pixel = BlackPixel(display_, screen);
   color.red = color.green = color.blue = 0;
   color.flags = DoRed | DoGreen | DoBlue;
   XColor maskColor;
-  maskColor.pixel = WhitePixel(m_display, screen);
+  maskColor.pixel = WhitePixel(display_, screen);
   maskColor.red = maskColor.green = maskColor.blue = 65535;
   maskColor.flags = DoRed | DoGreen | DoBlue;
 
-  Cursor xcursor = XCreatePixmapCursor(m_display, cursorPixmap, maskPixmap, &color, &maskColor, hotX, hotY);
-  XDefineCursor(m_display, nativeWindowHandle(), xcursor);
-  XFreeCursor(m_display, xcursor);
-  XFreeColors(m_display, DefaultColormap(m_display, screen), &color.pixel, 1, 0);
+  Cursor xcursor = XCreatePixmapCursor(display_, cursorPixmap, maskPixmap, &color, &maskColor, hotX, hotY);
+  XDefineCursor(display_, nativeWindowHandle(), xcursor);
+  XFreeCursor(display_, xcursor);
+  XFreeColors(display_, DefaultColormap(display_, screen), &color.pixel, 1, 0);
 
-  XFreePixmap(m_display, cursorPixmap);
-  XFreePixmap(m_display, maskPixmap);
+  XFreePixmap(display_, cursorPixmap);
+  XFreePixmap(display_, maskPixmap);
 }
 
 bool QVNCX11View::eventFilter(QObject *obj, QEvent *event)
@@ -669,8 +669,8 @@ void QVNCX11View::setLEDState(unsigned int state)
   // support for this extension. We will push our state to sync up the
   // server when we get focus. If we already have focus we need to push
   // it here though.
-  if (m_firstLEDState) {
-    m_firstLEDState = false;
+  if (firstLEDState_) {
+    firstLEDState_ = false;
     if (hasFocus()) {
       pushLEDState();
     }
@@ -698,7 +698,7 @@ void QVNCX11View::setLEDState(unsigned int state)
   if (state & rfb::ledScrollLock) {
     values |= mask;
   }
-  Bool ret = XkbLockModifiers(m_display, XkbUseCoreKbd, affect, values);
+  Bool ret = XkbLockModifiers(display_, XkbUseCoreKbd, affect, values);
   if (!ret) {
     vlog.error(_("Failed to update keyboard LED state"));
   }
@@ -714,7 +714,7 @@ void QVNCX11View::pushLEDState()
     return;
   }
   XkbStateRec xkbState;
-  Status status = XkbGetState(m_display, XkbUseCoreKbd, &xkbState);
+  Status status = XkbGetState(display_, XkbUseCoreKbd, &xkbState);
   if (status != Success) {
     vlog.error(_("Failed to get keyboard LED state: %d"), status);
     return;
@@ -751,11 +751,11 @@ void QVNCX11View::pushLEDState()
 void QVNCX11View::grabKeyboard()
 {
 #if 1
-  XGrabKeyboard(m_display, nativeWindowHandle(), True, GrabModeAsync, GrabModeAsync, CurrentTime);
+  XGrabKeyboard(display_, nativeWindowHandle(), True, GrabModeAsync, GrabModeAsync, CurrentTime);
 #else
-  unsigned long serial = XNextRequest(m_display);
+  unsigned long serial = XNextRequest(display_);
 
-  int ret = XGrabKeyboard(m_display, nativeWindowHandle(), True, GrabModeAsync, GrabModeAsync, CurrentTime);
+  int ret = XGrabKeyboard(display_, nativeWindowHandle(), True, GrabModeAsync, GrabModeAsync, CurrentTime);
   if (ret) {
     if (ret == AlreadyGrabbed) {
       // It seems like we can race with the WM in some cases.
@@ -772,9 +772,9 @@ void QVNCX11View::grabKeyboard()
   // change of focus. This causes us to get stuck in an endless loop
   // grabbing and ungrabbing the keyboard. Avoid this by filtering out
   // any focus events generated by XGrabKeyboard().
-  XSync(m_display, False);
+  XSync(display_, False);
   XEvent xev;
-  while (XCheckIfEvent(m_display, &xev, &eventIsFocusWithSerial, (XPointer)&serial) == True) {
+  while (XCheckIfEvent(display_, &xev, &eventIsFocusWithSerial, (XPointer)&serial) == True) {
     vlog.debug("Ignored synthetic focus event cause by grab change");
   }
 #endif
@@ -785,16 +785,16 @@ void QVNCX11View::grabKeyboard()
 void QVNCX11View::ungrabKeyboard()
 {
 #if 1
-  XUngrabKeyboard(m_display, CurrentTime);
+  XUngrabKeyboard(display_, CurrentTime);
 #else
   XEvent xev;
-  unsigned long serial = XNextRequest(m_display);
+  unsigned long serial = XNextRequest(display_);
 
-  XUngrabKeyboard(m_display, CurrentTime);
+  XUngrabKeyboard(display_, CurrentTime);
 
   // See grabKeyboard()
-  XSync(m_display, False);
-  while (XCheckIfEvent(m_display, &xev, &eventIsFocusWithSerial, (XPointer)&serial) == True) {
+  XSync(display_, False);
+  while (XCheckIfEvent(display_, &xev, &eventIsFocusWithSerial, (XPointer)&serial) == True) {
     vlog.debug("Ignored synthetic focus event cause by grab change");
   }
 #endif
@@ -820,7 +820,7 @@ void QVNCX11View::ungrabPointer()
 
 unsigned int QVNCX11View::getModifierMask(unsigned int keysym)
 {
-  XkbDescPtr xkb = XkbGetMap(m_display, XkbAllComponentsMask, XkbUseCoreKbd);
+  XkbDescPtr xkb = XkbGetMap(display_, XkbAllComponentsMask, XkbUseCoreKbd);
   if (xkb == nullptr) {
     return 0;
   }
@@ -867,14 +867,14 @@ unsigned int QVNCX11View::getModifierMask(unsigned int keysym)
 void QVNCX11View::enable_touch()
 {
   int ev, err;
-  if (!XQueryExtension(m_display, "XInputExtension", &m_ximajor, &ev, &err)) {
+  if (!XQueryExtension(display_, "XInputExtension", &ximajor_, &ev, &err)) {
     AppManager::instance()->publishError(_("X Input extension not available."));
     QGuiApplication::quit();
   }
 
   int major_ver = 2;
   int minor_ver = 2;
-  if (XIQueryVersion(m_display, &major_ver, &minor_ver) != Success) {
+  if (XIQueryVersion(display_, &major_ver, &minor_ver) != Success) {
     AppManager::instance()->publishError(_("X Input 2 (or newer) is not available."));
     QGuiApplication::quit();
   }
@@ -892,10 +892,10 @@ void QVNCX11View::x11_change_touch_ownership(bool enable)
   newmask.mask_len = sizeof(mask);
 
   int num_masks;
-    XIEventMask *curmasks = XIGetSelectedEvents(m_display, m_window, &num_masks);
+    XIEventMask *curmasks = XIGetSelectedEvents(display_, window_, &num_masks);
     if (curmasks == nullptr) {
       if (num_masks == -1) {
-        vlog.error(_("Unable to get X Input 2 event mask for window 0x%08lx"), m_window);
+        vlog.error(_("Unable to get X Input 2 event mask for window 0x%08lx"), window_);
         return;
       }
     }
@@ -904,7 +904,7 @@ void QVNCX11View::x11_change_touch_ownership(bool enable)
     // simplify all the code handling the masks
     if (num_masks > 1) {
       XFree(curmasks);
-      vlog.error(_("Window 0x%08lx has more than one X Input 2 event mask"), m_window);
+      vlog.error(_("Window 0x%08lx has more than one X Input 2 event mask"), window_);
       return;
     }
 
@@ -917,7 +917,7 @@ void QVNCX11View::x11_change_touch_ownership(bool enable)
     else {
       XIClearMask(newmask.mask, XI_TouchOwnership);
     }
-    XISelectEvents(m_display, m_window, &newmask, 1);
+    XISelectEvents(display_, window_, &newmask, 1);
 
     XFree(curmasks);
 }
