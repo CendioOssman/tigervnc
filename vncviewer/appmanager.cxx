@@ -6,13 +6,16 @@
 #include <QTcpSocket>
 #include <QScreen>
 #include <QProcess>
+#if defined(Q_OS_UNIX)
+#include <QApplication>
+#endif
+
 #include "rdr/Exception.h"
 #include "i18n.h"
 #include "vncconnection.h"
-#include "viewerconfig.h"
+#include "parameters.h"
 #include "abstractvncview.h"
 #include "vncwindow.h"
-#include "parameters.h"
 #include "appmanager.h"
 #undef asprintf
 
@@ -89,7 +92,7 @@ void AppManager::publishError(const QString message, bool quit)
 void AppManager::openVNCWindow(int width, int height, QString name)
 {
   QWidget *parent = nullptr;
-  if (!::remoteResize) {
+  if (!ViewerConfig::config()->remoteResize()) {
     scroll_->takeWidget();
     parent = scroll_;
   }
@@ -99,7 +102,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 #elif defined(__APPLE__)
   view_ = new QVNCMacView(parent);
 #elif defined(Q_OS_UNIX)
-  QString platform = QGuiApplication::platformName();
+  QString platform = QApplication::platformName();
   if (platform == "xcb") {
     view_ = new QVNCX11View(parent);
   }
@@ -116,7 +119,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
     scroll_->setVerticalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
   }, Qt::QueuedConnection);
 
-  if (!::remoteResize) {
+  if (!ViewerConfig::config()->remoteResize()) {
     connect(view_, &QAbstractVNCView::delayedInitialized, scroll_, &QVNCWindow::popupToast);
     view_->resize(width, height);
     scroll_->setWidget(view_);
@@ -140,7 +143,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 
 void AppManager::setWindowName(QString name)
 {
-  if (!::remoteResize) {
+  if (!ViewerConfig::config()->remoteResize()) {
     scroll_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
   }
   else {

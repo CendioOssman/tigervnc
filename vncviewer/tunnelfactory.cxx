@@ -3,7 +3,10 @@
 #endif
 
 #include <QProcess>
-#include "viewerconfig.h"
+#if !defined(WIN32)
+#include <QCoreApplication>
+#endif
+#include "parameters.h"
 #include "tunnelfactory.h"
 
 TunnelFactory::TunnelFactory()
@@ -74,7 +77,7 @@ void TunnelFactory::run()
     ViewerConfig::config()->setAccessPoint(serverName);
   }
   else {
-    errorOccurrrd_ = true;
+    errorOccurred_ = true;
   }
 #else
   connect(process_, &QProcess::started, this, []() {

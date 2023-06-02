@@ -5,7 +5,7 @@
 #include <QQmlApplicationEngine>
 #include <QQuickImageProvider>
 #include <QStyle>
-#include "viewerconfig.h"
+#include "parameters.h"
 #include "appmanager.h"
 #include "vncapplication.h"
 #include "vncconnection.h"

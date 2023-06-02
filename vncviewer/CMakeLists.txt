@@ -46,8 +46,6 @@ set(PROJECT_SOURCES
         vnctoast.h
         vncwindow.cxx
         vncwindow.h
-        viewerconfig.h
-        viewerconfig.cxx
         vncconnection.h
         vncconnection.cxx
         vnccredential.cxx

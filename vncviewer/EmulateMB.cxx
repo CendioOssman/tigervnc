@@ -214,7 +214,7 @@ void EmulateMB::filterPointerEvent(const rfb::Point& pos, int buttonMask)
   int lastState;
 
   // Just pass through events if the emulate setting is disabled
-  if (!emulateMiddleButton) {
+  if (!ViewerConfig::config()->emulateMiddleButton()) {
      sendPointerEvent(pos, buttonMask);
      return;
   }

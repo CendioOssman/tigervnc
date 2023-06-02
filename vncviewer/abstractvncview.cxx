@@ -20,11 +20,10 @@
 #include "rfb/PixelBuffer.h"
 #include "EmulateMB.h"
 #include "appmanager.h"
-#include "parameters.h"
 #include "menukey.h"
 #include "vncconnection.h"
 #include "i18n.h"
-#include "viewerconfig.h"
+#include "parameters.h"
 #include "vnctoast.h"
 #include "abstractvncview.h"
 #undef asprintf
@@ -252,7 +251,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   if (!clipboard_) {
     clipboard_ = QGuiApplication::clipboard();
     connect(clipboard_, &QClipboard::dataChanged, this, []() {
-      if (!::sendClipboard) {
+      if (!ViewerConfig::config()->sendClipboard()) {
         return;
       }
       //qDebug() << "QClipboard::dataChanged: owns=" << clipboard_->ownsClipboard() << ", text=" << clipboard_->text();
@@ -337,7 +336,7 @@ void QAbstractVNCView::createContextMenu()
     actions_ << new QMenuSeparator();
     actions_ << new QKeyToggleAction(p_("ContextMenu|", "&Ctrl"), 0x1d, XK_Control_L);
     actions_ << new QKeyToggleAction(p_("ContextMenu|", "&Alt"), 0x38, XK_Alt_L);
-    actions_ << new QAction(QString::asprintf(p_("ContextMenu|", "Send %s"), (const char*)::menuKey));
+    actions_ << new QAction(QString::asprintf(p_("ContextMenu|", "Send %s"), ViewerConfig::config()->menuKey().toStdString().c_str()));
     actions_ << new QCtrlAltDelAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"));
     actions_ << new QMenuSeparator();
     actions_ << new QRefreshAction(p_("ContextMenu|", "&Refresh screen"));
@@ -593,16 +592,16 @@ void QAbstractVNCView::handleDesktopSize()
 #else
   double f = devicePixelRatio_;
 #endif
-  if (strcmp(::desktopSize, "") != 0) {
+  if (strcmp(ViewerConfig::config()->desktopSize().toStdString().c_str(), "") != 0) {
     int w, h;
     // An explicit size has been requested
-    if (sscanf(::desktopSize, "%dx%d", &w, &h) != 2) {
+    if (sscanf(ViewerConfig::config()->desktopSize().toStdString().c_str(), "%dx%d", &w, &h) != 2) {
       return;
     }
     remoteResize(w * f, h * f);
     //qDebug() << "QAbstractVNCView::handleDesktopSize(explicit): width=" << w << ", height=" << h;
   }
-  else if (::remoteResize) {
+  else if (ViewerConfig::config()->remoteResize()) {
     // No explicit size, but remote resizing is on so make sure it
     // matches whatever size the window ended up being
     remoteResize(width() * f, height() * f);
@@ -752,7 +751,7 @@ QScreen *QAbstractVNCView::getCurrentScreen()
 
 void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
 {
-  if (::viewOnly) {
+  if (ViewerConfig::config()->viewOnly()) {
     return;
   }
   mbemu_->filterPointerEvent(pos, mask);
@@ -760,7 +759,7 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
 
 void QAbstractVNCView::handleMouseButtonEmulationTimeout()
 {
-  if (::viewOnly) {
+  if (ViewerConfig::config()->viewOnly()) {
     return;
   }
   mbemu_->handleTimeout();

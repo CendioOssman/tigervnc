@@ -14,7 +14,7 @@
 #include "rfb/LogWriter.h"
 #include "rfb/CMsgWriter.h"
 #include "network/TcpSocket.h"
-#include "viewerconfig.h"
+#include "parameters.h"
 #include "appmanager.h"
 #include "i18n.h"
 #include "abstractvncview.h"

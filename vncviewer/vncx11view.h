@@ -1,8 +1,7 @@
 #ifndef VNCX11VIEW_H
 #define VNCX11VIEW_H
 
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
+#include <QBitmap>
 #include <X11/extensions/Xrender.h>
 #include "abstractvncview.h"
 

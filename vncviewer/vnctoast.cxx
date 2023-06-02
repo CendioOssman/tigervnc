@@ -7,7 +7,7 @@
 #undef asprintf
 
 QVNCToast::QVNCToast(QWidget *parent)
- : QLabel(QString::asprintf(_("Press %s to open the context menu"), (const char*)::menuKey), parent, Qt::SplashScreen | Qt::WindowStaysOnTopHint)
+ : QLabel(QString::asprintf(_("Press %s to open the context menu"), ViewerConfig::config()->menuKey().toStdString().c_str()), parent, Qt::SplashScreen | Qt::WindowStaysOnTopHint)
  , closeTimer_(new QTimer)
 {
   int radius = 5;

@@ -2,12 +2,16 @@
 #include "config.h"
 #endif
 
-#include <QEvent>
-#include <QTextStream>
-#include <QDataStream>
-#include <QUrl>
+#include <QMouseEvent>
+#include <QResizeEvent>
 #include <QImage>
 #include <QBitmap>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QX11Info>
+#else
+#include <QGuiApplication>
+#endif
+
 #include "rfb/Exception.h"
 #include "rfb/ServerParams.h"
 #include "rfb/LogWriter.h"
@@ -18,23 +22,14 @@
 #include "appmanager.h"
 #include "vncconnection.h"
 #include "PlatformPixelBuffer.h"
-#include "vncx11view.h"
-
-#include <X11/Xlib.h>
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <QX11Info>
-#else
-#include <QGuiApplication>
-#endif
-
-#include <QDebug>
-#include <QMouseEvent>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/XKBlib.h>
 #include <X11/extensions/Xrender.h>
 #include <X11/extensions/XInput2.h>
+
+#include "vncx11view.h"
 
 extern const struct _code_map_xkb_to_qnum {
   const char * from;
@@ -296,7 +291,7 @@ void QVNCX11View::resizeEvent(QResizeEvent *e)
     // c) We're not still waiting for startup fullscreen to kick in
     //
     QVNCConnection *cc = AppManager::instance()->connection();
-    if (!firstUpdate_ && ::remoteResize && cc->server()->supportsSetDesktopSize) {
+    if (!firstUpdate_ && ViewerConfig::config()->remoteResize() && cc->server()->supportsSetDesktopSize) {
       postRemoteResizeRequest();
     }
     // Some systems require a grab after the window size has been changed.
@@ -515,7 +510,7 @@ void QVNCX11View::handleKeyPress(int keyCode, quint32 keySym)
     return;
   }
 
-  if (viewOnly)
+  if (ViewerConfig::config()->viewOnly())
     return;
 
   if (keyCode == 0) {
@@ -549,7 +544,7 @@ void QVNCX11View::handleKeyRelease(int keyCode)
 {
   DownMap::iterator iter;
 
-  if (viewOnly)
+  if (ViewerConfig::config()->viewOnly())
     return;
 
   iter = downKeySym_.find(keyCode);

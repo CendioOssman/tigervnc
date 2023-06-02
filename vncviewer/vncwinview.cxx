@@ -23,7 +23,6 @@
 #include "PlatformPixelBuffer.h"
 #include "win32.h"
 #include "i18n.h"
-#include "viewerconfig.h"
 #include "vncwinview.h"
 
 #include <QDebug>
@@ -143,7 +142,7 @@ void QVNCWinView::setWindow(HWND window)
 
 void QVNCWinView::postMouseMoveEvent(int x, int y, int mask)
 {
-  if (::viewOnly) {
+  if (ViewerConfig::config()->viewOnly()) {
     return;
   }
   rfb::Point p(x, y);
@@ -182,7 +181,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
     case WM_MOUSEWHEEL:
     case WM_XBUTTONUP:
     case WM_XBUTTONDOWN: {
-      if (::viewOnly) {
+      if (ViewerConfig::config()->viewOnly()) {
         break;
       }
       int x, y, buttonMask, wheelMask;
@@ -210,7 +209,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       break;
     case WM_KILLFOCUS:
       qDebug() << "VNCWinView::eventHandler(): WM_KILLFOCUS";
-      if (fullscreenSystemKeys) {
+      if (ViewerConfig::config()->fullscreenSystemKeys()) {
         window->ungrabKeyboard();
       }
       break;
@@ -397,7 +396,7 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
     // c) We're not still waiting for startup fullscreen to kick in
     //
     QVNCConnection *cc = AppManager::instance()->connection();
-    if (!firstUpdate_ && ::remoteResize && cc->server()->supportsSetDesktopSize && !fullscreenEnabled_ && !pendingFullscreen_) {
+    if (!firstUpdate_ && ViewerConfig::config()->remoteResize() && cc->server()->supportsSetDesktopSize && !fullscreenEnabled_ && !pendingFullscreen_) {
       postRemoteResizeRequest();
     }
     // Some systems require a grab after the window size has been changed.
@@ -444,7 +443,7 @@ void QVNCWinView::handleKeyPress(int keyCode, quint32 keySym)
     return;
   }
 
-  if (::viewOnly)
+  if (ViewerConfig::config()->viewOnly())
     return;
 
   if (keyCode == 0) {
@@ -478,7 +477,7 @@ void QVNCWinView::handleKeyRelease(int keyCode)
 {
   DownMap::iterator iter;
 
-  if (::viewOnly)
+  if (ViewerConfig::config()->viewOnly())
     return;
 
   iter = downKeySym_.find(keyCode);
@@ -845,7 +844,7 @@ void QVNCWinView::setLEDState(unsigned int state)
 
 void QVNCWinView::maybeGrabKeyboard()
 {
-  if (::fullscreenSystemKeys && isFullscreenEnabled() && hasFocus()) {
+  if (ViewerConfig::config()->fullscreenSystemKeys() && isFullscreenEnabled() && hasFocus()) {
     grabKeyboard();
   }
 }

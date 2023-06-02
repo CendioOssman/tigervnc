@@ -16,7 +16,7 @@ QVNCWindow::QVNCWindow(QWidget *parent)
  : QScrollArea(parent)
  , toast_(new QVNCToast(this))
 {
-  setWidgetResizable(::remoteResize);
+  setWidgetResizable(ViewerConfig::config()->remoteResize());
   setContentsMargins(0, 0, 0, 0);
   setFrameStyle(QFrame::NoFrame);
 
@@ -25,11 +25,11 @@ QVNCWindow::QVNCWindow(QWidget *parent)
   // coordinates relative to the right edge / bottom edge) at this
   // time.
   int geom_x = 0, geom_y = 0;
-  if (strcmp(::geometry, "") != 0) {
-    int nfields = sscanf((const char*)::geometry, "+%d+%d", &geom_x, &geom_y);
+  if (!ViewerConfig::config()->geometry().isEmpty()) {
+    int nfields = sscanf((const char*)ViewerConfig::config()->geometry().toStdString().c_str(), "+%d+%d", &geom_x, &geom_y);
     if (nfields != 2) {
       int geom_w, geom_h;
-      nfields = sscanf((const char*)::geometry, "%dx%d+%d+%d", &geom_w, &geom_h, &geom_x, &geom_y);
+      nfields = sscanf((const char*)ViewerConfig::config()->geometry().toStdString().c_str(), "%dx%d+%d+%d", &geom_w, &geom_h, &geom_x, &geom_y);
       if (nfields != 4) {
         vlog.error(_("Invalid geometry specified!"));
       }

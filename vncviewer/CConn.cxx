@@ -73,7 +73,7 @@ CConn::CConn(QVNCConnection *cfacade)
  , updateStartPos(0)
  , bpsEstimate(20000000)
 {
-  setShared(::shared);
+  setShared(ViewerConfig::config()->shared());
   
   supportsLocalCursor = true;
   supportsCursorPosition = true;
@@ -89,12 +89,12 @@ CConn::CConn(QVNCConnection *cfacade)
     CSecurity::msg = new VNCCredential;
   }
 #endif
-  if (customCompressLevel) {
-    setCompressLevel(::compressLevel);
+  if (ViewerConfig::config()->customCompressLevel()) {
+    setCompressLevel(ViewerConfig::config()->compressLevel());
   }
 
-  if (!::noJpeg) {
-    setQualityLevel(::qualityLevel);
+  if (!ViewerConfig::config()->noJpeg()) {
+    setQualityLevel(ViewerConfig::config()->qualityLevel());
   }
 }
 
@@ -183,8 +183,8 @@ void CConn::initDone()
 {
   // If using AutoSelect with old servers, start in FullColor
   // mode. See comment in autoSelectFormatAndEncoding.
-  if (server()->beforeVersion(3, 8) && ::autoSelect)
-    fullColour.setParam(true);
+  if (server()->beforeVersion(3, 8) && ViewerConfig::config()->autoSelect())
+    ViewerConfig::config()->setFullColour(true);
 
   *serverPF = server()->pf();
 
@@ -194,7 +194,7 @@ void CConn::initDone()
 
   // Force a switch to the format and encoding we'd like
   updatePixelFormat();
-  int encNum = encodingNum(::preferredEncoding);
+  int encNum = encodingNum(ViewerConfig::config()->preferredEncoding().toStdString().c_str());
   if (encNum != -1)
     setPreferredEncoding(encNum);
 }
@@ -257,7 +257,7 @@ void CConn::framebufferUpdateEnd()
   emit facade->refreshFramebufferEnded();
 
   // Compute new settings based on updated bandwidth values
-  if (::autoSelect)
+  if (ViewerConfig::config()->autoSelect())
     autoSelectFormatAndEncoding();
 }
 
@@ -302,7 +302,7 @@ void CConn::setCursor(int width, int height, const Point &hotspot,
     }
   }
   if (emptyCursor) {
-    if (::dotWhenNoCursor) {
+    if (ViewerConfig::config()->dotWhenNoCursor()) {
       static const char * dotcursor_xpm[] = {
         "5 5 2 1",
         ".	c #000000",
@@ -412,17 +412,17 @@ void CConn::autoSelectFormatAndEncoding()
   setPreferredEncoding(encodingTight);
 
   // Select appropriate quality level
-  if (!noJpeg) {
+  if (!ViewerConfig::config()->noJpeg()) {
     int newQualityLevel;
     if (bpsEstimate > 16000000)
       newQualityLevel = 8;
     else
       newQualityLevel = 6;
 
-    if (newQualityLevel != ::qualityLevel) {
+    if (newQualityLevel != ViewerConfig::config()->qualityLevel()) {
       vlog.info(_("Throughput %d kbit/s - changing to quality %d"),
                 (int)(bpsEstimate/1000), newQualityLevel);
-      ::qualityLevel.setParam(newQualityLevel);
+      ViewerConfig::config()->setQualityLevel(newQualityLevel);
       setQualityLevel(newQualityLevel);
     }
   }
@@ -440,14 +440,14 @@ void CConn::autoSelectFormatAndEncoding()
   
   // Select best color level
   bool newFullColour = (bpsEstimate > 256000);
-  if (newFullColour != fullColour) {
+  if (newFullColour != ViewerConfig::config()->fullColour()) {
     if (newFullColour)
       vlog.info(_("Throughput %d kbit/s - full color is now enabled"),
                 (int)(bpsEstimate/1000));
     else
       vlog.info(_("Throughput %d kbit/s - full color is now disabled"),
                 (int)(bpsEstimate/1000));
-    fullColour.setParam(newFullColour);
+    ViewerConfig::config()->setFullColour(newFullColour);
     updatePixelFormat();
   } 
 }
@@ -458,14 +458,14 @@ void CConn::updatePixelFormat()
 {
   PixelFormat pf;
 
-  if (fullColour) {
+  if (ViewerConfig::config()->fullColour()) {
     pf = *fullColourPF;
   }
   else {
-    if (lowColourLevel == 0) {
+    if (ViewerConfig::config()->lowColourLevel() == 0) {
       pf = verylowColourPF;
     }
-    else if (lowColourLevel == 1) {
+    else if (ViewerConfig::config()->lowColourLevel() == 1) {
       pf = lowColourPF;
     }
     else {

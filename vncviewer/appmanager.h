@@ -1,7 +1,7 @@
 #ifndef APPMANAGER_H
 #define APPMANAGER_H
 
-#include <QString>
+#include <QObject>
 
 class QVNCConnection;
 class QAbstractVNCView;

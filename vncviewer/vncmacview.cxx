@@ -2,6 +2,7 @@
 #include "config.h"
 #endif
 
+#include <QApplication>
 #include <QEvent>
 #include <QTextStream>
 #include <QDataStream>
@@ -238,7 +239,7 @@ void QVNCMacView::resizeEvent(QResizeEvent *e)
     // c) We're not still waiting for startup fullscreen to kick in
     //
     QVNCConnection *cc = AppManager::instance()->connection();
-    if (!firstUpdate_ && ::remoteResize && cc->server()->supportsSetDesktopSize) {
+    if (!firstUpdate_ && ViewerConfig::config()->remoteResize() && cc->server()->supportsSetDesktopSize) {
       postRemoteResizeRequest();
     }
     // Some systems require a grab after the window size has been changed.
@@ -347,7 +348,7 @@ void QVNCMacView::handleKeyPress(int keyCode, quint32 keySym)
     return;
   }
 
-  if (viewOnly)
+  if (ViewerConfig::config()->viewOnly())
     return;
 
   if (keyCode == 0) {
@@ -381,7 +382,7 @@ void QVNCMacView::handleKeyRelease(int keyCode)
 {
   DownMap::iterator iter;
 
-  if (viewOnly)
+  if (ViewerConfig::config()->viewOnly())
     return;
 
   iter = downKeySym_.find(keyCode);

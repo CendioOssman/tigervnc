@@ -24,8 +24,7 @@
 #elif defined(__APPLE__)
 class CGImage;
 #else
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
+#include <QCursor> // QCursor must be included before X headers to avoid symbol comflicts.
 #include <X11/extensions/Xrender.h>
 #include <X11/extensions/XShm.h>
 #endif
