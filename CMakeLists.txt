@@ -357,7 +357,7 @@ if(BUILD_VIEWER)
   add_subdirectory(vncviewer)
 endif()
 
-###add_subdirectory(tests)
+add_subdirectory(tests)
 
 
 if(BUILD_VIEWER)
