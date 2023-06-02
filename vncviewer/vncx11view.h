@@ -35,7 +35,6 @@ protected:
   void showEvent(QShowEvent *) override;
   void focusInEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
-  bool eventFilter(QObject *obj, QEvent *event) override;
 
   void handleMouseButtonEvent(QMouseEvent*);
   void handleMouseWheelEvent(QWheelEvent*);

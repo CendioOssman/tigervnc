@@ -631,26 +631,6 @@ void QVNCX11View::setQCursor(const QCursor &cursor)
   XFreePixmap(display_, maskPixmap);
 }
 
-bool QVNCX11View::eventFilter(QObject *obj, QEvent *event)
-{
-//  if (event->type() == QEvent::MouseMove) {
-//    QMouseEvent *e = static_cast<QMouseEvent *>(event);
-//    qDebug() << "QVNCX11View::eventFilter: pos=" << e->pos();
-//    return false;
-//  }
-//  else if (event->type() == QEvent::Enter) {
-//    qDebug() << "QVNCX11View::eventFilter: event type=Enter";
-//    return false;
-//  }
-//  else if (event->type() == QEvent::Leave) {
-//    qDebug() << "QVNCX11View::eventFilter: event type=Leave";
-//    return false;
-//  }
-
-  // standard event processing
-  return QObject::eventFilter(obj, event);
-}
-
 void QVNCX11View::handleClipboardData(const char*)
 {
 }

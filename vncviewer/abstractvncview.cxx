@@ -336,7 +336,7 @@ void QAbstractVNCView::createContextMenu()
     actions_ << new QMenuSeparator();
     actions_ << new QKeyToggleAction(p_("ContextMenu|", "&Ctrl"), 0x1d, XK_Control_L);
     actions_ << new QKeyToggleAction(p_("ContextMenu|", "&Alt"), 0x38, XK_Alt_L);
-    actions_ << new QAction(QString::asprintf(p_("ContextMenu|", "Send %s"), ViewerConfig::config()->menuKey().toStdString().c_str()));
+    actions_ << new QMenuKeyAction(QString::asprintf(p_("ContextMenu|", "Send %s"), ViewerConfig::config()->menuKey().toStdString().c_str()));
     actions_ << new QCtrlAltDelAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"));
     actions_ << new QMenuSeparator();
     actions_ << new QRefreshAction(p_("ContextMenu|", "&Refresh screen"));
