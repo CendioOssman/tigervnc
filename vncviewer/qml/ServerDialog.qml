@@ -1,3 +1,4 @@
+import QtQml 2.12
 import QtQuick 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Window 2.12
@@ -30,7 +31,19 @@ Window {
     }
 
     function validateServerText(serverText) {
-        var index = addressInput.indexOfValue(serverText)
+        var index = -1
+        if (addressInput.indexOfValue !== undefined) {
+            index = addressInput.indexOfValue(serverText)
+        }
+        else { // For Qt 5.12, which does not have indexOfValue().
+            for (var is = 0; is < servers.length; is++) {
+                if (servers[is] === serverText) {
+                    index = is
+                    break
+                }
+            }
+        }
+
         if (index >= 0) {
             addressInput.currentIndex = index
         }
@@ -51,6 +64,11 @@ Window {
             servers.push(Config.serverHistory[i])
         }
         serversChanged()
+    }
+
+    function accept()  {
+        validateServerText(addressInput.editText)
+        AppManager.connectToServer(addressInput.currentText)
     }
 
     Connections {
@@ -98,6 +116,9 @@ Window {
                 model: servers
                 onAccepted: validateServerText(editText)
                 Component.onCompleted: createServerList()
+                Keys.onEnabledChanged: accept()
+                Keys.onReturnPressed: accept()
+                Keys.onEscapePressed: Qt.quit()
             }
         }
 
@@ -169,10 +190,7 @@ Window {
                 Layout.bottomMargin: 15
                 enabled: addressInput.currentText.length > 0
                 text: qsTr("Connect")
-                onClicked: {
-                    validateServerText(addressInput.editText)
-                    AppManager.connectToServer(addressInput.currentText)
-                }
+                onClicked: accept()
             }
         }
     }
@@ -200,5 +218,18 @@ Window {
             id: configSaveDialog
             onAccepted: saveConfig(file)
         }
+    }
+
+    Shortcut {
+        sequence: "Enter"
+        onActivated: accept()
+    }
+    Shortcut {
+        sequence: "Return"
+        onActivated: accept()
+    }
+    Shortcut {
+        sequence: StandardKey.Cancel
+        onActivated: Qt.quit()
     }
 }

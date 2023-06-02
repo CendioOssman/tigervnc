@@ -147,6 +147,7 @@ Window {
                     echoMode: TextInput.Password
                     Keys.onEnterPressed: accept()
                     Keys.onReturnPressed: accept()
+                    Keys.onEscapePressed: cancel()
                 }
             }
         }
@@ -172,5 +173,10 @@ Window {
                 onClicked: accept()
             }
         }
+    }
+
+    Shortcut {
+        sequence: StandardKey.Cancel
+        onActivated: cancel()
     }
 }
