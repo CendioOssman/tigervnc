@@ -114,6 +114,7 @@ Window {
                 Layout.fillWidth: true
                 editable: true
                 model: servers
+                focus: true
                 onAccepted: validateServerText(editText)
                 Component.onCompleted: createServerList()
                 Keys.onEnabledChanged: accept()
