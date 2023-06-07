@@ -227,7 +227,7 @@ public slots:
   bool installedSecurity(int type) const;
   bool enabledSecurity(int type) const;
   QString toLocalFile(const QUrl url) const;
-  void saveViewerParameters(QString path, QString serverName) const;
+  void saveViewerParameters(QString path, QString serverName);
   QString loadViewerParameters(QString path);
   void loadServerHistory();
   void saveServerHistory();
@@ -256,7 +256,7 @@ private:
   bool potentiallyLoadConfigurationFile(QString vncServerName);
   QString getlocaledir();
   void initializeLogger();
-  void parserServerName();
+  void parseServerName();
 };
 
 #if 0
