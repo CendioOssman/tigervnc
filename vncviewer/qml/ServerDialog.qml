@@ -115,6 +115,7 @@ Window {
                 editable: true
                 model: servers
                 focus: true
+                selectTextByMouse: true
                 onAccepted: validateServerText(editText)
                 Component.onCompleted: createServerList()
                 Keys.onEnabledChanged: accept()
