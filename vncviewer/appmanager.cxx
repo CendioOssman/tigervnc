@@ -91,20 +91,16 @@ void AppManager::publishError(const QString message, bool quit)
 
 void AppManager::openVNCWindow(int width, int height, QString name)
 {
-  QWidget *parent = nullptr;
-  if (!ViewerConfig::config()->remoteResize()) {
-    scroll_->takeWidget();
-    parent = scroll_;
-  }
+  scroll_->takeWidget();
   delete view_;
 #if defined(WIN32)
-  view_ = new QVNCWinView(parent);
+  view_ = new QVNCWinView(scroll_);
 #elif defined(__APPLE__)
-  view_ = new QVNCMacView(parent);
+  view_ = new QVNCMacView(scroll_);
 #elif defined(Q_OS_UNIX)
   QString platform = QApplication::platformName();
   if (platform == "xcb") {
-    view_ = new QVNCX11View(parent);
+    view_ = new QVNCX11View(scroll_);
   }
   else if (platform == "wayland") {
     ;
@@ -119,20 +115,12 @@ void AppManager::openVNCWindow(int width, int height, QString name)
     scroll_->setVerticalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
   }, Qt::QueuedConnection);
 
-  if (!ViewerConfig::config()->remoteResize()) {
-    connect(view_, &QAbstractVNCView::delayedInitialized, scroll_, &QVNCWindow::popupToast);
-    view_->resize(width, height);
-    scroll_->setWidget(view_);
-    scroll_->resize(width, height);
-    scroll_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
-    scroll_->show();
-  }
-  else {
-    connect(view_, &QAbstractVNCView::delayedInitialized, view_, &QAbstractVNCView::popupToast);
-    view_->resize(width, height);
-    view_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
-    view_->show();
-  }
+  connect(view_, &QAbstractVNCView::delayedInitialized, scroll_, &QVNCWindow::popupToast);
+  view_->resize(width, height);
+  scroll_->setWidget(view_);
+  scroll_->resize(width, height);
+  scroll_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+  scroll_->show();
 
   if (ViewerConfig::config()->fullScreen()) {
     view_->fullscreen(true);
@@ -143,12 +131,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 
 void AppManager::setWindowName(QString name)
 {
-  if (!ViewerConfig::config()->remoteResize()) {
-    scroll_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
-  }
-  else {
-    view_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
-  }
+  scroll_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
 }
 
 void AppManager::invalidate(int x0, int y0, int x1, int y1)

@@ -53,7 +53,10 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
   connect(AppManager::instance()->connection(), &QVNCConnection::framebufferResized, this, [this](int width, int height) {
-    SetWindowPos(hwnd_, HWND_TOP, 0, 0, width, height, 0);
+    SetWindowPos(hwnd_, HWND_TOPMOST, 0, 0, width, height, 0);
+    SetFocus(hwnd_);
+    grabPointer();
+    grabKeyboard();
   }, Qt::QueuedConnection);
 
   altGrCtrlTimer_->setInterval(100);
@@ -237,7 +240,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       // https://stackoverflow.com/questions/52157587/why-qresizeevent-qwidgetsize-gives-different-when-fullscreen
       int w = AppManager::instance()->view()->width() * AppManager::instance()->view()->devicePixelRatio() + 0.5;
       int h = AppManager::instance()->view()->height() * AppManager::instance()->view()->devicePixelRatio() + 0.5;
-      SetWindowPos(hWnd, HWND_TOP, 0, 0, w, h, 0);
+      SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, w, h, 0);
       qDebug() << "VNCWinView::eventHandler(): SetWindowPos: w=" << w << ", h=" << h;
     }
       break;
@@ -326,25 +329,29 @@ bool QVNCWinView::event(QEvent *e)
     }
     break;
   case QEvent::WindowBlocked:
-    if (hwnd_)
+    if (hwnd_) {
       EnableWindow(hwnd_, false);
+    }
     break;
   case QEvent::WindowUnblocked:
-    if (hwnd_)
+    if (hwnd_) {
       EnableWindow(hwnd_, true);
+    }
     break;
   case QEvent::WindowActivate:
-    //qDebug() << "WindowActivate";
+    qDebug() << "WindowActivate";
+    ::SetFocus(hwnd_);
     break;
   case QEvent::WindowDeactivate:
-    //qDebug() << "WindowDeactivate";
+    qDebug() << "WindowDeactivate";
+    ::SetFocus(NULL);
     break;
   case QEvent::Enter:
-    //qDebug() << "Enter";
+    qDebug() << "Enter";
     grabPointer();
     break;
   case QEvent::Leave:
-    //qDebug() << "Leave";
+    qDebug() << "Leave";
     ungrabPointer();
     break;
   case QEvent::CursorChange:
@@ -355,6 +362,10 @@ bool QVNCWinView::event(QEvent *e)
     //qDebug() << "Paint";
     e->setAccepted(true);
     return true;
+  case QEvent::KeyPress:
+  case QEvent::KeyRelease:
+    qDebug() << "KeyPress/KeyRelease";
+    break;
   default:
     qDebug() << "Unprocessed Event: " << e->type();
     break;
@@ -396,29 +407,14 @@ void QVNCWinView::resizeEvent(QResizeEvent *e)
     // c) We're not still waiting for startup fullscreen to kick in
     //
     QVNCConnection *cc = AppManager::instance()->connection();
-    if (!firstUpdate_ && ViewerConfig::config()->remoteResize() && cc->server()->supportsSetDesktopSize && !fullscreenEnabled_ && !pendingFullscreen_) {
+    if (!firstUpdate_ && ViewerConfig::config()->remoteResize() && cc->server()->supportsSetDesktopSize) {
       postRemoteResizeRequest();
     }
     // Some systems require a grab after the window size has been changed.
     // Otherwise they might hold on to displays, resulting in them being unusable.
+    grabPointer();
     maybeGrabKeyboard();
   }
-}
-
-bool QVNCWinView::nativeEvent(const QByteArray &eventType, void *message, long *result)
-{
-  MSG *msg = (MSG *)message;
-  switch (msg->message) {
-    case WM_SETFOCUS:
-      if (hwnd_) {
-        ::SetFocus(hwnd_);
-        return true;
-      }
-      break;
-    default:
-      break;
-  }
-  return QWidget::nativeEvent(eventType, message, result);
 }
 
 void QVNCWinView::resolveAltGrDetection(bool isAltGrSequence)
@@ -861,10 +857,7 @@ void QVNCWinView::grabKeyboard()
 
 void QVNCWinView::ungrabKeyboard()
 {
-#if 0
-  // maybe unnecessary
   ungrabPointer();
-#endif
   win32_disable_lowlevel_keyboard(hwnd_);
   QAbstractVNCView::ungrabKeyboard();
 }

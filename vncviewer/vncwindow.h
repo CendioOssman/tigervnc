@@ -4,6 +4,7 @@
 #include <QScrollArea>
 
 class QMoveEvent;
+class QResizeEvent;
 class QVNCToast;
 
 class QVNCWindow : public QScrollArea
@@ -12,12 +13,15 @@ class QVNCWindow : public QScrollArea
 public:
   QVNCWindow(QWidget *parent = nullptr);
   virtual ~QVNCWindow();
+  QRect getExtendedFrameProperties();
 
 public slots:
   void popupToast();
 
 protected:
   void moveEvent(QMoveEvent *e) override;
+  void resizeEvent(QResizeEvent *e) override;
+  void changeEvent(QEvent *e) override;
 
 private:
   QVNCToast *toast_;

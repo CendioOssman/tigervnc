@@ -21,6 +21,7 @@ public:
   QVNCConnection *connection() const { return facade_; }
   int error() const { return error_; }
   QAbstractVNCView *view() const { return view_; }
+  QVNCWindow *window() const { return scroll_; }
 
 signals:
   void errorOcurred(int seq, QString message, bool quit = false);

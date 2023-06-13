@@ -24,7 +24,7 @@
 #include "vncconnection.h"
 #include "i18n.h"
 #include "parameters.h"
-#include "vnctoast.h"
+#include "vncwindow.h"
 #include "abstractvncview.h"
 #undef asprintf
 
@@ -228,7 +228,6 @@ public:
 
 QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
  : QWidget(parent, f)
- , toast_(new QVNCToast(this))
  , devicePixelRatio_(devicePixelRatioF())
  , menuKeySym_(XK_F8)
  , contextMenu_(nullptr)
@@ -296,7 +295,6 @@ QAbstractVNCView::~QAbstractVNCView()
   delete resizeTimer_;
   delete delayedInitializeTimer_;
   delete mouseButtonEmulationTimer_;
-  delete toast_;
 }
 
 void QAbstractVNCView::postRemoteResizeRequest()
@@ -316,6 +314,9 @@ void QAbstractVNCView::resize(int width, int height)
   if (cc->server()->supportsSetDesktopSize) {
     handleDesktopSize();
   }
+  ungrabPointer();
+  grabPointer();
+  maybeGrabKeyboard();
   //qDebug() << "QWidget::resize: width=" << width << ", height=" << height;
 }
 
@@ -438,7 +439,8 @@ void QAbstractVNCView::remoteResize(int w, int h)
 #else
   double f = devicePixelRatio_;
 #endif
-  if (!fullscreenEnabled_ || (w > width() * f) || (h > height() * f)) {
+  QVNCWindow *window = AppManager::instance()->window();
+  if (!fullscreenEnabled_ || (w > window->width() * f) || (h > window->height() * f)) {
     // In windowed mode (or the framebuffer is so large that we need
     // to scroll) we just report a single virtual screen that covers
     // the entire framebuffer.
@@ -475,8 +477,7 @@ void QAbstractVNCView::remoteResize(int w, int h)
 
     // In full screen we report all screens that are fully covered.
     rfb::Rect viewport_rect;
-    //viewport_rect.setXYWH(x() + (width() - w)/2, y() + (height() - h)/2, w, h);
-    viewport_rect.setXYWH(0, 0, w, h);
+    viewport_rect.setXYWH(fxmin_, fymin_, fw_, fh_);
 
     // If we can find a matching screen in the existing set, we use
     // that, otherwise we create a brand new screen.
@@ -592,7 +593,7 @@ void QAbstractVNCView::handleDesktopSize()
 #else
   double f = devicePixelRatio_;
 #endif
-  if (strcmp(ViewerConfig::config()->desktopSize().toStdString().c_str(), "") != 0) {
+  if (!ViewerConfig::config()->desktopSize().isEmpty()) {
     int w, h;
     // An explicit size has been requested
     if (sscanf(ViewerConfig::config()->desktopSize().toStdString().c_str(), "%dx%d", &w, &h) != 2) {
@@ -632,6 +633,7 @@ QList<int> QAbstractVNCView::fullscreenScreens()
 
 void QAbstractVNCView::fullscreen(bool enabled)
 {
+  QVNCWindow *window = AppManager::instance()->window();
   bool bypassWMHintingNeeded = bypassWMHintingEnabled();
   //qDebug() << "QAbstractVNCView::fullscreen: enabled=" << enabled;
   // TODO: Flag fullscreenEnabled_ seems have to be disabled before executing fullscreen().
@@ -644,7 +646,7 @@ void QAbstractVNCView::fullscreen(bool enabled)
   if (enabled) {
     // cf. DesktopWindow::fullscreen_on()
     if (!isFullscreenEnabled()) {
-      geometry_ = saveGeometry();
+      geometry_ = window->saveGeometry();
     }
 
     auto mode = ViewerConfig::config()->fullScreenMode();
@@ -675,51 +677,63 @@ void QAbstractVNCView::fullscreen(bool enabled)
       int w = xmax - xmin;
       int h = ymax - ymin;
       //qDebug() << "Fullsize Geometry=" << QRect(xmin, ymin, w, h);
+      // Capture the fullscreen geometry.
+      fxmin_ = xmin;
+      fymin_ = ymin;
+      fw_ = w;
+      fh_ = h;
 
       if (selectedScreens.length() == 1) {
         if (bypassWMHintingNeeded) {
-          setWindowFlag(Qt::BypassWindowManagerHint, true);
+          window->setWindowFlag(Qt::BypassWindowManagerHint, true);
         }
-        windowHandle()->setScreen(selectedPrimaryScreen);
-        moveView(xmin, ymin);
-        showFullScreen();
-        handleDesktopSize();
+        window->windowHandle()->setScreen(selectedPrimaryScreen);
+        window->move(xmin, ymin);
+        window->showFullScreen();
       }
       else {
         if (bypassWMHintingNeeded) {
-          setWindowFlag(Qt::BypassWindowManagerHint, true);
+          window->setWindowFlag(Qt::BypassWindowManagerHint, true);
         }
-        setWindowFlag(Qt::FramelessWindowHint, true);
-        setWindowState(Qt::WindowFullScreen);
-        moveView(xmin, ymin);
-        resize(w, h);
-        showNormal();
+        window->setWindowFlag(Qt::FramelessWindowHint, true);
+        window->setWindowState(Qt::WindowFullScreen);
+        QRect r = window->getExtendedFrameProperties();
+        window->move(xmin + r.x(), ymin);
+        window->resize(w, h);
+        window->showNormal();
       }
     }
     else {
       if (bypassWMHintingNeeded) {
-        setWindowFlag(Qt::BypassWindowManagerHint, true);
+        window->setWindowFlag(Qt::BypassWindowManagerHint, true);
       }
-      windowHandle()->setScreen(getCurrentScreen());
-      showFullScreen();
-      handleDesktopSize();
+      window->windowHandle()->setScreen(getCurrentScreen());
+      window->showFullScreen();
+      //qDebug() << "parent width=" << window->width() << ", height=" << window->height();
+      // Capture the fullscreen geometry.
+      QScreen *screen = getCurrentScreen();
+      double dpr = screen->devicePixelRatio();
+      QRect vg = screen->geometry();
+      fxmin_ = vg.x();
+      fymin_ = vg.y();
+      fw_ = vg.width() * dpr;
+      fh_ = vg.height() * dpr;
     }
   }
   else {
     if (bypassWMHintingNeeded) {
-      setWindowFlag(Qt::BypassWindowManagerHint, false);
+      window->setWindowFlag(Qt::BypassWindowManagerHint, false);
     }
-    setWindowFlag(Qt::FramelessWindowHint, false);
-    setWindowFlag(Qt::Window, true);
-    showNormal();
-    restoreGeometry(geometry_);
-    handleDesktopSize();
+    window->setWindowFlag(Qt::FramelessWindowHint, false);
+    window->setWindowFlag(Qt::Window);
+    window->showNormal();
+    window->restoreGeometry(geometry_);
   }
   fullscreenEnabled_ = enabled;
   pendingFullscreen_ = false;
   setFocus();
-  activateWindow();
-  raise();
+  window->activateWindow();
+  window->raise();
 
   if (!enabled) {
     ViewerConfig::config()->setFullScreen(false);
@@ -763,20 +777,4 @@ void QAbstractVNCView::handleMouseButtonEmulationTimeout()
     return;
   }
   mbemu_->handleTimeout();
-}
-
-void QAbstractVNCView::popupToast()
-{
-  QPoint point = mapToGlobal(QPoint(0, 0));
-  toast_->move(point.x() + (width() - toast_->width()) / 2, point.y() + 50);
-  toast_->show();
-}
-
-void QAbstractVNCView::moveEvent(QMoveEvent *e)
-{
-  QWidget::moveEvent(e);
-  if (toast_->isVisible()) {
-    QPoint point = mapToGlobal(QPoint(0, 0));
-    toast_->move(point.x() + (width() - toast_->width()) / 2, point.y() + 50);
-  }
 }

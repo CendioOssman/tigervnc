@@ -37,7 +37,6 @@ protected:
   static LRESULT CALLBACK eventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
   static void getMouseProperties(WPARAM wParam, LPARAM lParam, int &x, int &y, int &buttonMask, int &wheelMask);
   bool event(QEvent *e) override;
-  bool nativeEvent(const QByteArray &eventType, void *message, long *result) override;
   HWND createWindow(HWND parent, HINSTANCE instance);
   void showEvent(QShowEvent *) override;
   void focusInEvent(QFocusEvent*) override;

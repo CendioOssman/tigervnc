@@ -58,7 +58,6 @@ public slots:
   virtual void handleDesktopSize();
   virtual void fullscreen(bool enabled);
   virtual void moveView(int x, int y);
-  virtual void popupToast();
 
 signals:
   void fullscreenChanged(bool enabled);
@@ -66,7 +65,6 @@ signals:
 
 protected:
   static QClipboard *clipboard_;
-  QVNCToast *toast_;
   QByteArray geometry_;
   double devicePixelRatio_;
 
@@ -92,13 +90,16 @@ protected:
   DownMap downKeySym_;
   QTimer *mouseButtonEmulationTimer_;
   EmulateMB *mbemu_;
+  int fw_;
+  int fh_;
+  int fxmin_;
+  int fymin_;
 
   void createContextMenu();
   void postRemoteResizeRequest();
   QList<int> fullscreenScreens();
   void filterPointerEvent(const rfb::Point &pos, int buttonMask);
   void handleMouseButtonEmulationTimeout();
-  void moveEvent(QMoveEvent *e) override;
   void sendPointerEvent(const rfb::Point& pos, int buttonMask);
   virtual bool bypassWMHintingEnabled() const { return false; }
 };
