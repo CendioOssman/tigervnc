@@ -110,13 +110,13 @@ QString CConn::connectionInfo()
   QString infoText;
   char pfStr[100];
 
-  infoText += QString::asprintf(_("Desktop name: %.80s"), server()->name()) + "\n";
+  infoText += QString::asprintf(_("Desktop name: %.80s"), server.name()) + "\n";
   infoText += QString::asprintf(_("Host: %.80s port: %d"), serverHost.toStdString().c_str(), serverPort) + "\n";
-  infoText += QString::asprintf(_("Size: %d x %d"), server()->width(), server()->height()) + "\n";
+  infoText += QString::asprintf(_("Size: %d x %d"), server.width(), server.height()) + "\n";
 
   // TRANSLATORS: Will be filled in with a string describing the
   // protocol pixel format in a fairly language neutral way
-  server()->pf().print(pfStr, 100);
+  server.pf().print(pfStr, 100);
   infoText += QString::asprintf(_("Pixel format: %s"), pfStr) + "\n";
 
   // TRANSLATORS: Similar to the earlier "Pixel format" string
@@ -125,7 +125,7 @@ QString CConn::connectionInfo()
   infoText += QString::asprintf(_("Requested encoding: %s"), encodingName(getPreferredEncoding())) + "\n";
   infoText += QString::asprintf(_("Last used encoding: %s"), encodingName(lastServerEncoding)) + "\n";
   infoText += QString::asprintf(_("Line speed estimate: %d kbit/s"), (int)(bpsEstimate/1000)) + "\n";
-  infoText += QString::asprintf(_("Protocol version: %d.%d"), server()->majorVersion, server()->minorVersion) + "\n";
+  infoText += QString::asprintf(_("Protocol version: %d.%d"), server.majorVersion, server.minorVersion) + "\n";
   infoText += QString::asprintf(_("Security method: %s"), secTypeName(securityType())) + "\n";
 
   return infoText;
@@ -183,13 +183,13 @@ void CConn::initDone()
 {
   // If using AutoSelect with old servers, start in FullColor
   // mode. See comment in autoSelectFormatAndEncoding.
-  if (server()->beforeVersion(3, 8) && ViewerConfig::config()->autoSelect())
+  if (server.beforeVersion(3, 8) && ViewerConfig::config()->autoSelect())
     ViewerConfig::config()->setFullColour(true);
 
-  *serverPF = server()->pf();
+  *serverPF = server.pf();
 
-  setFramebuffer(new PlatformPixelBuffer(server()->width(), server()->height()));
-  emit facade->newVncWindowRequested(server()->width(), server()->height(), server()->name() /*, serverPF_, this */);
+  setFramebuffer(new PlatformPixelBuffer(server.width(), server.height()));
+  emit facade->newVncWindowRequested(server.width(), server.height(), server.name() /*, serverPF_, this */);
   *fullColourPF = getFramebuffer()->getPF();
 
   // Force a switch to the format and encoding we'd like
@@ -382,11 +382,11 @@ void CConn::handleClipboardData(const char* data)
 
 void CConn::resizeFramebuffer()
 {
-  //qDebug() << "QVNCConnection::resizeFramebuffer(): width=" << server()->width() << ",height=" << server()->height();
-  PlatformPixelBuffer *framebuffer = new PlatformPixelBuffer(server()->width(), server()->height());
+  //qDebug() << "QVNCConnection::resizeFramebuffer(): width=" << server.width() << ",height=" << server.height();
+  PlatformPixelBuffer *framebuffer = new PlatformPixelBuffer(server.width(), server.height());
   setFramebuffer(framebuffer);
 
-  emit facade->framebufferResized(server()->width(), server()->height());
+  emit facade->framebufferResized(server.width(), server.height());
 }
 
 // autoSelectFormatAndEncoding() chooses the format and encoding appropriate
@@ -427,7 +427,7 @@ void CConn::autoSelectFormatAndEncoding()
     }
   }
 
-  if (server()->beforeVersion(3, 8)) {
+  if (server.beforeVersion(3, 8)) {
     // Xvnc from TightVNC 1.2.9 sends out FramebufferUpdates with
     // cursors "asynchronously". If this happens in the middle of a
     // pixel format change, the server will encode the cursor with

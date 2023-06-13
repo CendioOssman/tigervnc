@@ -128,13 +128,13 @@ void QVNCConnection::connectToServer(const QString addressport)
 #endif
     }
     else {
-      std::string shost;
+      char *shost;
       int port;
       rfb::getHostAndPort(addressport.toStdString().c_str(), &shost, &port);
-      setHost(shost.c_str());
+      setHost(shost);
       setPort(port);
       delete socket_;
-      socket_ = new network::TcpSocket(shost.c_str(), port);
+      socket_ = new network::TcpSocket(shost, port);
       bind(socket_->getFd());
     }
   }

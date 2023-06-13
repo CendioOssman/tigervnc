@@ -38,7 +38,7 @@ class QVNCConnection : public QObject
 public:
   QVNCConnection();
   virtual ~QVNCConnection();
-  rfb::ServerParams *server() { return rfbcon_->server(); }
+  rfb::ServerParams *server() { return &rfbcon_->server; }
   void setState(int state);
   rdr::InStream *istream() { return rfbcon_->getInStream(); }
   rdr::OutStream *ostream() { return rfbcon_->getOutStream(); }

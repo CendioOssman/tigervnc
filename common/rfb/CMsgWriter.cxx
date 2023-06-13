@@ -41,7 +41,7 @@
 using namespace rfb;
 
 CMsgWriter::CMsgWriter(ServerParams* server_, rdr::OutStream* os_)
- : server(server_), os(os_)
+  : server(server_), os(os_)
 {
 }
 

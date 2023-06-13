@@ -23,7 +23,6 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string>
 #include <rdr/Exception.h>
 #include <rfb/util.h>
 
@@ -40,9 +39,7 @@ namespace rfb {
     return true;
   }
 
-  static void getHostAndPort(const char* hi, std::string* host,
-                             int* port, int basePort=5900)
-  {
+  static void getHostAndPort(const char* hi, char** host, int* port, int basePort=5900) {
     const char* hostStart;
     const char* hostEnd;
     const char* portStart;
@@ -90,9 +87,14 @@ namespace rfb {
       hostEnd--;
 
     if (hostStart == hostEnd)
-      *host = "localhost";
-    else
-      *host = std::string(hostStart, hostEnd - hostStart);
+      *host = strDup("localhost");
+    else {
+      size_t len;
+      len = hostEnd - hostStart + 1;
+      *host = new char[len];
+      strncpy(*host, hostStart, len-1);
+      (*host)[len-1] = '\0';
+    }
 
     if (portStart == nullptr)
       *port = basePort;

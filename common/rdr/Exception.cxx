@@ -40,7 +40,6 @@
 #ifdef HAVE_GNUTLS
 #include <gnutls/gnutls.h>
 #endif
-//#include <QString>
 
 using namespace rdr;
 
