@@ -81,7 +81,6 @@ void QVNCWindow::resizeEvent(QResizeEvent *e)
     QSize size = e->size();
     widget()->resize(size.width(), size.height());
   }
-  QScrollArea::resizeEvent(e);
 }
 
 void QVNCWindow::changeEvent(QEvent *e)
