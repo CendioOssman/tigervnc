@@ -40,13 +40,15 @@ QVNCConnection::QVNCConnection()
  : QObject(nullptr)
  , rfbcon_(nullptr)
  , socket_(nullptr)
- , socketNotifier_(nullptr)
+ , socketReadNotifier_(nullptr)
+ , socketWriteNotifier_(nullptr)
  , socketErrorNotifier_(nullptr)
  , updateTimer_(nullptr)
  , tunnelFactory_(nullptr)
  , closing_(false)
 {
-  connect(this, &QVNCConnection::socketNotified, this, &QVNCConnection::startProcessing);
+  connect(this, &QVNCConnection::socketReadNotified, this, &QVNCConnection::startProcessing);
+  connect(this, &QVNCConnection::socketWriteNotified, this, &QVNCConnection::flushSocket);
 
   connect(this, &QVNCConnection::writePointerEvent, this, [this](const rfb::Point &pos, int buttonMask) {
     try {
@@ -129,11 +131,19 @@ void QVNCConnection::bind(int fd)
 {
   rfbcon_->setStreams(&socket_->inStream(), &socket_->outStream());
 
-  delete socketNotifier_;
-  socketNotifier_ = new QSocketNotifier(fd, QSocketNotifier::Read);
-  QObject::connect(socketNotifier_, &QSocketNotifier::activated, this, [this](int fd) {
+  delete socketReadNotifier_;
+  socketReadNotifier_ = new QSocketNotifier(fd, QSocketNotifier::Read);
+  QObject::connect(socketReadNotifier_, &QSocketNotifier::activated, this, [this](int fd) {
     Q_UNUSED(fd)
-    emit socketNotified();
+    emit socketReadNotified();
+  });
+
+  delete socketWriteNotifier_;
+  socketWriteNotifier_ = new QSocketNotifier(fd, QSocketNotifier::Write);
+  socketWriteNotifier_->setEnabled(false);
+  QObject::connect(socketWriteNotifier_, &QSocketNotifier::activated, this, [this](int fd) {
+    Q_UNUSED(fd)
+    emit socketWriteNotified();
   });
 
   delete socketErrorNotifier_;
@@ -248,8 +258,10 @@ void QVNCConnection::listen()
 void QVNCConnection::resetConnection()
 {
   AppManager::instance()->closeVNCWindow();
-  delete socketNotifier_;
-  socketNotifier_ = nullptr;
+  delete socketReadNotifier_;
+  socketReadNotifier_ = nullptr;
+  delete socketWriteNotifier_;
+  socketWriteNotifier_ = nullptr;
   delete socketErrorNotifier_;
   socketErrorNotifier_ = nullptr;
   if (socket_) {
@@ -344,4 +356,18 @@ void QVNCConnection::startProcessing()
     resetConnection();
     AppManager::instance()->publishError(strerror(e));
   }
+
+  if (socket_)
+    socketWriteNotifier_->setEnabled(socket_->outStream().hasBufferedData());
+}
+
+void QVNCConnection::flushSocket()
+{
+  if (!socket_) {
+    return;
+  }
+
+  socket_->outStream().flush();
+
+  socketWriteNotifier_->setEnabled(socket_->outStream().hasBufferedData());
 }

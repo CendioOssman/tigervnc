@@ -52,7 +52,8 @@ public:
   void setPreferredEncoding(int encoding) { rfbcon_->setPreferredEncoding(encoding); }
 
 signals:
-  void socketNotified();
+  void socketReadNotified();
+  void socketWriteNotified();
   void newVncWindowRequested(int width, int height, QString name);
   void cursorChanged(const QCursor &cursor);
   void cursorPositionChanged(int x, int y);
@@ -73,6 +74,7 @@ public slots:
   void connectToServer(QString addressport = "");
   void resetConnection();
   void startProcessing();
+  void flushSocket();
   void refreshFramebuffer();
   QString infoText() { return rfbcon_ ? rfbcon_->connectionInfo() : ""; }
   QString host() { return rfbcon_ ? rfbcon_->host() : ""; }
@@ -80,7 +82,8 @@ public slots:
 private:
   CConn *rfbcon_;
   network::Socket *socket_;
-  QSocketNotifier *socketNotifier_;
+  QSocketNotifier *socketReadNotifier_;
+  QSocketNotifier *socketWriteNotifier_;
   QSocketNotifier *socketErrorNotifier_;
   QTimer *updateTimer_;
   TunnelFactory *tunnelFactory_;
