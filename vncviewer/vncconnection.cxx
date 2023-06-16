@@ -331,22 +331,14 @@ void QVNCConnection::startProcessing()
     return;
   }
   try {
-    size_t navailables0;
-    size_t navailables = socket_->inStream().avail();
-    do {
-      navailables0 = navailables;
+    rfbcon_->getOutStream()->cork(true);
 
-      socket_->outStream().flush();
-      rfbcon_->getOutStream()->cork(true);
+    while (rfbcon_->processMsg()) {
+      if (!socket_)
+        break;
+    }
 
-      rfbcon_->processMsg();
-
-      rfbcon_->getOutStream()->cork(false);
-
-      //qDebug() << "pre-avail()  navailables=" << navailables;
-      navailables = socket_->inStream().avail();
-      //qDebug() << "post-avail() navailables=" << navailables;
-    } while (navailables > 0 && navailables != navailables0 && socket_);
+    rfbcon_->getOutStream()->cork(false);
   }
   catch (rdr::Exception &e) {
     resetConnection();
