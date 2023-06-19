@@ -14,6 +14,8 @@ public:
   QVNCWindow(QWidget *parent = nullptr);
   virtual ~QVNCWindow();
   QRect getExtendedFrameProperties();
+  void resize(int width, int height);
+  void normalizedResize(int width, int height);
 
 public slots:
   void popupToast();

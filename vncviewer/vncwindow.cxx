@@ -100,3 +100,26 @@ QRect QVNCWindow::getExtendedFrameProperties()
   // https://stackoverflow.com/questions/42473554/windows-10-screen-coordinates-are-offset-by-7
   return QRect(7, 7, 7, 7);
 }
+
+void QVNCWindow::resize(int width, int height)
+{
+  QScrollArea::resize(width, height);
+  if (widgetResizable()) {
+#if !defined(__APPLE__)
+    double dpr = devicePixelRatioF();
+    width *= dpr;
+    height *= dpr;
+#endif
+    widget()->resize(width, height);
+  }
+}
+
+void QVNCWindow::normalizedResize(int width, int height)
+{
+#if !defined(__APPLE__)
+  double dpr = devicePixelRatioF();
+  width /= dpr;
+  height /= dpr;
+#endif
+  QScrollArea::resize(width, height);
+}

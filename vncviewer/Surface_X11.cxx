@@ -50,7 +50,7 @@ static Display *xdisplay()
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   Display *display = QX11Info::display();
 #else
-  Display *display = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display();
+  Display *display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
 #endif
   return display;
 }

@@ -10,7 +10,7 @@
         <file>qml/ServerDialog.qml</file>
         <file>qml/InfoDialog.qml</file>
         <file>qml/MessageDialog.qml</file>
-        <file>../media/insecure.svg</file>
-        <file>../media/secure.svg</file>
+        <file alias="insecure.svg">../media/insecure.svg</file>
+        <file alias="secure.svg">../media/secure.svg</file>
     </qresource>
 </RCC>

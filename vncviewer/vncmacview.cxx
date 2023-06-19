@@ -64,7 +64,11 @@ QVNCMacView::MacEventFilter::~MacEventFilter()
 * 
 * @return 
 */
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 bool QVNCMacView::MacEventFilter::nativeEventFilter(const QByteArray &eventType, void *message, long *result)
+#else
+bool QVNCMacView::MacEventFilter::nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result)
+#endif
 {
   if (eventType == "mac_generic_NSEvent") {
     if (QApplication::activePopupWidget()) { // F8 popup menu
@@ -117,7 +121,9 @@ QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
  , cursor_(nullptr)
  , filter_(nullptr)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   setAttribute(Qt::WA_NoBackground);
+#endif
   setAttribute(Qt::WA_NoSystemBackground);
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
@@ -283,7 +289,11 @@ void QVNCMacView::handleMouseButtonEvent(QMouseEvent *e)
   if (buttons & Qt::LeftButton) {
     buttonMask |= 1;
   }
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   if (buttons & Qt::MidButton) {
+#else
+  if (buttons & Qt::MiddleButton) {
+#endif
     buttonMask |= 2;
   }
   if (buttons & Qt::RightButton) {
@@ -302,7 +312,11 @@ void QVNCMacView::handleMouseWheelEvent(QWheelEvent *e)
   if (buttons & Qt::LeftButton) {
     buttonMask |= 1;
   }
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   if (buttons & Qt::MidButton) {
+#else
+  if (buttons & Qt::MiddleButton) {
+#endif
     buttonMask |= 2;
   }
   if (buttons & Qt::RightButton) {

@@ -118,7 +118,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   connect(view_, &QAbstractVNCView::delayedInitialized, scroll_, &QVNCWindow::popupToast);
   view_->resize(width, height);
   scroll_->setWidget(view_);
-  scroll_->resize(width, height);
+  scroll_->normalizedResize(width, height);
   scroll_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
   scroll_->show();
 

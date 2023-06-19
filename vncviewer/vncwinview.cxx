@@ -46,7 +46,9 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
  , mouseTracking_(false)
  , defaultCursor_(LoadCursor(NULL, IDC_ARROW))
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   setAttribute(Qt::WA_NoBackground);
+#endif
   setAttribute(Qt::WA_NoSystemBackground);
   setAttribute(Qt::WA_InputMethodTransparent);
   setAttribute(Qt::WA_NativeWindow);
@@ -92,7 +94,7 @@ HWND QVNCWinView::createWindow(HWND parent, HINSTANCE instance)
 {
   static ATOM windowClass = 0;
   if (!windowClass) {
-    WNDCLASSEX wcex;
+    WNDCLASSEXA wcex;
     wcex.cbSize		= sizeof(WNDCLASSEX);
     wcex.style		= CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc	= (WNDPROC)eventHandler;
@@ -106,10 +108,10 @@ HWND QVNCWinView::createWindow(HWND parent, HINSTANCE instance)
     wcex.lpszClassName	= "VNC Window";
     wcex.hIconSm	= NULL;
 
-    windowClass = RegisterClassEx(&wcex);
+    windowClass = RegisterClassExA(&wcex);
   }
 
-  HWND hwnd = CreateWindow("VNC Window", 0, WS_CHILD|WS_CLIPSIBLINGS|WS_TABSTOP, CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, parent, NULL, instance, NULL);
+  HWND hwnd = CreateWindowA("VNC Window", 0, WS_CHILD|WS_CLIPSIBLINGS|WS_TABSTOP, CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, parent, NULL, instance, NULL);
   return hwnd;
 }
 

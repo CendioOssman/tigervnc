@@ -49,7 +49,11 @@ private:
   public:
       MacEventFilter(QVNCMacView *view);
       virtual ~MacEventFilter();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
       bool nativeEventFilter(const QByteArray &eventType, void *message, long *result) override;
+#else
+      bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override;
+#endif
 
   private:
       QVNCMacView *view_;

@@ -1551,7 +1551,7 @@ ViewerConfig::FullScreenMode ViewerConfig::fullScreenMode() const
 void ViewerConfig::setFullScreenMode(ViewerConfig::FullScreenMode mode)
 {
   QString value = mode == FSCurrent ? "Current" : mode == FSAll ? "All" : "Selected";
-  if (fullScreenMode() != value) {
+  if (::fullScreenMode != value) {
     ::fullScreenMode.setParam(value.toStdString().c_str());
     emit fullScreenModeChanged(mode);
   }
@@ -1852,13 +1852,13 @@ void ViewerConfig::parseServerName()
   if (ix >= 0) {
     int ix2 = serverName_.indexOf("::");
     if (ix2 < 0) {
-      int port = SERVER_PORT_OFFSET + serverName_.midRef(ix + 1).toInt(&ok, 10);
+      int port = SERVER_PORT_OFFSET + serverName_.mid(ix + 1).toInt(&ok, 10);
       if (ok) {
         serverPort_ = port;
       }
     }
     else {
-      int port = serverName_.midRef(ix + 2).toInt(&ok, 10);
+      int port = serverName_.mid(ix + 2).toInt(&ok, 10);
       if (ok) {
         serverPort_ = port;
       }

@@ -22,6 +22,7 @@
 #include "appmanager.h"
 #include "menukey.h"
 #include "vncconnection.h"
+#include "locale.h"
 #include "i18n.h"
 #include "parameters.h"
 #include "vncwindow.h"

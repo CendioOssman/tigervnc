@@ -10,6 +10,7 @@
 #include <QX11Info>
 #else
 #include <QGuiApplication>
+#include <xcb/xcb.h>
 #endif
 
 #include "rfb/Exception.h"
@@ -51,7 +52,9 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   , pixmap_(0)
   , picture_(0)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   setAttribute(Qt::WA_NoBackground);
+#endif
   setAttribute(Qt::WA_NoSystemBackground);
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
@@ -61,7 +64,7 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   display_ = QX11Info::display();
 #else
-  display_ = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>()->display_;
+  display_ = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
 #endif
   screen_ = DefaultScreen(display_);
   XVisualInfo vtemplate;
@@ -303,7 +306,11 @@ void QVNCX11View::resizeEvent(QResizeEvent *e)
 /*!
     \reimp
 */
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, long *result)
+#else
+bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, qintptr *result)
+#endif
 {
   if (eventType == "xcb_generic_event_t") {
     xcb_generic_event_t* ev = static_cast<xcb_generic_event_t *>(message);
@@ -446,7 +453,11 @@ void QVNCX11View::handleMouseButtonEvent(QMouseEvent *e)
     if (buttons & Qt::LeftButton) {
       buttonMask |= 1;
     }
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (buttons & Qt::MidButton) {
+#else
+    if (buttons & Qt::MiddleButton) {
+#endif
       buttonMask |= 2;
     }
     if (buttons & Qt::RightButton) {
@@ -464,7 +475,11 @@ void QVNCX11View::handleMouseWheelEvent(QWheelEvent *e)
     if (buttons & Qt::LeftButton) {
       buttonMask |= 1;
     }
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (buttons & Qt::MidButton) {
+#else
+    if (buttons & Qt::MiddleButton) {
+#endif
       buttonMask |= 2;
     }
     if (buttons & Qt::RightButton) {

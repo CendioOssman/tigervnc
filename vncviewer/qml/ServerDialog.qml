@@ -7,12 +7,9 @@ import Qt.TigerVNC 1.0
 
 Window {
     id: serverDialog
-    width: container.childrenRect.width
-    height: container.childrenRect.height
-    maximumWidth: width
-    maximumHeight: height
-    minimumWidth: width
-    minimumHeight: height
+    width: container.implicitWidth
+    height: container.implicitHeight
+    flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowMinimizeButtonHint | Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint
     visible: !Config.listenModeEnabled
     title: qsTr("VNC Viewer: Connection Details")
 
@@ -115,9 +112,14 @@ Window {
                 editable: true
                 model: servers
                 focus: true
-                selectTextByMouse: true
+                //selectTextByMouse: true // CAVEAT: This line must be commented out when compiling with Qt5.12.
                 onAccepted: validateServerText(editText)
-                Component.onCompleted: createServerList()
+                Component.onCompleted: {
+                    createServerList()
+                    if (Config.qtVersionMajor === 5 && Config.qtVersionMinor >= 15) {
+                        addressInput.selectTextByMouse = true
+                    }
+                }
                 Keys.onEnabledChanged: accept()
                 Keys.onReturnPressed: accept()
                 Keys.onEscapePressed: Qt.quit()

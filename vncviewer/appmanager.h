@@ -2,8 +2,8 @@
 #define APPMANAGER_H
 
 #include <QObject>
+#include "vncconnection.h"
 
-class QVNCConnection;
 class QAbstractVNCView;
 class QVNCWindow;
 

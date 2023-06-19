@@ -79,6 +79,9 @@ class ViewerConfig : public QObject
   Q_PROPERTY(int serverPort READ serverPort CONSTANT);
   Q_PROPERTY(QString gatewayHost READ gatewayHost CONSTANT)
   Q_PROPERTY(int gatewayLocalPort READ gatewayLocalPort CONSTANT)
+  //
+  Q_PROPERTY(int qtVersionMajor READ qtVersionMajor CONSTANT)
+  Q_PROPERTY(int qtVersionMinor READ qtVersionMinor CONSTANT)
 
 public:
   const char* SERVER_HISTORY="tigervnc.history";
@@ -178,6 +181,9 @@ public:
   QString gatewayHost() const;
   int gatewayLocalPort() const { return gatewayLocalPort_; }
   void setAccessPoint(QString accessPoint);
+  //
+  int qtVersionMajor() const { return QT_VERSION_MAJOR; }
+  int qtVersionMinor() const { return QT_VERSION_MINOR; }
 
 signals:
   //

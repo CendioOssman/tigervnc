@@ -6,8 +6,27 @@ include_directories(${GETTEXT_INCLUDE_DIR})
 
 include_directories(${CMAKE_SOURCE_DIR}/common)
 
+#list(APPEND CMAKE_PREFIX_PATH "/opt/Qt/Static/6.2.4/gcc_64s")
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Quick Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Quick Widgets REQUIRED)
+if(QT_VERSION_MAJOR LESS_EQUAL 5 AND BUILD_STATIC)
+  find_package(QT NAMES Qt6 Qt5 COMPONENTS
+               Gui
+               Qml
+               QmlWorkerScript
+               QuickControls2
+               Svg
+               ThemeSupport
+               REQUIRED)
+  find_package(Qt5 COMPONENTS
+               Gui
+               Qml
+               QmlWorkerScript
+               QuickControls2
+               Svg
+               ThemeSupport
+               REQUIRED)
+endif()
 
 if (WIN32)
   set(OS_DEP_SOURCES
@@ -76,6 +95,10 @@ set(PROJECT_SOURCES
         ${OS_DEP_SOURCES}
 )
 
+if(BUILD_STATIC)
+  add_definitions(-DQT_STATIC_BUILD=1)
+endif()
+
 if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND ((QT_VERSION_MAJOR GREATER_EQUAL 6) OR ((QT_VERSION_MAJOR GREATER_EQUAL 5) AND (QT_VERSION_MAJOR GREATER_EQUAL 15))))
   set_target_properties(vncviewer PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
@@ -87,6 +110,9 @@ endif()
 
 if(WIN32)
   set(OS_DEPENDENT_LIBRARIES msimg32)
+  if(BUILD_STATIC)
+    set(OS_DEPENDENT_LIBRARIES ${OS_DEPENDENT_LIBRARIES} -static libzstd.a libstdc++.a -dynamic)
+  endif()
 elseif(APPLE)
   set(OS_DEPENDENT_LIBRARIES "-framework Cocoa -framework Carbon -framework IOKit -framework QuartzCore")
 else()
@@ -98,13 +124,14 @@ else()
 endif()
 
 if(QT_VERSION_MAJOR GREATER_EQUAL 6)
-    set(app_icon_resource_windows "${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc")
+    if (WIN32)
+      set(app_icon_resource_windows "${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc")
+    endif()
     qt_add_executable(vncviewer
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         ${app_icon_resource_windows}
     )
-    qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 else()
     if(ANDROID)
         add_library(vncviewer SHARED
@@ -152,10 +179,36 @@ target_compile_definitions(vncviewer
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 if(QT_VERSION_MAJOR GREATER_EQUAL 6)
     target_link_libraries(vncviewer
-      PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::QuickWidgets Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
+      PRIVATE
+      Qt${QT_VERSION_MAJOR}::Core
+      Qt${QT_VERSION_MAJOR}::Quick
+      Qt${QT_VERSION_MAJOR}::Widgets
+      rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES})
 else()
-    target_link_libraries(vncviewer
-      PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick Qt${QT_VERSION_MAJOR}::Widgets rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES}) # ${Intl_LIBRARIES}
+    if(BUILD_STATIC)
+        find_package(Qt5QmlImportScanner REQUIRED)
+        qt5_import_qml_plugins(vncviewer)
+        qt5_import_plugins(vncviewer INCLUDE Qt${QT_VERSION_MAJOR}::QSvgPlugin)
+        target_link_libraries(vncviewer
+            PRIVATE
+            Qt${QT_VERSION_MAJOR}::Core
+            Qt${QT_VERSION_MAJOR}::Gui
+            Qt${QT_VERSION_MAJOR}::Qml
+            Qt${QT_VERSION_MAJOR}::QmlWorkerScript
+            Qt${QT_VERSION_MAJOR}::Quick
+            Qt${QT_VERSION_MAJOR}::QuickControls2
+            Qt${QT_VERSION_MAJOR}::Svg
+            Qt${QT_VERSION_MAJOR}::ThemeSupport
+            Qt${QT_VERSION_MAJOR}::Widgets
+            rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES})
+    else()
+        target_link_libraries(vncviewer
+            PRIVATE
+            Qt${QT_VERSION_MAJOR}::Core
+            Qt${QT_VERSION_MAJOR}::Quick
+            Qt${QT_VERSION_MAJOR}::Widgets
+            rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES})
+    endif()
 endif()
 
 if(QT_VERSION_MAJOR EQUAL 6)
@@ -244,7 +297,6 @@ if(WIN32)
     set(DEPLOY_DIR ${CMAKE_CURRENT_BINARY_DIR}/deploy CACHE PATH "Package directory")
     get_target_property(LOCAL_QMAKE_PATH Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
     get_filename_component(LOCAL_QTBIN_PATH ${LOCAL_QMAKE_PATH} DIRECTORY)
-    find_program(DEPLOYQT NAMES windeployqt HINTS "${LOCAL_QTBIN_PATH}")
     add_custom_command(
         TARGET vncviewer
         POST_BUILD
@@ -253,10 +305,14 @@ if(WIN32)
         TARGET vncviewer
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<SHELL_PATH:$<TARGET_FILE:vncviewer>> "$<SHELL_PATH:${DEPLOY_DIR}>")
-    add_custom_command(
-        TARGET vncviewer
-        POST_BUILD
-        COMMAND ${DEPLOYQT} --dir ${DEPLOY_DIR} --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE:vncviewer>)
+    if(NOT BUILD_STATIC)
+    #if(NOT BUILD_STATIC AND (QT_VERSION_MAJOR EQUAL 6 OR (QT_VERSION_MAJOR EQUAL 5 AND QT_VERSION_MINOR GREATER_EQUAL 15)))
+        find_program(DEPLOYQT NAMES windeployqt HINTS "${LOCAL_QTBIN_PATH}")
+        add_custom_command(
+            TARGET vncviewer
+            POST_BUILD
+            COMMAND ${DEPLOYQT} --dir ${DEPLOY_DIR} --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE:vncviewer>)
+    endif()
 
     file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/../po/LINGUAS po_FILES)
     foreach(lang ${po_FILES})
@@ -271,7 +327,7 @@ if(WIN32)
           COMMAND ${CMAKE_COMMAND} -E copy $<SHELL_PATH:${mo}> $<SHELL_PATH:${DEPLOY_DIR}/locale/${lang}/LC_MESSAGES/tigervnc.mo>)
     endforeach(lang)
 endif()
-if(APPLE AND CMAKE_BUILD_TYPE MATCHES Release)
+if(APPLE AND CMAKE_BUILD_TYPE MATCHES Release AND NOT BUILD_STATIC)
     set(DEPLOY_DIR $<TARGET_FILE_DIR:vncviewer>/../../../vncviewer.app CACHE PATH "Package directory")
     set(LOCALE_DIR $<TARGET_FILE_DIR:vncviewer>/../Resources/locale CACHE PATH "Locale directory")
     get_target_property(LOCAL_QMAKE_PATH Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)

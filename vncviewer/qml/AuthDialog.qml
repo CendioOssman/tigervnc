@@ -71,7 +71,7 @@ Window {
                     Layout.preferredWidth: statusMessage.implicitHeight
                     Layout.preferredHeight: statusMessage.implicitHeight
                     fillMode: Image.PreserveAspectFit
-                    source: "qrc:/../media/insecure.svg"
+                    source: "qrc:/insecure.svg"
                 }
                 Text {
                     id: statusMessage
@@ -87,7 +87,7 @@ Window {
                     }
                     PropertyChanges {
                         target: statusIcon
-                        source: "qrc:/../media/secure.svg"
+                        source: "qrc:/secure.svg"
                     }
                     PropertyChanges {
                         target: statusMessage
