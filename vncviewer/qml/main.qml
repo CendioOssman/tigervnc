@@ -39,12 +39,21 @@ Item {
             messageDialog.open()
         }
 
+        function onCredentialRequested(secured, userNeeded, passwordNeeded) {
+            authDialog.secured = secured
+            authDialog.userNeeded = userNeeded
+            authDialog.passwordNeeded = passwordNeeded
+            authDialog.open()
+        }
+
         onErrorOcurred: onErrorOcurred(seq, message, quit)
         onVncWindowOpened: onVncWindowOpened()
         onInfoDialogRequested: onInfoDialogRequested()
         onOptionDialogRequested: onOptionDialogRequested()
         onAboutDialogRequested: onAboutDialogRequested()
         onMessageDialogRequested: onMessageDialogRequested(flags, title, text)
+        onServerHistoryChanged: onServerHistoryChanged()
+        onCredentialRequested: onCredentialRequested(secured, userNeeded, passwordNeeded)
     }
 
     ServerDialog {
@@ -85,6 +94,15 @@ Item {
         active: false
         MessageDialog {
             id: messageDialog
+        }
+    }
+
+    Loader {
+        active: false
+        AuthDialog {
+            id: authDialog
+            onCommit: AppManager.authenticate(user, password)
+            onAbort: AppManager.cancelAuth()
         }
     }
 }

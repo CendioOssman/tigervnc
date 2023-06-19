@@ -37,7 +37,7 @@ static rfb::LogWriter vlog("CConnection");
 
 QVNCConnection::QVNCConnection()
  : QObject(nullptr)
- , rfbcon_(new CConn(this))
+ , rfbcon_(nullptr)
  , socket_(nullptr)
  , socketNotifier_(nullptr)
  , socketErrorNotifier_(nullptr)
@@ -114,9 +114,18 @@ void QVNCConnection::bind(int fd)
   });
 }
 
-void QVNCConnection::connectToServer(const QString addressport)
+void QVNCConnection::connectToServer(QString addressport)
 {
   try {
+    if (addressport.isEmpty()) {
+      resetConnection();
+      addressport = addressport_;
+    }
+    else {
+      addressport_ = addressport;
+    }
+    delete rfbcon_;
+    rfbcon_ = new CConn(this);
     ViewerConfig::config()->saveViewerParameters("", addressport);
     if (addressport.contains("/")) {
 #ifndef Q_OS_WIN
@@ -135,16 +144,20 @@ void QVNCConnection::connectToServer(const QString addressport)
       setPort(port);
       delete socket_;
       socket_ = new network::TcpSocket(shost, port);
+      rdr::FdInStream &in = socket_->inStream();
+      while (in.avail() > 0) {
+        in.readU8();
+      }
       bind(socket_->getFd());
     }
   }
   catch (rdr::Exception &e) {
     resetConnection();
-    AppManager::instance()->publishError(e.str());
+    AppManager::instance()->publishError(e.str(), true);
   }
   catch (int &e) {
     resetConnection();
-    AppManager::instance()->publishError(strerror(e));
+    AppManager::instance()->publishError(strerror(e), true);
   }
 }
 
@@ -205,17 +218,26 @@ void QVNCConnection::listen()
 
 void QVNCConnection::resetConnection()
 {
+  AppManager::instance()->closeVNCWindow();
   delete socketNotifier_;
   socketNotifier_ = nullptr;
   delete socketErrorNotifier_;
   socketErrorNotifier_ = nullptr;
   if (socket_) {
     socket_->shutdown();
+    rdr::FdInStream &in = socket_->inStream();
+    while (in.avail() > 0) {
+      in.readU8();
+    }
   }
   delete socket_;
   socket_ = nullptr;
 
-  rfbcon_->resetConnection();
+  if (rfbcon_) {
+    rfbcon_->resetConnection();
+  }
+  delete rfbcon_;
+  rfbcon_ = nullptr;
 }
 
 void QVNCConnection::announceClipboard(bool available)
@@ -272,6 +294,9 @@ void QVNCConnection::startProcessing()
     return;
   }
   try {
+    socket_->outStream().flush();
+    rfbcon_->getOutStream()->cork(true);
+    
     size_t navailables0;
     size_t navailables = socket_->inStream().avail();
     do {
@@ -283,6 +308,8 @@ void QVNCConnection::startProcessing()
       navailables = socket_->inStream().avail();
       //qDebug() << "post-avail() navailables=" << navailables;
     } while (navailables > 0 && navailables != navailables0 && socket_);
+    
+    rfbcon_->getOutStream()->cork(false);
   }
   catch (rdr::Exception &e) {
     resetConnection();

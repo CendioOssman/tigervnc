@@ -69,19 +69,6 @@ Window {
     }
 
     Connections {
-        target: AppManager
-
-        function onCredentialRequested(secured, userNeeded, passwordNeeded) {
-            authDialog.secured = secured
-            authDialog.userNeeded = userNeeded
-            authDialog.passwordNeeded = passwordNeeded
-            authDialog.open()
-        }
-
-        onCredentialRequested: onCredentialRequested(secured, userNeeded, passwordNeeded)
-    }
-
-    Connections {
         target: Config
 
         function onServerHistoryChanged(serverList = []) {
@@ -196,15 +183,6 @@ Window {
                 text: qsTr("Connect")
                 onClicked: accept()
             }
-        }
-    }
-
-    Loader {
-        active: false
-        AuthDialog {
-            id: authDialog
-            onCommit: AppManager.authenticate(user, password)
-            onAbort: AppManager.cancelAuth()
         }
     }
 

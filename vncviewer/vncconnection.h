@@ -19,7 +19,6 @@ namespace rfb {
   class SecurityClient;
   class PixelFormat;
   class ModifiablePixelBuffer;
-  class DecodeManager;
   class CMsgReader;
   class CMsgWriter;
   struct ScreenSet;
@@ -71,7 +70,7 @@ signals:
 
 public slots:
   void listen();
-  void connectToServer(const QString addressport);
+  void connectToServer(QString addressport = "");
   void resetConnection();
   void startProcessing();
   void refreshFramebuffer();
@@ -86,6 +85,7 @@ private:
   QTimer *updateTimer_;
   TunnelFactory *tunnelFactory_;
   bool closing_;
+  QString addressport_;
 
   void bind(int fd);
   void setHost(QString host) { rfbcon_->setHost(host); }

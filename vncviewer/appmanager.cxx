@@ -86,7 +86,11 @@ void AppManager::resetConnection()
 
 void AppManager::publishError(const QString message, bool quit)
 {
-  emit errorOcurred(error_++, message, quit);
+  QString text(message);
+  if (!quit) {
+    text = QString::asprintf(_("%s\n\nAttempt to reconnect?"), message.toStdString().c_str());
+  }
+  emit errorOcurred(error_++, text, quit);
 }
 
 void AppManager::openVNCWindow(int width, int height, QString name)
@@ -127,6 +131,18 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   }
 
   emit vncWindowOpened();
+}
+
+void AppManager::closeVNCWindow()
+{
+  QWidget *w = scroll_->takeWidget();
+  if (w) {
+    scroll_->setVisible(false);
+    w->setVisible(false);
+    w->deleteLater();
+    view_ = nullptr;
+    emit vncWindowClosed();
+  }
 }
 
 void AppManager::setWindowName(QString name)

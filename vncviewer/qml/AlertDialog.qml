@@ -2,6 +2,7 @@ import QtQuick 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Window 2.12
 import QtQuick.Layouts 1.12
+import Qt.TigerVNC 1.0
 
 Window {
     id: root
@@ -24,6 +25,11 @@ Window {
         if (quit) {
             Qt.quit()
         }
+    }
+
+    function reconnect() {
+        visible = false
+        AppManager.connectToServer("")
     }
 
     GridLayout {
@@ -54,18 +60,38 @@ Window {
             verticalAlignment: Text.AlignVCenter
             wrapMode: Text.Wrap
         }
-        Button {
-            id: closeButton
+        Row {
+            id: buttonRow
             Layout.row: 1
             Layout.column: 1
             Layout.rightMargin: 15
             Layout.topMargin: 5
             Layout.bottomMargin: 10
             Layout.alignment: Qt.AlignRight | Qt.AlignBottom
-            Layout.preferredWidth: 72
-            focus: true
-            text: qsTr("Close")
-            onClicked: close()
+            spacing: 10
+            Button {
+                id: noButton
+                width: 72
+                visible: Config.reconnectOnError && !quit
+                text: qsTr("No")
+                onClicked: close()
+            }
+            Button {
+                id: yesButton
+                width: 72
+                visible: Config.reconnectOnError && !quit
+                focus: true
+                text: qsTr("Yes")
+                onClicked: reconnect()
+            }
+            Button {
+                id: closeButton
+                width: 72
+                visible: !Config.reconnectOnError || quit
+                focus: true
+                text: qsTr("Close")
+                onClicked: close()
+            }
         }
     }
 }

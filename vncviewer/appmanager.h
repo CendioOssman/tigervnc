@@ -41,6 +41,7 @@ signals:
   void optionDialogRequested();
   void aboutDialogRequested();
   void vncWindowOpened();
+  void vncWindowClosed();
 
 public slots:
   void publishError(const QString message, bool quit = false);
@@ -49,6 +50,7 @@ public slots:
   void cancelAuth();
   void resetConnection();
   void openVNCWindow(int width, int height, QString name);
+  void closeVNCWindow();
   void setWindowName(QString name);
   /**
    * @brief Request the framebuffer to add the given dirty region. Typically, called
