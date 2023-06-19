@@ -95,6 +95,10 @@ protected:
   int fxmin_;
   int fymin_;
 
+  rfb::Point *lastPointerPos_;
+  int lastButtonMask_;
+  QTimer *mousePointerTimer_;
+
   void createContextMenu();
   void postRemoteResizeRequest();
   QList<int> fullscreenScreens();

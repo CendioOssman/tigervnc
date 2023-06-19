@@ -247,6 +247,9 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
  , pendingFullscreen_(false)
  , mouseButtonEmulationTimer_(new QTimer)
  , mbemu_(new EmulateMB(mouseButtonEmulationTimer_))
+ , lastPointerPos_(new rfb::Point)
+ , lastButtonMask_(0)
+ , mousePointerTimer_(new QTimer)
 {
   if (!clipboard_) {
     clipboard_ = QGuiApplication::clipboard();
@@ -278,6 +281,12 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   mouseButtonEmulationTimer_->setSingleShot(true);
   connect(mouseButtonEmulationTimer_, &QTimer::timeout, this, &QAbstractVNCView::handleMouseButtonEmulationTimeout);
 
+  mousePointerTimer_->setInterval(ViewerConfig::config()->pointerEventInterval());
+  mousePointerTimer_->setSingleShot(true);
+  connect(mousePointerTimer_, &QTimer::timeout, this, [this]() {
+    mbemu_->filterPointerEvent(*lastPointerPos_, lastButtonMask_);
+  });
+
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorChanged, this, &QAbstractVNCView::setQCursor, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorPositionChanged, this, &QAbstractVNCView::setCursorPos, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::ledStateChanged, this, &QAbstractVNCView::setLEDState, Qt::QueuedConnection);
@@ -296,6 +305,8 @@ QAbstractVNCView::~QAbstractVNCView()
   delete resizeTimer_;
   delete delayedInitializeTimer_;
   delete mouseButtonEmulationTimer_;
+  delete lastPointerPos_;
+  delete mousePointerTimer_;
 }
 
 void QAbstractVNCView::postRemoteResizeRequest()
@@ -769,7 +780,15 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
   if (ViewerConfig::config()->viewOnly()) {
     return;
   }
-  mbemu_->filterPointerEvent(pos, mask);
+  bool instantPosting = ViewerConfig::config()->pointerEventInterval() == 0 || (mask != lastButtonMask_);
+  *lastPointerPos_ = pos;
+  lastButtonMask_ = mask;
+  if (instantPosting) {
+    mbemu_->filterPointerEvent(*lastPointerPos_, lastButtonMask_);
+  }
+  else {
+    mousePointerTimer_->start();
+  }
 }
 
 void QAbstractVNCView::handleMouseButtonEmulationTimeout()

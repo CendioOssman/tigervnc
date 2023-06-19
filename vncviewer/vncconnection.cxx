@@ -48,13 +48,37 @@ QVNCConnection::QVNCConnection()
   connect(this, &QVNCConnection::socketNotified, this, &QVNCConnection::startProcessing);
 
   connect(this, &QVNCConnection::writePointerEvent, this, [this](const rfb::Point &pos, int buttonMask) {
-    rfbcon_->writer()->writePointerEvent(pos, buttonMask);
+    try {
+      rfbcon_->writer()->writePointerEvent(pos, buttonMask);
+    }
+    catch (rdr::Exception &e) {
+      AppManager::instance()->publishError(e.str());
+    }
+    catch (int &e) {
+      AppManager::instance()->publishError(strerror(e));
+    }
   });
   connect(this, &QVNCConnection::writeSetDesktopSize, this, [this](int width, int height, const rfb::ScreenSet &layout) {
-    rfbcon_->writer()->writeSetDesktopSize(width, height, layout);
+    try {
+      rfbcon_->writer()->writeSetDesktopSize(width, height, layout);
+    }
+    catch (rdr::Exception &e) {
+      AppManager::instance()->publishError(e.str());
+    }
+    catch (int &e) {
+      AppManager::instance()->publishError(strerror(e));
+    }
   });
   connect(this, &QVNCConnection::writeKeyEvent, this, [this](rdr::U32 keysym, rdr::U32 keycode, bool down) {
-    rfbcon_->writer()->writeKeyEvent(keysym, keycode, down);
+    try {
+      rfbcon_->writer()->writeKeyEvent(keysym, keycode, down);
+    }
+    catch (rdr::Exception &e) {
+      AppManager::instance()->publishError(e.str());
+    }
+    catch (int &e) {
+      AppManager::instance()->publishError(strerror(e));
+    }
   });
   
   if (ViewerConfig::config()->listenModeEnabled()) {
@@ -64,7 +88,15 @@ QVNCConnection::QVNCConnection()
   updateTimer_ = new QTimer;
   updateTimer_->setSingleShot(true);
   connect(updateTimer_, &QTimer::timeout, this, [this]() {
-    rfbcon_->framebufferUpdateEnd();
+    try {
+      rfbcon_->framebufferUpdateEnd();
+    }
+    catch (rdr::Exception &e) {
+      AppManager::instance()->publishError(e.str());
+    }
+    catch (int &e) {
+      AppManager::instance()->publishError(strerror(e));
+    }
   });
 
   QString gatewayHost = ViewerConfig::config()->gatewayHost();
@@ -144,10 +176,6 @@ void QVNCConnection::connectToServer(QString addressport)
       setPort(port);
       delete socket_;
       socket_ = new network::TcpSocket(shost, port);
-      rdr::FdInStream &in = socket_->inStream();
-      while (in.avail() > 0) {
-        in.readU8();
-      }
       bind(socket_->getFd());
     }
   }
@@ -225,10 +253,6 @@ void QVNCConnection::resetConnection()
   socketErrorNotifier_ = nullptr;
   if (socket_) {
     socket_->shutdown();
-    rdr::FdInStream &in = socket_->inStream();
-    while (in.avail() > 0) {
-      in.readU8();
-    }
   }
   delete socket_;
   socket_ = nullptr;
@@ -294,22 +318,22 @@ void QVNCConnection::startProcessing()
     return;
   }
   try {
-    socket_->outStream().flush();
-    rfbcon_->getOutStream()->cork(true);
-    
     size_t navailables0;
     size_t navailables = socket_->inStream().avail();
     do {
       navailables0 = navailables;
 
+      socket_->outStream().flush();
+      rfbcon_->getOutStream()->cork(true);
+
       rfbcon_->processMsg();
+
+      rfbcon_->getOutStream()->cork(false);
 
       //qDebug() << "pre-avail()  navailables=" << navailables;
       navailables = socket_->inStream().avail();
       //qDebug() << "post-avail() navailables=" << navailables;
     } while (navailables > 0 && navailables != navailables0 && socket_);
-    
-    rfbcon_->getOutStream()->cork(false);
   }
   catch (rdr::Exception &e) {
     resetConnection();

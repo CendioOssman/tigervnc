@@ -55,6 +55,7 @@ class ViewerConfig : public QObject
   Q_PROPERTY(QString x509CRL READ x509CRL WRITE setX509CRL NOTIFY x509CRLChanged)
   // Input properties
   Q_PROPERTY(bool viewOnly READ viewOnly WRITE setViewOnly NOTIFY viewOnlyChanged)
+  Q_PROPERTY(int pointerEventInterval READ pointerEventInterval WRITE setPointerEventInterval NOTIFY pointerEventIntervalChanged)
   Q_PROPERTY(bool emulateMiddleButton READ emulateMiddleButton WRITE setEmulateMiddleButton NOTIFY emulateMiddleButtonChanged)
   Q_PROPERTY(bool dotWhenNoCursor READ dotWhenNoCursor WRITE setDotWhenNoCursor NOTIFY dotWhenNoCursorChanged)
   Q_PROPERTY(bool fullscreenSystemKeys READ fullscreenSystemKeys WRITE setFullscreenSystemKeys NOTIFY fullscreenSystemKeysChanged)
@@ -144,6 +145,8 @@ public:
   //
   bool viewOnly() const;
   void setViewOnly(bool value);
+  int pointerEventInterval() const;
+  void setPointerEventInterval(int value);
   bool emulateMiddleButton() const;
   void setEmulateMiddleButton(bool value);
   bool dotWhenNoCursor() const;
@@ -211,6 +214,7 @@ signals:
   void x509CRLChanged(QString path);
   //
   void viewOnlyChanged(bool value);
+  void pointerEventIntervalChanged(int value);
   void emulateMiddleButtonChanged(bool value);
   void dotWhenNoCursorChanged(bool value);
   void fullscreenSystemKeysChanged(bool value);
@@ -265,72 +269,4 @@ private:
   void parseServerName();
 };
 
-#if 0
-#include <QStringList>
-#include <rfb/Configuration.h>
-#include "MonitorIndicesParameter.h"
-
-#ifdef _WIN32
-#include <list>
-#include <string>
-#endif
-
-#define SERVER_HISTORY_SIZE 20
-
-
-extern rfb::IntParameter pointerEventInterval;
-extern rfb::BoolParameter emulateMiddleButton;
-extern rfb::BoolParameter dotWhenNoCursor;
-
-extern rfb::StringParameter passwordFile;
-
-extern rfb::BoolParameter autoSelect;
-extern rfb::BoolParameter fullColour;
-extern rfb::AliasParameter fullColourAlias;
-extern rfb::IntParameter lowColourLevel;
-extern rfb::AliasParameter lowColourLevelAlias;
-extern rfb::StringParameter preferredEncoding;
-extern rfb::BoolParameter customCompressLevel;
-extern rfb::IntParameter compressLevel;
-extern rfb::BoolParameter noJpeg;
-extern rfb::IntParameter qualityLevel;
-
-extern rfb::BoolParameter maximize;
-extern rfb::BoolParameter fullScreen;
-extern rfb::StringParameter fullScreenMode;
-extern rfb::BoolParameter fullScreenAllMonitors; // deprecated
-extern MonitorIndicesParameter fullScreenSelectedMonitors;
-extern rfb::StringParameter desktopSize;
-extern rfb::StringParameter geometry;
-extern rfb::BoolParameter remoteResize;
-
-extern rfb::BoolParameter listenMode;
-
-extern rfb::BoolParameter viewOnly;
-extern rfb::BoolParameter shared;
-
-extern rfb::BoolParameter acceptClipboard;
-extern rfb::BoolParameter setPrimary;
-extern rfb::BoolParameter sendClipboard;
-#if !defined(WIN32) && !defined(__APPLE__)
-extern rfb::BoolParameter sendPrimary;
-extern rfb::StringParameter display;
-#endif
-
-extern rfb::StringParameter menuKey;
-
-extern rfb::BoolParameter fullscreenSystemKeys;
-extern rfb::BoolParameter alertOnFatalError;
-extern rfb::BoolParameter reconnectOnError;
-
-extern rfb::StringParameter via;
-
-void saveViewerParameters(const char *filename, const char *servername=nullptr);
-char* loadViewerParameters(const char *filename);
-
-#ifdef _WIN32
-void loadHistoryFromRegKey(QStringList& serverHistory);
-void saveHistoryToRegKey(const QStringList& serverHistory);
-#endif
-#endif
 #endif

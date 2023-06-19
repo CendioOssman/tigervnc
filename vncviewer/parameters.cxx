@@ -1440,6 +1440,19 @@ void ViewerConfig::setViewOnly(bool value)
   }
 }
 
+int ViewerConfig::pointerEventInterval() const
+{
+  return ::pointerEventInterval;
+}
+
+void ViewerConfig::setPointerEventInterval(int value)
+{
+  if (pointerEventInterval() != value) {
+    ::pointerEventInterval.setParam(value);
+    emit pointerEventIntervalChanged(value);
+  }
+}
+
 bool ViewerConfig::emulateMiddleButton() const
 {
   return ::emulateMiddleButton;

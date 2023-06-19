@@ -145,15 +145,6 @@ void QVNCWinView::setWindow(HWND window)
   hwndowner_ = false;
 }
 
-void QVNCWinView::postMouseMoveEvent(int x, int y, int mask)
-{
-  if (ViewerConfig::config()->viewOnly()) {
-    return;
-  }
-  rfb::Point p(x, y);
-  emit AppManager::instance()->connection()->writePointerEvent(p, mask);
-}
-
 void *getWindowProc(QVNCWinView *host)
 {
   return host ? host->wndproc_ : 0;
@@ -170,7 +161,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       window->startMouseTracking();
       int x, y, buttonMask, wheelMask;
       getMouseProperties(wParam, lParam, x, y, buttonMask, wheelMask);
-      window->postMouseMoveEvent(x, y, buttonMask | wheelMask);
+      window->filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
       //qDebug() << "VNCWinView::eventHandler(): WM_MOUSEMOVE: x=" << x << ", y=" << y;
     }
       break;
@@ -191,8 +182,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       }
       int x, y, buttonMask, wheelMask;
       getMouseProperties(wParam, lParam, x, y, buttonMask, wheelMask);
-      rfb::Point p(x, y);
-      emit AppManager::instance()->connection()->writePointerEvent(p, buttonMask | wheelMask);
+      window->filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
       qDebug() << "QVNCWinView::eventHandler (button up/down): x=" << x << ", y=" << y << ", btn=" << Qt::hex << (buttonMask | wheelMask);
 #endif
