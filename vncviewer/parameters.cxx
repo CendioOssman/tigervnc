@@ -1684,15 +1684,6 @@ QString ViewerConfig::aboutText()
 
 void ViewerConfig::usage()
 {
-#if 0
-#ifdef WIN32
-  // If we don't have a console then we need to create one for output
-  if (GetConsoleWindow() == NULL) {
-    AllocConsole();
-  }
-#endif
-#endif
-
   QString argv0 = QGuiApplication::arguments().at(0);
   std::string str = argv0.toStdString();
   const char *programName = str.c_str();
@@ -1731,10 +1722,11 @@ void ViewerConfig::usage()
 
 #if defined(WIN32)
   // Just wait for the user to kill the console window
-  QThread::currentThread()->wait();
+  Sleep(INFINITE);
 #endif
 
   QGuiApplication::exit(1);
+  exit(1);
 }
 
 QString ViewerConfig::getlocaledir()
