@@ -295,6 +295,11 @@ endif()
 
 if(WIN32)
     set(DEPLOY_DIR ${CMAKE_CURRENT_BINARY_DIR}/deploy CACHE PATH "Package directory")
+    if(CMAKE_BUILD_TYPE MATCHES Release)
+      set(RELDEB --release)
+    else()
+      set(RELDEB --debug)
+    endif()
     get_target_property(LOCAL_QMAKE_PATH Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
     get_filename_component(LOCAL_QTBIN_PATH ${LOCAL_QMAKE_PATH} DIRECTORY)
     add_custom_command(
@@ -311,7 +316,7 @@ if(WIN32)
         add_custom_command(
             TARGET vncviewer
             POST_BUILD
-            COMMAND ${DEPLOYQT} --dir ${DEPLOY_DIR} --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE:vncviewer>)
+            COMMAND ${DEPLOYQT} ${RELDEB} --dir ${DEPLOY_DIR} --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE:vncviewer>)
     endif()
 
     file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/../po/LINGUAS po_FILES)
