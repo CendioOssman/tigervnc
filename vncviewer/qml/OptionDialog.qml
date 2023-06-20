@@ -10,6 +10,8 @@ Window {
     property bool screenLaid: false
     property var screenSelectionButtons: []
     property var selectedScreens: []
+    property var optionLabels: []
+    property var optionIndices: []
 
     width: categoryContainer.width + contentStack.width
     height: contentStack.height + buttonBox.height
@@ -300,11 +302,36 @@ Window {
         }
     }
 
+    function createOptionModel() {
+        var ix = 0
+        optionLabels = []
+        optionIndices = []
+        optionLabels.push(qsTr("Compression"))
+        optionIndices.push(ix++)
+        if (Config.haveGNUTLS || Config.haveNETTLE) {
+            optionLabels.push(qsTr("Security"))
+            optionIndices.push(ix++)
+        }
+        else {
+            ix++
+        }
+        optionLabels.push(qsTr("Input"))
+        optionIndices.push(ix++)
+        optionLabels.push(qsTr("Display"))
+        optionIndices.push(ix++)
+        optionLabels.push(qsTr("Miscellaneous"))
+        optionIndices.push(ix++)
+        optionLabelsChanged()
+        optionIndicesChanged()
+    }
+
     onVisibleChanged: {
         if (visible) {
             reset()
         }
     }
+
+    Component.onCompleted: createOptionModel()
 
     Rectangle {
         id: categoryContainer
@@ -316,7 +343,7 @@ Window {
         ListView {
             id: categoryList
             anchors.fill: parent
-            model: [ qsTr("Compression"), qsTr("Security"), qsTr("Input"), qsTr("Display"), qsTr("Miscellaneous"), ]
+            model: optionLabels
             delegate: ItemDelegate {
                 width: categoryList.width
                 contentItem: Label {
@@ -339,7 +366,7 @@ Window {
         width: childrenRect.width
         height: childrenRect.height
         x: categoryContainer.width
-        currentIndex: categoryList.currentIndex
+        currentIndex: optionIndices[categoryList.currentIndex]
         onCurrentIndexChanged: reportScreenSelection()
         Rectangle {
             id: compressionTab
@@ -397,6 +424,7 @@ Window {
                         }
                         RadioButton {
                             id: compressionEncodingH264
+                            visible: Config.haveH264
                             text: qsTr("H.264")
                         }
                         RadioButton {
@@ -485,10 +513,11 @@ Window {
             implicitWidth: childrenRect.width + childrenRect.x
             implicitHeight: childrenRect.height + childrenRect.y
             ColumnLayout {
-                id: securityContainer
+                id: securityContainer                
                 x: 10
                 y: 10
                 spacing: 0
+                visible: Config.haveGNUTLS || Config.haveNETTLE
                 Text {
                     font.bold: true
                     text: qsTr("Encryption")
@@ -501,15 +530,18 @@ Window {
                 CheckBox {
                     id: securityEncryptionTLSWithAnonymousCerts
                     Layout.leftMargin: 10
+                    visible: Config.haveGNUTLS
                     text: qsTr("TLS with anonymous certificates")
                 }
                 CheckBox {
                     id: securityEncryptionTLSWithX509Certs
                     Layout.leftMargin: 10
+                    visible: Config.haveGNUTLS
                     text: qsTr("TLS with X509 certificates")
                 }
                 Label {
                     Layout.leftMargin: 40
+                    visible: Config.haveGNUTLS
                     enabled: securityEncryptionTLSWithX509Certs.checked
                     text: qsTr("Path to X509 CA certificate")
                 }
@@ -517,10 +549,12 @@ Window {
                     id: securityEncryptionTLSWithX509CATextEdit
                     Layout.preferredWidth: 250
                     Layout.leftMargin: 44
+                    visible: Config.haveGNUTLS
                     enabled: securityEncryptionTLSWithX509Certs.checked
                 }
                 Label {
                     Layout.leftMargin: 40
+                    visible: Config.haveGNUTLS
                     enabled: securityEncryptionTLSWithX509Certs.checked
                     text: qsTr("Path to X509 CRL file")
                 }
@@ -528,11 +562,13 @@ Window {
                     id: securityEncryptionTLSWithX509CRLTextEdit
                     Layout.preferredWidth: 250
                     Layout.leftMargin: 44
+                    visible: Config.haveGNUTLS
                     enabled: securityEncryptionTLSWithX509Certs.checked
                 }
                 CheckBox {
                     id: securityEncryptionAES
                     Layout.leftMargin: 10
+                    visible: Config.haveNETTLE
                     text: qsTr("RSA-AES")
                 }
                 Text {

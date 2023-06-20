@@ -83,6 +83,9 @@ class ViewerConfig : public QObject
   //
   Q_PROPERTY(int qtVersionMajor READ qtVersionMajor CONSTANT)
   Q_PROPERTY(int qtVersionMinor READ qtVersionMinor CONSTANT)
+  Q_PROPERTY(bool haveGNUTLS READ haveGNUTLS CONSTANT)
+  Q_PROPERTY(bool haveNETTLE READ haveNETTLE CONSTANT)
+  Q_PROPERTY(bool haveH264 READ haveH264 CONSTANT)
 
 public:
   const char* SERVER_HISTORY="tigervnc.history";
@@ -187,6 +190,27 @@ public:
   //
   int qtVersionMajor() const { return QT_VERSION_MAJOR; }
   int qtVersionMinor() const { return QT_VERSION_MINOR; }
+  bool haveGNUTLS() const {
+#if defined(HAVE_GNUTLS)
+    return true;
+#else
+    return false;
+#endif
+  }
+  bool haveNETTLE() const {
+#if defined(HAVE_NETTLE)
+    return true;
+#else
+    return false;
+#endif
+  }
+  bool haveH264() const {
+#if defined(HAVE_H264)
+    return true;
+#else
+    return false;
+#endif
+  }
 
 signals:
   //
