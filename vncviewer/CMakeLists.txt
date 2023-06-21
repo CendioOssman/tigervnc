@@ -99,10 +99,6 @@ if(BUILD_STATIC)
   add_definitions(-DQT_STATIC_BUILD=1)
 endif()
 
-if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND ((QT_VERSION_MAJOR GREATER_EQUAL 6) OR ((QT_VERSION_MAJOR GREATER_EQUAL 5) AND (QT_VERSION_MAJOR GREATER_EQUAL 15))))
-  set_target_properties(vncviewer PROPERTIES WIN32_EXECUTABLE TRUE)
-endif()
-
 if(WIN32)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   configure_file(vncviewer.rc.in vncviewer.rc)
