@@ -13,8 +13,10 @@ class QLabel;
 class QScreen;
 class QClipboard;
 class QMoveEvent;
+class QGestureEvent;
 class QVNCToast;
 class EmulateMB;
+class GestureHandler;
 
 namespace rfb {
   struct Point;
@@ -37,6 +39,7 @@ public:
   double devicePixelRatio() const { return devicePixelRatio_; }
   QScreen *getCurrentScreen();
   QClipboard *clipboard() const { return clipboard_; }
+  QRect getExtendedFrameProperties();
 
 public slots:
   virtual void handleKeyPress(int keyCode, quint32 keySym);

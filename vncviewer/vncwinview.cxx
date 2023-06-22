@@ -21,6 +21,7 @@
 #include "parameters.h"
 #include "vncconnection.h"
 #include "PlatformPixelBuffer.h"
+#include "Win32TouchHandler.h"
 #include "win32.h"
 #include "i18n.h"
 #include "vncwinview.h"
@@ -45,6 +46,7 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
  , cursor_(nullptr)
  , mouseTracking_(false)
  , defaultCursor_(LoadCursor(NULL, IDC_ARROW))
+ , touchHandler_(nullptr)
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   setAttribute(Qt::WA_NoBackground);
@@ -53,6 +55,14 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
   setAttribute(Qt::WA_InputMethodTransparent);
   setAttribute(Qt::WA_NativeWindow);
   setAttribute(Qt::WA_AcceptTouchEvents);
+
+  grabGesture(Qt::TapGesture);
+  grabGesture(Qt::TapAndHoldGesture);
+  grabGesture(Qt::PanGesture);
+  grabGesture(Qt::PinchGesture);
+  grabGesture(Qt::SwipeGesture);
+  grabGesture(Qt::CustomGesture);
+
   setFocusPolicy(Qt::StrongFocus);
   connect(AppManager::instance()->connection(), &QVNCConnection::framebufferResized, this, [this](int width, int height) {
     SetWindowPos(hwnd_, HWND_TOPMOST, 0, 0, width, height, 0);
@@ -83,6 +93,8 @@ QVNCWinView::~QVNCWinView()
   delete altGrCtrlTimer_;
 
   DestroyIcon(cursor_);
+
+  delete touchHandler_;
 }
 
 qulonglong QVNCWinView::nativeWindowHandle() const
@@ -112,6 +124,7 @@ HWND QVNCWinView::createWindow(HWND parent, HINSTANCE instance)
   }
 
   HWND hwnd = CreateWindowA("VNC Window", 0, WS_CHILD|WS_CLIPSIBLINGS|WS_TABSTOP, CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, parent, NULL, instance, NULL);
+  UnregisterTouchWindow(hwnd);
   return hwnd;
 }
 
@@ -236,8 +249,12 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       qDebug() << "VNCWinView::eventHandler(): SetWindowPos: w=" << w << ", h=" << h;
     }
       break;
+    case WM_GESTURE:
+    case WM_GESTURENOTIFY:
+      //qDebug() << "VNCWinView::eventHandler() (WM_GESTURE/WM_GESTURENOTIFY): message=" << message;
+      return window->handleTouchEvent(message, wParam, lParam);
     default:
-      qDebug() << "VNCWinView::eventHandler() (DefWindowProc): message=" << message;
+      //qDebug() << "VNCWinView::eventHandler() (DefWindowProc): message=" << message;
       return DefWindowProc(hWnd, message, wParam, lParam);
     }
   }
@@ -278,7 +295,7 @@ void QVNCWinView::getMouseProperties(WPARAM wParam, LPARAM lParam, int &x, int &
 
 void QVNCWinView::draw()
 {
-  qDebug() << "VNCWinView::refresh(): hWnd=" << hwnd_;
+//  qDebug() << "VNCWinView::refresh(): hWnd=" << hwnd_;
   PlatformPixelBuffer *framebuffer = (PlatformPixelBuffer *)AppManager::instance()->connection()->framebuffer();
   rfb::Rect r = framebuffer->getDamage();
   int x = r.tl.x;
@@ -302,67 +319,78 @@ void QVNCWinView::draw()
 
 bool QVNCWinView::event(QEvent *e)
 {
-  switch(e->type()) {
-  case QEvent::Polish:
-    if (!hwnd_) {
-      hwnd_ = createWindow(HWND(winId()), GetModuleHandle(0));
-      fixParent();
-      hwndowner_ = hwnd_ != 0;
-    }
-    if (hwnd_ && !wndproc_ && GetParent(hwnd_) == (HWND)winId()) {
-      wndproc_ = (void*)GetWindowLongPtr(hwnd_, GWLP_WNDPROC);
-      SetWindowLongPtr(hwnd_, GWLP_WNDPROC, (LONG_PTR)eventHandler);
+  try {
+    switch(e->type()) {
+    case QEvent::Polish:
+      if (!hwnd_) {
+	hwnd_ = createWindow(HWND(winId()), GetModuleHandle(0));
+	fixParent();
+	hwndowner_ = hwnd_ != 0;
 
-      LONG style;
-      style = GetWindowLong(hwnd_, GWL_STYLE);
-      if (style & WS_TABSTOP) {
-        setFocusPolicy(Qt::FocusPolicy(focusPolicy() | Qt::StrongFocus));
+        grabGesture(Qt::TapGesture);
+        grabGesture(Qt::TapAndHoldGesture);
+        grabGesture(Qt::PanGesture);
+        grabGesture(Qt::PinchGesture);
+        grabGesture(Qt::SwipeGesture);
+        grabGesture(Qt::CustomGesture);
       }
+      if (hwnd_ && !wndproc_ && GetParent(hwnd_) == (HWND)winId()) {
+	wndproc_ = (void*)GetWindowLongPtr(hwnd_, GWLP_WNDPROC);
+	SetWindowLongPtr(hwnd_, GWLP_WNDPROC, (LONG_PTR)eventHandler);
+	touchHandler_ = new Win32TouchHandler(hwnd_);
+
+	LONG style;
+	style = GetWindowLong(hwnd_, GWL_STYLE);
+	if (style & WS_TABSTOP) {
+	  setFocusPolicy(Qt::FocusPolicy(focusPolicy() | Qt::StrongFocus));
+	}
+      }
+      break;
+    case QEvent::WindowBlocked:
+      if (hwnd_) {
+	EnableWindow(hwnd_, false);
+      }
+      break;
+    case QEvent::WindowUnblocked:
+      if (hwnd_) {
+	EnableWindow(hwnd_, true);
+      }
+      break;
+    case QEvent::WindowActivate:
+      //qDebug() << "WindowActivate";
+      ::SetFocus(hwnd_);
+      break;
+    case QEvent::WindowDeactivate:
+      //qDebug() << "WindowDeactivate";
+      ::SetFocus(NULL);
+      break;
+    case QEvent::Enter:
+      //qDebug() << "Enter";
+      grabPointer();
+      break;
+    case QEvent::Leave:
+      //qDebug() << "Leave";
+      ungrabPointer();
+      break;
+    case QEvent::CursorChange:
+      //qDebug() << "CursorChange";
+      e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
+      break;
+    case QEvent::Paint:
+      //qDebug() << "Paint";
+      e->setAccepted(true);
+      return true;
+    default:
+      //qDebug() << "Unprocessed Event: " << e->type();
+      break;
     }
-    break;
-  case QEvent::WindowBlocked:
-    if (hwnd_) {
-      EnableWindow(hwnd_, false);
-    }
-    break;
-  case QEvent::WindowUnblocked:
-    if (hwnd_) {
-      EnableWindow(hwnd_, true);
-    }
-    break;
-  case QEvent::WindowActivate:
-    qDebug() << "WindowActivate";
-    ::SetFocus(hwnd_);
-    break;
-  case QEvent::WindowDeactivate:
-    qDebug() << "WindowDeactivate";
-    ::SetFocus(NULL);
-    break;
-  case QEvent::Enter:
-    qDebug() << "Enter";
-    grabPointer();
-    break;
-  case QEvent::Leave:
-    qDebug() << "Leave";
-    ungrabPointer();
-    break;
-  case QEvent::CursorChange:
-    //qDebug() << "CursorChange";
-    e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
-    break;
-  case QEvent::Paint:
-    //qDebug() << "Paint";
-    e->setAccepted(true);
-    return true;
-  case QEvent::KeyPress:
-  case QEvent::KeyRelease:
-    qDebug() << "KeyPress/KeyRelease";
-    break;
-  default:
-    qDebug() << "Unprocessed Event: " << e->type();
-    break;
+    return QWidget::event(e);
   }
-  return QWidget::event(e);
+  catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    AppManager::instance()->publishError(e.str(), true);
+    return false;
+  }
 }
 
 void QVNCWinView::showEvent(QShowEvent *e)
@@ -456,8 +484,7 @@ void QVNCWinView::handleKeyPress(int keyCode, quint32 keySym)
   }
   catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    e.abort = true;
-    throw;
+    AppManager::instance()->publishError(e.str(), true);
   }
 }
 
@@ -487,8 +514,7 @@ void QVNCWinView::handleKeyRelease(int keyCode)
   }
   catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    e.abort = true;
-    throw;
+    AppManager::instance()->publishError(e.str(), true);
   }
 
   downKeySym_.erase(iter);
@@ -667,6 +693,11 @@ int QVNCWinView::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam)
   }
 
   return 1;
+}
+
+int QVNCWinView::handleTouchEvent(UINT message, WPARAM wParam, LPARAM lParam)
+{
+  return touchHandler_->processEvent(message, wParam, lParam);
 }
 
 void QVNCWinView::setQCursor(const QCursor &cursor)
@@ -872,7 +903,7 @@ void QVNCWinView::startMouseTracking()
     mouseTracking_ = true;
 
     SetCursor(NULL);
-    qDebug() << "SetCursor(NULL)";
+    //qDebug() << "SetCursor(NULL)";
 
     if (keyboardGrabbed_) {
       grabPointer();
@@ -895,4 +926,12 @@ void QVNCWinView::updateWindow()
 {
   QAbstractVNCView::updateWindow();
   draw();
+}
+
+QRect QVNCWinView::getExtendedFrameProperties()
+{
+  // Returns Windows10's magic number. This method might not be necessary for Qt6 / Windows11.
+  // See the followin URL for more details.
+  // https://stackoverflow.com/questions/42473554/windows-10-screen-coordinates-are-offset-by-7
+  return QRect(7, 7, 7, 7);
 }

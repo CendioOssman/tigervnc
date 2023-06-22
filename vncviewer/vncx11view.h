@@ -5,6 +5,9 @@
 #include <X11/extensions/Xrender.h>
 #include "abstractvncview.h"
 
+class XInputTouchHandler;
+class QVNCGestureRecognizer;
+
 class QVNCX11View : public QAbstractVNCView
 {
   Q_OBJECT
@@ -56,8 +59,13 @@ private:
   Pixmap pixmap_;
   Picture picture_;
 
+  GestureHandler *gestureHandler_;
+  int eventNumber_;
+  static QVNCGestureRecognizer *vncGestureRecognizer_;
+
   Pixmap toPixmap(QBitmap &bitmap);
   unsigned int getModifierMask(unsigned int keysym);
+  bool gestureEvent(QGestureEvent *event);
 };
 
 #endif // VNCX11VIEW_H

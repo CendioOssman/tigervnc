@@ -4,6 +4,10 @@
 
 #include <QMoveEvent>
 #include <QResizeEvent>
+#include <QHBoxLayout>
+#include <QGestureEvent>
+#include <QPainter>
+//#include <QCoreApplication>
 #include <QDebug>
 #include "rfb/LogWriter.h"
 #include "parameters.h"
@@ -20,7 +24,6 @@ QVNCWindow::QVNCWindow(QWidget *parent)
 {
   setAttribute(Qt::WA_InputMethodTransparent);
   setAttribute(Qt::WA_NativeWindow);
-  setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
 
   setWidgetResizable(ViewerConfig::config()->remoteResize());
@@ -91,14 +94,6 @@ void QVNCWindow::changeEvent(QEvent *e)
       widget()->resize(width(), height());
     }
   }
-}
-
-QRect QVNCWindow::getExtendedFrameProperties()
-{
-  // Returns Windows10's magic number. This method might not be necessary for Qt6 / Windows11.
-  // See the followin URL for more details.
-  // https://stackoverflow.com/questions/42473554/windows-10-screen-coordinates-are-offset-by-7
-  return QRect(7, 7, 7, 7);
 }
 
 void QVNCWindow::resize(int width, int height)

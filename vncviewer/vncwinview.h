@@ -6,6 +6,7 @@
 #include "abstractvncview.h"
 
 class QTimer;
+class Win32TouchHandler;
 
 class QVNCWinView : public QAbstractVNCView
 {
@@ -17,6 +18,7 @@ public:
   void setWindow(HWND);
   bool hasViewFocus() const override;
   qulonglong nativeWindowHandle() const override;
+  QRect getExtendedFrameProperties();
 
 public slots:
   void setQCursor(const QCursor &cursor) override;
@@ -55,11 +57,14 @@ private:
   bool mouseTracking_;
   HCURSOR defaultCursor_;
 
+  Win32TouchHandler *touchHandler_;
+
   void fixParent();
   friend void *getWindowProc(QVNCWinView *host);
   void resolveAltGrDetection(bool isAltGrSequence);
   int handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lParam);
   int handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam);
+  int handleTouchEvent(UINT message, WPARAM wParam, LPARAM lParam);
   void startMouseTracking();
   void stopMouseTracking();
   void draw();

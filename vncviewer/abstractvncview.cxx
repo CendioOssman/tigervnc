@@ -709,10 +709,17 @@ void QAbstractVNCView::fullscreen(bool enabled)
         }
         window->setWindowFlag(Qt::FramelessWindowHint, true);
         window->setWindowState(Qt::WindowFullScreen);
-        QRect r = window->getExtendedFrameProperties();
+        QRect r = getExtendedFrameProperties();
         window->move(xmin + r.x(), ymin);
         window->resize(w, h);
+        resize(w, h);
         window->showNormal();
+#if !defined(WIN32) && !defined(__APPLE__)
+        //window->setWindowFlag(Qt::WindowStaysOnTopHint, true);
+        window->setGeometry(xmin + r.x(), ymin, w, h);
+        AppManager::instance()->connection()->refreshFramebuffer();
+        //fsTimer_->start();
+#endif
       }
     }
     else {
@@ -797,4 +804,9 @@ void QAbstractVNCView::handleMouseButtonEmulationTimeout()
     return;
   }
   mbemu_->handleTimeout();
+}
+
+QRect QAbstractVNCView::getExtendedFrameProperties()
+{
+  return QRect();
 }

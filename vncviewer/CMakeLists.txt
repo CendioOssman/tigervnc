@@ -33,6 +33,8 @@ if (WIN32)
       vncwinview.cxx
       vncwinview.h
       Surface_Win32.cxx
+      Win32TouchHandler.cxx
+      Win32TouchHandler.h
       win32.c
       win32.h
   )
@@ -50,6 +52,14 @@ else()
       vncx11view.cxx
       vncx11view.h
       Surface_X11.cxx
+      X11TouchHandler.cxx
+      X11TouchHandler.h
+      GestureHandler.cxx
+      GestureHandler.h
+      vncgesture.h
+      vncgesture.cxx
+      vncgesturerecognizer.h
+      vncgesturerecognizer.cxx
       xkb_to_qnum.c
   )
 endif()
@@ -91,6 +101,9 @@ set(PROJECT_SOURCES
         EmulateMB.cxx
         CConn.h
         CConn.cxx
+        BaseTouchHandler.cxx
+        BaseTouchHandler.h
+        GestureEvent.h
         qml.qrc
         ${OS_DEP_SOURCES}
 )
