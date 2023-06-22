@@ -6,6 +6,7 @@
 
 class QAbstractVNCView;
 class QVNCWindow;
+class QTimer;
 
 class AppManager : public QObject
 {
@@ -74,6 +75,7 @@ private:
   QVNCConnection *facade_;
   QAbstractVNCView *view_;
   QVNCWindow *scroll_;
+  QTimer *rfbTimerProxy_;
   AppManager();
 };
 

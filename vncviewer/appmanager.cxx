@@ -6,11 +6,13 @@
 #include <QTcpSocket>
 #include <QScreen>
 #include <QProcess>
+#include <QTimer>
 #if defined(Q_OS_UNIX)
 #include <QApplication>
 #endif
 
 #include "rdr/Exception.h"
+#include "rfb/Timer.h"
 #include "i18n.h"
 #include "vncconnection.h"
 #include "parameters.h"
@@ -35,10 +37,17 @@ AppManager::AppManager()
  , facade_(new QVNCConnection)
  , view_(nullptr)
  , scroll_(new QVNCWindow)
+ , rfbTimerProxy_(new QTimer)
 {
   connect(this, &AppManager::connectToServerRequested, facade_, &QVNCConnection::connectToServer);
   connect(facade_, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
   connect(this, &AppManager::resetConnectionRequested, facade_, &QVNCConnection::resetConnection);
+  connect(rfbTimerProxy_, &QTimer::timeout, this, [this]() {
+    rfbTimerProxy_->setInterval(rfb::Timer::checkTimeouts());
+  });
+  rfbTimerProxy_->setSingleShot(false);
+  rfbTimerProxy_->setInterval(0);
+  rfbTimerProxy_->start();
 }
 
 AppManager::~AppManager()
@@ -47,6 +56,7 @@ AppManager::~AppManager()
   scroll_->takeWidget();
   delete scroll_;
   delete view_;
+  delete rfbTimerProxy_;
 }
 
 int AppManager::initialize()
