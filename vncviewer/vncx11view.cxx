@@ -9,6 +9,8 @@
 #include <QImage>
 #include <QBitmap>
 #include <QDebug>
+#include <QApplication>
+#include <QScreen>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QX11Info>
 #else
@@ -31,6 +33,7 @@
 
 #include <X11/XKBlib.h>
 
+#include "vncwindow.h"
 #include "vncx11view.h"
 
 extern const struct _code_map_xkb_to_qnum {
@@ -841,4 +844,61 @@ bool QVNCX11View::gestureEvent(QGestureEvent *event)
     }
   }
   return true;
+}
+
+void QVNCX11View::setWindowManager()
+{
+  QApplication *app = static_cast<QApplication*>(QApplication::instance());
+  QList<QScreen*> screens = app->screens();
+  QList<int> selectedScreens = fullscreenScreens();
+  int topScreen = 0;
+  int bottomScreen = 0;
+  int leftScreen = 0;
+  int rightScreen = 0;
+  for (int &screenIndex : selectedScreens) {
+    QScreen *screen = screens[screenIndex];
+    QRect rect = screen->geometry();
+    if (rect.y() < screens[topScreen]->geometry().y()) {
+      topScreen = screenIndex;
+    }
+    if (rect.y() + rect.height() * screen->devicePixelRatio() > screens[bottomScreen]->geometry().y() + screens[bottomScreen]->geometry().height() * screens[bottomScreen]->devicePixelRatio()) {
+      bottomScreen = screenIndex;
+    }
+    if (rect.x() < screens[leftScreen]->geometry().x()) {
+      leftScreen = screenIndex;
+    }
+    if (rect.x() + rect.width() * screen->devicePixelRatio() > screens[rightScreen]->geometry().y() + screens[rightScreen]->geometry().width() * screens[rightScreen]->devicePixelRatio()) {
+      rightScreen = screenIndex;
+    }
+  }
+
+  QVNCWindow *window = AppManager::instance()->window();
+  WId wid = window->winId();
+  unsigned long rootWindow = RootWindow(display_, screen_);
+  Atom atom_WM_FULLSCREEN_MONITORS = XInternAtom(display_, "_NET_WM_FULLSCREEN_MONITORS", 0);
+  Atom atom_WM_STATE_FULLSCREEN = XInternAtom(display_, "_NET_WM_STATE_FULLSCREEN", 0);
+  Atom atom_WM_STATE = XInternAtom(display_, "_NET_WM_STATE", 0);
+
+  XEvent e;
+  e.xany.type = ClientMessage;
+  e.xany.window = wid;
+  e.xclient.message_type = atom_WM_FULLSCREEN_MONITORS;
+  e.xclient.format = 32;
+  e.xclient.data.l[0] = topScreen;
+  e.xclient.data.l[1] = bottomScreen;
+  e.xclient.data.l[2] = leftScreen;
+  e.xclient.data.l[3] = rightScreen;
+  e.xclient.data.l[4] = 0;
+  XSendEvent(display_, rootWindow, 0, SubstructureNotifyMask | SubstructureRedirectMask, &e);
+
+  e.xany.type = ClientMessage;
+  e.xany.window = wid;
+  e.xclient.message_type = atom_WM_STATE;
+  e.xclient.format = 32;
+  e.xclient.data.l[0] = 1;
+  e.xclient.data.l[1] = atom_WM_STATE_FULLSCREEN;
+  e.xclient.data.l[2] = 0;
+  e.xclient.data.l[3] = 0;
+  e.xclient.data.l[4] = 0;
+  XSendEvent(display_, rootWindow, 0, SubstructureNotifyMask | SubstructureRedirectMask, &e);
 }

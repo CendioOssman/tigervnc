@@ -109,6 +109,7 @@ protected:
   void handleMouseButtonEmulationTimeout();
   void sendPointerEvent(const rfb::Point& pos, int buttonMask);
   virtual bool bypassWMHintingEnabled() const { return false; }
+  virtual void setWindowManager() {}
 };
 
 #endif // ABSTRACTVNCVIEW_H

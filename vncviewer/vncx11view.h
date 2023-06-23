@@ -45,6 +45,7 @@ protected:
 
   void handleMouseButtonEvent(QMouseEvent*);
   void handleMouseWheelEvent(QWheelEvent*);
+  void setWindowManager() override;
 
 signals:
   void message(const QString &msg, int timeout);

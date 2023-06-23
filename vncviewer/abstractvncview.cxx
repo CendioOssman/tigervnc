@@ -632,7 +632,7 @@ QList<int> QAbstractVNCView::fullscreenScreens()
       applicableScreens << i;
     }
   }
-  else {
+  else if (ViewerConfig::config()->fullScreenMode() == ViewerConfig::FSSelected) {
     for (int &id : ViewerConfig::config()->selectedScreens()) {
       int i = id - 1; // Screen ID in config is 1-origin.
       if (i < screens.length()) {
@@ -640,6 +640,16 @@ QList<int> QAbstractVNCView::fullscreenScreens()
       }
     }
   }
+  else {
+    QScreen *cscreen = getCurrentScreen();
+    for (int i = 0; i < screens.length(); i++) {
+      if (screens[i] == cscreen) {
+        applicableScreens << i;
+        break;
+      }
+    }
+  }
+
   return applicableScreens;
 }
 
@@ -661,6 +671,7 @@ void QAbstractVNCView::fullscreen(bool enabled)
       geometry_ = window->saveGeometry();
     }
 
+    setWindowManager();
     auto mode = ViewerConfig::config()->fullScreenMode();
     if (mode != ViewerConfig::FSCurrent) {
       QList<int> selectedScreens = fullscreenScreens();
@@ -707,19 +718,11 @@ void QAbstractVNCView::fullscreen(bool enabled)
         if (bypassWMHintingNeeded) {
           window->setWindowFlag(Qt::BypassWindowManagerHint, true);
         }
-        window->setWindowFlag(Qt::FramelessWindowHint, true);
-        window->setWindowState(Qt::WindowFullScreen);
         QRect r = getExtendedFrameProperties();
         window->move(xmin + r.x(), ymin);
         window->resize(w, h);
         resize(w, h);
         window->showNormal();
-#if !defined(WIN32) && !defined(__APPLE__)
-        //window->setWindowFlag(Qt::WindowStaysOnTopHint, true);
-        window->setGeometry(xmin + r.x(), ymin, w, h);
-        AppManager::instance()->connection()->refreshFramebuffer();
-        //fsTimer_->start();
-#endif
       }
     }
     else {
