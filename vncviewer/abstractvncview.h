@@ -40,10 +40,12 @@ public:
   QScreen *getCurrentScreen();
   QClipboard *clipboard() const { return clipboard_; }
   QRect getExtendedFrameProperties();
+  bool isVisibleContextMenu() const;
+  void sendContextMenuKey();
+  virtual void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false);
+  virtual void handleKeyRelease(int keyCode);
 
 public slots:
-  virtual void handleKeyPress(int keyCode, quint32 keySym);
-  virtual void handleKeyRelease(int keyCode);
   virtual void setQCursor(const QCursor &cursor);
   virtual void setCursorPos(int x, int y);
   virtual void pushLEDState();
@@ -110,6 +112,7 @@ protected:
   void sendPointerEvent(const rfb::Point& pos, int buttonMask);
   virtual bool bypassWMHintingEnabled() const { return false; }
   virtual void setWindowManager() {}
+  bool eventFilter(QObject *watched, QEvent *event) override;
 };
 
 #endif // ABSTRACTVNCVIEW_H

@@ -534,16 +534,18 @@ void QVNCX11View::handleMouseWheelEvent(QWheelEvent *e)
 #endif
 }
 
-void QVNCX11View::handleKeyPress(int keyCode, quint32 keySym)
+void QVNCX11View::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
 {
-  static bool menuRecursion = false;
-
-  // Prevent recursion if the menu wants to send its own
-  // activation key.
-  if (menuKeySym_ && (keySym == menuKeySym_) && !menuRecursion) {
-    menuRecursion = true;
-    popupContextMenu();
-    menuRecursion = false;
+  if (menuKeySym_ && keySym == menuKeySym_) {
+    if (isVisibleContextMenu()) {
+      if (!menuShortCutMode) {
+        sendContextMenuKey();
+        return;
+      }
+    }
+    else {
+      popupContextMenu();
+    }
     return;
   }
 

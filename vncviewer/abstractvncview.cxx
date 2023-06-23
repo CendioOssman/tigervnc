@@ -361,7 +361,43 @@ void QAbstractVNCView::createContextMenu()
     for (QAction *&action: actions_) {
       contextMenu_->addAction(action);
     }
+    contextMenu_->installEventFilter(this);
   }
+}
+
+bool QAbstractVNCView::isVisibleContextMenu() const
+{
+  return contextMenu_ && contextMenu_->isVisible();
+}
+
+void QAbstractVNCView::sendContextMenuKey()
+{
+  if (ViewerConfig::config()->viewOnly()) {
+    return;
+  }
+  qDebug() << "QAbstractVNCView::sendContextMenuKey";
+  int dummy;
+  int keyCode;
+  quint32 keySym;
+  ::getMenuKey(&dummy, &keyCode, &keySym);
+  QAbstractVNCView *view = AppManager::instance()->view();
+  view->handleKeyPress(keyCode, keySym, true);
+  view->handleKeyRelease(keyCode);
+  contextMenu_->hide();
+}
+
+bool QAbstractVNCView::eventFilter(QObject *obj, QEvent *event)
+{
+  if (event->type() == QEvent::KeyPress) {
+    QKeyEvent *e = static_cast<QKeyEvent *>(event);
+    if (isVisibleContextMenu()) {
+      if (QKeySequence(e->key()).toString() == ViewerConfig::config()->menuKey()) {
+        sendContextMenuKey();
+        return true;
+      }
+    }
+  }
+  return QWidget::eventFilter(obj, event);
 }
 
 qulonglong QAbstractVNCView::nativeWindowHandle() const
@@ -369,7 +405,7 @@ qulonglong QAbstractVNCView::nativeWindowHandle() const
   return 0;
 }
 
-void QAbstractVNCView::handleKeyPress(int, quint32)
+void QAbstractVNCView::handleKeyPress(int, quint32, bool)
 {
 }
 

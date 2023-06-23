@@ -16,14 +16,14 @@ public:
   QVNCMacView(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~QVNCMacView();
   qulonglong nativeWindowHandle() const override;
+  void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
+  void handleKeyRelease(int keyCode) override;
 
 public slots:
   void setQCursor(const QCursor &cursor) override;
   void handleClipboardData(const char* data) override;
   void setLEDState(unsigned int state) override;
   void pushLEDState() override;
-  void handleKeyPress(int keyCode, quint32 keySym) override;
-  void handleKeyRelease(int keyCode) override;
   void grabKeyboard() override;
   void ungrabKeyboard() override;
   void bell() override;
