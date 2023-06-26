@@ -570,6 +570,7 @@ void QVNCX11View::draw()
     Picture winPict = XRenderCreatePicture(display_, window_, visualFormat_, 0, NULL);
     XRenderComposite(display_, PictOpSrc, picture_, None, winPict, x, y, 0, 0, x, y, w, h);
     XRenderFreePicture(display_, winPict);
+    XFlush(display_);
   }
 }
 
