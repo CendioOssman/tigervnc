@@ -513,11 +513,6 @@ void QVNCMacView::handleKeyRelease(int keyCode)
   downKeySym_.erase(iter);
 }
 
-void QVNCMacView::setQCursor(const QCursor &cursor)
-{
-  cursor_ = cocoa_set_cursor(view_, &cursor);
-}
-
 void QVNCMacView::handleClipboardData(const char* data)
 {
   if (!hasFocus()) {

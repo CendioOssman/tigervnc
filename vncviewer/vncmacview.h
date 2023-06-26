@@ -25,7 +25,6 @@ public:
   void dim(bool enabled) override;
 
 public slots:
-  void setQCursor(const QCursor &cursor) override;
   void handleClipboardData(const char* data) override;
   void setLEDState(unsigned int state) override;
   void pushLEDState() override;

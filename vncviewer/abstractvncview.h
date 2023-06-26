@@ -56,7 +56,6 @@ public:
 #endif
 
 public slots:
-  virtual void setQCursor(const QCursor &cursor);
   virtual void setCursorPos(int x, int y);
   virtual void pushLEDState();
   virtual void setLEDState(unsigned int state);

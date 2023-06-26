@@ -296,7 +296,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
     mbemu_->filterPointerEvent(*lastPointerPos_, lastButtonMask_);
   });
 
-  connect(AppManager::instance()->connection(), &QVNCConnection::cursorChanged, this, &QAbstractVNCView::setQCursor, Qt::QueuedConnection);
+  connect(AppManager::instance()->connection(), &QVNCConnection::cursorChanged, this, &QAbstractVNCView::setCursor, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorPositionChanged, this, &QAbstractVNCView::setCursorPos, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::ledStateChanged, this, &QAbstractVNCView::setLEDState, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::clipboardDataReceived, this, &QAbstractVNCView::handleClipboardData, Qt::QueuedConnection);
@@ -465,10 +465,6 @@ void QAbstractVNCView::handleKeyPress(int, quint32, bool)
 }
 
 void QAbstractVNCView::handleKeyRelease(int)
-{
-}
-
-void QAbstractVNCView::setQCursor(const QCursor &)
 {
 }
 

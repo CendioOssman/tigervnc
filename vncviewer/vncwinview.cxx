@@ -779,54 +779,6 @@ int QVNCWinView::handleTouchEvent(UINT message, WPARAM wParam, LPARAM lParam)
   return touchHandler_->processEvent(message, wParam, lParam);
 }
 
-void QVNCWinView::setQCursor(const QCursor &cursor)
-{
-  QImage image = cursor.pixmap().toImage();
-  int width = image.width();
-  int height = image.height();
-  int hotX = cursor.hotSpot().x();
-  int hotY = cursor.hotSpot().y();
-  BITMAPV5HEADER header;
-  memset(&header, 0, sizeof(BITMAPV5HEADER));
-  header.bV5Size = sizeof(BITMAPV5HEADER);
-  header.bV5Width = width;
-  header.bV5Height = -height;
-  header.bV5Planes = 1;
-  header.bV5BitCount = 32;
-  header.bV5Compression = BI_BITFIELDS;
-  header.bV5RedMask = 0x00FF0000;
-  header.bV5GreenMask = 0x0000FF00;
-  header.bV5BlueMask = 0x000000FF;
-  header.bV5AlphaMask = 0xFF000000;
-
-  HDC hdc = GetDC(hwnd_);
-  quint32 *bits = nullptr;
-  HBITMAP bitmap = CreateDIBSection(hdc, (BITMAPINFO*)&header, DIB_RGB_COLORS, (void**)&bits, nullptr, 0);
-  ReleaseDC(nullptr, hdc);
-
-  quint32* ptr = bits;
-  for (int y = 0; y < height; y++) {
-    for (int x = 0; x < width; x++) {
-      *ptr++ = image.pixel(x, y);
-    }
-  }
-
-  HBITMAP empty_mask = CreateBitmap(width, height, 1, 1, nullptr);
-  ICONINFO icon_info;
-  icon_info.fIcon = false;
-  icon_info.xHotspot = hotX;
-  icon_info.yHotspot = hotY;
-  icon_info.hbmMask = empty_mask;
-  icon_info.hbmColor = bitmap;
-
-  DestroyIcon(cursor_);
-  cursor_ = CreateIconIndirect(&icon_info);
-  DeleteObject(bitmap);
-  DeleteObject(empty_mask);
-
-  SetCursor(cursor_);
-}
-
 void QVNCWinView::setCursorPos(int x, int y)
 {
   if (!mouseGrabbed_) {
