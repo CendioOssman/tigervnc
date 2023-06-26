@@ -6,6 +6,8 @@
 #include <QResizeEvent>
 #include <QGestureEvent>
 #include <QPainter>
+#include <QStyleFactory>
+#include <QScrollBar>
 #include <QDebug>
 #include "rfb/LogWriter.h"
 #include "parameters.h"
@@ -45,6 +47,8 @@ QVNCWindow::QVNCWindow(QWidget *parent)
   p.setColor(QPalette::Window, QColor::fromRgb(40, 40, 40));
   setPalette(p);
   setBackgroundRole(QPalette::Window);
+  horizontalScrollBar()->setStyle(QStyleFactory::create("Fusion"));
+  verticalScrollBar()->setStyle(QStyleFactory::create("Fusion"));
 
   setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
