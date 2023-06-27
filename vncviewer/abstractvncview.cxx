@@ -925,7 +925,8 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
     mbemu_->filterPointerEvent(*lastPointerPos_, lastButtonMask_);
   }
   else {
-    mousePointerTimer_->start();
+    if (!mousePointerTimer_->isActive())
+      mousePointerTimer_->start();
   }
 }
 
