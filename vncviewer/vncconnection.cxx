@@ -334,6 +334,7 @@ void QVNCConnection::startProcessing()
     rfbcon_->getOutStream()->cork(true);
 
     while (rfbcon_->processMsg()) {
+      QApplication::processEvents();
       if (!socket_)
         break;
     }
