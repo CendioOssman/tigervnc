@@ -13,9 +13,8 @@
 #include <QQuickWindow>
 #include "cocoa.h"
 #endif
-#if defined(Q_OS_UNIX)
 #include <QApplication>
-#endif
+#include <QAbstractEventDispatcher>
 
 #include "rdr/Exception.h"
 #include "rfb/Timer.h"
@@ -54,11 +53,14 @@ AppManager::AppManager()
   connect(facade_, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
   connect(this, &AppManager::resetConnectionRequested, facade_, &QVNCConnection::resetConnection);
   connect(rfbTimerProxy_, &QTimer::timeout, this, [this]() {
-    rfbTimerProxy_->setInterval(rfb::Timer::checkTimeouts());
+    rfb::Timer::checkTimeouts();
   });
-  rfbTimerProxy_->setSingleShot(false);
-  rfbTimerProxy_->setInterval(0);
-  rfbTimerProxy_->start();
+  connect(QApplication::eventDispatcher(), &QAbstractEventDispatcher::aboutToBlock, this, [this]() {
+    int next = rfb::Timer::checkTimeouts();
+    if (next != 0)
+      rfbTimerProxy_->start(next);
+  });
+  rfbTimerProxy_->setSingleShot(true);
 
 #if defined(__APPLE__)
   overlay_->setAttribute(Qt::WA_NativeWindow);
