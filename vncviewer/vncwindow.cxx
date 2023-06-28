@@ -7,7 +7,6 @@
 #include <QHBoxLayout>
 #include <QGestureEvent>
 #include <QPainter>
-//#include <QCoreApplication>
 #include <QDebug>
 #include "rfb/LogWriter.h"
 #include "parameters.h"
@@ -28,18 +27,25 @@ QVNCWindow::QVNCWindow(QWidget *parent)
 
   setWidgetResizable(ViewerConfig::config()->remoteResize());
   setContentsMargins(0, 0, 0, 0);
-  setFrameRect(QRect(0, 0, 0, 0));
+#if 1
   setFrameStyle(QFrame::NoFrame);
-
   setLineWidth(0);
+#else // NOTE: Enabling frame makes breaking fullscreen functions.
+  setFrameStyle(QFrame::Panel | QFrame::Raised);
+  setLineWidth(5);
+#endif
+
   setViewportMargins(0, 0, 0, 0);
 
   QPalette p(palette());
-  p.setColor(QPalette::Window, QColor::fromRgb(0, 0, 0));
+  p.setColor(QPalette::Window, QColor::fromRgb(40, 40, 40));
   setPalette(p);
   setBackgroundRole(QPalette::Window);
 
   setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+
+  setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
   // Support for -geometry option. Note that although we do support
   // negative coordinates, we do not support -XOFF-YOFF (ie
@@ -75,15 +81,33 @@ void QVNCWindow::popupToast()
 
 void QVNCWindow::moveEvent(QMoveEvent *e)
 {
-  QWidget::moveEvent(e);
+  QScrollArea::moveEvent(e);
 }
 
 void QVNCWindow::resizeEvent(QResizeEvent *e)
 {
+  qDebug() << "QVNCWindow::resizeEvent: w=" << e->size().width() << ", h=" << e->size().height() << ", widgetResizable=" << widgetResizable();
   if (ViewerConfig::config()->remoteResize()) {
     QSize size = e->size();
     widget()->resize(size.width(), size.height());
   }
+  else {
+    scrollContentsBy(0, 0);
+    QSize size = e->size();
+    if (widget()->size().width() > size.width()) {
+      setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    }
+    else {
+      setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    }
+    if (widget()->size().height() > size.height()) {
+      setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    }
+    else {
+      setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    }
+  }
+  QScrollArea::resizeEvent(e);
 }
 
 void QVNCWindow::changeEvent(QEvent *e)
@@ -94,19 +118,21 @@ void QVNCWindow::changeEvent(QEvent *e)
       widget()->resize(width(), height());
     }
   }
+  QScrollArea::changeEvent(e);
 }
 
 void QVNCWindow::resize(int width, int height)
 {
-  QScrollArea::resize(width, height);
+  qDebug() << "QVNCWindow::resize: w=" << width << ", h=" << height;
   if (widgetResizable()) {
 #if !defined(__APPLE__)
     double dpr = devicePixelRatioF();
     width *= dpr;
     height *= dpr;
-#endif
     widget()->resize(width, height);
+#endif
   }
+  QScrollArea::resize(width, height);
 }
 
 void QVNCWindow::normalizedResize(int width, int height)

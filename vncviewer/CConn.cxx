@@ -148,7 +148,7 @@ unsigned CConn::getPosition()
 
 int CConn::securityType()
 {
-  return csecurity->getType();
+  return csecurity ? csecurity->getType() : -1;
 }
 
 ModifiablePixelBuffer *CConn::framebuffer()

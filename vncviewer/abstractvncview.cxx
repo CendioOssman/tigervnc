@@ -34,6 +34,10 @@
 #define XK_XKB_KEYS
 #include "rfb/keysymdef.h"
 
+#if defined(__APPLE__)
+#include "cocoa.h"
+#endif
+
 static rfb::LogWriter vlog("VNCView");
 
 QClipboard *QAbstractVNCView::clipboard_ = nullptr;
@@ -316,11 +320,10 @@ void QAbstractVNCView::postRemoteResizeRequest()
 
 void QAbstractVNCView::resize(int width, int height)
 {
+  qDebug() << "QAbstractVNCView::resize: w=" << width << ", h=" << height;
   resizeTimer_->stop();
-#if !defined(__APPLE__)
-  width /= devicePixelRatio_;
-  height /= devicePixelRatio_;
-#endif
+  width /= effectiveDevicePixelRatio();
+  height /= effectiveDevicePixelRatio();
   QWidget::resize(width, height);
   QVNCConnection *cc = AppManager::instance()->connection();
   if (cc->server()->supportsSetDesktopSize) {
@@ -334,7 +337,16 @@ void QAbstractVNCView::resize(int width, int height)
 
 void QAbstractVNCView::popupContextMenu()
 {
+#if 0
+#if defined(__APPLE__)
+  ungrabKeyboard();
+#endif
+#endif
   createContextMenu();
+#if 0
+  cocoa_set_overlay_property(contextMenu_);
+  contextMenu_->raise();
+#endif
   contextMenu_->exec(QCursor::pos());
 }
 
@@ -357,7 +369,12 @@ void QAbstractVNCView::createContextMenu()
     actions_ << new QOptionDialogAction(p_("ContextMenu|", "&Options..."));
     actions_ << new QInfoDialogAction(p_("ContextMenu|", "Connection &info..."));
     actions_ << new QAboutDialogAction(p_("ContextMenu|", "About &TigerVNC viewer..."));
-    contextMenu_ = new QMenu();
+    QVNCWindow *window = AppManager::instance()->window();
+    contextMenu_ = new QMenu(window);
+#if defined(__APPLE__)
+    contextMenu_->setAttribute(Qt::WA_NativeWindow);
+    cocoa_set_overlay_property(contextMenu_->winId());
+#endif
     for (QAction *&action: actions_) {
       contextMenu_->addAction(action);
     }
@@ -482,13 +499,9 @@ void QAbstractVNCView::remoteResize(int w, int h)
   QVNCConnection *cc = AppManager::instance()->connection();
   rfb::ScreenSet layout;
   rfb::ScreenSet::const_iterator iter;
-#if defined(__APPLE__)
-  double f = 1.0;
-#else
-  double f = devicePixelRatio_;
-#endif
+  double f = effectiveDevicePixelRatio();
   QVNCWindow *window = AppManager::instance()->window();
-  if (!fullscreenEnabled_ || (w > window->width() * f) || (h > window->height() * f)) {
+  if ((!fullscreenEnabled_ && !pendingFullscreen_) || (w > window->width() * f) || (h > window->height() * f)) {
     // In windowed mode (or the framebuffer is so large that we need
     // to scroll) we just report a single virtual screen that covers
     // the entire framebuffer.
@@ -535,8 +548,11 @@ void QAbstractVNCView::remoteResize(int w, int h)
     //
     QApplication *app = static_cast<QApplication*>(QApplication::instance());
     QList<QScreen*> screens = app->screens();
+//    std::sort(screens.begin(), screens.end(), [](QScreen *a, QScreen *b) {
+//                return a->geometry().x() == b->geometry().x() ? (a->geometry().y() < b->geometry().y()) : (a->geometry().x() < b->geometry().x());
+//              });
     for (QScreen *&screen : screens) {
-      double dpr = screen->devicePixelRatio();
+      double dpr = effectiveDevicePixelRatio(screen);
       QRect vg = screen->geometry();
       int sx = vg.x();
       int sy = vg.y();
@@ -611,7 +627,7 @@ void QAbstractVNCView::remoteResize(int w, int h)
   else {
     vlog.debug("%s", buffer);
   }
-  //qDebug() << "QAbstractVNCView::remoteResize: w=" << w << ", h=" << h << ", layout=" << buffer;
+  qDebug() << "QAbstractVNCView::remoteResize: w=" << w << ", h=" << h << ", layout=" << buffer;
   emit AppManager::instance()->connection()->writeSetDesktopSize(w, h, layout);
 }
 
@@ -636,11 +652,7 @@ void QAbstractVNCView::updateWindow()
 
 void QAbstractVNCView::handleDesktopSize()
 {
-#if defined(__APPLE__)
-  double f = 1.0;
-#else
-  double f = devicePixelRatio_;
-#endif
+  double f = effectiveDevicePixelRatio();
   if (!ViewerConfig::config()->desktopSize().isEmpty()) {
     int w, h;
     // An explicit size has been requested
@@ -701,13 +713,14 @@ void QAbstractVNCView::fullscreen(bool enabled)
   resizeTimer_->stop();
   QApplication *app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
+  setWindowManager();
   if (enabled) {
     // cf. DesktopWindow::fullscreen_on()
     if (!isFullscreenEnabled()) {
       geometry_ = window->saveGeometry();
+      fscreen_ = getCurrentScreen();
     }
 
-    setWindowManager();
     auto mode = ViewerConfig::config()->fullScreenMode();
     if (mode != ViewerConfig::FSCurrent) {
       QList<int> selectedScreens = fullscreenScreens();
@@ -719,7 +732,7 @@ void QAbstractVNCView::fullscreen(bool enabled)
       for (int &screenIndex : selectedScreens) {
         QScreen *screen = screens[screenIndex];
         QRect rect = screen->geometry();
-        double dpr = screen->devicePixelRatio();
+        double dpr = effectiveDevicePixelRatio(screen);
         if (xmin > rect.x()) {
           xmin = rect.x();
         }
@@ -742,50 +755,19 @@ void QAbstractVNCView::fullscreen(bool enabled)
       fw_ = w;
       fh_ = h;
 
-      if (selectedScreens.length() == 1) {
-        if (bypassWMHintingNeeded) {
-          window->setWindowFlag(Qt::BypassWindowManagerHint, true);
-        }
-        window->windowHandle()->setScreen(selectedPrimaryScreen);
-        window->move(xmin, ymin);
-        window->showFullScreen();
+      if (selectedScreens.length() == 1) { // Fullscreen on the selected single display.
+        fullscreenOnSelectedDisplay(selectedPrimaryScreen, xmin, ymin, w, h);
       }
-      else {
-        if (bypassWMHintingNeeded) {
-          window->setWindowFlag(Qt::BypassWindowManagerHint, true);
-        }
-        QRect r = getExtendedFrameProperties();
-        window->move(xmin + r.x(), ymin);
-        window->resize(w, h);
-        resize(w, h);
-        window->showNormal();
+      else { // Fullscreen on multiple displays.
+        fullscreenOnSelectedDisplays(xmin, ymin, w, h);
       }
     }
-    else {
-      if (bypassWMHintingNeeded) {
-        window->setWindowFlag(Qt::BypassWindowManagerHint, true);
-      }
-      window->windowHandle()->setScreen(getCurrentScreen());
-      window->showFullScreen();
-      //qDebug() << "parent width=" << window->width() << ", height=" << window->height();
-      // Capture the fullscreen geometry.
-      QScreen *screen = getCurrentScreen();
-      double dpr = screen->devicePixelRatio();
-      QRect vg = screen->geometry();
-      fxmin_ = vg.x();
-      fymin_ = vg.y();
-      fw_ = vg.width() * dpr;
-      fh_ = vg.height() * dpr;
+    else { // Fullscreen on the current single display.
+      fullscreenOnCurrentDisplay();
     }
   }
-  else {
-    if (bypassWMHintingNeeded) {
-      window->setWindowFlag(Qt::BypassWindowManagerHint, false);
-    }
-    window->setWindowFlag(Qt::FramelessWindowHint, false);
-    window->setWindowFlag(Qt::Window);
-    window->showNormal();
-    window->restoreGeometry(geometry_);
+  else { // Exit fullscreen mode.
+    exitFullscreen();
   }
   fullscreenEnabled_ = enabled;
   pendingFullscreen_ = false;
@@ -799,6 +781,70 @@ void QAbstractVNCView::fullscreen(bool enabled)
   if (fullscreenEnabled_ != fullscreenEnabled0) {
     emit fullscreenChanged(fullscreenEnabled_);
   }
+}
+
+void QAbstractVNCView::fullscreenOnCurrentDisplay()
+{
+  QVNCWindow *window = AppManager::instance()->window();
+  if (bypassWMHintingEnabled()) {
+    window->setWindowFlag(Qt::BypassWindowManagerHint, true);
+  }
+  QScreen *screen = getCurrentScreen();
+  window->windowHandle()->setScreen(screen);
+  window->showFullScreen();
+
+  // Capture the fullscreen geometry.
+  double dpr = effectiveDevicePixelRatio(screen);
+  QRect vg = screen->geometry();
+  fxmin_ = vg.x();
+  fymin_ = vg.y();
+  fw_ = vg.width() * dpr;
+  fh_ = vg.height() * dpr;
+
+  grabKeyboard();
+}
+
+void QAbstractVNCView::fullscreenOnSelectedDisplay(QScreen *screen, int vx, int vy, int, int)
+{
+  QVNCWindow *window = AppManager::instance()->window();
+  if (bypassWMHintingEnabled()) {
+    window->setWindowFlag(Qt::BypassWindowManagerHint, true);
+  }
+  window->windowHandle()->setScreen(screen);
+  window->move(vx, vy);
+  window->showFullScreen();
+  grabKeyboard();
+}
+
+void QAbstractVNCView::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight)
+{
+  QVNCWindow *window = AppManager::instance()->window();
+  if (bypassWMHintingEnabled()) {
+    window->setWindowFlag(Qt::BypassWindowManagerHint, true);
+  }
+
+  window->setWindowFlag(Qt::FramelessWindowHint, true);
+
+  QRect r = getExtendedFrameProperties();
+  window->move(vx + r.x(), vy);
+  window->resize(vwidth, vheight);
+  resize(vwidth, vheight);
+  window->showNormal();
+  grabKeyboard();
+}
+
+void QAbstractVNCView::exitFullscreen()
+{
+  QVNCWindow *window = AppManager::instance()->window();
+  if (bypassWMHintingEnabled()) {
+    window->setWindowFlag(Qt::BypassWindowManagerHint, false);
+  }
+  window->setWindowFlag(Qt::FramelessWindowHint, false);
+  window->setWindowFlag(Qt::Window);
+  window->showNormal();
+  window->windowHandle()->setScreen(fscreen_);
+  window->restoreGeometry(geometry_);
+  ungrabKeyboard();
 }
 
 void QAbstractVNCView::moveView(int x, int y)
@@ -819,6 +865,14 @@ QScreen *QAbstractVNCView::getCurrentScreen()
     }
   }
   return screens[0];
+}
+
+double QAbstractVNCView::effectiveDevicePixelRatio(QScreen *screen) const
+{
+  if (screen) {
+    return screen->devicePixelRatio();
+  }
+  return devicePixelRatio_;
 }
 
 void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)

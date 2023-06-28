@@ -6,6 +6,7 @@ import QtQuick.Window 2.12
 Window {
     id: root
 
+    objectName: "AuthDialog"
     property bool secured: false
     property alias userNeeded: userText.visible
     property alias passwordNeeded: passwordText.visible

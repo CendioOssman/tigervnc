@@ -34,6 +34,7 @@
 #endif
 #if defined(__APPLE__)
 #include <Carbon/Carbon.h>
+#include "cocoa.h"
 #endif
 
 #include "parameters.h"
@@ -1881,4 +1882,13 @@ void ViewerConfig::parseServerName()
 void ViewerConfig::setAccessPoint(QString accessPoint)
 {
   emit accessPointChanged(accessPoint);
+}
+
+bool ViewerConfig::canFullScreenOnMultiDisplays() const
+{
+#if defined(__APPLE__)
+  return !cocoa_displays_have_separate_spaces();
+#else
+  return true;
+#endif
 }

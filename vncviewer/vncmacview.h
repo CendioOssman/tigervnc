@@ -5,6 +5,7 @@
 #include "abstractvncview.h"
 
 class QWindow;
+class QScreen;
 class QLabel;
 class NSView;
 class NSCursor;
@@ -16,6 +17,7 @@ public:
   QVNCMacView(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~QVNCMacView();
   qulonglong nativeWindowHandle() const override;
+  double effectiveDevicePixelRatio(QScreen *screen = nullptr) const override { return 1.0; }
   void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
   void handleKeyRelease(int keyCode) override;
 
@@ -39,6 +41,8 @@ protected:
   void handleMouseButtonEvent(QMouseEvent*);
   void handleMouseWheelEvent(QWheelEvent*);
   void installNativeEventHandler();
+  void fullscreenOnCurrentDisplay() override;
+  void fullscreenOnSelectedDisplay(QScreen *screen, int vx, int vy, int vwidth, int vheight) override;
 
 signals:
   void message(const QString &msg, int timeout);

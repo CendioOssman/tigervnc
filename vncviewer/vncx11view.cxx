@@ -532,6 +532,13 @@ void QVNCX11View::handleMouseWheelEvent(QWheelEvent *e)
 #else
     filterPointerEvent(rfb::Point(e->x(), e->y()), buttonMask | wheelMask);
 #endif
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    filterPointerEvent(rfb::Point(e->position().x(), e->position().y()), buttonMask);
+    qDebug() << "QVNCX11View::handleMouseWheelEvent (button up/down): x=" << e->position().x() << ", y=" << e->position().y() << ", btn=" << Qt::hex << (buttonMask | wheelMask);
+#else
+    filterPointerEvent(rfb::Point(e->x(), e->y()), buttonMask);
+    qDebug() << "QVNCX11View::handleMouseWheelEvent (button up/down): x=" << e->x() << ", y=" << e->y() << ", btn=" << Qt::hex << (buttonMask | wheelMask);
+#endif
 }
 
 void QVNCX11View::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
@@ -853,10 +860,10 @@ void QVNCX11View::setWindowManager()
   QApplication *app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
   QList<int> selectedScreens = fullscreenScreens();
-  int topScreen = 0;
-  int bottomScreen = 0;
-  int leftScreen = 0;
-  int rightScreen = 0;
+  int topScreen = selectedScreens[0];
+  int bottomScreen = selectedScreens[0];
+  int leftScreen = selectedScreens[0];
+  int rightScreen = selectedScreens[0];
   for (int &screenIndex : selectedScreens) {
     QScreen *screen = screens[screenIndex];
     QRect rect = screen->geometry();
@@ -897,10 +904,24 @@ void QVNCX11View::setWindowManager()
   e.xany.window = wid;
   e.xclient.message_type = atom_WM_STATE;
   e.xclient.format = 32;
-  e.xclient.data.l[0] = 1;
+  e.xclient.data.l[0] = pendingFullscreen_ ? 1 : 0;
   e.xclient.data.l[1] = atom_WM_STATE_FULLSCREEN;
   e.xclient.data.l[2] = 0;
   e.xclient.data.l[3] = 0;
   e.xclient.data.l[4] = 0;
   XSendEvent(display_, rootWindow, 0, SubstructureNotifyMask | SubstructureRedirectMask, &e);
+}
+
+void QVNCX11View::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight)
+{
+  QVNCWindow *window = AppManager::instance()->window();
+  if (bypassWMHintingEnabled()) {
+    window->setWindowFlag(Qt::BypassWindowManagerHint, true);
+  }
+  QRect r = getExtendedFrameProperties();
+  window->move(vx + r.x(), vy);
+  window->resize(vwidth, vheight);
+  resize(vwidth, vheight);
+  window->showNormal();
+  grabKeyboard();
 }

@@ -18,7 +18,7 @@ public:
   void setWindow(HWND);
   bool hasViewFocus() const override;
   qulonglong nativeWindowHandle() const override;
-  QRect getExtendedFrameProperties();
+  QRect getExtendedFrameProperties() override;
   void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
   void handleKeyRelease(int keyCode) override;
 
@@ -36,13 +36,18 @@ public slots:
 
 protected:
   static LRESULT CALLBACK eventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-  static void getMouseProperties(WPARAM wParam, LPARAM lParam, int &x, int &y, int &buttonMask, int &wheelMask);
+  static void getMouseProperties(QVNCWinView *window, UINT message, WPARAM wParam, LPARAM lParam, int &x, int &y, int &buttonMask, int &wheelMask);
   bool event(QEvent *e) override;
   HWND createWindow(HWND parent, HINSTANCE instance);
   void showEvent(QShowEvent *) override;
   void focusInEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
   bool bypassWMHintingEnabled() const override { return true; }
+#if 0
+  void fullscreenOnCurrentDisplay() override;
+  void fullscreenOnSelectedDisplay(QScreen *screen) override;
+  void fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight) override;
+#endif
 
 private:
   void *wndproc_;

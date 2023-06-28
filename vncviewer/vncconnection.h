@@ -74,8 +74,8 @@ public slots:
   void resetConnection();
   void startProcessing();
   void refreshFramebuffer();
-  QString infoText() { return rfbcon_->connectionInfo(); }
-  QString host() { return rfbcon_->host(); }
+  QString infoText() { return rfbcon_ ? rfbcon_->connectionInfo() : ""; }
+  QString host() { return rfbcon_ ? rfbcon_->host() : ""; }
 
 private:
   CConn *rfbcon_;

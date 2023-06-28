@@ -7,6 +7,7 @@ import Qt.TigerVNC 1.0
 Window {
     id: root
 
+    objectName: "MessageDialog"
     property int response: 0
     property int setting: 0
     property alias text: messageText.text

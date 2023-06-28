@@ -86,6 +86,7 @@ class ViewerConfig : public QObject
   Q_PROPERTY(bool haveGNUTLS READ haveGNUTLS CONSTANT)
   Q_PROPERTY(bool haveNETTLE READ haveNETTLE CONSTANT)
   Q_PROPERTY(bool haveH264 READ haveH264 CONSTANT)
+  Q_PROPERTY(bool canFullScreenOnMultiDisplays READ canFullScreenOnMultiDisplays CONSTANT)
 
 public:
   const char* SERVER_HISTORY="tigervnc.history";
@@ -211,6 +212,7 @@ public:
     return false;
 #endif
   }
+  bool canFullScreenOnMultiDisplays() const;
 
 signals:
   //

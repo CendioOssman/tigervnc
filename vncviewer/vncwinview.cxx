@@ -7,6 +7,7 @@
 #include <QTimer>
 #include <QCursor>
 #include <qt_windows.h>
+#include <windowsx.h>
 
 #define XK_LATIN1
 #define XK_MISCELLANY
@@ -24,11 +25,13 @@
 #include "Win32TouchHandler.h"
 #include "win32.h"
 #include "i18n.h"
+#include "vncwindow.h"
 #include "vncwinview.h"
 
 #include <QDebug>
 #include <QMessageBox>
 #include <QTime>
+#include <QScreen>
 
 static rfb::LogWriter vlog("Viewport");
 
@@ -173,9 +176,9 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
     case WM_MOUSEMOVE: {
       window->startMouseTracking();
       int x, y, buttonMask, wheelMask;
-      getMouseProperties(wParam, lParam, x, y, buttonMask, wheelMask);
-      window->filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
+      getMouseProperties(window, message, wParam, lParam, x, y, buttonMask, wheelMask);
       //qDebug() << "VNCWinView::eventHandler(): WM_MOUSEMOVE: x=" << x << ", y=" << y;
+      window->filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
     }
       break;
     case WM_MOUSELEAVE:
@@ -194,20 +197,23 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
         break;
       }
       int x, y, buttonMask, wheelMask;
-      getMouseProperties(wParam, lParam, x, y, buttonMask, wheelMask);
-      window->filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
+      getMouseProperties(window, message, wParam, lParam, x, y, buttonMask, wheelMask);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-      qDebug() << "QVNCWinView::eventHandler (button up/down): x=" << x << ", y=" << y << ", btn=" << Qt::hex << (buttonMask | wheelMask);
+      //qDebug() << "QVNCWinView::eventHandler (button up/down): x=" << x << ", y=" << y << ", btn=" << Qt::hex << (buttonMask | wheelMask);
 #endif
+      if (wheelMask) {
+        window->filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
+      }
+      window->filterPointerEvent(rfb::Point(x, y), buttonMask);
       if (message == WM_LBUTTONUP || message == WM_MBUTTONUP || message == WM_RBUTTONUP || message == WM_XBUTTONUP) {
-	// We usually fail to grab the mouse if a mouse button was
-	// pressed when we gained focus (e.g. clicking on our window),
-	// so we may need to try again when the button is released.
-	// (We do it here rather than handle() because a window does not
-	// see FL_RELEASE events if a child widget grabs it first)
-	if (window->keyboardGrabbed_ && !window->mouseGrabbed_) {
-	  window->grabPointer();
-	}
+        // We usually fail to grab the mouse if a mouse button was
+        // pressed when we gained focus (e.g. clicking on our window),
+        // so we may need to try again when the button is released.
+        // (We do it here rather than handle() because a window does not
+        // see FL_RELEASE events if a child widget grabs it first)
+        if (window->keyboardGrabbed_ && !window->mouseGrabbed_) {
+          window->grabPointer();
+        }
       }
     }
       break;
@@ -233,6 +239,13 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       AppManager::instance()->connection()->refreshFramebuffer();
       AppManager::instance()->view()->updateWindow();
       break;
+//    case WM_SIZE: {
+//      int w = LOWORD(lParam);
+//      int h = HIWORD(lParam);
+//      SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, w, h, SWP_NOCOPYBITS | SWP_DEFERERASE | SWP_NOREDRAW);
+//      qDebug() << "VNCWinView::eventHandler(WM_SIZE): SetWindowPos: w=" << w << ", h=" << h;
+//    }
+//      break;
     case WM_WINDOWPOSCHANGED: {
       // Use WM_WINDOWPOSCHANGED instead of WM_SIZE. WM_SIZE is being sent while the window size is changing, whereas
       // WM_WINDOWPOSCHANGED is sent only a couple of times when the window sizing completes.
@@ -245,13 +258,21 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       // https://stackoverflow.com/questions/52157587/why-qresizeevent-qwidgetsize-gives-different-when-fullscreen
       int w = AppManager::instance()->view()->width() * AppManager::instance()->view()->devicePixelRatio() + 0.5;
       int h = AppManager::instance()->view()->height() * AppManager::instance()->view()->devicePixelRatio() + 0.5;
+
+      // Maximum window size must be specified at least once, otherwise the window cannot be properly enlarged.
+      // https://stackoverflow.com/questions/11379505/change-the-maximum-size-of-a-possibly-maximized-window
+      QScreen *screen = window->getCurrentScreen();
+      int swidth = screen->virtualGeometry().width(); // Use virtual geometry to enable fullscreen in multi-screen environment.
+      int sheight = screen->virtualGeometry().height();
+      SetWindowPos(hWnd, NULL, 0, 0, swidth, sheight, SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER);
+
       SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, w, h, 0);
-      qDebug() << "VNCWinView::eventHandler(): SetWindowPos: w=" << w << ", h=" << h;
+      qDebug() << "VNCWinView::eventHandler(WM_WINDOWPOSCHANGED): SetWindowPos: w=" << w << ", h=" << h;
     }
       break;
     case WM_GESTURE:
     case WM_GESTURENOTIFY:
-      //qDebug() << "VNCWinView::eventHandler() (WM_GESTURE/WM_GESTURENOTIFY): message=" << message;
+      qDebug() << "VNCWinView::eventHandler() (WM_GESTURE/WM_GESTURENOTIFY): message=" << message;
       return window->handleTouchEvent(message, wParam, lParam);
     default:
       //qDebug() << "VNCWinView::eventHandler() (DefWindowProc): message=" << message;
@@ -261,7 +282,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
   return 0;
 }
 
-void QVNCWinView::getMouseProperties(WPARAM wParam, LPARAM lParam, int &x, int &y, int &buttonMask, int &wheelMask)
+void QVNCWinView::getMouseProperties(QVNCWinView *window, UINT message, WPARAM wParam, LPARAM lParam, int &x, int &y, int &buttonMask, int &wheelMask)
 {
   short h = (short)HIWORD(wParam);
   WORD l = LOWORD(wParam);
@@ -289,19 +310,25 @@ void QVNCWinView::getMouseProperties(WPARAM wParam, LPARAM lParam, int &x, int &
     wheelMask |= 16;
   }
 
-  x = (lParam & 0x0000ffff);
-  y = ((lParam & 0xffff0000) >> 16);
+  x = GET_X_LPARAM(lParam);
+  y = GET_Y_LPARAM(lParam);
+  if (message == WM_MOUSEWHEEL) { // Only WM_MOUSEWHEEL employs the screem coordinate system.
+    QPoint lp = window->mapFromGlobal(QPoint(x, y));
+    x = lp.x();
+    y = lp.y();
+  }
 }
 
 void QVNCWinView::draw()
 {
-//  qDebug() << "VNCWinView::refresh(): hWnd=" << hwnd_;
   PlatformPixelBuffer *framebuffer = (PlatformPixelBuffer *)AppManager::instance()->connection()->framebuffer();
   rfb::Rect r = framebuffer->getDamage();
   int x = r.tl.x;
   int y = r.tl.y;
   int width = r.br.x - x;
   int height = r.br.y - y;
+  //qDebug() << "VNCWinView::draw(): hWnd=" << hwnd_ << ", x=" << x << ", y=" << y << ", w=" << width << ", h=" << height;
+
   RECT rect{x, y, x + width, y + height};
   InvalidateRect(hwnd_, &rect, false);
 
@@ -313,6 +340,7 @@ void QVNCWinView::draw()
   HDC hDCBits = CreateCompatibleDC(hDC);
   SelectObject(hDCBits, hBitmap);
   BitBlt(hDC, x, y, width, height, hDCBits, x, y, SRCCOPY);
+
   DeleteDC(hDCBits);
   EndPaint(hwnd_, &ps);
 }
@@ -323,9 +351,9 @@ bool QVNCWinView::event(QEvent *e)
     switch(e->type()) {
     case QEvent::Polish:
       if (!hwnd_) {
-	hwnd_ = createWindow(HWND(winId()), GetModuleHandle(0));
-	fixParent();
-	hwndowner_ = hwnd_ != 0;
+        hwnd_ = createWindow(HWND(winId()), GetModuleHandle(0));
+        fixParent();
+        hwndowner_ = hwnd_ != 0;
 
         grabGesture(Qt::TapGesture);
         grabGesture(Qt::TapAndHoldGesture);
@@ -335,9 +363,9 @@ bool QVNCWinView::event(QEvent *e)
         grabGesture(Qt::CustomGesture);
       }
       if (hwnd_ && !wndproc_ && GetParent(hwnd_) == (HWND)winId()) {
-	wndproc_ = (void*)GetWindowLongPtr(hwnd_, GWLP_WNDPROC);
-	SetWindowLongPtr(hwnd_, GWLP_WNDPROC, (LONG_PTR)eventHandler);
-	touchHandler_ = new Win32TouchHandler(hwnd_);
+        wndproc_ = (void*)GetWindowLongPtr(hwnd_, GWLP_WNDPROC);
+        SetWindowLongPtr(hwnd_, GWLP_WNDPROC, (LONG_PTR)eventHandler);
+        touchHandler_ = new Win32TouchHandler(hwnd_);
 
 	LONG style;
 	style = GetWindowLong(hwnd_, GWL_STYLE);
@@ -348,12 +376,12 @@ bool QVNCWinView::event(QEvent *e)
       break;
     case QEvent::WindowBlocked:
       if (hwnd_) {
-	EnableWindow(hwnd_, false);
+        EnableWindow(hwnd_, false);
       }
       break;
     case QEvent::WindowUnblocked:
       if (hwnd_) {
-	EnableWindow(hwnd_, true);
+        EnableWindow(hwnd_, true);
       }
       break;
     case QEvent::WindowActivate:
@@ -416,7 +444,9 @@ void QVNCWinView::focusInEvent(QFocusEvent *e)
 
 void QVNCWinView::resizeEvent(QResizeEvent *e)
 {
-  qDebug() << "QVNCWinView::resizeEvent: w=" << e->size().width() << ", h=" << e->size().height();
+  QVNCWindow *window = AppManager::instance()->window();
+  QSize vsize = window->viewport()->size();
+  qDebug() << "QVNCWinView::resizeEvent: w=" << e->size().width() << ", h=" << e->size().height() << ", viewport=" << vsize;
 
   if (hwnd_) {
     // Try to get the remote size to match our window size, provided
@@ -756,6 +786,10 @@ void QVNCWinView::setCursorPos(int x, int y)
     // Do nothing if we do not have the mouse captured.
     return;
   }
+  QPoint gp = mapToGlobal(QPoint(x, y));
+  qDebug() << "QVNCWinView::setCursorPos: local xy=" << x << y << ", screen xy=" << gp.x() << gp.y();
+  x = gp.x();
+  y = gp.y();
   SetCursorPos(x, y);
 }
 
@@ -904,7 +938,7 @@ void QVNCWinView::startMouseTracking()
     TrackMouseEvent(&tme);
     mouseTracking_ = true;
 
-    SetCursor(NULL);
+    //SetCursor(NULL);
     //qDebug() << "SetCursor(NULL)";
 
     if (keyboardGrabbed_) {
@@ -937,3 +971,17 @@ QRect QVNCWinView::getExtendedFrameProperties()
   // https://stackoverflow.com/questions/42473554/windows-10-screen-coordinates-are-offset-by-7
   return QRect(7, 7, 7, 7);
 }
+
+#if 0
+void QVNCWinView::fullscreenOnCurrentDisplay()
+{
+}
+
+void QVNCWinView::fullscreenOnSelectedDisplay(QScreen *screen)
+{
+}
+
+void QVNCWinView::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight)
+{
+}
+#endif

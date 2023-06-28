@@ -19,6 +19,8 @@
 #ifndef __VNCVIEWER_COCOA_H__
 #define __VNCVIEWER_COCOA_H__
 
+#include <QList>
+#include <QWindow>
 class NSWindow;
 class NSView;
 class NSCursor;
@@ -35,8 +37,8 @@ CGImage *cocoa_create_bitmap(int width, int height, unsigned char *framebuffer);
 void cocoa_draw(NSView *view, int x, int y, int w, int h);
 void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h);
 
-int cocoa_capture_displays(QWidget *parent);
-void cocoa_release_displays(QWidget *parent);
+int cocoa_capture_displays(NSView *view, QList<int> screens);
+void cocoa_release_displays(NSView *view, bool fullscreen);
 
 int cocoa_is_keyboard_sync(const void *event);
 int cocoa_is_keyboard_event(const void *event);
@@ -56,5 +58,7 @@ int cocoa_get_caps_lock_state(bool *on);
 int cocoa_get_num_lock_state(bool *on);
 
 void cocoa_get_mouse_properties(const void *event, int *x, int *y, int *buttonMask);
+bool cocoa_displays_have_separate_spaces();
+void cocoa_set_overlay_property(WId winid);
 
 #endif

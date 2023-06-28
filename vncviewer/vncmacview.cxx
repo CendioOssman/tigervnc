@@ -8,9 +8,11 @@
 #include <QDataStream>
 #include <QUrl>
 #include <QWindow>
+#include <QMenu>
 #include <QImage>
 #include <QBitmap>
 #include <QLabel>
+#include <QTimer>
 #include <QAbstractEventDispatcher>
 #include "rfb/ServerParams.h"
 #include "rfb/LogWriter.h"
@@ -21,10 +23,12 @@
 #include "appmanager.h"
 #include "vncconnection.h"
 #include "PlatformPixelBuffer.h"
+#include "vncwindow.h"
 #include "vncmacview.h"
 
 #include <QDebug>
 #include <QMouseEvent>
+#include <QScreen>
 
 #include "cocoa.h"
 extern const unsigned short code_map_osx_to_qnum[];
@@ -77,6 +81,20 @@ bool QVNCMacView::MacEventFilter::nativeEventFilter(const QByteArray &eventType,
     if (QApplication::activeWindow() != view_->window()) { // QML dialog windows
       return false;
     }
+#if 0
+    if (cocoa_is_mouse_entered(message)) {
+      qDebug() << "nativeEvent: mouseEntered";
+      view_->setFocus();
+      view_->grabPointer();
+      return true;
+    }
+    if (cocoa_is_mouse_exited(message)) {
+      qDebug() << "nativeEvent: mouseExited";
+      view_->clearFocus();
+      view_->ungrabPointer();
+      return true;
+    }
+#endif
     if (cocoa_is_keyboard_sync(message)) {
       while (!view_->downKeySym_.empty()) {
         view_->handleKeyRelease(view_->downKeySym_.begin()->first);
@@ -126,6 +144,7 @@ QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
 #endif
   setAttribute(Qt::WA_NoSystemBackground);
   setAttribute(Qt::WA_AcceptTouchEvents);
+  setAttribute(Qt::WA_NativeWindow);
   setFocusPolicy(Qt::StrongFocus);
   connect(AppManager::instance()->connection(), &QVNCConnection::framebufferResized, this, [this](int width, int height) {
     PlatformPixelBuffer *framebuffer = (PlatformPixelBuffer*)AppManager::instance()->connection()->framebuffer();
@@ -347,6 +366,11 @@ void QVNCMacView::handleMouseWheelEvent(QWheelEvent *e)
   #else
   filterPointerEvent(rfb::Point(e->x(), e->y()), buttonMask | wheelMask);
   #endif
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+  filterPointerEvent(rfb::Point(e->position().x(), e->position().y()), buttonMask);
+#else
+  filterPointerEvent(rfb::Point(e->x(), e->y()), buttonMask);
+#endif
 }
 
 void QVNCMacView::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
@@ -521,7 +545,7 @@ void QVNCMacView::pushLEDState()
 
 void QVNCMacView::grabKeyboard()
 {
-  int ret = cocoa_capture_displays(this);
+  int ret = cocoa_capture_displays(view_, fullscreenScreens());
   if (ret != 0) {
     vlog.error(_("Failure grabbing keyboard"));
     return;
@@ -531,6 +555,54 @@ void QVNCMacView::grabKeyboard()
 
 void QVNCMacView::ungrabKeyboard()
 {
-  cocoa_release_displays(this);
+  cocoa_release_displays(view_, fullscreenEnabled_);
   QAbstractVNCView::ungrabKeyboard();
+}
+
+void QVNCMacView::fullscreenOnCurrentDisplay()
+{
+  QVNCWindow *window = AppManager::instance()->window();
+  QScreen *screen = getCurrentScreen();
+  window->windowHandle()->setScreen(screen);
+
+  // Capture the fullscreen geometry.
+  double dpr = effectiveDevicePixelRatio(screen);
+  QRect vg = screen->geometry();
+  fxmin_ = vg.x();
+  fymin_ = vg.y();
+  fw_ = vg.width() * dpr;
+  fh_ = vg.height() * dpr;
+
+  window->move(fxmin_, fymin_);
+  window->resize(fw_, fh_);
+  resize(fw_, fh_);
+  window->setWindowFlag(Qt::FramelessWindowHint, true);
+  window->setWindowState(Qt::WindowFullScreen);
+  grabKeyboard();
+#if 0
+  window->show();
+#endif
+  //popupContextMenu();
+}
+
+void QVNCMacView::fullscreenOnSelectedDisplay(QScreen *screen, int vx, int vy, int vwidth, int vheight)
+{
+  QVNCWindow *window = AppManager::instance()->window();
+  window->windowHandle()->setScreen(screen);
+  window->move(vx, vy);
+  window->resize(vwidth, vheight);
+  resize(vwidth, vheight);
+  window->setWindowFlag(Qt::FramelessWindowHint, true);
+  window->setWindowState(Qt::WindowFullScreen);
+  grabKeyboard();
+
+#if 0
+  QTimer t;
+  t.setInterval(1000);
+  connect(&t, &QTimer::timeout, this, [this]() {
+    contextMenu_->hide();
+  });
+  t.start();
+#endif
+  //popupContextMenu();
 }

@@ -46,6 +46,7 @@ protected:
   void handleMouseButtonEvent(QMouseEvent*);
   void handleMouseWheelEvent(QWheelEvent*);
   void setWindowManager() override;
+  void fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight) override;
 
 signals:
   void message(const QString &msg, int timeout);

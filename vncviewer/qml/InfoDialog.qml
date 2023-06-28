@@ -7,6 +7,7 @@ import Qt.TigerVNC 1.0
 Window {
     id: root
 
+    objectName: "InfoDialog"
     width: container.implicitWidth
     height: container.implicitHeight
     flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint
@@ -14,62 +15,15 @@ Window {
     title: qsTr("VNC connection info")
 
     function open() {
-        infoText.text = AppManager.connection.infoText()
         visible = true
     }
 
     function close() {
-        infoText.text = ""
         visible = false
     }
 
-    Timer {
-        id: refreshTimer
-        running: root.visible
-        interval: 500
-        repeat: true
-        onTriggered: infoText.text = AppManager.connection.infoText()
-    }
-
-    GridLayout {
+    InfoDialogContent {
         id: container
-        rows: 2
-        columns: 2
-        rowSpacing: 0
-        columnSpacing: 0
-
-        Image {
-            id: infoIcon
-            Layout.row: 0
-            Layout.column: 0
-            Layout.leftMargin: 10
-            Layout.topMargin: 15
-            source: "image://qticons/SP_MessageBoxInformation"
-        }
-        Text {
-            id: infoText
-            Layout.row: 0
-            Layout.column: 1
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            Layout.minimumWidth: 300
-            Layout.leftMargin: 10
-            Layout.rightMargin: 15
-            Layout.topMargin: 18
-            verticalAlignment: Text.AlignVCenter
-        }
-        Button {
-            id: closeButton
-            Layout.row: 1
-            Layout.column: 1
-            Layout.rightMargin: 15
-            Layout.topMargin: 5
-            Layout.bottomMargin: 10
-            Layout.alignment: Qt.AlignRight | Qt.AlignBottom
-            Layout.preferredWidth: 72
-            focus: true
-            text: qsTr("Close")
-            onClicked: close()
-        }
+        onCloseRequested: root.close()
     }
 }

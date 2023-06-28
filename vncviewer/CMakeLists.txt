@@ -7,14 +7,15 @@ include_directories(${GETTEXT_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/common)
 
 #list(APPEND CMAKE_PREFIX_PATH "/opt/Qt/Static/6.2.4/gcc_64s")
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Quick Widgets REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Quick Widgets REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Quick QuickWidgets Widgets REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Quick QuickWidgets Widgets REQUIRED)
 if(QT_VERSION_MAJOR LESS_EQUAL 5 AND BUILD_STATIC)
   find_package(QT NAMES Qt6 Qt5 COMPONENTS
                Gui
                Qml
                QmlWorkerScript
                QuickControls2
+               QuickWidgets
                Svg
                ThemeSupport
                REQUIRED)
@@ -23,6 +24,7 @@ if(QT_VERSION_MAJOR LESS_EQUAL 5 AND BUILD_STATIC)
                Qml
                QmlWorkerScript
                QuickControls2
+               QuickWidgets
                Svg
                ThemeSupport
                REQUIRED)
@@ -191,6 +193,7 @@ if(QT_VERSION_MAJOR GREATER_EQUAL 6)
       PRIVATE
       Qt${QT_VERSION_MAJOR}::Core
       Qt${QT_VERSION_MAJOR}::Quick
+      Qt${QT_VERSION_MAJOR}::QuickWidgets
       Qt${QT_VERSION_MAJOR}::Widgets
       rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES})
 else()
@@ -206,6 +209,7 @@ else()
             Qt${QT_VERSION_MAJOR}::QmlWorkerScript
             Qt${QT_VERSION_MAJOR}::Quick
             Qt${QT_VERSION_MAJOR}::QuickControls2
+            Qt${QT_VERSION_MAJOR}::QuickWidgets
             Qt${QT_VERSION_MAJOR}::Svg
             Qt${QT_VERSION_MAJOR}::ThemeSupport
             Qt${QT_VERSION_MAJOR}::Widgets
@@ -215,6 +219,7 @@ else()
             PRIVATE
             Qt${QT_VERSION_MAJOR}::Core
             Qt${QT_VERSION_MAJOR}::Quick
+            Qt${QT_VERSION_MAJOR}::QuickWidgets
             Qt${QT_VERSION_MAJOR}::Widgets
             rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES})
     endif()

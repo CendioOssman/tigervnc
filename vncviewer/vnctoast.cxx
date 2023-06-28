@@ -16,12 +16,11 @@ QVNCToast::QVNCToast(QWidget *parent)
   setGeometry(0, 0, 300, 40);
   setStyleSheet(QString("QLabel {"
                         "border-radius: %1px;"
-                        "background-color: #50505050;"
+                        "background-color: #ff505050;"
                         "color: #e0ffffff;"
                         "font-size: 14px;"
                         "font-weight: bold;"
                         "}").arg(radius));
-  setWindowOpacity(0.8);
   const QRect rect(QPoint(0,0), geometry().size());
   QBitmap b(rect.size());
   b.fill(QColor(Qt::color0));

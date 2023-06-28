@@ -90,9 +90,6 @@ static bool captured = false;
 - (void)dealloc
 {
   [_image release];
-#if 0
-  [_bitmap release];
-#endif
   [super dealloc];
 }
 
@@ -109,9 +106,6 @@ static bool captured = false;
 - (void)setRemoteCursor:(NSCursor *)newCursor
 {
   if (newCursor) {
-    if (_cursor) {
-      [_cursor release];
-    }
     _cursor = [newCursor retain];
     // Force the window to rebuild its cursor rects. This will cause our new cursor to be set.
     [[self window] performSelectorOnMainThread:@selector(resetCursorRects) withObject:nil waitUntilDone:NO];
@@ -308,9 +302,9 @@ CGImageRef cocoa_create_bitmap(int width, int height, unsigned char *data)
   return iref;
 }
 
-int cocoa_capture_displays(QWidget *parent)
+int cocoa_capture_displays(NSView *view, QList<int> screens)
 {
-  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
+  NSWindow *window = [view window];
   CGDirectDisplayID displays[16];
 
   NSRect r = [window frame];
@@ -322,31 +316,22 @@ int cocoa_capture_displays(QWidget *parent)
     return 1;
   }
 
-  QApplication *app = static_cast<QApplication*>(QApplication::instance());
-  QList<QScreen*> screens = app->screens();
-  if (count != screens.length()) {
-    return 1;
+  if (screens.size() == count) {
+    CGCaptureAllDisplays();
   }
-
-  for (int i = 0; i < screens.length(); i++) {
-    double dpr = screens[i]->devicePixelRatio();
-    QRect vg = screens[i]->geometry();
-    int sx = vg.x();
-    int sy = vg.y();
-    int sw = vg.width() * dpr;
-    int sh = vg.height() * dpr;
-    
-    rfb::Rect screen_rect;
-    screen_rect.setXYWH(sx, sy, sw, sh);
-    if (screen_rect.enclosed_by(windows_rect)) {
-      if (CGDisplayCapture(displays[i]) != kCGErrorSuccess) {
-        return 1;
+  else {
+    for (int dix = 0; dix < count; dix++) {
+      if (screens.contains(dix)) {
+	if (CGDisplayCapture(displays[dix]) != kCGErrorSuccess) {
+	  return 1;
+	}
       }
-    } else {
-      // A display might have been captured with the previous
-      // monitor selection. In that case we don't want to keep
-      // it when its no longer inside the window_rect.
-      CGDisplayRelease(displays[i]);
+      else {
+	// A display might have been captured with the previous
+	// monitor selection. In that case we don't want to keep
+	// it when its no longer inside the window_rect.
+	CGDisplayRelease(displays[dix]);
+      }
     }
   }
 
@@ -362,17 +347,15 @@ int cocoa_capture_displays(QWidget *parent)
   // cases on macOS 13, despite setLevel: being documented as also
   // pushing the window to the front. So let's explicitly move it.
   [window orderFront:window];
-
+  
   return 0;
 }
 
-void cocoa_release_displays(QWidget *parent)
+void cocoa_release_displays(NSView *view, bool fullscreen)
 {
-  NSWindow *window = (__bridge NSWindow*)reinterpret_cast<void *>(parent->winId());
+  NSWindow *window = [view window];
 
-  if (captured) {
-    CGReleaseAllDisplays();
-  }
+  CGReleaseAllDisplays();
   captured = false;
 
   // Someone else has already changed the level of this window
@@ -380,15 +363,7 @@ void cocoa_release_displays(QWidget *parent)
     return;
   }
 
-  // FIXME: Store the previous level somewhere so we don't have to hard
-  //        code a level here.
-  int newlevel = parent->isFullScreen() ? NSStatusWindowLevel : NSNormalWindowLevel;
-
-  // Only change if different as the level change also moves the window
-  // to the top of that level.
-  if ([window level] != newlevel) {
-    [window setLevel:newlevel];
-  }
+  [window setLevel:NSNormalWindowLevel];
 }
 
 int cocoa_is_keyboard_sync(const void *event)
@@ -777,4 +752,17 @@ void cocoa_get_mouse_properties(const void *event, int *x, int *y, int *buttonMa
   *x = p.x;
   *y = p.y;
   *buttonMask = [nsevent buttonMask];
+}
+
+bool cocoa_displays_have_separate_spaces()
+{
+  return [NSScreen screensHaveSeparateSpaces];
+}
+
+void cocoa_set_overlay_property(WId winid)
+{
+  NSView *view = reinterpret_cast<NSView*>(winid);
+  NSWindow *window = [view window];
+  [window setLevel:CGShieldingWindowLevel()];
+  [window setCollectionBehavior:NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorFullScreenAuxiliary];
 }

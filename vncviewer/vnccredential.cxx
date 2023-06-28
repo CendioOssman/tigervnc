@@ -19,6 +19,26 @@ void VNCCredential::getUserPasswd(bool secure, char** user, char** password)
   bool passwordNeeded = password != nullptr;
   bool canceled = false;
   AppManager *manager = AppManager::instance();
+  QString envUsername = QString(qgetenv("VNC_USERNAME"));
+  QString envPassword = QString(qgetenv("VNC_PASSWORD"));
+  if (user && password && !envUsername.isEmpty() && !envPassword.isEmpty()) {
+    delete *user;
+    *user = new char[envUsername.length() + 1];
+    strncpy(*user, envUsername.toStdString().c_str(), envUsername.length());
+    (*user)[envUsername.length()] = 0;
+    delete *password;
+    *password = new char[envPassword.length() + 1];
+    strncpy(*password, envPassword.toStdString().c_str(), envPassword.length());
+    (*password)[envPassword.length()] = 0;
+    return;
+  }
+  if (password && !envPassword.isEmpty()) {
+    delete *password;
+    *password = new char[envPassword.length() + 1];
+    strncpy(*password, envPassword.toStdString().c_str(), envPassword.length());
+    (*password)[envPassword.length()] = 0;
+    return;
+  }
   emit manager->credentialRequested(secure, userNeeded, passwordNeeded);
   QEventLoop loop;
   connect(AppManager::instance(), &AppManager::authenticateRequested, this, [&](QString userText, QString passwordText) {

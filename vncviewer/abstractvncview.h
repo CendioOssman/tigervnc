@@ -37,9 +37,10 @@ public:
   virtual bool hasViewFocus() const { return true; }
   bool hasFocus() const { return hasViewFocus() || QWidget::hasFocus() || isActiveWindow(); }
   double devicePixelRatio() const { return devicePixelRatio_; }
+  virtual double effectiveDevicePixelRatio(QScreen *screen = nullptr) const;
   QScreen *getCurrentScreen();
   QClipboard *clipboard() const { return clipboard_; }
-  QRect getExtendedFrameProperties();
+  virtual QRect getExtendedFrameProperties();
   bool isVisibleContextMenu() const;
   void sendContextMenuKey();
   virtual void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false);
@@ -63,6 +64,7 @@ public slots:
   virtual void handleDesktopSize();
   virtual void fullscreen(bool enabled);
   virtual void moveView(int x, int y);
+  void postRemoteResizeRequest();
 
 signals:
   void fullscreenChanged(bool enabled);
@@ -99,19 +101,23 @@ protected:
   int fh_;
   int fxmin_;
   int fymin_;
+  QScreen *fscreen_;
 
   rfb::Point *lastPointerPos_;
   int lastButtonMask_;
   QTimer *mousePointerTimer_;
 
   void createContextMenu();
-  void postRemoteResizeRequest();
   QList<int> fullscreenScreens();
   void filterPointerEvent(const rfb::Point &pos, int buttonMask);
   void handleMouseButtonEmulationTimeout();
   void sendPointerEvent(const rfb::Point& pos, int buttonMask);
   virtual bool bypassWMHintingEnabled() const { return false; }
   virtual void setWindowManager() {}
+  virtual void fullscreenOnCurrentDisplay();
+  virtual void fullscreenOnSelectedDisplay(QScreen *screen, int vx, int vy, int vwidth, int vheight);
+  virtual void fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight);
+  virtual void exitFullscreen();
   bool eventFilter(QObject *watched, QEvent *event) override;
 };
 
