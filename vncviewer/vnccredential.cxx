@@ -13,7 +13,7 @@ VNCCredential::~VNCCredential()
 {
 }
 
-void VNCCredential::getUserPasswd(bool secure, char** user, char** password)
+void VNCCredential::getUserPasswd(bool secure, std::string *user, std::string *password)
 {
   bool userNeeded = user != nullptr;
   bool passwordNeeded = password != nullptr;
@@ -22,37 +22,22 @@ void VNCCredential::getUserPasswd(bool secure, char** user, char** password)
   QString envUsername = QString(qgetenv("VNC_USERNAME"));
   QString envPassword = QString(qgetenv("VNC_PASSWORD"));
   if (user && password && !envUsername.isEmpty() && !envPassword.isEmpty()) {
-    delete *user;
-    *user = new char[envUsername.length() + 1];
-    strncpy(*user, envUsername.toStdString().c_str(), envUsername.length());
-    (*user)[envUsername.length()] = 0;
-    delete *password;
-    *password = new char[envPassword.length() + 1];
-    strncpy(*password, envPassword.toStdString().c_str(), envPassword.length());
-    (*password)[envPassword.length()] = 0;
+    user->assign(envUsername.toStdString());
+    password->assign(envPassword.toStdString());
     return;
   }
   if (password && !envPassword.isEmpty()) {
-    delete *password;
-    *password = new char[envPassword.length() + 1];
-    strncpy(*password, envPassword.toStdString().c_str(), envPassword.length());
-    (*password)[envPassword.length()] = 0;
+    password->assign(envPassword.toStdString());
     return;
   }
   emit manager->credentialRequested(secure, userNeeded, passwordNeeded);
   QEventLoop loop;
   connect(AppManager::instance(), &AppManager::authenticateRequested, this, [&](QString userText, QString passwordText) {
     if (userNeeded) {
-      delete *user;
-      *user = new char[userText.length() + 1];
-      strncpy(*user, userText.toStdString().c_str(), userText.length());
-      (*user)[userText.length()] = 0;
+      user->assign(userText.toStdString());
     }
     if (passwordNeeded) {
-      delete *password;
-      *password = new char[passwordText.length() + 1];
-      strncpy(*password, passwordText.toStdString().c_str(), passwordText.length());
-      (*password)[passwordText.length()] = 0;
+      password->assign(passwordText.toStdString());
     }
     loop.quit();
   });

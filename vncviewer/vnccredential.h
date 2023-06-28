@@ -15,11 +15,11 @@ public:
 
   // UserPasswdGetter callbacks
 
-  void getUserPasswd(bool secure, char** user, char** password);
+  void getUserPasswd(bool secure, std::string *user, std::string *password) override;
 
   // UserMsgBox callbacks
 
-  bool showMsgBox(int flags, const char* title, const char* text);
+  bool showMsgBox(int flags, const char* title, const char* text) override;
 };
 
 #endif // _VNCCREDENTIAL_H

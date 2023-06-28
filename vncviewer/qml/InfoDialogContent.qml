@@ -22,7 +22,7 @@ GridLayout {
 
     Timer {
         id: refreshTimer
-        running: container.visible
+        running: AppManager.visibleInfo
         interval: 500
         repeat: true
         triggeredOnStart: true

@@ -316,11 +316,11 @@ int cocoa_capture_displays(NSView *view, QList<int> screens)
     return 1;
   }
 
-  if (screens.size() == count) {
+  if (screens.size() == (int)count) {
     CGCaptureAllDisplays();
   }
   else {
-    for (int dix = 0; dix < count; dix++) {
+    for (int dix = 0; dix < (int)count; dix++) {
       if (screens.contains(dix)) {
 	if (CGDisplayCapture(displays[dix]) != kCGErrorSuccess) {
 	  return 1;
@@ -353,6 +353,7 @@ int cocoa_capture_displays(NSView *view, QList<int> screens)
 
 void cocoa_release_displays(NSView *view, bool fullscreen)
 {
+  Q_UNUSED(fullscreen)
   NSWindow *window = [view window];
 
   CGReleaseAllDisplays();

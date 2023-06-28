@@ -74,6 +74,7 @@ bool QVNCMacView::MacEventFilter::nativeEventFilter(const QByteArray &eventType,
 bool QVNCMacView::MacEventFilter::nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result)
 #endif
 {
+  Q_UNUSED(result)
   if (eventType == "mac_generic_NSEvent") {
     if (QApplication::activePopupWidget()) { // F8 popup menu
       return false;
@@ -111,7 +112,7 @@ bool QVNCMacView::MacEventFilter::nativeEventFilter(const QByteArray &eventType,
         keyCode = code_map_osx_to_qnum[keyCode];
       }
       if (cocoa_is_key_press(message)) {
-        rdr::U32 keySym = cocoa_event_keysym(message);
+        uint32_t keySym = cocoa_event_keysym(message);
         if (keySym == NoSymbol) {
           vlog.error(_("No symbol for key code 0x%02x (in the current state)"), (int)keyCode);
         }
@@ -147,6 +148,8 @@ QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
   setAttribute(Qt::WA_NativeWindow);
   setFocusPolicy(Qt::StrongFocus);
   connect(AppManager::instance()->connection(), &QVNCConnection::framebufferResized, this, [this](int width, int height) {
+    Q_UNUSED(width)
+    Q_UNUSED(height)
     PlatformPixelBuffer *framebuffer = (PlatformPixelBuffer*)AppManager::instance()->connection()->framebuffer();
     cocoa_resize(view_, framebuffer->bitmap());
   }, Qt::QueuedConnection);
@@ -275,6 +278,7 @@ void QVNCMacView::resizeEvent(QResizeEvent *e)
 
 void QVNCMacView::paintEvent(QPaintEvent *event)
 {
+  Q_UNUSED(event)
   draw();
 }
 

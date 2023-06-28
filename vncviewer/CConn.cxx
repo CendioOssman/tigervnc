@@ -263,7 +263,7 @@ void CConn::framebufferUpdateEnd()
 
 // The rest of the callbacks are fairly self-explanatory...
 
-void CConn::setColourMapEntries(int firstColour, int nColours, U16* rgbs)
+void CConn::setColourMapEntries(int firstColour, int nColours, uint16_t *rgbs)
 {
   Q_UNUSED(firstColour)
   Q_UNUSED(nColours)
@@ -292,7 +292,7 @@ bool CConn::dataRect(const Rect& r, int encoding)
 }
 
 void CConn::setCursor(int width, int height, const Point &hotspot,
-                      const U8 *data)
+                      const uint8_t *data)
 {
   bool emptyCursor = true;
   for (int i = 0; i < width * height; i++) {
@@ -339,7 +339,7 @@ void CConn::setCursorPos(const Point &pos)
   emit facade->cursorPositionChanged(pos.x, pos.y);
 }
 
-void CConn::fence(U32 flags, unsigned len, const char data[])
+void CConn::fence(uint32_t flags, unsigned len, const char data[])
 {
   CMsgHandler::fence(flags, len, data);
 

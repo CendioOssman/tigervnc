@@ -63,7 +63,9 @@ using namespace std;
 
 static LogWriter vlog("Parameters");
 
-extern int getvnchomedir(char **dirp);
+namespace os {
+  extern const char *getvnchomedir();
+}
 ViewerConfig *ViewerConfig::config_;
 
 IntParameter pointerEventInterval("PointerEventInterval",
@@ -703,7 +705,6 @@ static bool findAndSetViewerParameterFromValue(
   VoidParameter* parameters[], size_t parameters_len,
   char* value, char* line)
 {
-  Q_UNUSED(filepath)
   const size_t buffersize = 256;
   char decodingBuffer[buffersize];
 
@@ -886,14 +887,13 @@ ViewerConfig::ViewerConfig()
   }, Qt::QueuedConnection);
   initializeLogger();
 
-  char* homeDir = nullptr;
-  if (getvnchomedir(&homeDir) == -1) {
+  const char* homeDir = os::getvnchomedir();
+  if (homeDir == nullptr) {
     QDir dir;
     if (!dir.mkpath(homeDir)) {
       vlog.error(_("Could not create VNC home directory:"));
     }
   }
-  delete[] homeDir;
   
   rfb::Configuration::enableViewerParams();
   loadViewerParameters("");
@@ -947,7 +947,7 @@ ViewerConfig::ViewerConfig()
   potentiallyLoadConfigurationFile(serverName_);
 
   /* Specifying -via and -listen together is nonsense */
-  if (::listenMode && strlen(::via.getValueStr()) > 0) {
+  if (::listenMode && ::via.getValueStr().length() > 0) {
     // TRANSLATORS: "Parameters" are command line arguments, or settings
     // from a file or the Windows registry.
     vlog.error(_("Parameters -listen and -via are incompatible"));
@@ -1006,6 +1006,9 @@ ViewerConfig::ViewerConfig()
     case rfb::secTypeRA2:
     case rfb::secTypeRA256:
       encAES_ = true;
+      authVNC_ = true;
+      authPlain_ = true;
+      break;
     case rfb::secTypeRA2ne:
     case rfb::secTypeRAne256:
       authVNC_ = true;
@@ -1078,13 +1081,12 @@ void ViewerConfig::loadServerHistory()
   return;
 #endif
 
-  char* homeDir = NULL;
-  if (getvnchomedir(&homeDir) == -1)
+  const char* homeDir = os::getvnchomedir();
+  if (homeDir == nullptr)
     throw rdr::Exception("%s", tr("Could not obtain the home directory path").toStdString().c_str());
 
   char filepath[PATH_MAX];
-  snprintf(filepath, sizeof(filepath), "%s%s", homeDir, SERVER_HISTORY);
-  delete[] homeDir;
+  snprintf(filepath, sizeof(filepath), "%s/%s", homeDir, SERVER_HISTORY);
 
   /* Read server history from file */
   FILE* f = fopen(filepath, "r");
@@ -1151,13 +1153,12 @@ void ViewerConfig::saveServerHistory()
 #ifdef _WIN32
   saveHistoryToRegKey(serverHistory_);
 #else
-  char* homeDir = nullptr;
-  if (getvnchomedir(&homeDir) == -1) {
+  const char* homeDir = os::getvnchomedir();
+  if (homeDir == nullptr) {
     throw rdr::Exception("%s", _("Could not obtain the home directory path"));
   }
   char filepath[PATH_MAX];
-  snprintf(filepath, sizeof(filepath), "%s%s", homeDir, SERVER_HISTORY);
-  delete[] homeDir;
+  snprintf(filepath, sizeof(filepath), "%s/%s", homeDir, SERVER_HISTORY);
 
   /* Write server history to file */
   FILE *f = fopen(filepath, "w");

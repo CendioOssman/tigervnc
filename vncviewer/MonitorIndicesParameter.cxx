@@ -54,7 +54,7 @@ std::set<int> MonitorIndicesParameter::getParam()
         return indices;
     }
 
-    valid = parseIndices(value, &configIndices);
+    valid = parseIndices(value.c_str(), &configIndices);
     if (!valid) {
         return indices;
     }
@@ -76,7 +76,7 @@ bool MonitorIndicesParameter::setParam(const char* v)
 {
     std::set<int> indices;
 
-    if (strlen(v) < 0)
+    if (!v)
         return false;
 
     if (!parseIndices(v, &indices, true)) {

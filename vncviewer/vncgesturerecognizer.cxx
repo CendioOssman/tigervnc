@@ -20,6 +20,7 @@ QGesture *QVNCGestureRecognizer::create(QObject *target)
 
 QGestureRecognizer::Result QVNCGestureRecognizer::recognize(QGesture *state, QObject *watched, QEvent *event)
 {
+  Q_UNUSED(watched)
   QVNCGesture *q = static_cast<QVNCGesture *>(state);
   QGestureRecognizer::Result result = QGestureRecognizer::Ignore;
   switch (event->type()) {

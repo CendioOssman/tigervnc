@@ -17,7 +17,7 @@ public:
   QVNCMacView(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~QVNCMacView();
   qulonglong nativeWindowHandle() const override;
-  double effectiveDevicePixelRatio(QScreen *screen = nullptr) const override { return 1.0; }
+  double effectiveDevicePixelRatio(QScreen *screen = nullptr) const override { Q_UNUSED(screen) return 1.0; }
   void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
   void handleKeyRelease(int keyCode) override;
 

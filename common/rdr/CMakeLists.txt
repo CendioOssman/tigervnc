@@ -20,7 +20,6 @@ add_library(rdr STATIC
   HexOutStream.cxx
   HexOutStream.h
   InStream.h
-  InStream.cxx
   MemInStream.h
   MemOutStream.h
   OutStream.h
@@ -36,7 +35,6 @@ add_library(rdr STATIC
   ZlibInStream.h
   ZlibOutStream.cxx
   ZlibOutStream.h
-  types.h
   )
 
 target_include_directories(rdr PUBLIC ${CMAKE_SOURCE_DIR}/common)

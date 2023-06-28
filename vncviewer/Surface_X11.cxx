@@ -41,6 +41,8 @@ static bool caughtError;
 
 static int XShmAttachErrorHandler(Display *dpy, XErrorEvent *error)
 {
+  Q_UNUSED(dpy)
+  Q_UNUSED(error)
   caughtError = true;
   return 0;
 }

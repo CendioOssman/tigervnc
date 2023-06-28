@@ -44,6 +44,7 @@ AppManager::AppManager()
  , view_(nullptr)
  , scroll_(new QVNCWindow)
  , rfbTimerProxy_(new QTimer)
+ , visibleInfo_(false)
 #if defined(__APPLE__)
  , overlay_(new QQuickWidget(scroll_))
 #endif
@@ -204,11 +205,6 @@ void AppManager::refresh()
   emit refreshRequested();
 }
 
-void AppManager::refresh()
-{
-  emit refreshRequested();
-}
-
 void AppManager::openContextMenu()
 {
   emit contextMenuRequested();
@@ -216,6 +212,8 @@ void AppManager::openContextMenu()
 
 void AppManager::openInfoDialog()
 {
+  visibleInfo_ = true;
+  emit visibleInfoChanged();
 #if defined(__APPLE__)
   openOverlay("qrc:/qml/InfoDialogContent.qml", _("VNC connection info"));
 #else
@@ -267,6 +265,8 @@ void AppManager::openOverlay(QString qml, const char *title, const char *message
 
 void AppManager::closeOverlay()
 {
+  visibleInfo_ = false;
+  emit visibleInfoChanged();
 #if defined(__APPLE__)
   emit closeOverlayRequested();
 #endif

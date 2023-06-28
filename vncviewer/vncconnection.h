@@ -1,7 +1,7 @@
 #ifndef VNCCONNECTION_H
 #define VNCCONNECTION_H
 
-#include "rdr/types.h"
+//#include "rdr/types.h"
 #include "rfb/Rect.h"
 #include "CConn.h"
 
@@ -66,7 +66,7 @@ signals:
 
   void writePointerEvent(const rfb::Point &pos, int buttonMask);
   void writeSetDesktopSize(int width, int height, const rfb::ScreenSet &layout);
-  void writeKeyEvent(rdr::U32 keysym, rdr::U32 keycode, bool down);
+  void writeKeyEvent(uint32_t keysym, uint32_t keycode, bool down);
 
 public slots:
   void listen();

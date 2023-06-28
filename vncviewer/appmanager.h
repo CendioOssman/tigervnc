@@ -18,6 +18,7 @@ class AppManager : public QObject
   Q_PROPERTY(QVNCConnection *connection READ connection CONSTANT)
   Q_PROPERTY(QAbstractVNCView *view READ view CONSTANT)
   Q_PROPERTY(QVNCWindow *window READ window CONSTANT)
+  Q_PROPERTY(bool visibleInfo READ visibleInfo NOTIFY visibleInfoChanged)
 
 public:
   virtual ~AppManager();
@@ -27,6 +28,7 @@ public:
   int error() const { return error_; }
   QAbstractVNCView *view() const { return view_; }
   QVNCWindow *window() const { return scroll_; }
+  bool visibleInfo() const { return visibleInfo_; }
 
 signals:
   void errorOcurred(int seq, QString message, bool quit = false);
@@ -48,6 +50,7 @@ signals:
   void vncWindowOpened();
   void vncWindowClosed();
   void closeOverlayRequested();
+  void visibleInfoChanged();
 
 public slots:
   void publishError(const QString message, bool quit = false);
@@ -82,6 +85,7 @@ private:
   QAbstractVNCView *view_;
   QVNCWindow *scroll_;
   QTimer *rfbTimerProxy_;
+  bool visibleInfo_;
 #if defined(__APPLE__)
   QQuickWidget *overlay_;
   void openOverlay(QString qml, const char *title, const char *message = nullptr);

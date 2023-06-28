@@ -143,8 +143,6 @@ add_executable(vncviewer
     const uint8_t* getBuffer(const Rect& r, int* stride) const override;
     uint8_t* getBufferRW(const Rect& r, int* stride) override;
     void commitBufferRW(const Rect& r) override;
-    rdr::U8 *bits() { return data; }
-    int getStride() { return stride; }
 
   protected:
     FullFramePixelBuffer();

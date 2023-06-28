@@ -69,7 +69,7 @@ QVNCConnection::QVNCConnection()
       AppManager::instance()->publishError(strerror(e));
     }
   });
-  connect(this, &QVNCConnection::writeKeyEvent, this, [this](rdr::U32 keysym, rdr::U32 keycode, bool down) {
+  connect(this, &QVNCConnection::writeKeyEvent, this, [this](uint32_t keysym, uint32_t keycode, bool down) {
     try {
       rfbcon_->writer()->writeKeyEvent(keysym, keycode, down);
     }
@@ -169,13 +169,13 @@ void QVNCConnection::connectToServer(QString addressport)
 #endif
     }
     else {
-      char *shost;
+      std::string shost;
       int port;
       rfb::getHostAndPort(addressport.toStdString().c_str(), &shost, &port);
-      setHost(shost);
+      setHost(shost.c_str());
       setPort(port);
       delete socket_;
-      socket_ = new network::TcpSocket(shost, port);
+      socket_ = new network::TcpSocket(shost.c_str(), port);
       bind(socket_->getFd());
     }
   }

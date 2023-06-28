@@ -534,7 +534,7 @@ void QAbstractVNCView::remoteResize(int w, int h)
     layout.begin()->dimensions.br.y = h;
   }
   else {
-    rdr::U32 id;
+    uint32_t id;
 
     // In full screen we report all screens that are fully covered.
     rfb::Rect viewport_rect;
@@ -704,7 +704,6 @@ QList<int> QAbstractVNCView::fullscreenScreens()
 void QAbstractVNCView::fullscreen(bool enabled)
 {
   QVNCWindow *window = AppManager::instance()->window();
-  bool bypassWMHintingNeeded = bypassWMHintingEnabled();
   //qDebug() << "QAbstractVNCView::fullscreen: enabled=" << enabled;
   // TODO: Flag fullscreenEnabled_ seems have to be disabled before executing fullscreen().
   bool fullscreenEnabled0 = fullscreenEnabled_;

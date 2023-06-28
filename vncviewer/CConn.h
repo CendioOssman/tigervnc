@@ -21,7 +21,7 @@
 #define __CCONN_H__
 
 #include <QString>
-#include "rdr/types.h"
+//#include "rdr/types.h"
 #include "rfb/Rect.h"
 #include "rfb/CConnection.h"
 
@@ -52,7 +52,7 @@ public:
 
   void setName(const char* name) override;
 
-  void setColourMapEntries(int firstColour, int nColours, rdr::U16 *rgbs) override;
+  void setColourMapEntries(int firstColour, int nColours, uint16_t *rgbs) override;
 
   void bell() override;
 
@@ -61,10 +61,10 @@ public:
   bool dataRect(const rfb::Rect& r, int encoding) override;
 
   void setCursor(int width, int height, const rfb::Point &hotspot,
-                 const rdr::U8 *data) override;
+                 const uint8_t *data) override;
   void setCursorPos(const rfb::Point &pos) override;
 
-  void fence(rdr::U32 flags, unsigned len, const char data[]) override;
+  void fence(uint32_t flags, unsigned len, const char data[]) override;
 
   void setLEDState(unsigned int state) override;
 

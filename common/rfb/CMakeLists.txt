@@ -14,10 +14,8 @@ add_library(rfb STATIC
   CSecurityNone.h
   CSecurityPlain.cxx
   CSecurityPlain.h
-  CSecurityRSAAES.h
   CSecurityStack.cxx
   CSecurityStack.h
-  CSecurityTLS.h
   CSecurityVeNCrypt.cxx
   CSecurityVeNCrypt.h
   CSecurityVncAuth.cxx
@@ -94,10 +92,8 @@ add_library(rfb STATIC
   SSecurityNone.h
   SSecurityPlain.cxx
   SSecurityPlain.h
-  SSecurityRSAAES.h
   SSecurityStack.cxx
   SSecurityStack.h
-  SSecurityTLS.h
   SSecurityVeNCrypt.cxx
   Timer.cxx
   TightDecoder.cxx
@@ -108,7 +104,6 @@ add_library(rfb STATIC
   TightJPEGEncoder.h
   Timer.cxx
   Timer.h
-  UnixPasswordValidator.h
   UpdateTracker.cxx
   UpdateTracker.h
   UserMsgBox.h
@@ -151,7 +146,7 @@ if(ENABLE_H264 AND NOT H264_LIBS STREQUAL "NONE")
 endif()
 
 if(UNIX)
-  target_sources(rfb PRIVATE Logger_syslog.cxx)
+  target_sources(rfb PRIVATE Logger_syslog.cxx Logger_syslog.h)
 endif()
 
 if(WIN32)
@@ -160,7 +155,7 @@ if(WIN32)
 endif(WIN32)
 
 if(UNIX AND NOT APPLE)
-  target_sources(rfb PRIVATE UnixPasswordValidator.cxx pam.c)
+  target_sources(rfb PRIVATE UnixPasswordValidator.cxx UnixPasswordValidator.h pam.c pam.h)
   target_link_libraries(rfb ${PAM_LIBS})
 endif()
 
