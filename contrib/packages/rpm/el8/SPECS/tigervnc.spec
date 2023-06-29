@@ -30,7 +30,7 @@ BuildRequires: libXdamage-devel, libXrandr-devel, libXt-devel, libXdmcp-devel
 BuildRequires: libXinerama-devel, mesa-libGL-devel, libxshmfence-devel
 BuildRequires: pixman-devel, libdrm-devel, mesa-libgbm-devel
 BuildRequires: xorg-x11-util-macros, xorg-x11-xtrans-devel, libXtst-devel
-BuildRequires: xorg-x11-font-utils
+BuildRequires: xorg-x11-font-utils, libXcursor-devel
 BuildRequires:  libXfont2-devel
 # SELinux
 BuildRequires:  libselinux-devel, selinux-policy-devel, systemd

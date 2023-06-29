@@ -26,6 +26,7 @@ Build-Depends:
  libxrandr-dev,
  libxdamage-dev,
  libxfixes-dev,
+ libxcursor-dev,
  qtbase5-dev,
  qtdeclarative5-dev,
  qtmultimedia5-dev,
