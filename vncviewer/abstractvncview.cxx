@@ -14,6 +14,7 @@
 #include <QUrl>
 #include <QClipboard>
 #include <QMoveEvent>
+#include <QScrollBar>
 #include "rfb/ScreenSet.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ServerParams.h"
@@ -86,11 +87,10 @@ public:
    : QAction(text, parent)
   {
     connect(this, &QAction::triggered, this, []() {
+      QVNCWindow *window = AppManager::instance()->window();
       QAbstractVNCView *view = AppManager::instance()->view();
-      if (!view->isFullscreenEnabled()) {
-        view->showNormal();
-        view->handleDesktopSize();
-      }
+      window->normalizedResize(view->width() + window->horizontalScrollBar()->width(), view->height() + window->verticalScrollBar()->height()); // Needed to hide scrollbars.
+      window->normalizedResize(view->width(), view->height());
     });
     connect(ViewerConfig::config(), &ViewerConfig::fullScreenChanged, this, [this](bool enabled) {
       setEnabled(!enabled); // cf. Viewport::initContextMenu()
