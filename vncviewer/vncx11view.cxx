@@ -32,6 +32,7 @@
 #include "GestureHandler.h"
 
 #include <X11/XKBlib.h>
+#include <X11/Xcursor/Xcursor.h>
 
 #include "vncwindow.h"
 #include "vncx11view.h"
@@ -274,7 +275,7 @@ bool QVNCX11View::event(QEvent *e)
     case QEvent::Gesture:
       gestureEvent(reinterpret_cast<QGestureEvent*>(e));
     default:
-      //qDebug() << "Unprocessed Event: " << e->type();
+      qDebug() << "Unprocessed Event: " << e->type();
       break;
   }
   return QWidget::event(e);
@@ -293,7 +294,17 @@ void QVNCX11View::showEvent(QShowEvent *e)
 */
 void QVNCX11View::focusInEvent(QFocusEvent *e)
 {
+  qDebug() << "QVNCX11View::focusInEvent";
   QWidget::focusInEvent(e);
+}
+
+void QVNCX11View::focusOutEvent(QFocusEvent *e)
+{
+  qDebug() << "QVNCX11View::focusOutEvent";
+  // We won't get more key events, so reset our knowledge about keys
+  resetKeyboard();
+  enableIM();
+  QWidget::focusOutEvent(e);
 }
 
 /*!
@@ -344,11 +355,11 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, qintpt
       //qDebug() << "QVNCX11View::nativeEvent: XCB_KEY_PRESS: keycode=0x" << Qt::hex << xevent->detail << ", state=0x" << xevent->state << ", mapped_keycode=0x" << code_map_keycode_to_qnum[xevent->detail];
 
       int keycode = code_map_keycode_to_qnum[xevent->detail]; // TODO: what's this table???
-      //int keycode = xevent->detail;
+#if 0
       if (keycode == 50) {
         keycode = 42;
       }
-
+#endif
       // Generate a fake keycode just for tracking if we can't figure
       // out the proper one
       if (keycode == 0)
@@ -412,13 +423,34 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, qintpt
     }
     else if (xcbEventType == XCB_ENTER_NOTIFY) {
       // Won't reach here, because Enter/Leave events are handled by XInput.
-      //qDebug() << "XCB_ENTER_NOTIFY";
+      qDebug() << "XCB_ENTER_NOTIFY";
       grabPointer();
     }
     else if (xcbEventType == XCB_LEAVE_NOTIFY) {
       // Won't reach here, because Enter/Leave events are handled by XInput.
-      //qDebug() << "XCB_LEAVE_NOTIFY";
+      qDebug() << "XCB_LEAVE_NOTIFY";
       ungrabPointer();
+    }
+    else if (xcbEventType == XCB_GE_GENERIC) { // XInput
+      xcb_ge_generic_event_t* xevent = reinterpret_cast<xcb_ge_generic_event_t*>(message);
+      switch (xevent->event_type) {
+        case XCB_ENTER_NOTIFY:
+          qDebug() << "XCB_GE_GENERIC:XCB_ENTER_NOTIFY";
+          grabPointer();
+          break;
+        case XCB_LEAVE_NOTIFY:
+          qDebug() << "XCB_GE_GENERIC:XCB_LEAVE_NOTIFY";
+          ungrabPointer();
+          break;
+        case XCB_MOTION_NOTIFY: // process by QVNCX11View::event(QEvent *e)
+          break;
+        default:
+          qDebug() << "XCB_GE_GENERIC: event_type=" << xevent->event_type;
+          break;
+       }
+    }
+    else {
+      qDebug() << "nativeEvent: eventtype=" << xcbEventType;
     }
   }
   //return false;
@@ -470,6 +502,7 @@ void QVNCX11View::draw()
 // Viewport::handle(int event)
 void QVNCX11View::handleMouseButtonEvent(QMouseEvent *e)
 {
+    qDebug() << "VNCX11View::handleMouseButtonEvent";
     int buttonMask = 0;
     Qt::MouseButtons buttons = e->buttons();
     if (buttons & Qt::LeftButton) {
@@ -539,6 +572,16 @@ void QVNCX11View::handleMouseWheelEvent(QWheelEvent *e)
     filterPointerEvent(rfb::Point(e->x(), e->y()), buttonMask);
     qDebug() << "QVNCX11View::handleMouseWheelEvent (button up/down): x=" << e->x() << ", y=" << e->y() << ", btn=" << Qt::hex << (buttonMask | wheelMask);
 #endif
+}
+
+void QVNCX11View::disableIM()
+{
+  // Seems nothing to do.
+}
+
+void QVNCX11View::enableIM()
+{
+  // Seems nothing to do.
 }
 
 void QVNCX11View::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
@@ -659,22 +702,59 @@ void QVNCX11View::setQCursor(const QCursor &cursor)
   Pixmap cursorPixmap = toPixmap(cursorBitmap);
   Pixmap maskPixmap = toPixmap(maskBitmap);
 
-  XColor color;
-  color.pixel = BlackPixel(display_, screen);
-  color.red = color.green = color.blue = 0;
-  color.flags = DoRed | DoGreen | DoBlue;
-  XColor maskColor;
-  maskColor.pixel = WhitePixel(display_, screen);
-  maskColor.red = maskColor.green = maskColor.blue = 65535;
-  maskColor.flags = DoRed | DoGreen | DoBlue;
+  XcursorImage *xcursor = XcursorImageCreate(image.width(), image.height());
+  if (!xcursor) {
+    return;
+  }
+  XcursorPixel *o = xcursor->pixels;
+  for (int y = 0; y < image.height(); y++) {
+    int d = image.depth();
+    const uchar *i = image.constScanLine(y);
+    for (int x = 0; x < image.width(); x++) {
+      uchar r, g, b, a;
+      switch (d) {
+      case 8:
+        r = g = b = i[0];
+        a = 0xff;
+        break;
+      case 16:
+        r = g = b = i[0];
+        a = i[1];
+        break;
+      case 24:
+        r = i[0];
+        g = i[1];
+        b = i[2];
+        a = 0xff;
+        break;
+      case 32:
+        r = i[0];
+        g = i[1];
+        b = i[2];
+        a = i[3];
+        break;
+      default:
+        return;
+      }
+      // Alpha needs to be pre-multiplied for X11
+      r = (uchar)((unsigned)r * a / 255);
+      g = (uchar)((unsigned)g * a / 255);
+      b = (uchar)((unsigned)b * a / 255);
 
-  Cursor xcursor = XCreatePixmapCursor(display_, cursorPixmap, maskPixmap, &color, &maskColor, hotX, hotY);
-  XDefineCursor(display_, nativeWindowHandle(), xcursor);
-  XFreeCursor(display_, xcursor);
-  XFreeColors(display_, DefaultColormap(display_, screen), &color.pixel, 1, 0);
+      *o = (a<<24) | (r<<16) | (g<<8) | b;
+      o++;
+      i += d / 8;
+    }
+  }
 
-  XFreePixmap(display_, cursorPixmap);
-  XFreePixmap(display_, maskPixmap);
+  xcursor->xhot = hotX;
+  xcursor->yhot = hotY;
+
+  Cursor xc = XcursorImageLoadCursor(display_, xcursor);
+  XDefineCursor(display_, window_, xc);
+  XFreeCursor(display_, xc);
+
+  XcursorImageDestroy(xcursor);
 }
 
 void QVNCX11View::handleClipboardData(const char*)

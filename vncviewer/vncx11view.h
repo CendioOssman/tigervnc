@@ -15,6 +15,8 @@ public:
   QVNCX11View(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~QVNCX11View();
   qulonglong nativeWindowHandle() const override;
+  void disableIM() override;
+  void enableIM() override;
   void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
   void handleKeyRelease(int keyCode) override;
 
@@ -41,6 +43,7 @@ protected:
 #endif
   void showEvent(QShowEvent *) override;
   void focusInEvent(QFocusEvent*) override;
+  void focusOutEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
 
   void handleMouseButtonEvent(QMouseEvent*);

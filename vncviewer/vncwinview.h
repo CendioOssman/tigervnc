@@ -19,15 +19,16 @@ public:
   bool hasViewFocus() const override;
   qulonglong nativeWindowHandle() const override;
   QRect getExtendedFrameProperties() override;
+  void disableIM() override;
+  void enableIM() override;
   void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
   void handleKeyRelease(int keyCode) override;
 
 public slots:
   void setQCursor(const QCursor &cursor) override;
   void setCursorPos(int x, int y) override;
-  void setLEDState(unsigned int state) override;
   void pushLEDState() override;
-  void maybeGrabKeyboard() override;
+  void setLEDState(unsigned int state) override;
   void grabKeyboard() override;
   void ungrabKeyboard() override;
   void bell() override;
@@ -40,14 +41,12 @@ protected:
   bool event(QEvent *e) override;
   HWND createWindow(HWND parent, HINSTANCE instance);
   void showEvent(QShowEvent *) override;
+  void enterEvent(QEvent*) override;
+  void leaveEvent(QEvent*) override;
   void focusInEvent(QFocusEvent*) override;
+  void focusOutEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
   bool bypassWMHintingEnabled() const override { return true; }
-#if 0
-  void fullscreenOnCurrentDisplay() override;
-  void fullscreenOnSelectedDisplay(QScreen *screen) override;
-  void fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight) override;
-#endif
 
 private:
   void *wndproc_;

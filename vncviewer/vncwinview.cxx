@@ -71,7 +71,7 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
     SetWindowPos(hwnd_, HWND_TOPMOST, 0, 0, width, height, 0);
     SetFocus(hwnd_);
     grabPointer();
-    grabKeyboard();
+    maybeGrabKeyboard();
   }, Qt::QueuedConnection);
 
   altGrCtrlTimer_->setInterval(100);
@@ -217,6 +217,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       }
     }
       break;
+#if 0
     case WM_SETFOCUS:
       qDebug() << "VNCWinView::eventHandler(): WM_SETFOCUS";
       window->maybeGrabKeyboard();
@@ -227,6 +228,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
         window->ungrabKeyboard();
       }
       break;
+#endif
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
       window->handleKeyDownEvent(message, wParam, lParam);
@@ -392,14 +394,6 @@ bool QVNCWinView::event(QEvent *e)
       //qDebug() << "WindowDeactivate";
       ::SetFocus(NULL);
       break;
-    case QEvent::Enter:
-      //qDebug() << "Enter";
-      grabPointer();
-      break;
-    case QEvent::Leave:
-      //qDebug() << "Leave";
-      ungrabPointer();
-      break;
     case QEvent::CursorChange:
       //qDebug() << "CursorChange";
       e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
@@ -433,13 +427,52 @@ void QVNCWinView::showEvent(QShowEvent *e)
   }
 }
 
+void QVNCWinView::enterEvent(QEvent *e)
+{
+  qDebug() << "QVNCWinView::enterEvent";
+  grabPointer();
+  //SetCursor(cursor_);
+  QWidget::enterEvent(e);
+}
+
+void QVNCWinView::leaveEvent(QEvent *e)
+{
+  qDebug() << "QVNCWinView::leaveEvent";
+  ungrabPointer();
+  QWidget::leaveEvent(e);
+}
+
 void QVNCWinView::focusInEvent(QFocusEvent *e)
 {
-  QWidget::focusInEvent(e);
-
+  qDebug() << "QVNCWinView::focusInEvent";
   if (hwnd_) {
     ::SetFocus(hwnd_);
   }
+  disableIM();
+
+  //flushPendingClipboard();
+
+  // We may have gotten our lock keys out of sync with the server
+  // whilst we didn't have focus. Try to sort this out.
+  pushLEDState();
+
+  // Resend Ctrl/Alt if needed
+  if (menuCtrlKey_) {
+    handleKeyPress(0x1d, XK_Control_L);
+  }
+  if (menuAltKey_) {
+    handleKeyPress(0x38, XK_Alt_L);
+  }
+  QWidget::focusInEvent(e);
+}
+
+void QVNCWinView::focusOutEvent(QFocusEvent *e)
+{
+  qDebug() << "QVNCWinView::focusOutEvent";
+  // We won't get more key events, so reset our knowledge about keys
+  resetKeyboard();
+  enableIM();
+  QWidget::focusOutEvent(e);
 }
 
 void QVNCWinView::resizeEvent(QResizeEvent *e)
@@ -474,6 +507,16 @@ void QVNCWinView::resolveAltGrDetection(bool isAltGrSequence)
   // when it's not an AltGr sequence we can't supress the Ctrl anymore
   if (!isAltGrSequence)
     handleKeyPress(0x1d, XK_Control_L);
+}
+
+void QVNCWinView::disableIM()
+{
+  ImmAssociateContextEx(hwnd_, 0, IACE_DEFAULT);
+}
+
+void QVNCWinView::enableIM()
+{
+  ImmAssociateContextEx(hwnd_, 0, 0);
 }
 
 void QVNCWinView::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
@@ -897,13 +940,6 @@ void QVNCWinView::setLEDState(unsigned int state)
   }
 }
 
-void QVNCWinView::maybeGrabKeyboard()
-{
-  if (ViewerConfig::config()->fullscreenSystemKeys() && isFullscreenEnabled() && hasFocus()) {
-    grabKeyboard();
-  }
-}
-
 void QVNCWinView::grabKeyboard()
 {
   int ret = win32_enable_lowlevel_keyboard(hwnd_);
@@ -937,9 +973,6 @@ void QVNCWinView::startMouseTracking()
     tme.dwHoverTime = HOVER_DEFAULT;
     TrackMouseEvent(&tme);
     mouseTracking_ = true;
-
-    //SetCursor(NULL);
-    //qDebug() << "SetCursor(NULL)";
 
     if (keyboardGrabbed_) {
       grabPointer();

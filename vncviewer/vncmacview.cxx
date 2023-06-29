@@ -233,7 +233,7 @@ bool QVNCMacView::event(QEvent *e)
     //qDebug() << "CursorChange";
     e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
     return true;
-  case QEvent::MetaCall:
+ case QEvent::MetaCall:
     // qDebug() << "QEvent::MetaCall (signal-slot call)";
     break;
   default:
@@ -250,7 +250,32 @@ void QVNCMacView::showEvent(QShowEvent *e)
 
 void QVNCMacView::focusInEvent(QFocusEvent *e)
 {
+  qDebug() << "QVNCMacView::focusInEvent";
+  disableIM();
+
+  //flushPendingClipboard();
+
+  // We may have gotten our lock keys out of sync with the server
+  // whilst we didn't have focus. Try to sort this out.
+  pushLEDState();
+
+  // Resend Ctrl/Alt if needed
+  if (menuCtrlKey_) {
+    handleKeyPress(0x1d, XK_Control_L);
+  }
+  if (menuAltKey_) {
+    handleKeyPress(0x38, XK_Alt_L);
+  }
   QWidget::focusInEvent(e);
+}
+
+void QVNCMacView::focusOutEvent(QFocusEvent *e)
+{
+  qDebug() << "QVNCMacView::focusOutEvent";
+  // We won't get more key events, so reset our knowledge about keys
+  resetKeyboard();
+  enableIM();
+  QWidget::focusOutEvent(e);
 }
 
 void QVNCMacView::resizeEvent(QResizeEvent *e)
@@ -375,6 +400,16 @@ void QVNCMacView::handleMouseWheelEvent(QWheelEvent *e)
 #else
   filterPointerEvent(rfb::Point(e->x(), e->y()), buttonMask);
 #endif
+}
+
+void QVNCMacView::disableIM()
+{
+  // Seems nothing to do.
+}
+
+void QVNCMacView::enableIM()
+{
+  // Seems nothing to do.
 }
 
 void QVNCMacView::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
@@ -583,10 +618,6 @@ void QVNCMacView::fullscreenOnCurrentDisplay()
   window->setWindowFlag(Qt::FramelessWindowHint, true);
   window->setWindowState(Qt::WindowFullScreen);
   grabKeyboard();
-#if 0
-  window->show();
-#endif
-  //popupContextMenu();
 }
 
 void QVNCMacView::fullscreenOnSelectedDisplay(QScreen *screen, int vx, int vy, int vwidth, int vheight)
@@ -599,14 +630,4 @@ void QVNCMacView::fullscreenOnSelectedDisplay(QScreen *screen, int vx, int vy, i
   window->setWindowFlag(Qt::FramelessWindowHint, true);
   window->setWindowState(Qt::WindowFullScreen);
   grabKeyboard();
-
-#if 0
-  QTimer t;
-  t.setInterval(1000);
-  connect(&t, &QTimer::timeout, this, [this]() {
-    contextMenu_->hide();
-  });
-  t.start();
-#endif
-  //popupContextMenu();
 }

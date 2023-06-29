@@ -43,6 +43,10 @@ public:
   virtual QRect getExtendedFrameProperties();
   bool isVisibleContextMenu() const;
   void sendContextMenuKey();
+  void setMenuKeyStatus(quint32 keysym, bool checked);
+  virtual void disableIM();
+  virtual void enableIM();
+  virtual void resetKeyboard();
   virtual void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false);
   virtual void handleKeyRelease(int keyCode);
 
@@ -106,6 +110,8 @@ protected:
   rfb::Point *lastPointerPos_;
   int lastButtonMask_;
   QTimer *mousePointerTimer_;
+  bool menuCtrlKey_;
+  bool menuAltKey_;
 
   void createContextMenu();
   QList<int> fullscreenScreens();

@@ -18,6 +18,8 @@ public:
   virtual ~QVNCMacView();
   qulonglong nativeWindowHandle() const override;
   double effectiveDevicePixelRatio(QScreen *screen = nullptr) const override { Q_UNUSED(screen) return 1.0; }
+  void disableIM() override;
+  void enableIM() override;
   void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
   void handleKeyRelease(int keyCode) override;
 
@@ -36,6 +38,7 @@ protected:
   bool event(QEvent *e) override;
   void showEvent(QShowEvent *) override;
   void focusInEvent(QFocusEvent*) override;
+  void focusOutEvent(QFocusEvent*) override;
   void resizeEvent(QResizeEvent*) override;
   void paintEvent(QPaintEvent *event) override;
   void handleMouseButtonEvent(QMouseEvent*);

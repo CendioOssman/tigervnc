@@ -114,6 +114,7 @@ public:
       else {
         view->handleKeyRelease(keyCode_);
       }
+      view->setMenuKeyStatus(keySym_, checked);
     });
   }
 
@@ -254,6 +255,8 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
  , lastPointerPos_(new rfb::Point)
  , lastButtonMask_(0)
  , mousePointerTimer_(new QTimer)
+ , menuCtrlKey_(false)
+ , menuAltKey_(false)
 {
   if (!clipboard_) {
     clipboard_ = QGuiApplication::clipboard();
@@ -422,6 +425,31 @@ qulonglong QAbstractVNCView::nativeWindowHandle() const
   return 0;
 }
 
+void QAbstractVNCView::setMenuKeyStatus(quint32 keysym, bool checked)
+{
+  if (keysym == XK_Control_L) {
+    menuCtrlKey_ = checked;
+  }
+  else if (keysym == XK_Alt_L) {
+    menuAltKey_ = checked;
+  }
+}
+
+void QAbstractVNCView::disableIM()
+{
+}
+
+void QAbstractVNCView::enableIM()
+{
+}
+
+void QAbstractVNCView::resetKeyboard()
+{
+  while (!downKeySym_.empty()) {
+    handleKeyRelease(downKeySym_.begin()->first);
+  }
+}
+
 void QAbstractVNCView::handleKeyPress(int, quint32, bool)
 {
 }
@@ -454,6 +482,9 @@ void QAbstractVNCView::handleClipboardData(const char *data)
 
 void QAbstractVNCView::maybeGrabKeyboard()
 {
+  if (ViewerConfig::config()->fullscreenSystemKeys() && (isFullscreenEnabled() || pendingFullscreen_) && hasFocus()) {
+    grabKeyboard();
+  }
 }
 
 void QAbstractVNCView::grabKeyboard()
