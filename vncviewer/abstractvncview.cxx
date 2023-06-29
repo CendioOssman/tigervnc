@@ -884,7 +884,9 @@ void QAbstractVNCView::moveView(int x, int y)
 
 QScreen *QAbstractVNCView::getCurrentScreen()
 {
-  QPoint globalCursorPos = QCursor::pos();
+  int centerX = x() + width() / 2;
+  int centerY = y() + height() / 2;
+  QPoint globalCursorPos = mapToGlobal(QPoint(centerX, centerY));
   //qDebug() << "QAbstractVNCView::getCurrentScreen: pos=" << globalCursorPos;
   QApplication *app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
