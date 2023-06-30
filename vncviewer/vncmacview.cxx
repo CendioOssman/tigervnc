@@ -631,3 +631,10 @@ void QVNCMacView::fullscreenOnSelectedDisplay(QScreen *screen, int vx, int vy, i
   window->setWindowState(Qt::WindowFullScreen);
   grabKeyboard();
 }
+
+void QVNCMacView::dim(bool enabled)
+{
+  if (view_) {
+    cocoa_dim(view_, enabled);
+  }
+}

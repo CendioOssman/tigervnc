@@ -22,6 +22,7 @@ public:
   void enableIM() override;
   void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
   void handleKeyRelease(int keyCode) override;
+  void dim(bool enabled) override;
 
 public slots:
   void setQCursor(const QCursor &cursor) override;

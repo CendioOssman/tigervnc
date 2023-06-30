@@ -4,7 +4,6 @@
 
 #include <QMoveEvent>
 #include <QResizeEvent>
-#include <QHBoxLayout>
 #include <QGestureEvent>
 #include <QPainter>
 #include <QDebug>
@@ -14,6 +13,9 @@
 #include "vnctoast.h"
 #include "vncwindow.h"
 #undef asprintf
+#if defined(WIN32)
+#include <windows.h>
+#endif
 
 static rfb::LogWriter vlog("VNCWindow");
 

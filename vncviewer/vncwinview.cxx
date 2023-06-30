@@ -51,10 +51,9 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
  , defaultCursor_(LoadCursor(NULL, IDC_ARROW))
  , touchHandler_(nullptr)
 {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  setAttribute(Qt::WA_NoBackground);
-#endif
-  setAttribute(Qt::WA_NoSystemBackground);
+  // Do not set either Qt::WA_NoBackground nor Qt::WA_NoSystemBackground
+  // for Windows. Otherwise, unneeded ghost image of the toast is shown
+  // when dimming.
   setAttribute(Qt::WA_InputMethodTransparent);
   setAttribute(Qt::WA_NativeWindow);
   setAttribute(Qt::WA_AcceptTouchEvents);
@@ -1005,16 +1004,17 @@ QRect QVNCWinView::getExtendedFrameProperties()
   return QRect(7, 7, 7, 7);
 }
 
-#if 0
-void QVNCWinView::fullscreenOnCurrentDisplay()
+void QVNCWinView::dim(bool enabled)
 {
+  if (enabled) {
+    LONG lStyle = GetWindowLong(hwnd_, GWL_EXSTYLE);
+    lStyle |= WS_EX_LAYERED;
+    SetWindowLong(hwnd_, GWL_EXSTYLE, lStyle);
+    SetLayeredWindowAttributes(hwnd_, RGB(0, 0, 0), 128, LWA_ALPHA | LWA_COLORKEY);
+  }
+  else {
+    LONG lStyle = GetWindowLong(hwnd_, GWL_EXSTYLE);
+    lStyle &= ~WS_EX_LAYERED;
+    SetWindowLong(hwnd_, GWL_EXSTYLE, lStyle);
+  }
 }
-
-void QVNCWinView::fullscreenOnSelectedDisplay(QScreen *screen)
-{
-}
-
-void QVNCWinView::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight)
-{
-}
-#endif

@@ -767,3 +767,11 @@ void cocoa_set_overlay_property(WId winid)
   [window setLevel:CGShieldingWindowLevel()];
   [window setCollectionBehavior:NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorFullScreenAuxiliary];
 }
+
+
+void cocoa_dim(NSView *view, bool enabled)
+{
+  CGFloat alpha = enabled ? 0.4 : 1.0;
+  [view setAlphaValue:(alpha)];
+}
+

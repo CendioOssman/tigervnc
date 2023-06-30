@@ -49,6 +49,7 @@ public:
   virtual void resetKeyboard();
   virtual void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false);
   virtual void handleKeyRelease(int keyCode);
+  virtual void dim(bool enabled) {}
 
 public slots:
   virtual void setQCursor(const QCursor &cursor);

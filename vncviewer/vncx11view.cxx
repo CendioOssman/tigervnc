@@ -33,6 +33,7 @@
 
 #include <X11/XKBlib.h>
 #include <X11/Xcursor/Xcursor.h>
+#include <X11/Xatom.h>
 
 #include "vncwindow.h"
 #include "vncx11view.h"
@@ -52,6 +53,7 @@ QVNCGestureRecognizer *QVNCX11View::vncGestureRecognizer_ = nullptr;
 QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   : QAbstractVNCView(parent, f)
   , window_(0)
+  , dimmer_(0)
   , display_(nullptr)
   , screen_(0)
   , visualInfo_(nullptr)
@@ -227,6 +229,28 @@ bool QVNCX11View::event(QEvent *e)
         XMapWindow(display_, window_);
         setMouseTracking(true);
         //touchHandler_ = new XInputTouchHandler(window_);
+
+        XSetWindowAttributes xdattr;
+        xattr.override_redirect = False;
+        xdattr.background_pixel = 0x96000000;
+        xattr.border_pixel = 0;
+        xdattr.colormap = colorMap_;
+        unsigned int wdattr = CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWColormap;
+        dimmer_ = XCreateWindow(display_, DefaultRootWindow(display_), 0, 0, w, h, borderWidth, 32, InputOutput, visualInfo_->visual, wdattr, &xdattr);
+
+        Atom mwmHintsProperty = XInternAtom(display_, "_MOTIF_WM_HINTS", 0);
+        struct MwmHints {
+            unsigned long flags;
+            unsigned long functions;
+            unsigned long decorations;
+            long input_mode;
+            unsigned long status;
+        };
+        unsigned MWM_HINTS_DECORATIONS =  (1L << 1);
+        struct MwmHints hints;
+        hints.flags = MWM_HINTS_DECORATIONS;
+        hints.decorations = 0;
+        XChangeProperty(display_, dimmer_, mwmHintsProperty, mwmHintsProperty, 32, PropModeReplace, (unsigned char *)&hints, 5);
       }
       break;
     case QEvent::KeyboardLayoutChange:
@@ -697,11 +721,6 @@ void QVNCX11View::setQCursor(const QCursor &cursor)
   int hotX = cursor.hotSpot().x();
   int hotY = cursor.hotSpot().y();
 
-  int screen = DefaultScreen(display_);
-
-  Pixmap cursorPixmap = toPixmap(cursorBitmap);
-  Pixmap maskPixmap = toPixmap(maskBitmap);
-
   XcursorImage *xcursor = XcursorImageCreate(image.width(), image.height());
   if (!xcursor) {
     return;
@@ -1004,4 +1023,28 @@ void QVNCX11View::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int v
   resize(vwidth, vheight);
   window->showNormal();
   grabKeyboard();
+}
+
+void QVNCX11View::dim(bool enabled)
+{
+  if (window_) {
+    if (enabled) {
+      QPoint p0 = AppManager::instance()->window()->topLevelWidget()->mapToGlobal(QPoint(0, 0));
+      qDebug() << "global pos=" << p0;
+
+      XMapWindow(display_, dimmer_);
+
+      unsigned long newmask = (CWX | CWY | CWWidth | CWHeight);
+      XWindowChanges wc;
+      wc.x = p0.x();
+      wc.y = p0.y();
+      wc.width = width();
+      wc.height = height();
+      XConfigureWindow(display_, dimmer_, newmask, &wc);
+    }
+    else {
+      XUnmapWindow(display_, dimmer_);
+      AppManager::instance()->connection()->refreshFramebuffer();
+    }
+  }
 }

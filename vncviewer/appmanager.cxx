@@ -212,6 +212,7 @@ void AppManager::openContextMenu()
 
 void AppManager::openInfoDialog()
 {
+  view_->dim(true);
   visibleInfo_ = true;
   emit visibleInfoChanged();
 #if defined(__APPLE__)
@@ -223,6 +224,7 @@ void AppManager::openInfoDialog()
 
 void AppManager::openOptionDialog()
 {
+  view_->dim(true);
 #if defined(__APPLE__)
   openOverlay("qrc:/qml/OptionDialogContent.qml", _("TigerVNC Options"));
 #else
@@ -232,6 +234,7 @@ void AppManager::openOptionDialog()
 
 void AppManager::openAboutDialog()
 {
+  view_->dim(true);
 #if defined(__APPLE__)
   openOverlay("qrc:/qml/AboutDialogContent.qml", _("About TigerVNC Viewer"));
 #else
@@ -265,6 +268,9 @@ void AppManager::openOverlay(QString qml, const char *title, const char *message
 
 void AppManager::closeOverlay()
 {
+  if (view_) {
+    view_->dim(false);
+  }
   visibleInfo_ = false;
   emit visibleInfoChanged();
 #if defined(__APPLE__)

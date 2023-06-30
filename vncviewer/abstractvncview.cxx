@@ -752,8 +752,8 @@ void QAbstractVNCView::fullscreen(bool enabled)
     }
 
     auto mode = ViewerConfig::config()->fullScreenMode();
-    if (mode != ViewerConfig::FSCurrent) {
-      QList<int> selectedScreens = fullscreenScreens();
+    QList<int> selectedScreens = fullscreenScreens();
+    if (mode != ViewerConfig::FSCurrent && selectedScreens.length() > 0) {
       QScreen *selectedPrimaryScreen = screens[selectedScreens[0]];
       int xmin = INT_MAX;
       int ymin = INT_MAX;
