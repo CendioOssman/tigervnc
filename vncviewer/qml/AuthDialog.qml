@@ -131,6 +131,7 @@ Window {
                     Layout.rightMargin: 25
                     Layout.preferredHeight: 25
                     Layout.minimumWidth: 200
+                    selectByMouse: true
                 }
                 Text {
                     id: passwordLabel
@@ -146,6 +147,7 @@ Window {
                     Layout.preferredHeight: 25
                     Layout.minimumWidth: 200
                     echoMode: TextInput.Password
+                    selectByMouse: true
                     Keys.onEnterPressed: accept()
                     Keys.onReturnPressed: accept()
                     Keys.onEscapePressed: cancel()

@@ -471,6 +471,7 @@ Item {
                     TextField {
                         id: compressionCustomCompressionLevelTextEdit
                         Layout.preferredWidth: 24
+                        selectByMouse: true
                         validator: IntValidator {
                             bottom: 0
                             top: 9
@@ -496,6 +497,7 @@ Item {
                     TextField {
                         id: compressionJPEGCompressionTextEdit
                         Layout.preferredWidth: 24
+                        selectByMouse: true
                         validator: IntValidator {
                             bottom: 0
                             top: 9
@@ -551,6 +553,7 @@ Item {
                     Layout.leftMargin: 44
                     visible: Config.haveGNUTLS
                     enabled: securityEncryptionTLSWithX509Certs.checked
+                    selectByMouse: true
                 }
                 Label {
                     Layout.leftMargin: 40
@@ -564,6 +567,7 @@ Item {
                     Layout.leftMargin: 44
                     visible: Config.haveGNUTLS
                     enabled: securityEncryptionTLSWithX509Certs.checked
+                    selectByMouse: true
                 }
                 CheckBox {
                     id: securityEncryptionAES
