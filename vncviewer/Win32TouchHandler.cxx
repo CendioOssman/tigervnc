@@ -369,7 +369,9 @@ void Win32TouchHandler::fakeButtonEvent(bool press, int button,
 
     // Regular mouse events expect client coordinates
     lParam = MAKELPARAM(origEvent.eventX, origEvent.eventY);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     qDebug() << "Win32TouchHandler::fakeButtonEvent: x=" << origEvent.eventX << ", y=" << origEvent.eventY << ", buttons=" << Qt::hex << fakeButtonMask;
+#endif
   } else {
     POINT pos;
 
