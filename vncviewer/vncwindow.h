@@ -23,6 +23,8 @@ protected:
   void moveEvent(QMoveEvent *e) override;
   void resizeEvent(QResizeEvent *e) override;
   void changeEvent(QEvent *e) override;
+  void focusInEvent(QFocusEvent*) override;
+  void focusOutEvent(QFocusEvent*) override;
 
 private:
   QVNCToast *toast_;

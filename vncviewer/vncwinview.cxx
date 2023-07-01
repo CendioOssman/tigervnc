@@ -173,7 +173,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
   if (window) {
     switch (message) {
     case WM_MOUSEMOVE: {
-      window->startMouseTracking();
+      window->grabPointer();
       int x, y, buttonMask, wheelMask;
       getMouseProperties(window, message, wParam, lParam, x, y, buttonMask, wheelMask);
       //qDebug() << "VNCWinView::eventHandler(): WM_MOUSEMOVE: x=" << x << ", y=" << y;
@@ -181,7 +181,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
     }
       break;
     case WM_MOUSELEAVE:
-      window->stopMouseTracking();
+      window->ungrabPointer();
       break;
     case WM_LBUTTONDOWN:
     case WM_LBUTTONUP:
@@ -195,6 +195,7 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
       if (ViewerConfig::config()->viewOnly()) {
         break;
       }
+      ::SetFocus(hWnd);
       int x, y, buttonMask, wheelMask;
       getMouseProperties(window, message, wParam, lParam, x, y, buttonMask, wheelMask);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
@@ -447,6 +448,7 @@ void QVNCWinView::focusInEvent(QFocusEvent *e)
   if (hwnd_) {
     ::SetFocus(hwnd_);
   }
+  maybeGrabKeyboard();
   disableIM();
 
   //flushPendingClipboard();
@@ -468,6 +470,9 @@ void QVNCWinView::focusInEvent(QFocusEvent *e)
 void QVNCWinView::focusOutEvent(QFocusEvent *e)
 {
   qDebug() << "QVNCWinView::focusOutEvent";
+  if (ViewerConfig::config()->fullscreenSystemKeys()) {
+    ungrabKeyboard();
+  }
   // We won't get more key events, so reset our knowledge about keys
   resetKeyboard();
   enableIM();

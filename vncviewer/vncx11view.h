@@ -7,6 +7,7 @@
 
 class XInputTouchHandler;
 class QVNCGestureRecognizer;
+class QTimer;
 
 class QVNCX11View : public QAbstractVNCView
 {
@@ -20,6 +21,7 @@ public:
   void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
   void handleKeyRelease(int keyCode) override;
   void dim(bool enabled) override;
+  void releaseKeyboard();
 
 public slots:
   void setQCursor(const QCursor &cursor) override;
@@ -69,6 +71,9 @@ private:
   GestureHandler *gestureHandler_;
   int eventNumber_;
   static QVNCGestureRecognizer *vncGestureRecognizer_;
+#if 0
+  QTimer *keyboardGrabberTimer_;
+#endif
 
   Pixmap toPixmap(QBitmap &bitmap);
   unsigned int getModifierMask(unsigned int keysym);

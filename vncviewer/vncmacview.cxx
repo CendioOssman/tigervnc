@@ -251,6 +251,7 @@ void QVNCMacView::showEvent(QShowEvent *e)
 void QVNCMacView::focusInEvent(QFocusEvent *e)
 {
   qDebug() << "QVNCMacView::focusInEvent";
+  maybeGrabKeyboard();
   disableIM();
 
   //flushPendingClipboard();
@@ -272,6 +273,9 @@ void QVNCMacView::focusInEvent(QFocusEvent *e)
 void QVNCMacView::focusOutEvent(QFocusEvent *e)
 {
   qDebug() << "QVNCMacView::focusOutEvent";
+  if (ViewerConfig::config()->fullscreenSystemKeys()) {
+    ungrabKeyboard();
+  }
   // We won't get more key events, so reset our knowledge about keys
   resetKeyboard();
   enableIM();

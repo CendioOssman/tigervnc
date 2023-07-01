@@ -11,6 +11,7 @@
 #include <QDebug>
 #include <QApplication>
 #include <QScreen>
+#include <QTimer>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QX11Info>
 #else
@@ -50,6 +51,18 @@ static rfb::LogWriter vlog("QVNCX11View");
 
 QVNCGestureRecognizer *QVNCX11View::vncGestureRecognizer_ = nullptr;
 
+Bool eventIsFocusWithSerial(Display *display, XEvent *event, XPointer arg)
+{
+  unsigned long serial = *(unsigned long*)arg;
+  if (event->xany.serial != serial) {
+    return False;
+  }
+  if ((event->type != FocusIn) && (event->type != FocusOut)) {
+    return False;
+  }
+  return True;
+}
+
 QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   : QAbstractVNCView(parent, f)
   , window_(0)
@@ -62,6 +75,9 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   , picture_(0)
   , gestureHandler_(new GestureHandler)
   , eventNumber_(0)
+#if 0
+  , keyboardGrabberTimer_(new QTimer)
+#endif
 {
   if (!vncGestureRecognizer_) {
     vncGestureRecognizer_ = new QVNCGestureRecognizer;
@@ -137,6 +153,11 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   }
 
   XkbFreeKeyboard(xkb, 0, True);
+#if 0
+  keyboardGrabberTimer_->setInterval(500);
+  keyboardGrabberTimer_->setSingleShot(true);
+  connect(keyboardGrabberTimer_, &QTimer::timeout, this, &QVNCX11View::grabKeyboard);
+#endif
 }
 
 QVNCX11View::~QVNCX11View()
@@ -148,6 +169,9 @@ QVNCX11View::~QVNCX11View()
     XFreePixmap(display_, pixmap_);
   }
   delete gestureHandler_;
+#if 0
+  delete keyboardGrabberTimer_;
+#endif
 }
 
 qulonglong QVNCX11View::nativeWindowHandle() const
@@ -256,13 +280,20 @@ bool QVNCX11View::event(QEvent *e)
     case QEvent::KeyboardLayoutChange:
       break;
     case QEvent::MouseMove:
+      handleMouseButtonEvent((QMouseEvent*)e);
+      break;
     case QEvent::MouseButtonPress:
     case QEvent::MouseButtonRelease:
     case QEvent::MouseButtonDblClick:
+      grabKeyboard();
+      focusInEvent(nullptr);
       handleMouseButtonEvent((QMouseEvent*)e);
       break;
     case QEvent::Wheel:
+      grabKeyboard();
+      focusInEvent(nullptr);
       handleMouseWheelEvent((QWheelEvent*)e);
+      break;
     case QEvent::WindowBlocked:
       //      if (hwnd_)
       //        EnableWindow(hwnd_, false);
@@ -299,7 +330,7 @@ bool QVNCX11View::event(QEvent *e)
     case QEvent::Gesture:
       gestureEvent(reinterpret_cast<QGestureEvent*>(e));
     default:
-      qDebug() << "Unprocessed Event: " << e->type();
+      //qDebug() << "Unprocessed Event: " << e->type();
       break;
   }
   return QWidget::event(e);
@@ -316,19 +347,38 @@ void QVNCX11View::showEvent(QShowEvent *e)
 /*!
     \reimp
 */
-void QVNCX11View::focusInEvent(QFocusEvent *e)
+void QVNCX11View::focusInEvent(QFocusEvent *)
 {
   qDebug() << "QVNCX11View::focusInEvent";
-  QWidget::focusInEvent(e);
+  maybeGrabKeyboard();
+  disableIM();
+
+  //flushPendingClipboard();
+
+  // We may have gotten our lock keys out of sync with the server
+  // whilst we didn't have focus. Try to sort this out.
+  pushLEDState();
+
+  // Resend Ctrl/Alt if needed
+  if (menuCtrlKey_) {
+    handleKeyPress(0x1d, XK_Control_L);
+  }
+  if (menuAltKey_) {
+    handleKeyPress(0x38, XK_Alt_L);
+  }
+  //QWidget::focusInEvent(e);
 }
 
-void QVNCX11View::focusOutEvent(QFocusEvent *e)
+void QVNCX11View::focusOutEvent(QFocusEvent *)
 {
   qDebug() << "QVNCX11View::focusOutEvent";
+  if (ViewerConfig::config()->fullscreenSystemKeys()) {
+    ungrabKeyboard();
+  }
   // We won't get more key events, so reset our knowledge about keys
   resetKeyboard();
   enableIM();
-  QWidget::focusOutEvent(e);
+  //QWidget::focusOutEvent(e);
 }
 
 /*!
@@ -376,7 +426,7 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, qintpt
     //qDebug() << "QVNCX11View::nativeEvent: xcbEventType=" << xcbEventType << ",eventType=" << eventType;
     if (xcbEventType == XCB_KEY_PRESS) {
       xcb_key_press_event_t* xevent = reinterpret_cast<xcb_key_press_event_t*>(message);
-      //qDebug() << "QVNCX11View::nativeEvent: XCB_KEY_PRESS: keycode=0x" << Qt::hex << xevent->detail << ", state=0x" << xevent->state << ", mapped_keycode=0x" << code_map_keycode_to_qnum[xevent->detail];
+      qDebug() << "QVNCX11View::nativeEvent: XCB_KEY_PRESS: keycode=0x" << Qt::hex << xevent->detail << ", state=0x" << xevent->state << ", mapped_keycode=0x" << code_map_keycode_to_qnum[xevent->detail];
 
       int keycode = code_map_keycode_to_qnum[xevent->detail]; // TODO: what's this table???
 #if 0
@@ -464,7 +514,7 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, qintpt
           break;
         case XCB_LEAVE_NOTIFY:
           qDebug() << "XCB_GE_GENERIC:XCB_LEAVE_NOTIFY";
-          ungrabPointer();
+          //ungrabPointer();
           break;
         case XCB_MOTION_NOTIFY: // process by QVNCX11View::event(QEvent *e)
           break;
@@ -526,7 +576,7 @@ void QVNCX11View::draw()
 // Viewport::handle(int event)
 void QVNCX11View::handleMouseButtonEvent(QMouseEvent *e)
 {
-    qDebug() << "VNCX11View::handleMouseButtonEvent";
+    //qDebug() << "VNCX11View::handleMouseButtonEvent";
     int buttonMask = 0;
     Qt::MouseButtons buttons = e->buttons();
     if (buttons & Qt::LeftButton) {
@@ -610,6 +660,7 @@ void QVNCX11View::enableIM()
 
 void QVNCX11View::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
 {
+  qDebug() << "QVNCX11View::handleKeyPress: keyCode=" << keyCode << ", keySym=" << keySym;
   if (menuKeySym_ && keySym == menuKeySym_) {
     if (isVisibleContextMenu()) {
       if (!menuShortCutMode) {
@@ -870,14 +921,51 @@ void QVNCX11View::pushLEDState()
 
 void QVNCX11View::grabKeyboard()
 {
-  XGrabKeyboard(display_, nativeWindowHandle(), True, GrabModeAsync, GrabModeAsync, CurrentTime);
+#if 0
+  keyboardGrabberTimer_->stop();
+  int ret = XGrabKeyboard(display_, nativeWindowHandle(), True, GrabModeAsync, GrabModeAsync, CurrentTime);
+  if (ret) {
+    if (ret == AlreadyGrabbed) {
+      // It seems like we can race with the WM in some cases.
+      // Try again in a bit.
+      keyboardGrabberTimer_->start();
+    }
+    else {
+      vlog.error(_("Failure grabbing keyboard"));
+    }
+    return;
+  }
+
+  // Xorg 1.20+ generates FocusIn/FocusOut even when there is no actual
+  // change of focus. This causes us to get stuck in an endless loop
+  // grabbing and ungrabbing the keyboard. Avoid this by filtering out
+  // any focus events generated by XGrabKeyboard().
+  XSync(display_, False);
+  XEvent xev;
+  unsigned long serial;
+  while (XCheckIfEvent(display_, &xev, &eventIsFocusWithSerial, (XPointer)&serial) == True) {
+    vlog.debug("Ignored synthetic focus event cause by grab change");
+  }
+#else
+  QWidget::grabKeyboard();
+#endif
   QAbstractVNCView::grabKeyboard();
 }
 
 void QVNCX11View::ungrabKeyboard()
 {
+#if 0
+  keyboardGrabberTimer_->stop();
   XUngrabKeyboard(display_, CurrentTime);  
+#else
+  QWidget::releaseKeyboard();
+#endif
   QAbstractVNCView::ungrabKeyboard();
+}
+
+void QVNCX11View::releaseKeyboard()
+{
+  // Intentionally do nothing, in order to prevent Qt (on X11) from releasing the keyboard on focus out.
 }
 
 void QVNCX11View::grabPointer()

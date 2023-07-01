@@ -11,6 +11,8 @@
 #include "parameters.h"
 #include "i18n.h"
 #include "vnctoast.h"
+#include "abstractvncview.h"
+#include "parameters.h"
 #include "vncwindow.h"
 #undef asprintf
 #if defined(WIN32)
@@ -121,6 +123,22 @@ void QVNCWindow::changeEvent(QEvent *e)
     }
   }
   QScrollArea::changeEvent(e);
+}
+
+void QVNCWindow::focusInEvent(QFocusEvent *)
+{
+  qDebug() << "QVNCWindow::focusInEvent";
+  QAbstractVNCView *view = (QAbstractVNCView *)widget();
+  view->maybeGrabKeyboard();
+}
+
+void QVNCWindow::focusOutEvent(QFocusEvent *)
+{
+  qDebug() << "QVNCWindow::focusOutEvent";
+  if (ViewerConfig::config()->fullscreenSystemKeys()) {
+    QAbstractVNCView *view = (QAbstractVNCView *)widget();
+    view->ungrabKeyboard();
+  }
 }
 
 void QVNCWindow::resize(int width, int height)
