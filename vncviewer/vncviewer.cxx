@@ -52,7 +52,9 @@ int main(int argc, char *argv[])
 
   app.setOrganizationName("TigerVNC Team");
   app.setOrganizationDomain("tigervnc.org");
-  app.setApplicationName("TigerVNC Viewer");
+  // This controls the WM_CLASS we get for all windows
+  app.setApplicationName("vncviewer");
+  app.setApplicationDisplayName("TigerVNC Viewer");
 
   ViewerConfig::initialize();
   AppManager::initialize();
