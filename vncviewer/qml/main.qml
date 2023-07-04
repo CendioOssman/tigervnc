@@ -7,7 +7,14 @@ Item {
         alertDialog.open()
     }
 
-    Component.onCompleted: serverDialog.visible = true
+    Component.onCompleted: {
+        if (Config.serverName.length > 0) {
+            AppManager.connectToServer(Config.serverName)
+        }
+        else {
+            serverDialog.visible = true
+        }
+    }
     Connections {
         target: AppManager
         function onErrorOcurred(seq, message, quit) {
