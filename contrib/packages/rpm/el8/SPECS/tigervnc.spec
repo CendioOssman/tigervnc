@@ -172,7 +172,7 @@ autoreconf -fiv
         --disable-devel-docs \
         --disable-selective-werror
 
-make %{?_smp_mflags} TIGERVNC_SRCDIR=`realpath ../../..` TIGERVNC_BUILDDIR=`realpath ../..`
+make %{?_smp_mflags} TIGERVNC_SRCDIR=`pwd`/../../.. TIGERVNC_BUILDDIR=`pwd`/../..
 popd
 
 # SELinux
