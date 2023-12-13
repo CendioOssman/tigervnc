@@ -122,6 +122,18 @@ runs properly under an environment with SELinux enabled.
 %prep
 %setup -q -n %{name}-%{version}%{?snap:-%{snap}}
 
+mkdir -p builddir/unix/
+cp -R unix/xserver builddir/unix/
+cp -R /usr/share/xorg-x11-server-source/* builddir/unix/xserver
+
+pushd builddir/unix/xserver
+for all in `find . -type f -perm -001`; do
+        chmod -x "$all"
+done
+xserver_patch="../../../unix/xserver$(rpm -q --qf '%%{VERSION}' xorg-x11-server-source | awk -F. '{ print $1 $2 }').patch"
+patch -p1 -b --suffix .vnc < "$xserver_patch"
+popd
+
 
 %build
 %ifarch sparcv9 sparc64 s390 s390x
@@ -131,21 +143,13 @@ export CFLAGS="$RPM_OPT_FLAGS -fpic"
 %endif
 export CXXFLAGS="$CFLAGS -std=c++11"
 
-mkdir builddir
+mkdir -p builddir
 pushd builddir
 
 %cmake ..
 
 %cmake_build
 
-popd
-
-cp -R unix/xserver builddir/unix/
-cp -R /usr/share/xorg-x11-server-source/* builddir/unix/xserver
-
-pushd builddir/unix/xserver
-xserver_patch="../../../unix/xserver$(rpm -q --qf '%%{VERSION}' xorg-x11-server-source | awk -F. '{ print $1 $2 }').patch"
-patch -p1 -b --suffix .vnc < "$xserver_patch"
 popd
 
 pushd builddir/unix/xserver
