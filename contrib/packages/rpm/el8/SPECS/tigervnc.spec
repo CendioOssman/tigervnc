@@ -122,14 +122,6 @@ runs properly under an environment with SELinux enabled.
 %prep
 %setup -q -n %{name}-%{version}%{?snap:-%{snap}}
 
-cp -r /usr/share/xorg-x11-server-source/* unix/xserver
-pushd unix/xserver
-for all in `find . -type f -perm -001`; do
-        chmod -x "$all"
-done
-xserver_patch="../xserver$(rpm -q --qf '%%{VERSION}' xorg-x11-server-source | awk -F. '{ print $1 $2 }').patch"
-patch -p1 -b --suffix .vnc < "$xserver_patch"
-popd
 
 %build
 %ifarch sparcv9 sparc64 s390 s390x
@@ -139,11 +131,24 @@ export CFLAGS="$RPM_OPT_FLAGS -fpic"
 %endif
 export CXXFLAGS="$CFLAGS -std=c++11"
 
-%cmake
+mkdir builddir
+pushd builddir
+
+%cmake ..
 
 %cmake_build
 
-pushd unix/xserver
+popd
+
+cp -R unix/xserver builddir/unix/
+cp -R /usr/share/xorg-x11-server-source/* builddir/unix/xserver
+
+pushd builddir/unix/xserver
+xserver_patch="../../../unix/xserver$(rpm -q --qf '%%{VERSION}' xorg-x11-server-source | awk -F. '{ print $1 $2 }').patch"
+patch -p1 -b --suffix .vnc < "$xserver_patch"
+popd
+
+pushd builddir/unix/xserver
 
 autoreconf -fiv
 %configure \
@@ -163,7 +168,7 @@ autoreconf -fiv
         --disable-devel-docs \
         --disable-selective-werror
 
-make %{?_smp_mflags}
+make %{?_smp_mflags} TIGERVNC_SRCDIR=`realpath ../../..` TIGERVNC_BUILDDIR=`realpath ../..`
 popd
 
 # SELinux
@@ -172,9 +177,11 @@ make
 popd
 
 %install
+pushd builddir
 %cmake_install
+popd
 
-pushd unix/xserver/hw/vnc
+pushd builddir/unix/xserver/hw/vnc
 %make_install
 popd
 
