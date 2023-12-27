@@ -151,6 +151,10 @@ namespace rfb {
 
     // Signals
 
+    // "ready" is emitted when the connection has completed the
+    // handshake and is ready for normal communication. A boolean is
+    // included to indicate if the connection should be shared or not.
+
     // "keydown" is emitted whenever the client sends a key press
     // message. A KeyEvent structure is included with the KeySym and key
     // code.
