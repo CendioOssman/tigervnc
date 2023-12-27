@@ -195,6 +195,13 @@ namespace rfb {
 
     // Signals
 
+    // "ready" is emitted when the connection is fully established
+    // and standard messages can be sent. This is emitted before the
+    // initial FramebufferUpdateRequest giving listeners the chance to
+    // modify pixel format and settings. Listeners must also make sure
+    // to provided a valid framebuffer before returning from the signal
+    // handler.
+
     // "clipboardrequest" is emitted whenever the server requests
     // the client to send over its clipboard data. It will only be
     // sent after the client has first announced a clipboard change
@@ -264,14 +271,6 @@ namespace rfb {
 
 
     // Methods to be overridden in a derived class
-
-    // initDone() is called when the connection is fully established
-    // and standard messages can be sent. This is called before the
-    // initial FramebufferUpdateRequest giving a derived class the
-    // chance to modify pixel format and settings. The derived class
-    // must also make sure it has provided a valid framebuffer before
-    // returning.
-    virtual void initDone() = 0;
 
     // resizeFramebuffer() is called whenever the framebuffer
     // dimensions or the screen layout changes. A subclass must make
