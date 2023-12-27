@@ -119,9 +119,9 @@ namespace rfb {
     unsigned getLEDState() const { return ledState; }
 
     // Event handlers
-    unsigned int setDesktopSize(VNCSConnectionST* requester,
-                                int fb_width, int fb_height,
-                                const ScreenSet& layout);
+    void setDesktopSize(VNCSConnectionST* requester,
+                        int fb_width, int fb_height,
+                        const ScreenSet& layout);
 
     // closeClients() closes all RFB sessions, except the specified one (if
     // any), and logs the specified reason for closure.

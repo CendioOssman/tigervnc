@@ -73,6 +73,7 @@ namespace rfb {
     // Wrappers to make these methods "safe" for VNCServerST.
     void writeFramebufferUpdateOrClose();
     void screenLayoutChangeOrClose(uint16_t reason);
+    void setDesktopSizeFailureOrClose(uint16_t result);
     void setCursorOrClose();
     void bellOrClose();
     void setDesktopNameOrClose(const char *name);
@@ -165,6 +166,7 @@ namespace rfb {
     void writeLosslessRefresh();
 
     void screenLayoutChange(uint16_t reason);
+    void setDesktopSizeFailure(uint16_t result);
     void setCursor();
     void setCursorPos();
     void setDesktopName(const char *name);
