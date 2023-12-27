@@ -467,7 +467,6 @@ void VNCSConnectionST::clientInit(bool shared)
   if (!accessCheck(AccessNonShared)) shared = true;
   if (rfb::Server::neverShared) shared = false;
   SConnection::clientInit(shared);
-  server->clientReady(this, shared);
 }
 
 void VNCSConnectionST::setPixelFormat(const PixelFormat& pf)
