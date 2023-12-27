@@ -187,6 +187,8 @@ void VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
   VNCSConnectionST* client = new VNCSConnectionST(this, sock, outgoing, accessRights);
   clients.push_front(client);
 
+  client->connectSignal("ready", this, &VNCServerST::clientReady);
+
   client->connectSignal("keydown", this, &VNCServerST::keyEvent);
   client->connectSignal("keyup", this, &VNCServerST::keyEvent);
   client->connectSignal("pointer", this, &VNCServerST::pointerEvent);
@@ -507,6 +509,26 @@ void VNCServerST::setLEDState(unsigned int state)
 
 // Event handlers
 
+void VNCServerST::clientReady(VNCSConnectionST* client, const char*,
+                              bool shared)
+{
+  if (!shared) {
+    if (rfb::Server::disconnectClients &&
+        client->accessCheck(AccessNonShared)) {
+      // - Close all the other connected clients
+      slog.debug("Non-shared connection - closing clients");
+      closeClients("Non-shared connection requested", client->getSock());
+    } else {
+      // - Refuse this connection if there are existing clients, in addition to
+      // this one
+      if (authClientCount() > 1) {
+        client->close("Server is already in use");
+        return;
+      }
+    }
+  }
+}
+
 void VNCServerST::keyEvent(VNCSConnectionST*, const char *evname,
                            KeyEvent event)
 {
@@ -775,25 +797,6 @@ void VNCServerST::queryConnection(VNCSConnectionST* client,
   }
 
   desktop->queryConnection(client->getSock(), userName);
-}
-
-void VNCServerST::clientReady(VNCSConnectionST* client, bool shared)
-{
-  if (!shared) {
-    if (rfb::Server::disconnectClients &&
-        client->accessCheck(AccessNonShared)) {
-      // - Close all the other connected clients
-      slog.debug("Non-shared connection - closing clients");
-      closeClients("Non-shared connection requested", client->getSock());
-    } else {
-      // - Refuse this connection if there are existing clients, in addition to
-      // this one
-      if (authClientCount() > 1) {
-        client->close("Server is already in use");
-        return;
-      }
-    }
-  }
 }
 
 // -=- Internal methods

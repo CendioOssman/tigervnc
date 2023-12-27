@@ -61,6 +61,8 @@ SConnection::SConnection(AccessRights accessRights_)
   authFailureTimer.connectSignal("timer", this,
                                  &SConnection::authFailureTimeout);
 
+  registerSignal<bool>("ready");
+
   registerSignal<KeyEvent>("keydown");
   registerSignal<KeyEvent>("keyup");
   registerSignal<PointerEvent>("pointer");
@@ -587,11 +589,13 @@ void SConnection::approveConnection(bool accept, const char* reason)
   }
 }
 
-void SConnection::clientInit(bool /*shared*/)
+void SConnection::clientInit(bool shared)
 {
   writer_->writeServerInit(client.width(), client.height(),
                            client.pf(), client.name());
   state_ = RFBSTATE_NORMAL;
+
+  emitSignal("ready", shared);
 }
 
 void SConnection::close(const char* /*reason*/)

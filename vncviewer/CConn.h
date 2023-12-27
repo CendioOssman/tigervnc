@@ -57,8 +57,6 @@ protected:
   void getUserPasswd(bool secure, std::string *user,
                      std::string *password) override;
 
-  void initDone() override;
-
   void setDesktopSize(int w, int h) override;
   void setExtendedDesktopSize(unsigned reason, unsigned result,
                               int w, int h,
@@ -82,6 +80,8 @@ protected:
   void setLEDState(unsigned int state) override;
 
 private:
+
+  void connectionReady(rfb::CConnection*, const char*);
 
   void resizeFramebuffer() override;
 
