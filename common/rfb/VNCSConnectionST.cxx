@@ -277,6 +277,16 @@ void VNCSConnectionST::screenLayoutChangeOrClose(uint16_t reason)
   }
 }
 
+void VNCSConnectionST::setDesktopSizeFailureOrClose(uint16_t result)
+{
+  try {
+    setDesktopSizeFailure(result);
+    writeFramebufferUpdate();
+  } catch(std::exception& e) {
+    close(e.what());
+  }
+}
+
 void VNCSConnectionST::bellOrClose()
 {
   try {
@@ -656,7 +666,6 @@ void VNCSConnectionST::framebufferUpdateRequest(const core::Rect& r,
 void VNCSConnectionST::setDesktopSize(int fb_width, int fb_height,
                                       const ScreenSet& layout)
 {
-  unsigned int result;
   char buffer[2048];
 
   vlog.debug("Got request for framebuffer resize to %dx%d",
@@ -666,12 +675,10 @@ void VNCSConnectionST::setDesktopSize(int fb_width, int fb_height,
 
   if (!accessCheck(AccessSetDesktopSize)) {
     vlog.debug("Rejecting unauthorized framebuffer resize request");
-    result = resultProhibited;
+    setDesktopSizeFailure(resultProhibited);
   } else {
-    result = server->setDesktopSize(this, fb_width, fb_height, layout);
+    server->setDesktopSize(this, fb_width, fb_height, layout);
   }
-
-  writer()->writeDesktopSize(reasonClient, result);
 }
 
 void VNCSConnectionST::fence(uint32_t flags, unsigned len, const uint8_t data[])
@@ -1084,6 +1091,15 @@ void VNCSConnectionST::screenLayoutChange(uint16_t reason)
     return;
 
   writer()->writeDesktopSize(reason);
+}
+
+
+void VNCSConnectionST::setDesktopSizeFailure(uint16_t result)
+{
+  if (state() != RFBSTATE_NORMAL)
+    return;
+
+  writer()->writeDesktopSize(reasonClient, result);
 }
 
 

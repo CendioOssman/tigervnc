@@ -568,37 +568,42 @@ void VNCServerST::pointerEvent(VNCSConnectionST* client,
   emitSignal(evname, event);
 }
 
-unsigned int VNCServerST::setDesktopSize(VNCSConnectionST* requester,
-                                         int fb_width, int fb_height,
-                                         const ScreenSet& layout)
+void VNCServerST::setDesktopSize(VNCSConnectionST* requester,
+                                 int fb_width, int fb_height,
+                                 const ScreenSet& layout)
 {
   unsigned int result;
   std::list<VNCSConnectionST*>::iterator ci;
 
   if (!rfb::Server::acceptSetDesktopSize) {
     slog.debug("Rejecting unauthorized framebuffer resize request");
-    return resultProhibited;
+    requester->setDesktopSizeFailureOrClose(resultProhibited);
+    return;
   }
 
   // We can't handle a framebuffer larger than this, so don't let a
   // client set one (see PixelBuffer.cxx)
   if ((fb_width > 16384) || (fb_height > 16384)) {
     slog.error("Rejecting too large framebuffer resize request");
-    return resultProhibited;
+    requester->setDesktopSizeFailureOrClose(resultProhibited);
+    return;
   }
 
   // Don't bother the desktop with an invalid configuration
   if (!layout.validate(fb_width, fb_height)) {
     slog.error("Invalid screen layout requested by client");
-    return resultInvalid;
+    requester->setDesktopSizeFailureOrClose(resultInvalid);
+    return;
   }
 
   // FIXME: the desktop will call back to VNCServerST and an extra set
   // of ExtendedDesktopSize messages will be sent. This is okay
   // protocol-wise, but unnecessary.
   result = desktop->setScreenLayout(fb_width, fb_height, layout);
-  if (result != resultSuccess)
-    return result;
+  if (result != resultSuccess) {
+    requester->setDesktopSizeFailureOrClose(result);
+    return;
+  }
 
   // Sanity check
   if (screenLayout != layout)
@@ -611,7 +616,7 @@ unsigned int VNCServerST::setDesktopSize(VNCSConnectionST* requester,
     (*ci)->screenLayoutChangeOrClose(reasonOtherClient);
   }
 
-  return resultSuccess;
+  requester->screenLayoutChangeOrClose(reasonClient);
 }
 
 // Other public methods
