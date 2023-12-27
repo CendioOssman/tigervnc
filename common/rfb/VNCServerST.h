@@ -128,11 +128,6 @@ namespace rfb {
     // request to the desktop.
     void queryConnection(VNCSConnectionST* client, const char* userName);
 
-    // clientReady() is called by a VNCSConnectionST instance when the
-    // client has completed the handshake and is ready for normal
-    // communication.
-    void clientReady(VNCSConnectionST* client, bool shared);
-
     // Estimated time until the next time new updates will be pushed
     // to clients
     int msToNextUpdate();
@@ -148,6 +143,10 @@ namespace rfb {
   protected:
 
     // Signal handlers
+
+    void clientReady(VNCSConnectionST* client, const char*,
+                     bool shared);
+
     void keyEvent(VNCSConnectionST* client, const char* name,
                   KeyEvent event);
     void pointerEvent(VNCSConnectionST* client, const char* name,
