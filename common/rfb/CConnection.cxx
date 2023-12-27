@@ -70,6 +70,8 @@ CConnection::CConnection()
     framebuffer(nullptr), decoder(this),
     hasRemoteClipboard(false), hasLocalClipboard(false)
 {
+  registerSignal("ready");
+
   registerSignal("clipboardrequest");
   registerSignal<bool>("clipboardannounce");
   registerSignal<const char*>("clipboarddata");
@@ -505,7 +507,8 @@ void CConnection::serverInit(int width, int height,
   state_ = RFBSTATE_NORMAL;
   vlog.debug("Initialisation done");
 
-  initDone();
+  emitSignal("ready");
+
   assert(framebuffer != nullptr);
   assert(framebuffer->width() == server.width());
   assert(framebuffer->height() == server.height());
@@ -687,10 +690,6 @@ void CConnection::handleClipboardProvide(uint32_t flags,
 
   // FIXME: Should probably verify that this data was actually requested
   emitSignal("clipboarddata", serverClipboard.c_str());
-}
-
-void CConnection::initDone()
-{
 }
 
 void CConnection::resizeFramebuffer()
