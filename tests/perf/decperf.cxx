@@ -66,7 +66,6 @@ public:
   CConn(const char *filename);
   ~CConn();
 
-  void initDone() override;
   void setCursor(int, int, const core::Point&, const uint8_t*) override;
   void setCursorPos(const core::Point&) override;
   void framebufferUpdateStart() override;
@@ -79,6 +78,9 @@ public:
 
 public:
   double cpuTime;
+
+private:
+  void connectionReady(rfb::CConnection*, const char*);
 
 protected:
   rdr::FileInStream *in;
@@ -116,6 +118,8 @@ CConn::CConn(const char *filename)
 {
   cpuTime = 0.0;
 
+  connectSignal("ready", this, &CConn::connectionReady);
+
   in = new rdr::FileInStream(filename);
   out = new DummyOutStream;
   setStreams(in, out);
@@ -133,7 +137,7 @@ CConn::~CConn()
   delete out;
 }
 
-void CConn::initDone()
+void CConn::connectionReady(rfb::CConnection*, const char*)
 {
   setFramebuffer(new rfb::ManagedPixelBuffer(filePF,
                                              server.width(),
