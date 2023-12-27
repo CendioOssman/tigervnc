@@ -140,6 +140,7 @@ namespace rfb {
     // side rendered cursor buffer
     const RenderedCursor* getRenderedCursor();
 
+
     // Signals
 
     // "keydown" is emitted whenever the client sends a key press
@@ -170,6 +171,7 @@ namespace rfb {
     // called if the clipboard data was no longer available when the
     // client received the request. A const char* string is included
     // that contains the actual clipboard contents.
+
 
   protected:
 
