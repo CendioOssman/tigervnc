@@ -157,6 +157,10 @@ namespace rfb {
 
     // Signals
 
+    // "ready" is emitted when the connection has completed the
+    // handshake and is ready for normal communication. A boolean is
+    // included to indicate if the connection should be shared or not.
+
     // "clipboardrequest" is emitted whenever the client requests
     // the server to send over its clipboard data. It will only be
     // sent after the server has first announced a clipboard change

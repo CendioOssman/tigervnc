@@ -98,7 +98,6 @@ public:
   void getStats(double& ratio, unsigned long long& bytes,
                 unsigned long long& rawEquivalent);
 
-  void initDone() override {};
   void resizeFramebuffer() override;
   void setCursor(int, int, const core::Point&, const uint8_t*) override;
   void setCursorPos(const core::Point&) override;
