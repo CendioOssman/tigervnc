@@ -45,7 +45,6 @@ namespace rfb {
                            core::Point& hotspot,
                            const uint8_t* data) = 0;
     virtual void setCursorPos(const core::Point& pos) = 0;
-    virtual void setPixelFormat(const PixelFormat& pf) = 0;
     virtual void setName(const char* name) = 0;
     virtual void fence(uint32_t flags, unsigned len,
                        const uint8_t data[]) = 0;
