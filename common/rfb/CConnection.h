@@ -86,6 +86,67 @@ namespace rfb {
     // connection
     void close();
 
+    // requestClipboard() will result in a request to the server to
+    // transfer its clipboard data. A call to handleClipboardData()
+    // will be made once the data is available.
+    virtual void requestClipboard();
+
+    // announceClipboard() informs the server of changes to the
+    // clipboard on the client. The server may later request the
+    // clipboard data via handleClipboardRequest().
+    virtual void announceClipboard(bool available);
+
+    // sendClipboardData() transfers the clipboard data to the server
+    // and should be called whenever the server has requested the
+    // clipboard via handleClipboardRequest().
+    virtual void sendClipboardData(const char* data);
+
+    // refreshFramebuffer() forces a complete refresh of the entire
+    // framebuffer
+    void refreshFramebuffer();
+
+    // setPreferredEncoding()/getPreferredEncoding() adjusts which
+    // encoding is listed first as a hint to the server that it is the
+    // preferred one
+    void setPreferredEncoding(int encoding);
+    int getPreferredEncoding();
+    // setCompressLevel()/setQualityLevel() controls the encoding hints
+    // sent to the server
+    void setCompressLevel(int level);
+    void setQualityLevel(int level);
+    // setPF() controls the pixel format requested from the server.
+    // server.pf() will automatically be adjusted once the new format
+    // is active.
+    void setPF(const PixelFormat& pf);
+
+    CMsgReader* reader() { return reader_; }
+    CMsgWriter* writer() { return writer_; }
+
+    rdr::InStream* getInStream() { return is; }
+    rdr::OutStream* getOutStream() { return os; }
+
+    // Access method used by SSecurity implementations that can verify servers'
+    // Identities, to determine the unique(ish) name of the server.
+    const char* getServerName() const { return serverName.c_str(); }
+
+    bool isSecure() const { return csecurity ? csecurity->isSecure() : false; }
+
+    enum stateEnum {
+      RFBSTATE_UNINITIALISED,
+      RFBSTATE_PROTOCOL_VERSION,
+      RFBSTATE_SECURITY_TYPES,
+      RFBSTATE_SECURITY,
+      RFBSTATE_SECURITY_RESULT,
+      RFBSTATE_SECURITY_REASON,
+      RFBSTATE_INITIALISATION,
+      RFBSTATE_NORMAL,
+      RFBSTATE_CLOSING,
+      RFBSTATE_INVALID
+    };
+
+    stateEnum state() { return state_; }
+
+  protected:
 
     // Methods overridden from CMsgHandler
 
@@ -155,71 +216,10 @@ namespace rfb {
     // server received the request.
     virtual void handleClipboardData(const char* data);
 
-
-    // Other methods
-
-    // requestClipboard() will result in a request to the server to
-    // transfer its clipboard data. A call to handleClipboardData()
-    // will be made once the data is available.
-    virtual void requestClipboard();
-
-    // announceClipboard() informs the server of changes to the
-    // clipboard on the client. The server may later request the
-    // clipboard data via handleClipboardRequest().
-    virtual void announceClipboard(bool available);
-
-    // sendClipboardData() transfers the clipboard data to the server
-    // and should be called whenever the server has requested the
-    // clipboard via handleClipboardRequest().
-    virtual void sendClipboardData(const char* data);
-
-    // refreshFramebuffer() forces a complete refresh of the entire
-    // framebuffer
-    void refreshFramebuffer();
-
-    // setPreferredEncoding()/getPreferredEncoding() adjusts which
-    // encoding is listed first as a hint to the server that it is the
-    // preferred one
-    void setPreferredEncoding(int encoding);
-    int getPreferredEncoding();
-    // setCompressLevel()/setQualityLevel() controls the encoding hints
-    // sent to the server
-    void setCompressLevel(int level);
-    void setQualityLevel(int level);
-    // setPF() controls the pixel format requested from the server.
-    // server.pf() will automatically be adjusted once the new format
-    // is active.
-    void setPF(const PixelFormat& pf);
-
-    CMsgReader* reader() { return reader_; }
-    CMsgWriter* writer() { return writer_; }
-
-    rdr::InStream* getInStream() { return is; }
-    rdr::OutStream* getOutStream() { return os; }
-
-    // Access method used by SSecurity implementations that can verify servers'
-    // Identities, to determine the unique(ish) name of the server.
-    const char* getServerName() const { return serverName.c_str(); }
-
-    bool isSecure() const { return csecurity ? csecurity->isSecure() : false; }
-
-    enum stateEnum {
-      RFBSTATE_UNINITIALISED,
-      RFBSTATE_PROTOCOL_VERSION,
-      RFBSTATE_SECURITY_TYPES,
-      RFBSTATE_SECURITY,
-      RFBSTATE_SECURITY_RESULT,
-      RFBSTATE_SECURITY_REASON,
-      RFBSTATE_INITIALISATION,
-      RFBSTATE_NORMAL,
-      RFBSTATE_CLOSING,
-      RFBSTATE_INVALID
-    };
-
-    stateEnum state() { return state_; }
-
+  protected:
     CSecurity *csecurity;
     SecurityClient security;
+
   protected:
     void setState(stateEnum s) { state_ = s; }
 
