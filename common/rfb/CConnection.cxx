@@ -446,11 +446,6 @@ void CConnection::setExtendedDesktopSize(unsigned reason,
   assert(framebuffer->height() == server.height());
 }
 
-void CConnection::setPixelFormat(const PixelFormat& pf)
-{
-  server.setPF(pf);
-}
-
 void CConnection::setName(const char* name)
 {
   server.setName(name);

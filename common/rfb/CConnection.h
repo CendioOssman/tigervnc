@@ -187,8 +187,6 @@ namespace rfb {
                                 int w, int h,
                                 const ScreenSet& layout) override;
 
-    void setPixelFormat(const PixelFormat& pf) override;
-
     void setName(const char* name) override;
 
     void fence(uint32_t flags, unsigned len, const uint8_t data[]) override;
