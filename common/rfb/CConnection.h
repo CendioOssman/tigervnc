@@ -87,86 +87,6 @@ namespace rfb {
     // connection
     void close();
 
-
-    // Methods overridden from CMsgHandler
-
-    // Note: These must be called by any deriving classes
-
-    void setDesktopSize(int w, int h) override;
-    void setExtendedDesktopSize(unsigned reason, unsigned result,
-                                int w, int h,
-                                const ScreenSet& layout) override;
-
-    void setPixelFormat(const PixelFormat& pf) override;
-
-    void setName(const char* name) override;
-
-    void fence(uint32_t flags, unsigned len, const uint8_t data[]) override;
-
-    void endOfContinuousUpdates() override;
-
-    void supportsQEMUKeyEvent() override;
-
-    void serverInit(int width, int height, const PixelFormat& pf,
-                    const char* name) override;
-
-    bool readAndDecodeRect(const core::Rect& r, int encoding,
-                           ModifiablePixelBuffer* pb) override;
-
-    void framebufferUpdateStart() override;
-    void framebufferUpdateEnd() override;
-    bool dataRect(const core::Rect& r, int encoding) override;
-
-    void serverCutText(const char* str) override;
-
-    void setLEDState(unsigned int state) override;
-
-    void handleClipboardCaps(uint32_t flags,
-                                     const uint32_t* lengths) override;
-    void handleClipboardRequest(uint32_t flags) override;
-    void handleClipboardPeek() override;
-    void handleClipboardNotify(uint32_t flags) override;
-    void handleClipboardProvide(uint32_t flags, const size_t* lengths,
-                                const uint8_t* const* data) override;
-
-
-    // Methods to be overridden in a derived class
-
-    // resizeFramebuffer() is called whenever the framebuffer
-    // dimensions or the screen layout changes. A subclass must make
-    // sure the pixel buffer has been updated once this call returns.
-    virtual void resizeFramebuffer();
-
-
-    // Signals
-
-    // "ready" is emitted when the connection is fully established
-    // and standard messages can be sent. This is emitted before the
-    // initial FramebufferUpdateRequest giving listeners the chance to
-    // modify pixel format and settings. Listeners must also make sure
-    // to provided a valid framebuffer before returning from the signal
-    // handler.
-
-    // "clipboardrequest" is emitted whenever the server requests
-    // the client to send over its clipboard data. It will only be
-    // sent after the client has first announced a clipboard change
-    // via announceClipboard().
-
-    // "clipboardannounce" is emitted to indicate a change in the
-    // clipboard on the server. Call requestClipboard() to access the
-    // actual data. A boolean is included to indicate if the clipboard
-    // is available or not.
-
-    // "clipboardData" is emitted when the server has sent over
-    // the clipboard data as a result of a previous call to
-    // requestClipboard(). Note that this function might never be
-    // called if the clipboard data was no longer available when the
-    // server received the request. A const char* string is included
-    // that contains the actual clipboard contents.
-
-
-    // Other methods
-
     // requestClipboard() will result in a request to the server to
     // transfer its clipboard data. A call to handleClipboardData()
     // will be made once the data is available.
@@ -229,8 +149,88 @@ namespace rfb {
 
     stateEnum state() { return state_; }
 
+
+    // Signals
+
+    // "ready" is emitted when the connection is fully established
+    // and standard messages can be sent. This is emitted before the
+    // initial FramebufferUpdateRequest giving listeners the chance to
+    // modify pixel format and settings. Listeners must also make sure
+    // to provided a valid framebuffer before returning from the signal
+    // handler.
+
+    // "clipboardrequest" is emitted whenever the server requests
+    // the client to send over its clipboard data. It will only be
+    // sent after the client has first announced a clipboard change
+    // via announceClipboard().
+
+    // "clipboardannounce" is emitted to indicate a change in the
+    // clipboard on the server. Call requestClipboard() to access the
+    // actual data. A boolean is included to indicate if the clipboard
+    // is available or not.
+
+    // "clipboardData" is emitted when the server has sent over
+    // the clipboard data as a result of a previous call to
+    // requestClipboard(). Note that this function might never be
+    // called if the clipboard data was no longer available when the
+    // server received the request. A const char* string is included
+    // that contains the actual clipboard contents.
+
+  protected:
+
+    // Methods overridden from CMsgHandler
+
+    // Note: These must be called by any deriving classes
+
+    void setDesktopSize(int w, int h) override;
+    void setExtendedDesktopSize(unsigned reason, unsigned result,
+                                int w, int h,
+                                const ScreenSet& layout) override;
+
+    void setPixelFormat(const PixelFormat& pf) override;
+
+    void setName(const char* name) override;
+
+    void fence(uint32_t flags, unsigned len, const uint8_t data[]) override;
+
+    void endOfContinuousUpdates() override;
+
+    void supportsQEMUKeyEvent() override;
+
+    void serverInit(int width, int height, const PixelFormat& pf,
+                    const char* name) override;
+
+    bool readAndDecodeRect(const core::Rect& r, int encoding,
+                           ModifiablePixelBuffer* pb) override;
+
+    void framebufferUpdateStart() override;
+    void framebufferUpdateEnd() override;
+    bool dataRect(const core::Rect& r, int encoding) override;
+
+    void serverCutText(const char* str) override;
+
+    void setLEDState(unsigned int state) override;
+
+    void handleClipboardCaps(uint32_t flags,
+                                     const uint32_t* lengths) override;
+    void handleClipboardRequest(uint32_t flags) override;
+    void handleClipboardPeek() override;
+    void handleClipboardNotify(uint32_t flags) override;
+    void handleClipboardProvide(uint32_t flags, const size_t* lengths,
+                                const uint8_t* const* data) override;
+
+
+    // Methods to be overridden in a derived class
+
+    // resizeFramebuffer() is called whenever the framebuffer
+    // dimensions or the screen layout changes. A subclass must make
+    // sure the pixel buffer has been updated once this call returns.
+    virtual void resizeFramebuffer();
+
+  protected:
     CSecurity *csecurity;
     SecurityClient security;
+
   protected:
     void setState(stateEnum s) { state_ = s; }
 
