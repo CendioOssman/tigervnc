@@ -1806,19 +1806,25 @@ void ViewerConfig::initializeLogger()
     // According to the linux document, trailing '/locale' of the message directory path must be removed for passing it to bindtextdomain()
     // but in reallity '/locale' must be given to make gettext() work properly.
     messageDir_ = strdup(locale.absoluteFilePath().toStdString().c_str());
+#ifdef ENABLE_NLS
     bindtextdomain(PACKAGE_NAME, messageDir_);
+#endif
   }
+#ifdef ENABLE_NLS
   textdomain(PACKAGE_NAME);
+#endif
 
   // Write about text to console, still using normal locale codeset
   QString about = aboutText();
   fprintf(stderr,"\n%s\n", about.toStdString().c_str());
 
+#ifdef ENABLE_NLS
   // Set gettext codeset to what our GUI toolkit uses. Since we are
   // passing strings from strerror/gai_strerror to the GUI, these must
   // be in GUI codeset as well.
   bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
   bind_textdomain_codeset("libc", "UTF-8");
+#endif
 
   rfb::initStdIOLoggers();
 #ifdef WIN32

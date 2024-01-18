@@ -198,7 +198,13 @@ if(QT_VERSION_MAJOR GREATER_EQUAL 6)
       Qt${QT_VERSION_MAJOR}::Quick
       Qt${QT_VERSION_MAJOR}::QuickWidgets
       Qt${QT_VERSION_MAJOR}::Widgets
-      rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES})
+      rfb network rdr os  ${OS_DEPENDENT_LIBRARIES})
+  if(ENABLE_NLS)
+    target_link_libraries(vncviewer
+      PRIVATE
+      ${GETTEXT_LIBRARIES}
+    )
+  endif()
 else()
     if(BUILD_STATIC)
         find_package(Qt5QmlImportScanner REQUIRED)
@@ -216,7 +222,13 @@ else()
             Qt${QT_VERSION_MAJOR}::Svg
             Qt${QT_VERSION_MAJOR}::ThemeSupport
             Qt${QT_VERSION_MAJOR}::Widgets
-            rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES})
+            rfb network rdr os ${OS_DEPENDENT_LIBRARIES})
+        if(ENABLE_NLS)
+          target_link_libraries(vncviewer
+            PRIVATE
+            ${GETTEXT_LIBRARIES}
+          )
+        endif()
     else()
         target_link_libraries(vncviewer
             PRIVATE
@@ -224,7 +236,13 @@ else()
             Qt${QT_VERSION_MAJOR}::Quick
             Qt${QT_VERSION_MAJOR}::QuickWidgets
             Qt${QT_VERSION_MAJOR}::Widgets
-            rfb network rdr os ${GETTEXT_LIBRARIES} ${OS_DEPENDENT_LIBRARIES})
+            rfb network rdr os ${OS_DEPENDENT_LIBRARIES})
+        if(ENABLE_NLS)
+          target_link_libraries(vncviewer
+            PRIVATE
+            ${GETTEXT_LIBRARIES}
+          )
+        endif()
     endif()
 endif()
 
@@ -336,6 +354,7 @@ if(WIN32)
             COMMAND ${DEPLOYQT} ${RELDEB} --dir ${DEPLOY_DIR} --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE:vncviewer>)
     endif()
 
+    if(ENABLE_NLS)
     file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/../po/LINGUAS po_FILES)
     foreach(lang ${po_FILES})
       set(mo "${CMAKE_CURRENT_BINARY_DIR}/../po/${lang}.mo")
@@ -348,6 +367,7 @@ if(WIN32)
           POST_BUILD
           COMMAND ${CMAKE_COMMAND} -E copy $<SHELL_PATH:${mo}> $<SHELL_PATH:${DEPLOY_DIR}/locale/${lang}/LC_MESSAGES/tigervnc.mo>)
     endforeach(lang)
+    endif()
 endif()
 if(APPLE AND CMAKE_BUILD_TYPE MATCHES Release AND NOT BUILD_STATIC)
     set(DEPLOY_DIR $<TARGET_FILE_DIR:vncviewer>/../../../vncviewer.app CACHE PATH "Package directory")
