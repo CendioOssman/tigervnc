@@ -32,9 +32,8 @@ public slots:
   void grabPointer() override;
   void ungrabPointer() override;
   void bell() override;
-  void updateWindow() override;
   void resizePixmap(int width, int height);
-  void draw();
+  void paintEvent(QPaintEvent *event) override;
 
 protected:
   bool event(QEvent *e) override;

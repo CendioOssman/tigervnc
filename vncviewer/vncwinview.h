@@ -33,7 +33,7 @@ public slots:
   void ungrabKeyboard() override;
   void bell() override;
   void moveView(int x, int y) override;
-  void updateWindow() override;
+  void paintEvent(QPaintEvent *event) override;
 
 protected:
   static LRESULT CALLBACK eventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);

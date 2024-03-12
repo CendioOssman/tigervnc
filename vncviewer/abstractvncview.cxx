@@ -21,6 +21,7 @@
 #include "rfb/ServerParams.h"
 #include "rfb/PixelBuffer.h"
 #include "EmulateMB.h"
+#include "PlatformPixelBuffer.h"
 #include "appmanager.h"
 #include "menukey.h"
 #include "vncconnection.h"
@@ -32,10 +33,14 @@
 #include "abstractvncview.h"
 #undef asprintf
 
+#if defined(WIN32) || defined(__APPLE__)
 #define XK_LATIN1
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
 #include "rfb/keysymdef.h"
+#endif
+
+#undef KeyPress
 
 #if defined(__APPLE__)
 #include "cocoa.h"
@@ -684,6 +689,16 @@ void QAbstractVNCView::updateWindow()
         handleDesktopSize();
     }
     firstUpdate_ = false;
+  }
+
+  PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
+  rfb::Rect rect = framebuffer->getDamage();
+  int x = rect.tl.x;
+  int y = rect.tl.y;
+  int w = rect.br.x - x;
+  int h = rect.br.y - y;
+  if (!rect.is_empty()) {
+    update(x, y, w, h);
   }
 }
 

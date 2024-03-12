@@ -237,10 +237,6 @@ LRESULT CALLBACK QVNCWinView::eventHandler(HWND hWnd, UINT message, WPARAM wPara
     case WM_SYSKEYUP:
       window->handleKeyUpEvent(message, wParam, lParam);
       break;
-    case WM_PAINT:
-      AppManager::instance()->connection()->refreshFramebuffer();
-      AppManager::instance()->view()->updateWindow();
-      break;
 //    case WM_SIZE: {
 //      int w = LOWORD(lParam);
 //      int h = HIWORD(lParam);
@@ -321,14 +317,15 @@ void QVNCWinView::getMouseProperties(QVNCWinView *window, UINT message, WPARAM w
   }
 }
 
-void QVNCWinView::draw()
+void QVNCWinView::paintEvent(QPaintEvent *event)
 {
   PlatformPixelBuffer *framebuffer = (PlatformPixelBuffer *)AppManager::instance()->connection()->framebuffer();
-  rfb::Rect r = framebuffer->getDamage();
-  int x = r.tl.x;
-  int y = r.tl.y;
-  int width = r.br.x - x;
-  int height = r.br.y - y;
+
+  QRect r = event->rect();
+  int x = r.x();
+  int y = r.y();
+  int width = r.width();
+  int height = r.height();
   //qDebug() << "VNCWinView::draw(): hWnd=" << hwnd_ << ", x=" << x << ", y=" << y << ", w=" << width << ", h=" << height;
 
   RECT rect{x, y, x + width, y + height};
@@ -398,10 +395,6 @@ bool QVNCWinView::event(QEvent *e)
       //qDebug() << "CursorChange";
       e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
       break;
-    case QEvent::Paint:
-      //qDebug() << "Paint";
-      e->setAccepted(true);
-      return true;
     default:
       //qDebug() << "Unprocessed Event: " << e->type();
       break;
@@ -945,12 +938,6 @@ void QVNCWinView::stopMouseTracking()
 void QVNCWinView::moveView(int x, int y)
 {
   MoveWindow((HWND)window()->winId(), x, y, width(), height(), false);
-}
-
-void QVNCWinView::updateWindow()
-{
-  QAbstractVNCView::updateWindow();
-  draw();
 }
 
 QRect QVNCWinView::getExtendedFrameProperties()

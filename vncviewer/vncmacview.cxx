@@ -167,12 +167,6 @@ qulonglong QVNCMacView::nativeWindowHandle() const
   return (qulonglong)view_;
 }
 
-void QVNCMacView::updateWindow()
-{
-  QAbstractVNCView::updateWindow();
-  draw();
-}
-
 void QVNCMacView::installNativeEventHandler()
 {
   QAbstractEventDispatcher::instance()->removeNativeEventFilter(filter_);
@@ -305,29 +299,26 @@ void QVNCMacView::resizeEvent(QResizeEvent *e)
   }
 }
 
-void QVNCMacView::paintEvent(QPaintEvent *event)
-{
-  Q_UNUSED(event)
-  draw();
-}
-
 void QVNCMacView::bell()
 {
   cocoa_beep();
 }
 
-void QVNCMacView::draw()
+void QVNCMacView::paintEvent(QPaintEvent *event)
 {
   if (!view_ || !AppManager::instance()->view()) {
     return;
   }
+
   QVNCConnection *cc = AppManager::instance()->connection();
   PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-  rfb::Rect rect = framebuffer->getDamage();
-  int x = rect.tl.x;
-  int y = rect.tl.y;
-  int w = rect.br.x - x;
-  int h = rect.br.y - y;
+
+  QRect rect = event->rect();
+  int x = rect.x();
+  int y = rect.y();
+  int w = rect.width();
+  int h = rect.height();
+
   if (!rect.is_empty()) {
     cocoa_draw(view_, x, y, w, h);
   }

@@ -82,10 +82,7 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   if (!vncGestureRecognizer_) {
     vncGestureRecognizer_ = new QVNCGestureRecognizer;
   }
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  setAttribute(Qt::WA_NoBackground);
-#endif
-  setAttribute(Qt::WA_NoSystemBackground);
+  setAttribute(Qt::WA_OpaquePaintEvent);
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
 
@@ -225,12 +222,6 @@ void QVNCX11View::resizePixmap(int width, int height)
   picture_ = XRenderCreatePicture(display_, pixmap_, format, 0, NULL);
 }
 
-void QVNCX11View::updateWindow()
-{
-  QAbstractVNCView::updateWindow();
-  draw();
-}
-
 /*!
     \reimp
 */
@@ -321,11 +312,6 @@ bool QVNCX11View::event(QEvent *e)
     case QEvent::CursorChange:
       //qDebug() << "CursorChange";
       e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
-      return true;
-    case QEvent::Paint:
-      //qDebug() << "QEvent::Paint";
-      draw();
-      e->setAccepted(true);
       return true;
     case QEvent::Gesture:
       gestureEvent(reinterpret_cast<QGestureEvent*>(e));
@@ -536,42 +522,43 @@ void QVNCX11View::bell()
   XBell(display_, 0 /* volume */);
 }
 
-void QVNCX11View::draw()
+void QVNCX11View::paintEvent(QPaintEvent *event)
 {
   if (!window_ || !AppManager::instance()->view()) {
     return;
   }
+
+  QRect rect = event->rect();
+  int x = rect.x();
+  int y = rect.y();
+  int w = rect.width();
+  int h = rect.height();
+
   QVNCConnection *cc = AppManager::instance()->connection();
   PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-  rfb::Rect rect = framebuffer->getDamage();
-  int x = rect.tl.x;
-  int y = rect.tl.y;
-  int w = rect.br.x - x;
-  int h = rect.br.y - y;
-  if (!rect.is_empty()) {
-    //qDebug() << "QVNCX11View::draw: x=" << x << ", y=" << y << ", w=" << w << ", h=" << h;
-    // copy the specified region in XImage (== data in framebuffer) to Pixmap.
-    XGCValues gcvalues;
-    GC gc = XCreateGC(display_, pixmap_, 0, &gcvalues);
-    XImage *xim = framebuffer->ximage();
-    XShmSegmentInfo *shminfo = framebuffer->shmSegmentInfo();
-    if (shminfo) {
-      XShmPutImage(display_, pixmap_, gc, xim, x, y, x, y, w, h, False);
-      // Need to make sure the X server has finished reading the
-      // shared memory before we return
-      XSync(display_, False);
-    }
-    else {
-      XPutImage(display_, pixmap_, gc, xim, x, y, x, y, w, h);
-    }
 
-    XFreeGC(display_, gc);
-
-    Picture winPict = XRenderCreatePicture(display_, window_, visualFormat_, 0, NULL);
-    XRenderComposite(display_, PictOpSrc, picture_, None, winPict, x, y, 0, 0, x, y, w, h);
-    XRenderFreePicture(display_, winPict);
-    XFlush(display_);
+  //qDebug() << "QVNCX11View::draw: x=" << x << ", y=" << y << ", w=" << w << ", h=" << h;
+  // copy the specified region in XImage (== data in framebuffer) to Pixmap.
+  XGCValues gcvalues;
+  GC gc = XCreateGC(display_, pixmap_, 0, &gcvalues);
+  XImage *xim = framebuffer->ximage();
+  XShmSegmentInfo *shminfo = framebuffer->shmSegmentInfo();
+  if (shminfo) {
+    XShmPutImage(display_, pixmap_, gc, xim, x, y, x, y, w, h, False);
+    // Need to make sure the X server has finished reading the
+    // shared memory before we return
+    XSync(display_, False);
   }
+  else {
+    XPutImage(display_, pixmap_, gc, xim, x, y, x, y, w, h);
+  }
+
+  XFreeGC(display_, gc);
+
+  Picture winPict = XRenderCreatePicture(display_, window_, visualFormat_, 0, NULL);
+  XRenderComposite(display_, PictOpSrc, picture_, None, winPict, x, y, 0, 0, x, y, w, h);
+  XRenderFreePicture(display_, winPict);
+  XFlush(display_);
 }
 
 // Viewport::handle(int event)

@@ -31,8 +31,7 @@ public slots:
   void grabKeyboard() override;
   void ungrabKeyboard() override;
   void bell() override;
-  void updateWindow() override;
-  void draw();
+  void paintEvent(QPaintEvent *event) override;
 
 protected:
   bool event(QEvent *e) override;
