@@ -696,31 +696,44 @@ void QAbstractVNCView::updateWindow()
   int w = rect.br.x - x;
   int h = rect.br.y - y;
   if (!rect.is_empty()) {
+    damage += QRect(x, y, w, h);
     update(x, y, w, h);
   }
 }
 
 void QAbstractVNCView::paintEvent(QPaintEvent *event)
 {
-  QRect rect = event->rect();
-  int x = rect.x();
-  int y = rect.y();
-  int w = rect.width();
-  int h = rect.height();
-
   QVNCConnection *cc = AppManager::instance()->connection();
   PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
 
+  if ((framebuffer->width() != pixmap.width()) ||
+      (framebuffer->height() != pixmap.height())) {
+    pixmap = QPixmap(framebuffer->width(), framebuffer->height());
+    damage = QRegion(0, 0, pixmap.width(), pixmap.height());
+  }
+
+  if (!damage.isEmpty()) {
+    QPainter pixmapPainter(&pixmap);
+    const uint8_t *data;
+    int stride;
+    QRect bounds = damage.boundingRect();
+    int x = bounds.x();
+    int y = bounds.y();
+    int w = bounds.width();
+    int h = bounds.height();
+    rfb::Rect rfbrect(x, y, x+w, y+h);
+
+    data = framebuffer->getBuffer(rfbrect, &stride);
+    QImage image(data, w, h, stride*4, QImage::Format_RGB32);
+
+    pixmapPainter.drawImage(bounds, image);
+    damage = QRegion();
+  }
+
   QPainter painter(this);
+  QRect rect = event->rect();
 
-  const uint8_t *data;
-  int stride;
-  rfb::Rect rfbrect(x, y, x+w, y+h);
-
-  data = framebuffer->getBuffer(rfbrect, &stride);
-  QImage image(data, w, h, stride*4, QImage::Format_RGB32);
-
-  painter.drawImage(rect, image);
+  painter.drawPixmap(rect, pixmap, rect);
 }
 
 void QAbstractVNCView::handleDesktopSize()

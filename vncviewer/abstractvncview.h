@@ -79,6 +79,9 @@ signals:
   void delayedInitialized();
 
 protected:
+  QPixmap pixmap;
+  QRegion damage;
+
   static QClipboard *clipboard_;
   QByteArray geometry_;
   double devicePixelRatio_;
