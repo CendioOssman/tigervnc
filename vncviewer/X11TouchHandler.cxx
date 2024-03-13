@@ -74,7 +74,7 @@ void X11TouchHandler::preparePointerEvent(XEvent* dst, const GestureEvent src)
   // We don't have a real event to steal things from, so we'll have
   // to fake these events based on the current state of things
 
-  Window wnd = AppManager::instance()->view()->nativeWindowHandle();
+  Window wnd = 0;
   root = XDefaultRootWindow(xdisplay());
   XTranslateCoordinates(xdisplay(), wnd, root,
                         src.eventX,
@@ -150,7 +150,7 @@ void X11TouchHandler::fakeKeyEvent(bool press, int keysym,
 
   int modmask;
 
-  Window wnd = AppManager::instance()->view()->nativeWindowHandle();
+  Window wnd = 0;
   root = XDefaultRootWindow(xdisplay());
   XTranslateCoordinates(xdisplay(), wnd, root,
                         origEvent.eventX,

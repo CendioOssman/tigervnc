@@ -65,14 +65,7 @@ Bool eventIsFocusWithSerial(Display *display, XEvent *event, XPointer arg)
 
 QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   : QAbstractVNCView(parent, f)
-  , window_(0)
-  , dimmer_(0)
   , display_(nullptr)
-  , screen_(0)
-  , visualInfo_(nullptr)
-  , colorMap_(0)
-  , pixmap_(0)
-  , picture_(0)
   , gestureHandler_(new GestureHandler)
   , eventNumber_(0)
 #if 0
@@ -82,7 +75,6 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   if (!vncGestureRecognizer_) {
     vncGestureRecognizer_ = new QVNCGestureRecognizer;
   }
-  setAttribute(Qt::WA_OpaquePaintEvent);
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
 
@@ -94,28 +86,11 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   grabGesture(Qt::CustomGesture);
   QGestureRecognizer::registerRecognizer(vncGestureRecognizer_);
 
-  connect(AppManager::instance()->connection(), &QVNCConnection::framebufferResized, this, &QVNCX11View::resizePixmap, Qt::QueuedConnection);
-
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   display_ = QX11Info::display();
 #else
   display_ = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
 #endif
-  screen_ = DefaultScreen(display_);
-  XVisualInfo vtemplate;
-  int nvinfo;
-  XVisualInfo *visualList = XGetVisualInfo(display_, 0, &vtemplate, &nvinfo);
-  XVisualInfo *found = 0;
-  for (int i = 0; i < nvinfo; i++) {
-    if (visualList[i].c_class == StaticColor || visualList[i].c_class == TrueColor) {
-      if (!found || found->depth < visualList[i].depth) {
-        found = &visualList[i];
-      }
-    }
-  }
-  visualInfo_ = found;
-  colorMap_ = XCreateColormap(display_, RootWindow(display_, screen_), visualInfo_->visual, AllocNone);
-  visualFormat_ = XRenderFindVisualFormat(display_, visualInfo_->visual);
 
   XkbSetDetectableAutoRepeat(display_, True, nullptr); // ported from vncviewer.cxx.
 
@@ -159,67 +134,10 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
 
 QVNCX11View::~QVNCX11View()
 {
-  if (picture_) {
-    XRenderFreePicture(display_, picture_);
-  }
-  if (pixmap_) {
-    XFreePixmap(display_, pixmap_);
-  }
   delete gestureHandler_;
 #if 0
   delete keyboardGrabberTimer_;
 #endif
-}
-
-qulonglong QVNCX11View::nativeWindowHandle() const
-{
-  return (qulonglong)window_;
-}
-
-void QVNCX11View::resizePixmap(int width, int height)
-{
-  if (picture_) {
-    XRenderFreePicture(display_, picture_);
-  }
-  if (pixmap_) {
-    XFreePixmap(display_, pixmap_);
-  }
-  pixmap_ = XCreatePixmap(display_, RootWindow(display_, screen_), width, height, 32);
-  //qDebug() << "Surface::alloc: XCreatePixmap: w=" << width << ", h=" << height << ", pixmap=" << pixmap_;
-
-  // Our code assumes a BGRA byte order, regardless of what the endian
-  // of the machine is or the native byte order of XImage, so make sure
-  // we find such a format
-  XRenderPictFormat templ;
-  templ.type = PictTypeDirect;
-  templ.depth = 32;
-  if (XImageByteOrder(display_) == MSBFirst) {
-    templ.direct.alpha = 0;
-    templ.direct.red   = 8;
-    templ.direct.green = 16;
-    templ.direct.blue  = 24;
-  }
-  else {
-    templ.direct.alpha = 24;
-    templ.direct.red   = 16;
-    templ.direct.green = 8;
-    templ.direct.blue  = 0;
-  }
-  templ.direct.alphaMask = 0xff;
-  templ.direct.redMask = 0xff;
-  templ.direct.greenMask = 0xff;
-  templ.direct.blueMask = 0xff;
-
-  XRenderPictFormat *format = XRenderFindFormat(display_, PictFormatType | PictFormatDepth |
-                                                PictFormatRed | PictFormatRedMask |
-                                                PictFormatGreen | PictFormatGreenMask |
-                                                PictFormatBlue | PictFormatBlueMask |
-                                                PictFormatAlpha | PictFormatAlphaMask,
-                                                &templ, 0);
-  if (!format) {
-    throw rdr::Exception("XRenderFindFormat");
-  }
-  picture_ = XRenderCreatePicture(display_, pixmap_, format, 0, NULL);
 }
 
 /*!
@@ -228,46 +146,6 @@ void QVNCX11View::resizePixmap(int width, int height)
 bool QVNCX11View::event(QEvent *e)
 {
   switch(e->type()) {
-    case QEvent::Polish:
-      if (!window_) {
-        int w = width() > 0 ? width() : parentWidget()->width();
-        int h = height() > 0 ? height() : parentWidget()->height();
-        int borderWidth = 0;
-        XSetWindowAttributes xattr;
-        xattr.override_redirect = False;
-        xattr.background_pixel = 0;
-        xattr.border_pixel = 0;
-        xattr.colormap = colorMap_;
-        xattr.event_mask = NoEventMask;
-        unsigned int wattr = CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
-        window_ = XCreateWindow(display_, winId(), 0, 0, w, h, borderWidth, 32, InputOutput, visualInfo_->visual, wattr, &xattr);
-        XMapWindow(display_, window_);
-        setMouseTracking(true);
-        //touchHandler_ = new XInputTouchHandler(window_);
-
-        XSetWindowAttributes xdattr;
-        xattr.override_redirect = False;
-        xdattr.background_pixel = 0x96000000;
-        xattr.border_pixel = 0;
-        xdattr.colormap = colorMap_;
-        unsigned int wdattr = CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWColormap;
-        dimmer_ = XCreateWindow(display_, DefaultRootWindow(display_), 0, 0, w, h, borderWidth, 32, InputOutput, visualInfo_->visual, wdattr, &xdattr);
-
-        Atom mwmHintsProperty = XInternAtom(display_, "_MOTIF_WM_HINTS", 0);
-        struct MwmHints {
-            unsigned long flags;
-            unsigned long functions;
-            unsigned long decorations;
-            long input_mode;
-            unsigned long status;
-        };
-        unsigned MWM_HINTS_DECORATIONS =  (1L << 1);
-        struct MwmHints hints;
-        hints.flags = MWM_HINTS_DECORATIONS;
-        hints.decorations = 0;
-        XChangeProperty(display_, dimmer_, mwmHintsProperty, mwmHintsProperty, 32, PropModeReplace, (unsigned char *)&hints, 5);
-      }
-      break;
     case QEvent::KeyboardLayoutChange:
       break;
     case QEvent::MouseMove:
@@ -372,29 +250,23 @@ void QVNCX11View::focusOutEvent(QFocusEvent *)
 */
 void QVNCX11View::resizeEvent(QResizeEvent *e)
 {
-  if (window_) {
-    QSize size = e->size();
-    int w = size.width() * devicePixelRatio_;
-    int h = size.height() * devicePixelRatio_;
-    XResizeWindow(display_, window_, w, h);
-    QWidget::resizeEvent(e);
-    adjustSize();
+  QWidget::resizeEvent(e);
+  adjustSize();
 
-    // Try to get the remote size to match our window size, provided
-    // the following conditions are true:
-    //
-    // a) The user has this feature turned on
-    // b) The server supports it
-    // c) We're not still waiting for startup fullscreen to kick in
-    //
-    QVNCConnection *cc = AppManager::instance()->connection();
-    if (!firstUpdate_ && ViewerConfig::config()->remoteResize() && cc->server()->supportsSetDesktopSize) {
-      postRemoteResizeRequest();
-    }
-    // Some systems require a grab after the window size has been changed.
-    // Otherwise they might hold on to displays, resulting in them being unusable.
-    maybeGrabKeyboard();
+  // Try to get the remote size to match our window size, provided
+  // the following conditions are true:
+  //
+  // a) The user has this feature turned on
+  // b) The server supports it
+  // c) We're not still waiting for startup fullscreen to kick in
+  //
+  QVNCConnection *cc = AppManager::instance()->connection();
+  if (!firstUpdate_ && ViewerConfig::config()->remoteResize() && cc->server()->supportsSetDesktopSize) {
+    postRemoteResizeRequest();
   }
+  // Some systems require a grab after the window size has been changed.
+  // Otherwise they might hold on to displays, resulting in them being unusable.
+  maybeGrabKeyboard();
 }
 
 /*!
@@ -520,45 +392,6 @@ bool QVNCX11View::nativeEvent(const QByteArray &eventType, void *message, qintpt
 void QVNCX11View::bell()
 {
   XBell(display_, 0 /* volume */);
-}
-
-void QVNCX11View::paintEvent(QPaintEvent *event)
-{
-  if (!window_ || !AppManager::instance()->view()) {
-    return;
-  }
-
-  QRect rect = event->rect();
-  int x = rect.x();
-  int y = rect.y();
-  int w = rect.width();
-  int h = rect.height();
-
-  QVNCConnection *cc = AppManager::instance()->connection();
-  PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-
-  //qDebug() << "QVNCX11View::draw: x=" << x << ", y=" << y << ", w=" << w << ", h=" << h;
-  // copy the specified region in XImage (== data in framebuffer) to Pixmap.
-  XGCValues gcvalues;
-  GC gc = XCreateGC(display_, pixmap_, 0, &gcvalues);
-  XImage *xim = framebuffer->ximage();
-  XShmSegmentInfo *shminfo = framebuffer->shmSegmentInfo();
-  if (shminfo) {
-    XShmPutImage(display_, pixmap_, gc, xim, x, y, x, y, w, h, False);
-    // Need to make sure the X server has finished reading the
-    // shared memory before we return
-    XSync(display_, False);
-  }
-  else {
-    XPutImage(display_, pixmap_, gc, xim, x, y, x, y, w, h);
-  }
-
-  XFreeGC(display_, gc);
-
-  Picture winPict = XRenderCreatePicture(display_, window_, visualFormat_, 0, NULL);
-  XRenderComposite(display_, PictOpSrc, picture_, None, winPict, x, y, 0, 0, x, y, w, h);
-  XRenderFreePicture(display_, winPict);
-  XFlush(display_);
 }
 
 // Viewport::handle(int event)
@@ -722,27 +555,6 @@ void QVNCX11View::handleKeyRelease(int keyCode)
   }
 
   downKeySym_.erase(iter);
-}
-
-Pixmap QVNCX11View::toPixmap(QBitmap &bitmap)
-{
-  QImage image = bitmap.toImage();
-
-  int xbytes = (image.width() + 7) / 8;
-  int ybytes = image.height();
-  char *data = new char[xbytes * ybytes];
-  uchar *src = image.bits();
-  char *dst = data;
-  for (int y = 0; y < ybytes; y++) {
-    memcpy(dst, src, xbytes);
-    src += image.bytesPerLine();
-    dst += xbytes;
-  }
-
-  Pixmap pixmap = XCreateBitmapFromData(display_, nativeWindowHandle(), data, image.width(), image.height());
-
-  delete[] data;
-  return pixmap;
 }
 
 void QVNCX11View::handleClipboardData(const char*)
@@ -962,95 +774,12 @@ bool QVNCX11View::gestureEvent(QGestureEvent *event)
 
 void QVNCX11View::setWindowManager()
 {
-  QApplication *app = static_cast<QApplication*>(QApplication::instance());
-  QList<QScreen*> screens = app->screens();
-  QList<int> selectedScreens = fullscreenScreens();
-  int topScreen = selectedScreens[0];
-  int bottomScreen = selectedScreens[0];
-  int leftScreen = selectedScreens[0];
-  int rightScreen = selectedScreens[0];
-  for (int &screenIndex : selectedScreens) {
-    QScreen *screen = screens[screenIndex];
-    QRect rect = screen->geometry();
-    if (rect.y() < screens[topScreen]->geometry().y()) {
-      topScreen = screenIndex;
-    }
-    if (rect.y() + rect.height() * screen->devicePixelRatio() > screens[bottomScreen]->geometry().y() + screens[bottomScreen]->geometry().height() * screens[bottomScreen]->devicePixelRatio()) {
-      bottomScreen = screenIndex;
-    }
-    if (rect.x() < screens[leftScreen]->geometry().x()) {
-      leftScreen = screenIndex;
-    }
-    if (rect.x() + rect.width() * screen->devicePixelRatio() > screens[rightScreen]->geometry().y() + screens[rightScreen]->geometry().width() * screens[rightScreen]->devicePixelRatio()) {
-      rightScreen = screenIndex;
-    }
-  }
-
-  QVNCWindow *window = AppManager::instance()->window();
-  WId wid = window->winId();
-  unsigned long rootWindow = RootWindow(display_, screen_);
-  Atom atom_WM_FULLSCREEN_MONITORS = XInternAtom(display_, "_NET_WM_FULLSCREEN_MONITORS", 0);
-  Atom atom_WM_STATE_FULLSCREEN = XInternAtom(display_, "_NET_WM_STATE_FULLSCREEN", 0);
-  Atom atom_WM_STATE = XInternAtom(display_, "_NET_WM_STATE", 0);
-
-  XEvent e;
-  e.xany.type = ClientMessage;
-  e.xany.window = wid;
-  e.xclient.message_type = atom_WM_FULLSCREEN_MONITORS;
-  e.xclient.format = 32;
-  e.xclient.data.l[0] = topScreen;
-  e.xclient.data.l[1] = bottomScreen;
-  e.xclient.data.l[2] = leftScreen;
-  e.xclient.data.l[3] = rightScreen;
-  e.xclient.data.l[4] = 0;
-  XSendEvent(display_, rootWindow, 0, SubstructureNotifyMask | SubstructureRedirectMask, &e);
-
-  e.xany.type = ClientMessage;
-  e.xany.window = wid;
-  e.xclient.message_type = atom_WM_STATE;
-  e.xclient.format = 32;
-  e.xclient.data.l[0] = pendingFullscreen_ ? 1 : 0;
-  e.xclient.data.l[1] = atom_WM_STATE_FULLSCREEN;
-  e.xclient.data.l[2] = 0;
-  e.xclient.data.l[3] = 0;
-  e.xclient.data.l[4] = 0;
-  XSendEvent(display_, rootWindow, 0, SubstructureNotifyMask | SubstructureRedirectMask, &e);
 }
 
 void QVNCX11View::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight)
 {
-  QVNCWindow *window = AppManager::instance()->window();
-  if (bypassWMHintingEnabled()) {
-    window->setWindowFlag(Qt::BypassWindowManagerHint, true);
-  }
-  QRect r = getExtendedFrameProperties();
-  window->move(vx + r.x(), vy);
-  window->resize(vwidth, vheight);
-  resize(vwidth, vheight);
-  window->showNormal();
-  grabKeyboard();
 }
 
 void QVNCX11View::dim(bool enabled)
 {
-  if (window_) {
-    if (enabled) {
-      QPoint p0 = AppManager::instance()->window()->topLevelWidget()->mapToGlobal(QPoint(0, 0));
-      qDebug() << "global pos=" << p0;
-
-      XMapWindow(display_, dimmer_);
-
-      unsigned long newmask = (CWX | CWY | CWWidth | CWHeight);
-      XWindowChanges wc;
-      wc.x = p0.x();
-      wc.y = p0.y();
-      wc.width = width();
-      wc.height = height();
-      XConfigureWindow(display_, dimmer_, newmask, &wc);
-    }
-    else {
-      XUnmapWindow(display_, dimmer_);
-      AppManager::instance()->connection()->refreshFramebuffer();
-    }
-  }
 }

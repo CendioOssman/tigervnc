@@ -15,15 +15,9 @@ public:
   QVNCWinView(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Window);
   virtual ~QVNCWinView();
 
-  void setWindow(HWND);
-  bool hasViewFocus() const override;
-  qulonglong nativeWindowHandle() const override;
   QRect getExtendedFrameProperties() override;
-  void disableIM() override;
-  void enableIM() override;
   void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
   void handleKeyRelease(int keyCode) override;
-  void dim(bool enabled) override;
 
 public slots:
   void setCursorPos(int x, int y) override;
@@ -33,13 +27,9 @@ public slots:
   void ungrabKeyboard() override;
   void bell() override;
   void moveView(int x, int y) override;
-  void paintEvent(QPaintEvent *event) override;
 
 protected:
-  static LRESULT CALLBACK eventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-  static void getMouseProperties(QVNCWinView *window, UINT message, WPARAM wParam, LPARAM lParam, int &x, int &y, int &buttonMask, int &wheelMask);
   bool event(QEvent *e) override;
-  HWND createWindow(HWND parent, HINSTANCE instance);
   void showEvent(QShowEvent *) override;
   void enterEvent(QEvent*) override;
   void leaveEvent(QEvent*) override;
@@ -49,10 +39,6 @@ protected:
   bool bypassWMHintingEnabled() const override { return true; }
 
 private:
-  void *wndproc_;
-  bool hwndowner_;
-  HWND hwnd_;
-
   bool altGrArmed_;
   unsigned int altGrCtrlTime_;
   QTimer *altGrCtrlTimer_;

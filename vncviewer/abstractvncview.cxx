@@ -13,6 +13,7 @@
 #include <QWindow>
 #include <QDebug>
 #include <QUrl>
+#include <QPainter>
 #include <QClipboard>
 #include <QMoveEvent>
 #include <QScrollBar>
@@ -265,6 +266,8 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
  , menuCtrlKey_(false)
  , menuAltKey_(false)
 {
+  setAttribute(Qt::WA_OpaquePaintEvent);
+
   if (!clipboard_) {
     clipboard_ = QGuiApplication::clipboard();
     connect(clipboard_, &QClipboard::dataChanged, this, []() {
@@ -425,11 +428,6 @@ bool QAbstractVNCView::eventFilter(QObject *obj, QEvent *event)
     }
   }
   return QWidget::eventFilter(obj, event);
-}
-
-qulonglong QAbstractVNCView::nativeWindowHandle() const
-{
-  return 0;
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
@@ -700,6 +698,29 @@ void QAbstractVNCView::updateWindow()
   if (!rect.is_empty()) {
     update(x, y, w, h);
   }
+}
+
+void QAbstractVNCView::paintEvent(QPaintEvent *event)
+{
+  QRect rect = event->rect();
+  int x = rect.x();
+  int y = rect.y();
+  int w = rect.width();
+  int h = rect.height();
+
+  QVNCConnection *cc = AppManager::instance()->connection();
+  PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
+
+  QPainter painter(this);
+
+  const uint8_t *data;
+  int stride;
+  rfb::Rect rfbrect(x, y, x+w, y+h);
+
+  data = framebuffer->getBuffer(rfbrect, &stride);
+  QImage image(data, w, h, stride*4, QImage::Format_RGB32);
+
+  painter.drawImage(rect, image);
 }
 
 void QAbstractVNCView::handleDesktopSize()

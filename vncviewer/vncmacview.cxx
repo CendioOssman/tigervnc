@@ -47,151 +47,26 @@ extern const unsigned int code_map_osx_to_qnum_len;
 
 static rfb::LogWriter vlog("QVNCMacView");
 
-QVNCMacView::MacEventFilter::MacEventFilter(QVNCMacView *view)
- : view_(view)
-{
-}
-
-QVNCMacView::MacEventFilter::~MacEventFilter()
-{
-}
-
-/**
-* Native event handler must be installed with QAbstractEventDispatcher::installNativeEventFilter()
-* because QWidget::nativeEvent() doesn't get called on macOS if the widget does not have a native
-* window handle. See QTBUG-40116 or QWidget document (https://doc.qt.io/qt-6.4/qwidget.html#nativeEvent)
-* for more details.
-* 
-* @param eventType 
-* @param message 
-* @param result 
-* 
-* @return 
-*/
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-bool QVNCMacView::MacEventFilter::nativeEventFilter(const QByteArray &eventType, void *message, long *result)
-#else
-bool QVNCMacView::MacEventFilter::nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result)
-#endif
-{
-  Q_UNUSED(result)
-  if (eventType == "mac_generic_NSEvent") {
-    if (QApplication::activePopupWidget()) { // F8 popup menu
-      return false;
-    }
-    if (QApplication::activeWindow() != view_->window()) { // QML dialog windows
-      return false;
-    }
-#if 0
-    if (cocoa_is_mouse_entered(message)) {
-      qDebug() << "nativeEvent: mouseEntered";
-      view_->setFocus();
-      view_->grabPointer();
-      return true;
-    }
-    if (cocoa_is_mouse_exited(message)) {
-      qDebug() << "nativeEvent: mouseExited";
-      view_->clearFocus();
-      view_->ungrabPointer();
-      return true;
-    }
-#endif
-    if (cocoa_is_keyboard_sync(message)) {
-      while (!view_->downKeySym_.empty()) {
-        view_->handleKeyRelease(view_->downKeySym_.begin()->first);
-      }
-      return true;
-    }
-    if (cocoa_is_keyboard_event(message)) {
-      int keyCode = cocoa_event_keycode(message);
-      //qDebug() << "nativeEvent: keyEvent: keyCode=" << keyCode << ", hexKeyCode=" << hex << keyCode;
-      if ((unsigned)keyCode >= code_map_osx_to_qnum_len) {
-        keyCode = 0;
-      }
-      else {
-        keyCode = code_map_osx_to_qnum[keyCode];
-      }
-      if (cocoa_is_key_press(message)) {
-        uint32_t keySym = cocoa_event_keysym(message);
-        if (keySym == NoSymbol) {
-          vlog.error(_("No symbol for key code 0x%02x (in the current state)"), (int)keyCode);
-        }
-
-        view_->handleKeyPress(keyCode, keySym);
-
-        // We don't get any release events for CapsLock, so we have to
-        // send the release right away.
-        if (keySym == XK_Caps_Lock) {
-          view_->handleKeyRelease(keyCode);
-        }
-      }
-      else {
-        view_->handleKeyRelease(keyCode);
-      }
-      return true;
-    }
-  }
-  return false;
-}
 
 QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
  : QAbstractVNCView(parent, f)
- , view_(0)
  , cursor_(nullptr)
- , filter_(nullptr)
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   setAttribute(Qt::WA_NoBackground);
 #endif
   setAttribute(Qt::WA_NoSystemBackground);
   setAttribute(Qt::WA_AcceptTouchEvents);
-  setAttribute(Qt::WA_NativeWindow);
   setFocusPolicy(Qt::StrongFocus);
-  connect(AppManager::instance()->connection(), &QVNCConnection::framebufferResized, this, [this](int width, int height) {
-    Q_UNUSED(width)
-    Q_UNUSED(height)
-    PlatformPixelBuffer *framebuffer = (PlatformPixelBuffer*)AppManager::instance()->connection()->framebuffer();
-    cocoa_resize(view_, framebuffer->bitmap());
-  }, Qt::QueuedConnection);
 }
 
 QVNCMacView::~QVNCMacView()
 {
-  // cursor_ is autorelease.
-  QAbstractEventDispatcher::instance()->removeNativeEventFilter(filter_);
-  delete filter_;
-}
-
-qulonglong QVNCMacView::nativeWindowHandle() const
-{
-  return (qulonglong)view_;
-}
-
-void QVNCMacView::installNativeEventHandler()
-{
-  QAbstractEventDispatcher::instance()->removeNativeEventFilter(filter_);
-  delete filter_;
-
-  filter_ = new MacEventFilter(this);
-  QAbstractEventDispatcher::instance()->installNativeEventFilter(filter_);
 }
 
 bool QVNCMacView::event(QEvent *e)
 {
   switch(e->type()) {
-  case QEvent::Polish:
-    if (!view_) {
-      //qDebug() << "display numbers:  QMACInfo::display()=" <<  QMACInfo::display() << ", XOpenDisplay(NULL)=" << XOpenDisplay(NULL);
-      QVNCConnection *cc = AppManager::instance()->connection();
-      PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-      CGImage *bitmap = framebuffer->bitmap();
-      view_ = cocoa_create_view(this, bitmap);
-      // Do not invoke #fromWinId(), otherwise NSView won't be shown.
-      //QWindow *w = windowHandle()->fromWinId((WId)view_);
-      installNativeEventHandler();
-      setMouseTracking(true);
-    }
-    break;
   case QEvent::KeyboardLayoutChange:
     break;
   case QEvent::MouseMove:
@@ -278,7 +153,6 @@ void QVNCMacView::focusOutEvent(QFocusEvent *e)
 
 void QVNCMacView::resizeEvent(QResizeEvent *e)
 {
-  if (view_) {
     QSize size = e->size();
     QWidget::resize(size.width(), size.height());
 
@@ -296,32 +170,11 @@ void QVNCMacView::resizeEvent(QResizeEvent *e)
     // Some systems require a grab after the window size has been changed.
     // Otherwise they might hold on to displays, resulting in them being unusable.
     maybeGrabKeyboard();
-  }
 }
 
 void QVNCMacView::bell()
 {
   cocoa_beep();
-}
-
-void QVNCMacView::paintEvent(QPaintEvent *event)
-{
-  if (!view_ || !AppManager::instance()->view()) {
-    return;
-  }
-
-  QVNCConnection *cc = AppManager::instance()->connection();
-  PlatformPixelBuffer *framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-
-  QRect rect = event->rect();
-  int x = rect.x();
-  int y = rect.y();
-  int w = rect.width();
-  int h = rect.height();
-
-  if (!rect.is_empty()) {
-    cocoa_draw(view_, x, y, w, h);
-  }
 }
 
 // Viewport::handle(int event)
@@ -594,17 +447,11 @@ void QVNCMacView::pushLEDState()
 
 void QVNCMacView::grabKeyboard()
 {
-  int ret = cocoa_capture_displays(view_, fullscreenScreens());
-  if (ret != 0) {
-    vlog.error(_("Failure grabbing keyboard"));
-    return;
-  }
   QAbstractVNCView::grabKeyboard();
 }
 
 void QVNCMacView::ungrabKeyboard()
 {
-  cocoa_release_displays(view_, fullscreenEnabled_);
   QAbstractVNCView::ungrabKeyboard();
 }
 
@@ -640,11 +487,4 @@ void QVNCMacView::fullscreenOnSelectedDisplay(QScreen *screen, int vx, int vy, i
   window->setWindowFlag(Qt::FramelessWindowHint, true);
   window->setWindowState(Qt::WindowFullScreen);
   grabKeyboard();
-}
-
-void QVNCMacView::dim(bool enabled)
-{
-  if (view_) {
-    cocoa_dim(view_, enabled);
-  }
 }

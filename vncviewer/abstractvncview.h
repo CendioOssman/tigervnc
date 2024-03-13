@@ -33,7 +33,6 @@ public:
   virtual ~QAbstractVNCView();
   virtual void resize(int width, int height);
   void popupContextMenu();
-  virtual qulonglong nativeWindowHandle() const;
   virtual bool hasViewFocus() const { return true; }
   bool hasFocus() const { return hasViewFocus() || QWidget::hasFocus() || isActiveWindow(); }
   double devicePixelRatio() const { return devicePixelRatio_; }
@@ -69,6 +68,7 @@ public slots:
   virtual void bell();
   virtual void remoteResize(int width, int height);
   virtual void updateWindow();
+  void paintEvent(QPaintEvent *event) override;
   virtual void handleDesktopSize();
   virtual void fullscreen(bool enabled);
   virtual void moveView(int x, int y);

@@ -15,7 +15,6 @@ class QVNCX11View : public QAbstractVNCView
 public:
   QVNCX11View(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~QVNCX11View();
-  qulonglong nativeWindowHandle() const override;
   void disableIM() override;
   void enableIM() override;
   void handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
@@ -32,8 +31,6 @@ public slots:
   void grabPointer() override;
   void ungrabPointer() override;
   void bell() override;
-  void resizePixmap(int width, int height);
-  void paintEvent(QPaintEvent *event) override;
 
 protected:
   bool event(QEvent *e) override;
@@ -56,15 +53,7 @@ signals:
   void message(const QString &msg, int timeout);
 
 private:
-  Window window_;
-  Window dimmer_;
   Display *display_;
-  int screen_;
-  XVisualInfo *visualInfo_;
-  XRenderPictFormat *visualFormat_;
-  Colormap colorMap_;
-  Pixmap pixmap_;
-  Picture picture_;
 
   GestureHandler *gestureHandler_;
   int eventNumber_;
@@ -73,7 +62,6 @@ private:
   QTimer *keyboardGrabberTimer_;
 #endif
 
-  Pixmap toPixmap(QBitmap &bitmap);
   unsigned int getModifierMask(unsigned int keysym);
   bool gestureEvent(QGestureEvent *event);
 };
