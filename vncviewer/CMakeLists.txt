@@ -38,6 +38,8 @@ if (WIN32)
       Surface_Win32.cxx
       Win32TouchHandler.cxx
       Win32TouchHandler.h
+      Win32KeyboardHandler.cxx
+      Win32KeyboardHandler.h
       win32.c
       win32.h
   )
@@ -46,6 +48,8 @@ elseif(APPLE)
       vncmacview.cxx
       vncmacview.h
       Surface_OSX.cxx
+      MacKeyboardHandler.cxx
+      MacKeyboardHandler.h
       cocoa.h
       cocoa.mm
       osx_to_qnum.c
@@ -57,6 +61,8 @@ else()
       Surface_X11.cxx
       X11TouchHandler.cxx
       X11TouchHandler.h
+      X11KeyboardHandler.cxx
+      X11KeyboardHandler.h
       GestureHandler.cxx
       GestureHandler.h
       vncgesture.h
@@ -72,10 +78,11 @@ set(PROJECT_SOURCES
         vnctranslator.h
         appmanager.h
         appmanager.cxx
+        BaseKeyboardHandler.cxx
+        BaseKeyboardHandler.h
+        contextmenuactions.h
         vncapplication.cxx
         vncapplication.h
-        vnctoast.cxx
-        vnctoast.h
         vncwindow.cxx
         vncwindow.h
         vncconnection.h

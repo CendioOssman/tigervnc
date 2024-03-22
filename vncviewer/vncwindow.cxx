@@ -9,10 +9,10 @@
 #include <QStyleFactory>
 #include <QScrollBar>
 #include <QDebug>
+#include <QTimer>
 #include "rfb/LogWriter.h"
 #include "parameters.h"
 #include "i18n.h"
-#include "vnctoast.h"
 #include "abstractvncview.h"
 #include "parameters.h"
 #include "vncwindow.h"
@@ -25,7 +25,6 @@ static rfb::LogWriter vlog("VNCWindow");
 
 QVNCWindow::QVNCWindow(QWidget *parent)
  : QScrollArea(parent)
- , toast_(new QVNCToast(this))
 {
   setAttribute(Qt::WA_InputMethodTransparent);
   setAttribute(Qt::WA_NativeWindow);
@@ -77,14 +76,6 @@ QVNCWindow::QVNCWindow(QWidget *parent)
 
 QVNCWindow::~QVNCWindow()
 {
-  delete toast_;
-}
-
-void QVNCWindow::popupToast()
-{
-  toast_->move((width() - toast_->width()) / 2, 50);
-  toast_->show();
-  toast_->raise();
 }
 
 void QVNCWindow::moveEvent(QMoveEvent *e)

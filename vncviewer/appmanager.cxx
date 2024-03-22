@@ -162,7 +162,6 @@ void AppManager::openVNCWindow(int width, int height, QString name)
     scroll_->setVerticalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
   }, Qt::QueuedConnection);
 
-  connect(view_, &QAbstractVNCView::delayedInitialized, scroll_, &QVNCWindow::popupToast);
   view_->resize(width, height);
   if (!ViewerConfig::config()->remoteResize()) {
     view_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);

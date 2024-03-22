@@ -22,6 +22,7 @@
 #endif
 
 #include <string.h>
+#include <QDebug>
 
 // FLTK can pull in the X11 headers on some systems
 #ifndef XK_VoidSymbol
@@ -70,8 +71,9 @@ void getMenuKey(int *fltkcode, int *keycode, uint32_t *keysym)
   QString menuKeyStr;
 
   menuKeyStr = ViewerConfig::config()->menuKey();
+  qDebug() << menuKeyStr;
   for(int i = 0; i < getMenuKeySymbolCount(); i++) {
-    if (menuKeyStr != menuSymbols[i].name) {
+    if (menuKeyStr == menuSymbols[i].name) {
       *fltkcode = menuSymbols[i].fltkcode;
       *keycode = menuSymbols[i].keycode;
       *keysym = menuSymbols[i].keysym;

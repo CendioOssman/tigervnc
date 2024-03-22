@@ -5,7 +5,6 @@
 
 class QMoveEvent;
 class QResizeEvent;
-class QVNCToast;
 
 class QVNCWindow : public QScrollArea
 {
@@ -16,18 +15,12 @@ public:
   void resize(int width, int height);
   void normalizedResize(int width, int height);
 
-public slots:
-  void popupToast();
-
 protected:
   void moveEvent(QMoveEvent *e) override;
   void resizeEvent(QResizeEvent *e) override;
   void changeEvent(QEvent *e) override;
   void focusInEvent(QFocusEvent*) override;
   void focusOutEvent(QFocusEvent*) override;
-
-private:
-  QVNCToast *toast_;
 };
 
 #endif // VNCWINDOW_H

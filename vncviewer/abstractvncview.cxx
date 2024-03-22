@@ -17,13 +17,17 @@
 #include <QClipboard>
 #include <QMoveEvent>
 #include <QScrollBar>
+#include <QAbstractEventDispatcher>
+
 #include "rfb/ScreenSet.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ServerParams.h"
 #include "rfb/PixelBuffer.h"
 #include "EmulateMB.h"
+#include "BaseKeyboardHandler.h"
 #include "PlatformPixelBuffer.h"
 #include "appmanager.h"
+#include "contextmenuactions.h"
 #include "menukey.h"
 #include "vncconnection.h"
 #include "locale.h"
@@ -51,208 +55,17 @@ static rfb::LogWriter vlog("VNCView");
 
 QClipboard *QAbstractVNCView::clipboard_ = nullptr;
 
-class QMenuSeparator : public QAction
-{
-public:
-  QMenuSeparator(QWidget *parent = nullptr)
-   : QAction(parent)
-  {
-    setSeparator(true);
-  }
-};
-
-class QCheckableAction : public QAction
-{
-public:
-  QCheckableAction(const QString &text, QWidget *parent = nullptr)
-   : QAction(text, parent)
-  {
-    setCheckable(true);
-  }
-};
-
-class QFullScreenAction : public QCheckableAction
-{
-public:
-  QFullScreenAction(const QString &text, QWidget *parent = nullptr)
-   : QCheckableAction(text, parent)
-  {
-    connect(this, &QAction::toggled, this, [](bool checked) {
-      AppManager::instance()->view()->fullscreen(checked);
-    });
-    connect(ViewerConfig::config(), &ViewerConfig::fullScreenChanged, this, [this](bool enabled) {
-      setChecked(enabled);
-    });
-
-    setChecked(ViewerConfig::config()->fullScreen());
-  }
-};
-
-class QRevertSizeAction : public QAction
-{
-public:
-  QRevertSizeAction(const QString &text, QWidget *parent = nullptr)
-   : QAction(text, parent)
-  {
-    connect(this, &QAction::triggered, this, []() {
-      QVNCWindow *window = AppManager::instance()->window();
-      QAbstractVNCView *view = AppManager::instance()->view();
-      window->normalizedResize(view->width() + window->horizontalScrollBar()->width(), view->height() + window->verticalScrollBar()->height()); // Needed to hide scrollbars.
-      window->normalizedResize(view->width(), view->height());
-    });
-    connect(ViewerConfig::config(), &ViewerConfig::fullScreenChanged, this, [this](bool enabled) {
-      setEnabled(!enabled); // cf. Viewport::initContextMenu()
-    });
-  }
-};
-
-class QKeyToggleAction : public QCheckableAction
-{
-public:
-  QKeyToggleAction(const QString &text, int keyCode, quint32 keySym, QWidget *parent = nullptr)
-   : QCheckableAction(text, parent)
-   , keyCode_(keyCode)
-   , keySym_(keySym)
-  {
-    connect(this, &QAction::toggled, this, [this](bool checked) {
-      QAbstractVNCView *view = AppManager::instance()->view();
-      if (checked) {
-        view->handleKeyPress(keyCode_, keySym_);
-      }
-      else {
-        view->handleKeyRelease(keyCode_);
-      }
-      view->setMenuKeyStatus(keySym_, checked);
-    });
-  }
-
-private:
-  int keyCode_;
-  quint32 keySym_;
-};
-
-class QMenuKeyAction : public QAction
-{
-public:
-  QMenuKeyAction(const QString &text, QWidget *parent = nullptr)
-   : QAction(text, parent)
-  {
-    connect(this, &QAction::triggered, this, []() {
-      int dummy;
-      int keyCode;
-      quint32 keySym;
-      ::getMenuKey(&dummy, &keyCode, &keySym);
-      QAbstractVNCView *view = AppManager::instance()->view();
-      view->handleKeyPress(keyCode, keySym);
-      view->handleKeyRelease(keyCode);
-    });
-  }
-};
-
-class QCtrlAltDelAction : public QAction
-{
-public:
-  QCtrlAltDelAction(const QString &text, QWidget *parent = nullptr)
-   : QAction(text, parent)
-  {
-    connect(this, &QAction::triggered, this, []() {
-      QAbstractVNCView *view = AppManager::instance()->view();
-      view->handleKeyPress(0x1d, XK_Control_L);
-      view->handleKeyPress(0x38, XK_Alt_L);
-      view->handleKeyPress(0xd3, XK_Delete);
-      view->handleKeyRelease(0xd3);
-      view->handleKeyRelease(0x38);
-      view->handleKeyRelease(0x1d);
-    });
-  }
-};
-
-class QMinimizeAction : public QAction
-{
-public:
-  QMinimizeAction(const QString &text, QWidget *parent = nullptr)
-   : QAction(text, parent)
-  {
-    connect(this, &QAction::triggered, this, []() {
-      QAbstractVNCView *view = AppManager::instance()->view();
-      view->showMinimized();
-    });
-  }
-};
-
-class QDisconnectAction : public QAction
-{
-public:
-  QDisconnectAction(const QString &text, QWidget *parent = nullptr)
-   : QAction(text, parent)
-  {
-    connect(this, &QAction::triggered, this, []() {
-      QApplication::quit();
-    });
-  }
-};
-
-class QOptionDialogAction : public QAction
-{
-public:
-  QOptionDialogAction(const QString &text, QWidget *parent = nullptr)
-   : QAction(text, parent)
-  {
-    connect(this, &QAction::triggered, this, []() {
-      AppManager::instance()->openOptionDialog();
-    });
-  }
-};
-
-class QRefreshAction : public QAction
-{
-public:
-  QRefreshAction(const QString &text, QWidget *parent = nullptr)
-   : QAction(text, parent)
-  {
-    connect(this, &QAction::triggered, this, []() {
-      AppManager::instance()->connection()->refreshFramebuffer();
-    });
-  }
-};
-
-class QInfoDialogAction : public QAction
-{
-public:
-  QInfoDialogAction(const QString &text, QWidget *parent = nullptr)
-   : QAction(text, parent)
-  {
-    connect(this, &QAction::triggered, this, []() {
-      AppManager::instance()->openInfoDialog();
-    });
-  }
-};
-
-class QAboutDialogAction : public QAction
-{
-public:
-  QAboutDialogAction(const QString &text, QWidget *parent = nullptr)
-   : QAction(text, parent)
-  {
-    connect(this, &QAction::triggered, this, []() {
-      AppManager::instance()->openAboutDialog();
-    });
-  }
-};
-
 QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
  : QWidget(parent, f)
  , devicePixelRatio_(devicePixelRatioF())
  , menuKeySym_(XK_F8)
  , contextMenu_(nullptr)
- , firstLEDState_(false)
  , pendingServerClipboard_(false)
  , pendingClientClipboard_(false)
  , clipboardSource_(0)
  , firstUpdate_(true)
  , delayedFullscreen_(false)
  , delayedDesktopSize_(false)
- , keyboardGrabbed_(false)
  , mouseGrabbed_(false)
  , resizeTimer_(new QTimer)
  , delayedInitializeTimer_(new QTimer)
@@ -263,8 +76,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
  , lastPointerPos_(new rfb::Point)
  , lastButtonMask_(0)
  , mousePointerTimer_(new QTimer)
- , menuCtrlKey_(false)
- , menuAltKey_(false)
+ , toastTimer_(new QTimer(this))
 {
   setAttribute(Qt::WA_OpaquePaintEvent);
 
@@ -306,11 +118,15 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
 
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorChanged, this, &QAbstractVNCView::setCursor, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::cursorPositionChanged, this, &QAbstractVNCView::setCursorPos, Qt::QueuedConnection);
-  connect(AppManager::instance()->connection(), &QVNCConnection::ledStateChanged, this, &QAbstractVNCView::setLEDState, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::clipboardDataReceived, this, &QAbstractVNCView::handleClipboardData, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::bellRequested, this, &QAbstractVNCView::bell, Qt::QueuedConnection);
   connect(AppManager::instance()->connection(), &QVNCConnection::refreshFramebufferEnded, this, &QAbstractVNCView::updateWindow, Qt::QueuedConnection);
   connect(AppManager::instance(), &AppManager::refreshRequested, this, &QAbstractVNCView::updateWindow, Qt::QueuedConnection);
+
+  toastTimer_->setInterval(5000);
+  toastTimer_->setSingleShot(true);
+  connect(toastTimer_, &QTimer::timeout, this, &QAbstractVNCView::hideToast);
+  connect(this, &QAbstractVNCView::delayedInitialized, this, &QAbstractVNCView::showToast);
 }
 
 QAbstractVNCView::~QAbstractVNCView()
@@ -348,19 +164,18 @@ void QAbstractVNCView::resize(int width, int height)
   //qDebug() << "QWidget::resize: width=" << width << ", height=" << height;
 }
 
-void QAbstractVNCView::popupContextMenu()
+void QAbstractVNCView::toggleContextMenu()
 {
-#if 0
-#if defined(__APPLE__)
-  ungrabKeyboard();
-#endif
-#endif
-  createContextMenu();
-#if 0
-  cocoa_set_overlay_property(contextMenu_);
-  contextMenu_->raise();
-#endif
-  contextMenu_->exec(QCursor::pos());
+  if(isVisibleContextMenu())
+  {
+    contextMenu_->hide();
+  }
+  else
+  {
+    createContextMenu();
+    removeKeyboardHandler();
+    contextMenu_->exec(QCursor::pos());
+  }
 }
 
 void QAbstractVNCView::createContextMenu()
@@ -392,6 +207,7 @@ void QAbstractVNCView::createContextMenu()
       contextMenu_->addAction(action);
     }
     contextMenu_->installEventFilter(this);
+    connect(contextMenu_, &QMenu::aboutToHide, this, &QAbstractVNCView::installKeyboardHandler, Qt::QueuedConnection);
   }
 }
 
@@ -410,24 +226,63 @@ void QAbstractVNCView::sendContextMenuKey()
   int keyCode;
   quint32 keySym;
   ::getMenuKey(&dummy, &keyCode, &keySym);
-  QAbstractVNCView *view = AppManager::instance()->view();
-  view->handleKeyPress(keyCode, keySym, true);
-  view->handleKeyRelease(keyCode);
+  keyboardHandler_->handleKeyPress(keyCode, keySym, true);
+  keyboardHandler_->handleKeyRelease(keyCode);
   contextMenu_->hide();
 }
 
+void QAbstractVNCView::sendCtrlAltDel()
+{
+  keyboardHandler_->handleKeyPress(0x1d, XK_Control_L);
+  keyboardHandler_->handleKeyPress(0x38, XK_Alt_L);
+  keyboardHandler_->handleKeyPress(0xd3, XK_Delete);
+  keyboardHandler_->handleKeyRelease(0xd3);
+  keyboardHandler_->handleKeyRelease(0x38);
+  keyboardHandler_->handleKeyRelease(0x1d);
+}
+
+void QAbstractVNCView::toggleKey(bool toggle, int keyCode, quint32 keySym)
+{
+  if (toggle) {
+    keyboardHandler_->handleKeyPress(keyCode, keySym);
+  }
+  else {
+    keyboardHandler_->handleKeyRelease(keyCode);
+  }
+  keyboardHandler_->setMenuKeyStatus(keySym, toggle);
+}
+
+// As QMenu eventFilter
 bool QAbstractVNCView::eventFilter(QObject *obj, QEvent *event)
 {
   if (event->type() == QEvent::KeyPress) {
     QKeyEvent *e = static_cast<QKeyEvent *>(event);
     if (isVisibleContextMenu()) {
       if (QKeySequence(e->key()).toString() == ViewerConfig::config()->menuKey()) {
-        sendContextMenuKey();
+        toggleContextMenu();
         return true;
       }
     }
   }
   return QWidget::eventFilter(obj, event);
+}
+
+void QAbstractVNCView::initKeyboardHandler()
+{
+    installKeyboardHandler();
+    connect(AppManager::instance(), &AppManager::vncWindowClosed, this, &QAbstractVNCView::removeKeyboardHandler, Qt::QueuedConnection);
+    connect(AppManager::instance()->connection(), &QVNCConnection::ledStateChanged, keyboardHandler_, &BaseKeyboardHandler::setLEDState, Qt::QueuedConnection);
+    connect(keyboardHandler_, &BaseKeyboardHandler::contextMenuKeyPressed, this, &QAbstractVNCView::toggleContextMenu, Qt::QueuedConnection);
+}
+
+void QAbstractVNCView::installKeyboardHandler()
+{
+    QAbstractEventDispatcher::instance()->installNativeEventFilter(keyboardHandler_);
+}
+
+void QAbstractVNCView::removeKeyboardHandler()
+{
+    QAbstractEventDispatcher::instance()->removeNativeEventFilter(keyboardHandler_);
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
@@ -437,16 +292,6 @@ QScreen *QAbstractVNCView::screen() const
   return qApp->screens()[0];
 }
 #endif
-
-void QAbstractVNCView::setMenuKeyStatus(quint32 keysym, bool checked)
-{
-  if (keysym == XK_Control_L) {
-    menuCtrlKey_ = checked;
-  }
-  else if (keysym == XK_Alt_L) {
-    menuAltKey_ = checked;
-  }
-}
 
 void QAbstractVNCView::disableIM()
 {
@@ -458,28 +303,11 @@ void QAbstractVNCView::enableIM()
 
 void QAbstractVNCView::resetKeyboard()
 {
-  while (!downKeySym_.empty()) {
-    handleKeyRelease(downKeySym_.begin()->first);
-  }
-}
-
-void QAbstractVNCView::handleKeyPress(int, quint32, bool)
-{
-}
-
-void QAbstractVNCView::handleKeyRelease(int)
-{
+  if(keyboardHandler_)
+    keyboardHandler_->resetKeyboard();
 }
 
 void QAbstractVNCView::setCursorPos(int, int)
-{
-}
-
-void QAbstractVNCView::pushLEDState()
-{
-}
-
-void QAbstractVNCView::setLEDState(unsigned int)
 {
 }
 
@@ -498,7 +326,7 @@ void QAbstractVNCView::maybeGrabKeyboard()
 
 void QAbstractVNCView::grabKeyboard()
 {
-  keyboardGrabbed_ = true;
+  keyboardHandler_->grabKeyboard();
 
   QPoint gpos = QCursor::pos();
   QPoint lpos = mapFromGlobal(gpos);
@@ -510,7 +338,7 @@ void QAbstractVNCView::grabKeyboard()
 
 void QAbstractVNCView::ungrabKeyboard()
 {
-  keyboardGrabbed_ = true;
+    keyboardHandler_->ungrabKeyboard();
 }
 
 void QAbstractVNCView::grabPointer()
@@ -528,10 +356,6 @@ void QAbstractVNCView::ungrabPointer()
 bool QAbstractVNCView::isFullscreenEnabled()
 {
   return fullscreenEnabled_;
-}
-
-void QAbstractVNCView::bell()
-{
 }
 
 void QAbstractVNCView::remoteResize(int w, int h)
@@ -671,6 +495,29 @@ void QAbstractVNCView::remoteResize(int w, int h)
   emit AppManager::instance()->connection()->writeSetDesktopSize(w, h, layout);
 }
 
+QRect QAbstractVNCView::toastGeometry() const
+{
+    int x = (width() - toastSize_.width()) / 2;
+    int y = 50;
+    return QRect(QPoint(x, y), toastSize_);
+}
+
+void QAbstractVNCView::showToast()
+{
+    qDebug() << "QAbstractVNCView::showToast" << toastGeometry();
+    toastTimer_->start();
+    damage += toastGeometry();
+    update(damage);
+}
+
+void QAbstractVNCView::hideToast()
+{
+    qDebug() << "QAbstractVNCView::hideToast";
+    toastTimer_->stop();
+    damage += toastGeometry();
+    update(damage);
+}
+
 // Copy the areas of the framebuffer that have been changed (damaged)
 // to the displayed window.
 void QAbstractVNCView::updateWindow()
@@ -734,6 +581,180 @@ void QAbstractVNCView::paintEvent(QPaintEvent *event)
   QRect rect = event->rect();
 
   painter.drawPixmap(rect, pixmap, rect);
+
+  if(toastTimer_->isActive())
+  {
+    QFont f;
+    f.setBold(true);
+    f.setPixelSize(14);
+    painter.setFont(f);
+    painter.setPen(Qt::NoPen);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setBrush(QColor("#96101010"));
+    painter.drawRoundedRect(toastGeometry(), 15, 15, Qt::AbsoluteSize);
+    QPen p;
+    p.setColor("#e0ffffff");
+    painter.setPen(p);
+    QString text = QString::asprintf(_("Press %s to open the context menu"), ViewerConfig::config()->menuKey().toStdString().c_str());
+    painter.drawText(toastGeometry(), text, QTextOption(Qt::AlignCenter));
+  }
+}
+
+void QAbstractVNCView::getMouseProperties(QMouseEvent* event, int& x, int& y, int& buttonMask, int& wheelMask)
+{
+    buttonMask = 0;
+    wheelMask  = 0;
+    if (event->buttons() & Qt::LeftButton)
+    {
+        buttonMask |= 1;
+    }
+    if (event->buttons() & Qt::MiddleButton)
+    {
+        buttonMask |= 2;
+    }
+    if (event->buttons() & Qt::RightButton)
+    {
+        buttonMask |= 4;
+    }
+    if (event->buttons() & Qt::XButton1)
+    {
+        wheelMask |= 32;
+    }
+    if (event->buttons() & Qt::XButton2)
+    {
+        wheelMask |= 64;
+    }
+
+    x = event->x();
+    y = event->y();
+}
+
+void QAbstractVNCView::getMouseProperties(QWheelEvent* event, int& x, int& y, int& buttonMask, int& wheelMask)
+{
+    buttonMask = 0;
+    wheelMask  = 0;
+    if (event->buttons() & Qt::LeftButton)
+    {
+        buttonMask |= 1;
+    }
+    if (event->buttons() & Qt::MiddleButton)
+    {
+        buttonMask |= 2;
+    }
+    if (event->buttons() & Qt::RightButton)
+    {
+        buttonMask |= 4;
+    }
+    if (event->buttons() & Qt::XButton1)
+    {
+        wheelMask |= 32;
+    }
+    if (event->buttons() & Qt::XButton2)
+    {
+        wheelMask |= 64;
+    }
+    if (event->delta() > 0)
+    {
+        wheelMask |= 8;
+    }
+    if (event->delta() < 0)
+    {
+        wheelMask |= 16;
+    }
+
+    x = event->x();
+    y = event->y();
+}
+
+void QAbstractVNCView::mouseMoveEvent(QMouseEvent* event)
+{
+    // qDebug() << "QuickVNCItem::mousePressEvent" << event->x() << event->y();
+    grabPointer();
+    maybeGrabKeyboard();
+    int x, y, buttonMask, wheelMask;
+    getMouseProperties(event, x, y, buttonMask, wheelMask);
+    filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
+}
+
+void QAbstractVNCView::mousePressEvent(QMouseEvent* event)
+{
+    qDebug() << "QuickVNCItem::mousePressEvent";
+
+    if (ViewerConfig::config()->viewOnly())
+    {
+        return;
+    }
+
+    setFocus(Qt::FocusReason::MouseFocusReason);
+
+    int x, y, buttonMask, wheelMask;
+    getMouseProperties(event, x, y, buttonMask, wheelMask);
+    filterPointerEvent(rfb::Point(x, y), buttonMask);
+
+    grabPointer();
+    maybeGrabKeyboard();
+}
+
+void QAbstractVNCView::mouseReleaseEvent(QMouseEvent* event)
+{
+    qDebug() << "QuickVNCItem::mouseReleaseEvent";
+
+    if (ViewerConfig::config()->viewOnly())
+    {
+        return;
+    }
+
+    setFocus(Qt::FocusReason::MouseFocusReason);
+
+    int x, y, buttonMask, wheelMask;
+    getMouseProperties(event, x, y, buttonMask, wheelMask);
+    filterPointerEvent(rfb::Point(x, y), buttonMask);
+
+    grabPointer();
+    maybeGrabKeyboard();
+}
+
+void QAbstractVNCView::wheelEvent(QWheelEvent* event)
+{
+    qDebug() << "QuickVNCItem::wheelEvent";
+
+    int x, y, buttonMask, wheelMask;
+    getMouseProperties(event, x, y, buttonMask, wheelMask);
+    filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
+}
+
+void QAbstractVNCView::focusInEvent(QFocusEvent *event)
+{
+    qDebug() << "QVNCWinView::focusInEvent";
+    maybeGrabKeyboard();
+    disableIM();
+
+    //flushPendingClipboard();
+
+    // We may have gotten our lock keys out of sync with the server
+    // whilst we didn't have focus. Try to sort this out.
+    keyboardHandler_->pushLEDState();
+
+    // Resend Ctrl/Alt if needed
+    if (keyboardHandler_->menuCtrlKey()) {
+        keyboardHandler_->handleKeyPress(0x1d, XK_Control_L);
+    }
+    if (keyboardHandler_->menuAltKey()) {
+        keyboardHandler_->handleKeyPress(0x38, XK_Alt_L);
+    }
+    QWidget::focusInEvent(event);
+}
+
+void QAbstractVNCView::focusOutEvent(QFocusEvent *event)
+{
+    qDebug() << "QVNCWinView::focusOutEvent";
+    if (ViewerConfig::config()->fullscreenSystemKeys()) {
+        ungrabKeyboard();
+    }
+    // We won't get more key events, so reset our knowledge about keys
+    resetKeyboard();
+    enableIM();
+    QWidget::focusOutEvent(event);
 }
 
 void QAbstractVNCView::handleDesktopSize()
@@ -798,7 +819,6 @@ void QAbstractVNCView::fullscreen(bool enabled)
   resizeTimer_->stop();
   QApplication *app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
-  setWindowManager();
   if (enabled) {
     // cf. DesktopWindow::fullscreen_on()
     if (!isFullscreenEnabled()) {
