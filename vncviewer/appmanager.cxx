@@ -29,6 +29,7 @@
 #include "infodialog.h"
 #include "messagedialog.h"
 #include "alertdialog.h"
+#include "optionsdialog.h"
 #undef asprintf
 
 #if defined(WIN32)
@@ -201,7 +202,8 @@ void AppManager::openInfoDialog()
 
 void AppManager::openOptionDialog()
 {
-  // xTODO
+  OptionsDialog d;
+  d.exec();
 }
 
 void AppManager::openAboutDialog()

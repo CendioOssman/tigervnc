@@ -2,6 +2,7 @@
 #include "config.h"
 #endif
 #include <QApplication>
+#include <QIcon>
 #include "parameters.h"
 #include "appmanager.h"
 #include "vncapplication.h"
@@ -28,13 +29,13 @@ int main(int argc, char *argv[])
   app.setOrganizationDomain("tigervnc.org");
   app.setApplicationName("vncviewer");
   app.setApplicationDisplayName("TigerVNC Viewer");
+  app.setWindowIcon(QIcon(":/tigervnc.png"));
 
   ViewerConfig::initialize();
   AppManager::initialize();
 
   VNCTranslator translator;
   app.installTranslator(&translator);
-
 
   if (!ViewerConfig::config()->serverName().isEmpty()) {
     AppManager::instance()->connectToServer(ViewerConfig::config()->serverName());

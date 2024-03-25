@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="tigervnc.png">../media/icons/tigervnc.png</file>
+    </qresource>
+</RCC>

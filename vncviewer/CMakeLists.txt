@@ -120,6 +120,19 @@ set(PROJECT_SOURCES
         messagedialog.h
         alertdialog.cxx
         alertdialog.h
+        optionsdialog.cxx
+        optionsdialog.h
+        options/compressiontab.cxx
+        options/compressiontab.h
+        options/inputtab.cxx
+        options/inputtab.h
+        options/displaytab.cxx
+        options/displaytab.h
+        options/misctab.cxx
+        options/misctab.h
+        options/securitytab.cxx
+        options/securitytab.h
+        res.qrc
         ${OS_DEP_SOURCES}
 )
 
