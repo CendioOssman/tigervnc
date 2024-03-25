@@ -2,7 +2,6 @@
 #include <config.h>
 #endif
 
-#include <QQmlEngine>
 #include <QTcpSocket>
 #include <QScreen>
 #include <QProcess>
@@ -25,6 +24,11 @@
 #include "abstractvncview.h"
 #include "vncwindow.h"
 #include "appmanager.h"
+#include "aboutdialog.h"
+#include "authdialog.h"
+#include "infodialog.h"
+#include "messagedialog.h"
+#include "alertdialog.h"
 #undef asprintf
 
 #if defined(WIN32)
@@ -44,10 +48,6 @@ AppManager::AppManager()
  , view_(nullptr)
  , scroll_(new QVNCWindow)
  , rfbTimerProxy_(new QTimer)
- , visibleInfo_(false)
-#if defined(__APPLE__)
- , overlay_(new QQuickWidget(scroll_))
-#endif
 {
   connect(this, &AppManager::connectToServerRequested, facade_, &QVNCConnection::connectToServer);
   connect(facade_, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
@@ -62,11 +62,10 @@ AppManager::AppManager()
   });
   rfbTimerProxy_->setSingleShot(true);
 
-#if defined(__APPLE__)
-  overlay_->setAttribute(Qt::WA_NativeWindow);
-  overlay_->setResizeMode(QQuickWidget::SizeViewToRootObject);
-  overlay_->setWindowFlags(Qt::Window | Qt::CustomizeWindowHint | Qt::WindowTitleHint);
-#endif
+  connect(this, &AppManager::credentialRequested, this, [=](bool secured, bool userNeeded, bool passwordNeeded) {
+      AuthDialog d(secured, userNeeded, passwordNeeded);
+      d.exec();
+  });
 }
 
 AppManager::~AppManager()
@@ -78,25 +77,11 @@ AppManager::~AppManager()
     view_->deleteLater();
   }
   rfbTimerProxy_->deleteLater();
-#if defined(__APPLE__)
-  if (overlay_) {
-    overlay_->deleteLater();
-  }
-#endif
 }
 
 int AppManager::initialize()
 {
-  qRegisterMetaType<QAbstractSocket::SocketError>("QAbstractSocket::SocketError");
-  qRegisterMetaType<QAbstractSocket::SocketState>("QAbstractSocket::SocketState");
-  qRegisterMetaType<QProcess::ProcessError>("QProcess::ProcessError");
-  qmlRegisterType<QVNCConnection>("Qt.TigerVNC", 1, 0, "VNCConnection");
   manager_ = new AppManager();
-  qmlRegisterSingletonType<AppManager>("Qt.TigerVNC", 1, 0, "AppManager", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
-    Q_UNUSED(engine)
-    Q_UNUSED(scriptEngine)
-    return manager_;
-  });
   return 0;
 }
 
@@ -126,14 +111,10 @@ void AppManager::publishError(const QString message, bool quit)
   if (!quit) {
     text = QString::asprintf(_("%s\n\nAttempt to reconnect?"), message.toStdString().c_str());
   }
-#if defined(__APPLE__)
-  openOverlay("qrc:/qml/AlertDialogContent.qml", _("TigerVNC Viewer"), text.toStdString().c_str());
-  if (quit) {
-    QGuiApplication::exit(0);
-  }
-#else
-  emit errorOcurred(error_++, text, quit);
-#endif
+  error_++;
+
+  AlertDialog d(message, quit);
+  d.exec();
 }
 
 void AppManager::openVNCWindow(int width, int height, QString name)
@@ -214,68 +195,24 @@ void AppManager::openContextMenu()
 
 void AppManager::openInfoDialog()
 {
-  view_->dim(true);
-  visibleInfo_ = true;
-  emit visibleInfoChanged();
-#if defined(__APPLE__)
-  openOverlay("qrc:/qml/InfoDialogContent.qml", _("VNC connection info"));
-#else
-  emit infoDialogRequested();
-#endif
+  InfoDialog d;
+  d.exec();
 }
 
 void AppManager::openOptionDialog()
 {
-  view_->dim(true);
-#if defined(__APPLE__)
-  openOverlay("qrc:/qml/OptionDialogContent.qml", _("TigerVNC Options"));
-#else
-  emit optionDialogRequested();
-#endif
+  // xTODO
 }
 
 void AppManager::openAboutDialog()
 {
-  view_->dim(true);
-#if defined(__APPLE__)
-  openOverlay("qrc:/qml/AboutDialogContent.qml", _("About TigerVNC Viewer"));
-#else
-  emit aboutDialogRequested();
-#endif
+  AboutDialog d;
+  d.exec();
 }
 
-void AppManager::respondToMessage(int response)
+void AppManager::openMessageDialog(int flags, QString title, QString text)
 {
+  MessageDialog d(flags, title, text);
+  int response = d.exec() == QDialog::Accepted ? 1 : 0;
   emit messageResponded(response);
-}
-
-#if defined(__APPLE__)
-void AppManager::openOverlay(QString qml, const char *title, const char *message)
-{
-  overlay_->setWindowTitle(title);
-  overlay_->setSource(QUrl(qml));
-  overlay_->show();
-  WId winid = overlay_->winId();
-  cocoa_set_overlay_property(winid);
-  if (message) {
-    QQuickItem *item = overlay_->rootObject()->findChild<QQuickItem*>("AlertDialogMessageText");
-    if (item) {
-      qDebug() << "AppManager::openOverlay: message=" << message;
-      item->setProperty("text", message);
-    }
-  }
-  connect(this, &AppManager::closeOverlayRequested, overlay_, &QQuickWidget::hide);
-}
-#endif
-
-void AppManager::closeOverlay()
-{
-  if (view_) {
-    view_->dim(false);
-  }
-  visibleInfo_ = false;
-  emit visibleInfoChanged();
-#if defined(__APPLE__)
-  emit closeOverlayRequested();
-#endif
 }

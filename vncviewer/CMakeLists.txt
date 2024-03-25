@@ -7,24 +7,18 @@ include_directories(SYSTEM ${GETTEXT_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/common)
 
 #list(APPEND CMAKE_PREFIX_PATH "/opt/Qt/Static/6.2.4/gcc_64s")
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Quick QuickWidgets Widgets REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Quick QuickWidgets Widgets REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Network Widgets REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network Widgets REQUIRED)
 if(QT_VERSION_MAJOR LESS_EQUAL 5 AND BUILD_STATIC)
   find_package(QT NAMES Qt6 Qt5 COMPONENTS
                Gui
-               Qml
-               QmlWorkerScript
-               QuickControls2
-               QuickWidgets
+               Network
                Svg
                ThemeSupport
                REQUIRED)
   find_package(Qt5 COMPONENTS
                Gui
-               Qml
-               QmlWorkerScript
-               QuickControls2
-               QuickWidgets
+               Network
                Svg
                ThemeSupport
                REQUIRED)
@@ -114,7 +108,18 @@ set(PROJECT_SOURCES
         BaseTouchHandler.cxx
         BaseTouchHandler.h
         GestureEvent.h
-        qml.qrc
+        serverdialog.cxx
+        serverdialog.h
+        aboutdialog.cxx
+        aboutdialog.h
+        authdialog.cxx
+        authdialog.h
+        infodialog.cxx
+        infodialog.h
+        messagedialog.cxx
+        messagedialog.h
+        alertdialog.cxx
+        alertdialog.h
         ${OS_DEP_SOURCES}
 )
 
@@ -158,7 +163,8 @@ else()
         )
     else()
         if (WIN32)
-          set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc")
+
+set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc")
           add_executable(vncviewer
             ${PROJECT_SOURCES}
             ${APP_ICON_RESOURCE_WINDOWS}
@@ -167,10 +173,10 @@ else()
         if(APPLE)
           set(MACOSX_BUNDLE_BUNDLE_NAME "TigerVNC Viewer")
           set(MACOSX_BUNDLE_BUNDLE_VERSION "${VERSION}${BUILD}")
-          set(MACOSX_BUNDLE_COPYRIGHT "Copyright © 1998-2022 [many holders]")
+          set(MACOSX_BUNDLE_COPYRIGHT "Copyright © 1998-2024 [many holders]")
           set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.tigervnc.tigervnc")
           set(MACOSX_BUNDLE_ICON_FILE tigervnc.icns)
-          set(MACOSX_BUNDLE_INFO_STRING "${VERSION}, Copyright © 1998-2022 [many holders]")
+          set(MACOSX_BUNDLE_INFO_STRING "${VERSION}, Copyright © 1998-2024 [many holders]")
           set(MACOSX_BUNDLE_LONG_VERSION_STRING "TigerVNC Viewer ${VERSION}")
           set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${VERSION}")
           set(APP_ICON_MACOSX ${CMAKE_CURRENT_SOURCE_DIR}/../media/icons/tigervnc.icns)
@@ -202,8 +208,6 @@ if(QT_VERSION_MAJOR GREATER_EQUAL 6)
     target_link_libraries(vncviewer
       PRIVATE
       Qt${QT_VERSION_MAJOR}::Core
-      Qt${QT_VERSION_MAJOR}::Quick
-      Qt${QT_VERSION_MAJOR}::QuickWidgets
       Qt${QT_VERSION_MAJOR}::Widgets
       rfb network rdr os  ${OS_DEPENDENT_LIBRARIES})
   if(ENABLE_NLS)
@@ -214,18 +218,11 @@ if(QT_VERSION_MAJOR GREATER_EQUAL 6)
   endif()
 else()
     if(BUILD_STATIC)
-        find_package(Qt5QmlImportScanner REQUIRED)
-        qt5_import_qml_plugins(vncviewer)
-        qt5_import_plugins(vncviewer INCLUDE Qt${QT_VERSION_MAJOR}::QSvgPlugin)
         target_link_libraries(vncviewer
             PRIVATE
             Qt${QT_VERSION_MAJOR}::Core
             Qt${QT_VERSION_MAJOR}::Gui
-            Qt${QT_VERSION_MAJOR}::Qml
-            Qt${QT_VERSION_MAJOR}::QmlWorkerScript
-            Qt${QT_VERSION_MAJOR}::Quick
-            Qt${QT_VERSION_MAJOR}::QuickControls2
-            Qt${QT_VERSION_MAJOR}::QuickWidgets
+            Qt${QT_VERSION_MAJOR}::Network
             Qt${QT_VERSION_MAJOR}::Svg
             Qt${QT_VERSION_MAJOR}::ThemeSupport
             Qt${QT_VERSION_MAJOR}::Widgets
@@ -240,8 +237,7 @@ else()
         target_link_libraries(vncviewer
             PRIVATE
             Qt${QT_VERSION_MAJOR}::Core
-            Qt${QT_VERSION_MAJOR}::Quick
-            Qt${QT_VERSION_MAJOR}::QuickWidgets
+            Qt${QT_VERSION_MAJOR}::Network
             Qt${QT_VERSION_MAJOR}::Widgets
             rfb network rdr os ${OS_DEPENDENT_LIBRARIES})
         if(ENABLE_NLS)
@@ -254,7 +250,6 @@ else()
 endif()
 
 if(QT_VERSION_MAJOR EQUAL 6)
-    qt_import_qml_plugins(vncviewer)
     qt_finalize_executable(vncviewer)
 endif()
 
@@ -358,7 +353,7 @@ if(WIN32)
         add_custom_command(
             TARGET vncviewer
             POST_BUILD
-            COMMAND ${DEPLOYQT} ${RELDEB} --dir ${DEPLOY_DIR} --qmldir ${CMAKE_SOURCE_DIR}/vncviewer/qml --no-translations $<TARGET_FILE:vncviewer>)
+            COMMAND ${DEPLOYQT} ${RELDEB} --dir ${DEPLOY_DIR} --no-translations $<TARGET_FILE:vncviewer>)
     endif()
 
     if(ENABLE_NLS)
@@ -386,10 +381,6 @@ if(APPLE AND CMAKE_BUILD_TYPE MATCHES Release AND NOT BUILD_STATIC)
     add_custom_command(
         TARGET vncviewer
         POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E rm -rf "$<TARGET_FILE_DIR:vncviewer>/../Resources/qml")
-    add_custom_command(
-        TARGET vncviewer
-        POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "${DEPLOY_DIR}")
     add_custom_command(
         TARGET vncviewer
@@ -399,7 +390,7 @@ if(APPLE AND CMAKE_BUILD_TYPE MATCHES Release AND NOT BUILD_STATIC)
         TARGET vncviewer
         POST_BUILD
         WORKING_DIRECTORY "${DEPLOY_DIR}"
-        COMMAND ${DEPLOYQT} "${DEPLOY_DIR}" "-dmg" "-always-overwrite" "-qmldir=${CMAKE_SOURCE_DIR}/vncviewer/qml" "-verbose=2")
+        COMMAND ${DEPLOYQT} "${DEPLOY_DIR}" "-dmg" "-always-overwrite" "-verbose=2")
 
         file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/../po/LINGUAS po_FILES)
         foreach(lang ${po_FILES})

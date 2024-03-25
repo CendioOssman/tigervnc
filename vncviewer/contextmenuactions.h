@@ -3,9 +3,11 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QScrollBar>
 #include "abstractvncview.h"
 #include "appmanager.h"
 #include "parameters.h"
+#include "vncwindow.h"
 
 class QMenuSeparator : public QAction
 {
@@ -51,11 +53,10 @@ public:
         : QAction(text, parent)
     {
         connect(this, &QAction::triggered, this, []() {
-            // xTODO
-            // QVNCWindow *window = AppManager::instance()->window();
-            // QAbstractVNCView *view = AppManager::instance()->view();
-            // window->normalizedResize(view->width() + window->horizontalScrollBar()->width(), view->height() + window->verticalScrollBar()->height()); // Needed to hide scrollbars.
-            // window->normalizedResize(view->width(), view->height());
+            QVNCWindow *window = AppManager::instance()->window();
+            QAbstractVNCView *view = AppManager::instance()->view();
+            window->normalizedResize(view->width() + window->horizontalScrollBar()->width(), view->height() + window->verticalScrollBar()->height()); // Needed to hide scrollbars.
+            window->normalizedResize(view->width(), view->height());
         });
         connect(ViewerConfig::config(), &ViewerConfig::fullScreenChanged, this, [this](bool enabled) {
             setEnabled(!enabled); // cf. Viewport::initContextMenu()

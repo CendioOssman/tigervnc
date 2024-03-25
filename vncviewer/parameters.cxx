@@ -23,9 +23,9 @@
 #endif
 
 #include <QApplication>
-#include <QQmlEngine>
 #include <QDir>
 #include <QTextStream>
+#include <QDate>
 
 #if !defined(WIN32)
 #include <sys/stat.h>
@@ -1031,12 +1031,6 @@ ViewerConfig::~ViewerConfig()
 int ViewerConfig::initialize()
 {
   config_ = new ViewerConfig();
-  qRegisterMetaType<ViewerConfig::FullScreenMode>("ViewerConfig::FullScreenMode");
-  qmlRegisterSingletonType<ViewerConfig>("Qt.TigerVNC", 1, 0, "Config", [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
-    Q_UNUSED(engine)
-    Q_UNUSED(scriptEngine)
-    return config_;
-  });
   return 0;
 }
 
@@ -1143,6 +1137,16 @@ void ViewerConfig::setServerHistory(QStringList history)
     saveServerHistory();
     emit serverHistoryChanged(history);
   }
+}
+
+void ViewerConfig::addToServerHistory(QString value)
+{
+    if(!serverHistory_.contains(value))
+    {
+        serverHistory_.append(value);
+        saveServerHistory();
+        emit serverHistoryChanged(serverHistory_);
+    }
 }
 
 void ViewerConfig::saveServerHistory()
@@ -1680,7 +1684,7 @@ QString ViewerConfig::aboutText()
   return QString::asprintf(_("TigerVNC Viewer v%s\n"
                    "Built on: %s\n"
                    "Copyright (C) 1999-%d TigerVNC Team and many others (see README.rst)\n"
-                   "See https://www.tigervnc.org for information on TigerVNC."), PACKAGE_VERSION, BUILD_TIMESTAMP, 2022);
+                   "See https://www.tigervnc.org for information on TigerVNC."), PACKAGE_VERSION, BUILD_TIMESTAMP, QDate::currentDate().year());
 }
 
 void ViewerConfig::usage()

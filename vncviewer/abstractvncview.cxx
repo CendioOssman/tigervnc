@@ -293,14 +293,6 @@ QScreen *QAbstractVNCView::screen() const
 }
 #endif
 
-void QAbstractVNCView::disableIM()
-{
-}
-
-void QAbstractVNCView::enableIM()
-{
-}
-
 void QAbstractVNCView::resetKeyboard()
 {
   if(keyboardHandler_)
@@ -727,7 +719,6 @@ void QAbstractVNCView::focusInEvent(QFocusEvent *event)
 {
     qDebug() << "QVNCWinView::focusInEvent";
     maybeGrabKeyboard();
-    disableIM();
 
     //flushPendingClipboard();
 
@@ -753,7 +744,6 @@ void QAbstractVNCView::focusOutEvent(QFocusEvent *event)
     }
     // We won't get more key events, so reset our knowledge about keys
     resetKeyboard();
-    enableIM();
     QWidget::focusOutEvent(event);
 }
 

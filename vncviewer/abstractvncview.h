@@ -45,10 +45,7 @@ public:
   void sendContextMenuKey();
   void sendCtrlAltDel();
   void toggleKey(bool toggle, int keyCode, quint32 keySym);
-  virtual void disableIM();
-  virtual void enableIM();
   virtual void resetKeyboard();
-  virtual void dim(bool enabled) {}
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
   QScreen *screen() const;

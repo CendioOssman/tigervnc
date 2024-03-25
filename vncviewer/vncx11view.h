@@ -14,7 +14,6 @@ class QVNCX11View : public QAbstractVNCView
 public:
   QVNCX11View(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~QVNCX11View();
-  void dim(bool enabled) override;
 
 public slots:
   void handleClipboardData(const char* data) override;

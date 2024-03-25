@@ -196,7 +196,3 @@ bool QVNCX11View::gestureEvent(QGestureEvent *event)
 void QVNCX11View::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight)
 {
 }
-
-void QVNCX11View::dim(bool enabled)
-{
-}

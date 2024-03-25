@@ -30,8 +30,6 @@ void VNCCredential::getUserPasswd(bool secure, std::string *user, std::string *p
     password->assign(envPassword.toStdString());
     return;
   }
-  emit manager->credentialRequested(secure, userNeeded, passwordNeeded);
-  QEventLoop loop;
   connect(AppManager::instance(), &AppManager::authenticateRequested, this, [&](QString userText, QString passwordText) {
     if (userNeeded) {
       user->assign(userText.toStdString());
@@ -39,13 +37,11 @@ void VNCCredential::getUserPasswd(bool secure, std::string *user, std::string *p
     if (passwordNeeded) {
       password->assign(passwordText.toStdString());
     }
-    loop.quit();
   });
   connect(AppManager::instance(), &AppManager::cancelAuthRequested, this, [&]() {
-    loop.quit();
     canceled = true;
   });
-  loop.exec();
+  emit manager->credentialRequested(secure, userNeeded, passwordNeeded);
   if (canceled) {
     throw rfb::AuthCancelledException();
   }
@@ -55,12 +51,9 @@ bool VNCCredential::showMsgBox(int flags, const char* title, const char* text)
 {
   int result = 0;
   AppManager *manager = AppManager::instance();
-  emit manager->messageDialogRequested(flags, title, text);
-  QEventLoop loop;
+  emit manager->openMessageDialog(flags, title, text);
   connect(AppManager::instance(), &AppManager::messageResponded, this, [&](int response) {
     result = response;
-    loop.quit();
   });
-  loop.exec();
   return result;
 }

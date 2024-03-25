@@ -124,7 +124,8 @@ void QVNCWindow::focusInEvent(QFocusEvent *)
 {
   qDebug() << "QVNCWindow::focusInEvent";
   QAbstractVNCView *view = (QAbstractVNCView *)widget();
-  view->maybeGrabKeyboard();
+  if(view)
+    view->maybeGrabKeyboard();
 }
 
 void QVNCWindow::focusOutEvent(QFocusEvent *)
@@ -132,7 +133,8 @@ void QVNCWindow::focusOutEvent(QFocusEvent *)
   qDebug() << "QVNCWindow::focusOutEvent";
   if (ViewerConfig::config()->fullscreenSystemKeys()) {
     QAbstractVNCView *view = (QAbstractVNCView *)widget();
-    view->ungrabKeyboard();
+    if(view)
+      view->ungrabKeyboard();
   }
 }
 

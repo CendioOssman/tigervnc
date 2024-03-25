@@ -180,6 +180,7 @@ public:
   //
   QStringList serverHistory() const { return serverHistory_; }
   void setServerHistory(QStringList history);
+  void addToServerHistory(QString value);
   QString serverName() const { return serverName_; }
   void usage();
   bool listenModeEnabled() const;

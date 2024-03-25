@@ -7,18 +7,13 @@
 class QAbstractVNCView;
 class QVNCWindow;
 class QTimer;
-#if defined(__APPLE__)
-class QQuickWidget;
-#endif
 
 class AppManager : public QObject
 {
   Q_OBJECT
-  Q_PROPERTY(int error READ error NOTIFY errorOcurred)
   Q_PROPERTY(QVNCConnection *connection READ connection CONSTANT)
   Q_PROPERTY(QAbstractVNCView *view READ view CONSTANT)
   Q_PROPERTY(QVNCWindow *window READ window CONSTANT)
-  Q_PROPERTY(bool visibleInfo READ visibleInfo NOTIFY visibleInfoChanged)
 
 public:
   virtual ~AppManager();
@@ -28,10 +23,8 @@ public:
   int error() const { return error_; }
   QAbstractVNCView *view() const { return view_; }
   QVNCWindow *window() const { return scroll_; }
-  bool visibleInfo() const { return visibleInfo_; }
 
 signals:
-  void errorOcurred(int seq, QString message, bool quit = false);
   void credentialRequested(bool secured, bool userNeeded, bool passwordNeeded);
   void messageDialogRequested(int flags, QString title, QString text);
   void dataReady(QByteArray bytes);
@@ -44,13 +37,8 @@ signals:
   void invalidateRequested(int x0, int y0, int x1, int y1);
   void refreshRequested();
   void contextMenuRequested();
-  void infoDialogRequested();
-  void optionDialogRequested();
-  void aboutDialogRequested();
   void vncWindowOpened();
   void vncWindowClosed();
-  void closeOverlayRequested();
-  void visibleInfoChanged();
 
 public slots:
   void publishError(const QString message, bool quit = false);
@@ -75,8 +63,7 @@ public slots:
   void openInfoDialog();
   void openOptionDialog();
   void openAboutDialog();
-  void respondToMessage(int response);
-  void closeOverlay();
+  void openMessageDialog(int flags, QString title, QString text);
 
 private:
   static AppManager *manager_;
@@ -85,11 +72,6 @@ private:
   QAbstractVNCView *view_;
   QVNCWindow *scroll_;
   QTimer *rfbTimerProxy_;
-  bool visibleInfo_;
-#if defined(__APPLE__)
-  QQuickWidget *overlay_;
-  void openOverlay(QString qml, const char *title, const char *message = nullptr);
-#endif
   AppManager();
 };
 

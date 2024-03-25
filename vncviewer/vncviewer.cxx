@@ -2,37 +2,11 @@
 #include "config.h"
 #endif
 #include <QApplication>
-#include <QQmlApplicationEngine>
-#include <QQuickImageProvider>
-#include <QStyle>
 #include "parameters.h"
 #include "appmanager.h"
 #include "vncapplication.h"
-#include "vncconnection.h"
 #include "vnctranslator.h"
-
-class StandardIconProvider : public QQuickImageProvider
-{
-public:
-  StandardIconProvider(QStyle *style)
-    : QQuickImageProvider(Pixmap)
-    , style_(style)
-  {}
-
-  QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) override
-  {
-    Q_UNUSED(size)
-    const int defaultWidth = 48;
-    const int defaultHeight = 48;
-    QSize imageSize = { requestedSize.width() > 0 ? requestedSize.width() : defaultWidth, requestedSize.height() > 0 ? requestedSize.height() : defaultHeight };
-    static const auto metaobject = QMetaEnum::fromType<QStyle::StandardPixmap>();
-    const int value = metaobject.keyToValue(id.toLatin1());
-    QIcon icon = style_->standardIcon(static_cast<QStyle::StandardPixmap>(value));
-    return icon.pixmap(imageSize);
-  }
-private:
-  QStyle *style_;
-};
+#include "serverdialog.h"
 
 int main(int argc, char *argv[])
 {
@@ -52,7 +26,6 @@ int main(int argc, char *argv[])
 
   app.setOrganizationName("TigerVNC Team");
   app.setOrganizationDomain("tigervnc.org");
-  // This controls the WM_CLASS we get for all windows
   app.setApplicationName("vncviewer");
   app.setApplicationDisplayName("TigerVNC Viewer");
 
@@ -62,15 +35,14 @@ int main(int argc, char *argv[])
   VNCTranslator translator;
   app.installTranslator(&translator);
 
-  QQmlApplicationEngine engine;
-  engine.addImageProvider(QLatin1String("qticons"), new StandardIconProvider(app.style()));
-  const QUrl url(QStringLiteral("qrc:/qml/main.qml"));
-  QObject::connect(&engine, &QQmlApplicationEngine::objectCreated, &app, [url](QObject *obj, const QUrl &objUrl) {
-    if (!obj && url == objUrl) {
-      QCoreApplication::exit(-1);
-    }
-  }, Qt::QueuedConnection);
-  engine.load(url);
 
-  return app.exec();
+  if (!ViewerConfig::config()->serverName().isEmpty()) {
+    AppManager::instance()->connectToServer(ViewerConfig::config()->serverName());
+    return app.exec();
+  } else {
+    ServerDialog serverDialog;
+    serverDialog.setVisible(!ViewerConfig::config()->listenModeEnabled());
+    QObject::connect(AppManager::instance(), &AppManager::vncWindowOpened, &serverDialog, &QWidget::hide);
+    return app.exec();
+  }
 }
