@@ -23,6 +23,7 @@
 #include "rfb/LogWriter.h"
 #include "rfb/ServerParams.h"
 #include "rfb/PixelBuffer.h"
+#include "rfb/util.h"
 #include "EmulateMB.h"
 #include "BaseKeyboardHandler.h"
 #include "PlatformPixelBuffer.h"
@@ -77,6 +78,9 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
  , lastButtonMask_(0)
  , mousePointerTimer_(new QTimer)
  , toastTimer_(new QTimer(this))
+#ifdef QT_DEBUG
+ , fpsTimer(this)
+#endif
 {
   setAttribute(Qt::WA_OpaquePaintEvent);
 
@@ -127,6 +131,11 @@ QAbstractVNCView::QAbstractVNCView(QWidget *parent, Qt::WindowFlags f)
   toastTimer_->setSingleShot(true);
   connect(toastTimer_, &QTimer::timeout, this, &QAbstractVNCView::hideToast);
   connect(this, &QAbstractVNCView::delayedInitialized, this, &QAbstractVNCView::showToast);
+
+#ifdef QT_DEBUG
+  gettimeofday(&fpsLast, NULL);
+  fpsTimer.start(5000);
+#endif
 }
 
 QAbstractVNCView::~QAbstractVNCView()
@@ -591,7 +600,50 @@ void QAbstractVNCView::paintEvent(QPaintEvent *event)
     QString text = QString::asprintf(_("Press %s to open the context menu"), ViewerConfig::config()->menuKey().toStdString().c_str());
     painter.drawText(toastGeometry(), text, QTextOption(Qt::AlignCenter));
   }
+
+#ifdef QT_DEBUG
+  fpsCounter++;
+  QFont f;
+  f.setBold(true);
+  f.setPixelSize(14);
+  painter.setFont(f);
+  painter.setPen(Qt::NoPen);
+  painter.setRenderHint(QPainter::Antialiasing);
+  painter.setBrush(QColor("#96101010"));
+  painter.drawRect(fpsRect);
+  QPen p;
+  p.setColor("#e0ffffff");
+  painter.setPen(p);
+  QString text = QString("%1 fps").arg(fpsValue);
+  painter.drawText(fpsRect, text, QTextOption(Qt::AlignCenter));
+#endif
 }
+
+#ifdef QT_DEBUG
+bool QAbstractVNCView::handleTimeout(rfb::Timer* t)
+{
+    struct timeval now;
+    int            count;
+
+    gettimeofday(&now, NULL);
+    count = fpsCounter;
+
+    fpsValue = int(count * 1000.0 / rfb::msSince(&fpsLast));
+
+    vlog.info("%d frames in %g seconds = %d FPS",
+              count,
+              rfb::msSince(&fpsLast) / 1000.0,
+              fpsValue);
+
+    fpsCounter -= count;
+    fpsLast = now;
+
+    damage += fpsRect;
+    update(damage);
+
+    return true;
+}
+#endif
 
 void QAbstractVNCView::getMouseProperties(QMouseEvent* event, int& x, int& y, int& buttonMask, int& wheelMask)
 {

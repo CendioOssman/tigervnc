@@ -6,6 +6,8 @@
 #include <QList>
 #include <QLabel>
 
+#include <rfb/Timer.h>
+
 class QMenu;
 class QAction;
 class QCursor;
@@ -26,6 +28,9 @@ namespace rfb {
 using DownMap = std::map<int, quint32>;
 
 class QAbstractVNCView : public QWidget
+#ifdef QT_DEBUG
+    , public rfb::Timer::Callback
+#endif
 {
   Q_OBJECT
 
@@ -67,6 +72,9 @@ public slots:
   void showToast();
   void hideToast();
   void paintEvent(QPaintEvent *event) override;
+#ifdef QT_DEBUG
+  bool handleTimeout(rfb::Timer* t) override;
+#endif
   void getMouseProperties(QMouseEvent* event, int& x, int& y, int& buttonMask, int& wheelMask);
   void getMouseProperties(QWheelEvent* event, int& x, int& y, int& buttonMask, int& wheelMask);
   void mouseMoveEvent(QMouseEvent* event) override;
@@ -145,6 +153,13 @@ protected:
 private:
   QTimer *toastTimer_;
   QSize toastSize_ = { 300, 40 };
+#ifdef QT_DEBUG
+  QAtomicInt fpsCounter;
+  int fpsValue = 0;
+  QRect fpsRect = { 10, 10, 100, 20};
+  struct timeval fpsLast;
+  rfb::Timer fpsTimer;
+#endif
 };
 
 #endif // ABSTRACTVNCVIEW_H
