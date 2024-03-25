@@ -31,6 +31,7 @@
 #include "PlatformPixelBuffer.h"
 #include "vncgesturerecognizer.h"
 #include "GestureHandler.h"
+#include "X11KeyboardHandler.h"
 
 #include <X11/XKBlib.h>
 #include <X11/Xcursor/Xcursor.h>
@@ -52,21 +53,8 @@ static rfb::LogWriter vlog("QVNCX11View");
 
 QVNCGestureRecognizer *QVNCX11View::vncGestureRecognizer_ = nullptr;
 
-Bool eventIsFocusWithSerial(Display *display, XEvent *event, XPointer arg)
-{
-  unsigned long serial = *(unsigned long*)arg;
-  if (event->xany.serial != serial) {
-    return False;
-  }
-  if ((event->type != FocusIn) && (event->type != FocusOut)) {
-    return False;
-  }
-  return True;
-}
-
 QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   : QAbstractVNCView(parent, f)
-  , display_(nullptr)
   , gestureHandler_(new GestureHandler)
   , eventNumber_(0)
 #if 0
@@ -86,6 +74,9 @@ QVNCX11View::QVNCX11View(QWidget *parent, Qt::WindowFlags f)
   grabGesture(Qt::SwipeGesture);
   grabGesture(Qt::CustomGesture);
   QGestureRecognizer::registerRecognizer(vncGestureRecognizer_);
+
+  keyboardHandler_ = new X11KeyboardHandler(this);
+  initKeyboardHandler();
 }
 
 QVNCX11View::~QVNCX11View()

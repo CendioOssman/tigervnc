@@ -330,7 +330,8 @@ void QAbstractVNCView::grabKeyboard()
 
 void QAbstractVNCView::ungrabKeyboard()
 {
-    keyboardHandler_->ungrabKeyboard();
+    if(keyboardHandler_)
+        keyboardHandler_->ungrabKeyboard();
 }
 
 void QAbstractVNCView::grabPointer()
@@ -718,20 +719,23 @@ void QAbstractVNCView::wheelEvent(QWheelEvent* event)
 void QAbstractVNCView::focusInEvent(QFocusEvent *event)
 {
     qDebug() << "QVNCWinView::focusInEvent";
-    maybeGrabKeyboard();
+    if(keyboardHandler_)
+    {
+        maybeGrabKeyboard();
 
-    //flushPendingClipboard();
+        //flushPendingClipboard();
 
-    // We may have gotten our lock keys out of sync with the server
-    // whilst we didn't have focus. Try to sort this out.
-    keyboardHandler_->pushLEDState();
+        // We may have gotten our lock keys out of sync with the server
+        // whilst we didn't have focus. Try to sort this out.
+        keyboardHandler_->pushLEDState();
 
-    // Resend Ctrl/Alt if needed
-    if (keyboardHandler_->menuCtrlKey()) {
-        keyboardHandler_->handleKeyPress(0x1d, XK_Control_L);
-    }
-    if (keyboardHandler_->menuAltKey()) {
-        keyboardHandler_->handleKeyPress(0x38, XK_Alt_L);
+        // Resend Ctrl/Alt if needed
+        if (keyboardHandler_->menuCtrlKey()) {
+            keyboardHandler_->handleKeyPress(0x1d, XK_Control_L);
+        }
+        if (keyboardHandler_->menuAltKey()) {
+            keyboardHandler_->handleKeyPress(0x38, XK_Alt_L);
+        }
     }
     QWidget::focusInEvent(event);
 }

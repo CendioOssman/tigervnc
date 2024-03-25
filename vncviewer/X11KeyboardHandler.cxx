@@ -28,6 +28,8 @@
 #include <X11/Xcursor/Xcursor.h>
 #include <X11/extensions/Xrender.h>
 
+#include <QDebug>
+
 extern const struct _code_map_xkb_to_qnum
 {
   char const*          from;

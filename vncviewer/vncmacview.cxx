@@ -25,6 +25,7 @@
 #include "PlatformPixelBuffer.h"
 #include "vncwindow.h"
 #include "vncmacview.h"
+#include "MacKeyboardHandler.h"
 
 #include <QDebug>
 #include <QMouseEvent>
@@ -57,6 +58,9 @@ QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
   setAttribute(Qt::WA_NoSystemBackground);
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
+
+  keyboardHandler_ = new MacKeyboardHandler(this);
+  initKeyboardHandler();
 }
 
 QVNCMacView::~QVNCMacView()
