@@ -213,6 +213,8 @@ if(APPLE)
     set_target_properties(vncviewer PROPERTIES MACOSX_BUNDLE TRUE)
 endif()
 
+set_target_properties(vncviewer PROPERTIES LINK_FLAGS -Wl,--stack,100000000)
+
 target_compile_definitions(vncviewer
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 target_include_directories(vncviewer SYSTEM PUBLIC ${GETTEXT_INCLUDE_DIR})
