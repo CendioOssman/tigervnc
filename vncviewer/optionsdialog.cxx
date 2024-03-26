@@ -36,7 +36,7 @@ OptionsDialog::OptionsDialog(QWidget *parent)
 
     setLayout(layout);
 
-    setMinimumSize(1024, 600);
+    setMinimumSize(600, 600);
 
     reset();
 
@@ -53,6 +53,7 @@ void OptionsDialog::apply()
             w->apply();
         }
     }
+    close();
 }
 
 void OptionsDialog::reset()

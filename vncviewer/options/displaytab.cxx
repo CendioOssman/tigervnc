@@ -1,4 +1,5 @@
 #include "displaytab.h"
+#include "screensselectionwidget.h"
 #include "parameters.h"
 
 #include <QVBoxLayout>
@@ -21,12 +22,17 @@ DisplayTab::DisplayTab(QWidget *parent)
     vbox1->addWidget(displayFullScreenOnAllMonitors);
     displayFullScreenOnSelectedMonitors = new QRadioButton(tr("Full screen on selected monitor(s)"));
     vbox1->addWidget(displayFullScreenOnSelectedMonitors);
+    selectedScreens = new ScreensSelectionWidget;
+    selectedScreens->setEnabled(false);
+    vbox1->addWidget(selectedScreens, 1);
     groupBox1->setLayout(vbox1);
-    layout->addWidget(groupBox1);
-
-    layout->addStretch(1);
+    layout->addWidget(groupBox1, 1);
 
     setLayout(layout);
+
+    connect(displayFullScreenOnSelectedMonitors, &QRadioButton::toggled, this, [=](bool checked){
+        selectedScreens->setEnabled(checked);
+    });
 }
 
 void DisplayTab::apply()
@@ -42,6 +48,7 @@ void DisplayTab::apply()
         ViewerConfig::config()->setFullScreen(false);
         ViewerConfig::config()->setFullScreen(true);
     }
+    selectedScreens->apply();
 }
 
 void DisplayTab::reset()
@@ -50,4 +57,5 @@ void DisplayTab::reset()
     displayFullScreenOnCurrentMonitor->setChecked(ViewerConfig::config()->fullScreen() && ViewerConfig::config()->fullScreenMode() == ViewerConfig::FSCurrent);
     displayFullScreenOnAllMonitors->setChecked(ViewerConfig::config()->fullScreen() && ViewerConfig::config()->fullScreenMode() == ViewerConfig::FSAll);
     displayFullScreenOnSelectedMonitors->setChecked(ViewerConfig::config()->fullScreen() && ViewerConfig::config()->fullScreenMode() == ViewerConfig::FSSelected);
+    selectedScreens->reset();
 }

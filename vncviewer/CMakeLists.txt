@@ -132,6 +132,8 @@ set(PROJECT_SOURCES
         options/misctab.h
         options/securitytab.cxx
         options/securitytab.h
+        options/screensselectionwidget.cxx
+        options/screensselectionwidget.h
         res.qrc
         ${OS_DEP_SOURCES}
 )

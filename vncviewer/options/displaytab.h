@@ -4,6 +4,7 @@
 #include <QWidget>
 #include "../optionsdialog.h"
 
+class ScreensSelectionWidget;
 class QRadioButton;
 
 class DisplayTab : public TabElement
@@ -20,6 +21,7 @@ private:
     QRadioButton* displayFullScreenOnCurrentMonitor;
     QRadioButton* displayFullScreenOnAllMonitors;
     QRadioButton* displayFullScreenOnSelectedMonitors;
+    ScreensSelectionWidget* selectedScreens;
 };
 
 #endif // DISPLAYTAB_H
