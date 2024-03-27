@@ -83,7 +83,7 @@ bool Win32KeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menu
   }
 
   if (ViewerConfig::config()->viewOnly())
-    return true;
+    return false;
 
   if (keyCode == 0)
   {
@@ -121,7 +121,7 @@ bool Win32KeyboardHandler::handleKeyRelease(int keyCode)
   DownMap::iterator iter;
 
   if (ViewerConfig::config()->viewOnly())
-    return true;
+    return false;
 
   iter = downKeySym_.find(keyCode);
   if (iter == downKeySym_.end())
