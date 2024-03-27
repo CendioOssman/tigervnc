@@ -497,13 +497,6 @@ void QAbstractVNCView::remoteResize(int w, int h)
   emit AppManager::instance()->connection()->writeSetDesktopSize(w, h, layout);
 }
 
-QRect QAbstractVNCView::toastGeometry() const
-{
-    int x = (width() - toastSize_.width()) / 2;
-    int y = 50;
-    return QRect(QPoint(x, y), toastSize_);
-}
-
 void QAbstractVNCView::showToast()
 {
     qDebug() << "QAbstractVNCView::showToast" << toastGeometry();
@@ -518,6 +511,30 @@ void QAbstractVNCView::hideToast()
     toastTimer_->stop();
     damage += toastGeometry();
     update(damage);
+}
+
+QFont QAbstractVNCView::toastFont() const
+{
+    QFont f;
+    f.setBold(true);
+    f.setPixelSize(14);
+    return f;
+}
+
+QString QAbstractVNCView::toastText() const
+{
+    return QString::asprintf(_("Press %s to open the context menu"), ViewerConfig::config()->menuKey().toStdString().c_str());
+}
+
+QRect QAbstractVNCView::toastGeometry() const
+{
+    QFontMetrics fm(toastFont());
+    int b = 8;
+    QRect r = fm.boundingRect(toastText()).adjusted(-2*b,-2*b,2*b,2*b);
+
+    int x = (width() - r.width()) / 2;
+    int y = 50;
+    return QRect(QPoint(x, y), r.size());
 }
 
 // Copy the areas of the framebuffer that have been changed (damaged)
@@ -586,10 +603,7 @@ void QAbstractVNCView::paintEvent(QPaintEvent *event)
 
   if(toastTimer_->isActive())
   {
-    QFont f;
-    f.setBold(true);
-    f.setPixelSize(14);
-    painter.setFont(f);
+    painter.setFont(toastFont());
     painter.setPen(Qt::NoPen);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setBrush(QColor("#96101010"));
@@ -597,16 +611,12 @@ void QAbstractVNCView::paintEvent(QPaintEvent *event)
     QPen p;
     p.setColor("#e0ffffff");
     painter.setPen(p);
-    QString text = QString::asprintf(_("Press %s to open the context menu"), ViewerConfig::config()->menuKey().toStdString().c_str());
-    painter.drawText(toastGeometry(), text, QTextOption(Qt::AlignCenter));
+    painter.drawText(toastGeometry(), toastText(), QTextOption(Qt::AlignCenter));
   }
 
 #ifdef QT_DEBUG
   fpsCounter++;
-  QFont f;
-  f.setBold(true);
-  f.setPixelSize(14);
-  painter.setFont(f);
+  painter.setFont(toastFont());
   painter.setPen(Qt::NoPen);
   painter.setRenderHint(QPainter::Antialiasing);
   painter.setBrush(QColor("#96101010"));

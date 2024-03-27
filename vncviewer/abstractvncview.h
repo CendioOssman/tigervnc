@@ -67,10 +67,14 @@ public slots:
   virtual bool isFullscreenEnabled();
   virtual void bell() = 0;
   virtual void remoteResize(int width, int height);
-  virtual void updateWindow();
-  QRect toastGeometry() const;
   void showToast();
   void hideToast();
+
+protected:
+  QFont toastFont() const;
+  QString toastText() const;
+  QRect toastGeometry() const;
+  void updateWindow();
   void paintEvent(QPaintEvent *event) override;
 #ifdef QT_DEBUG
   bool handleTimeout(rfb::Timer* t) override;
@@ -83,6 +87,8 @@ public slots:
   void wheelEvent(QWheelEvent* event) override;
   void focusInEvent(QFocusEvent *event) override;
   void focusOutEvent(QFocusEvent *event) override;
+
+ public:
   virtual void handleDesktopSize();
   virtual void fullscreen(bool enabled);
   virtual void moveView(int x, int y);
@@ -151,8 +157,7 @@ protected:
   bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
-  QTimer *toastTimer_;
-  QSize toastSize_ = { 300, 40 };
+  QTimer* toastTimer_;
 #ifdef QT_DEBUG
   QAtomicInt fpsCounter;
   int fpsValue = 0;
