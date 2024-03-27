@@ -88,6 +88,39 @@ jobs:
           name: Windows
           path: build/release/tigervnc*.exe
 
+  build-windows-qt6:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: msys2/setup-msys2@v2
+      - name: Install dependencies
+        run: |
+          pacman --sync --noconfirm --needed \
+            make mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake
+          pacman --sync --noconfirm --needed \
+            mingw-w64-x86_64-libjpeg-turbo \
+            mingw-w64-x86_64-gnutls mingw-w64-x86_64-pixman \
+            mingw-w64-x86_64-nettle mingw-w64-x86_64-gmp \
+            mingw-w64-x86_64-qt6-base
+      - name: Configure
+        run: cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Debug -S . -B build
+      - name: Build
+        working-directory: build
+        run: make
+      - name: Install
+        working-directory: build
+        env:
+          MSYS2_PATH_TYPE: inherit
+        run: make installer winvnc_installer
+      - uses: actions/upload-artifact@v3
+        with:
+          name: Windows
+          path: build/release/tigervnc*.exe
+
   build-macos:
     runs-on: macos-latest
     timeout-minutes: 20
@@ -101,6 +134,31 @@ jobs:
       - name: Configure
         run: |
           export PATH="/usr/local/opt/qt@5/bin:$PATH"
+          cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
+      - name: Build
+        working-directory: build
+        run: make
+      - name: Install
+        working-directory: build
+        run: make dmg
+      - uses: actions/upload-artifact@v3
+        with:
+          name: macOS
+          path: build/TigerVNC-*.dmg
+
+  build-macos-qt6:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          brew install pixman ffmpeg
+          brew install gnutls nettle gmp
+          brew install qt@6
+      - name: Configure
+        run: |
+          export PATH="/usr/local/opt/qt@6/bin:$PATH"
           cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
         working-directory: build
