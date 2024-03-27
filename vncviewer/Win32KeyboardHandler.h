@@ -13,7 +13,11 @@ class Win32KeyboardHandler : public BaseKeyboardHandler
 public:
   Win32KeyboardHandler(QObject* parent = nullptr);
 
-  bool nativeEventFilter(QByteArray const& eventType, void* message, long*) override;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  bool nativeEventFilter(QByteArray const& eventType, void* message, long* result) override;
+#else
+  bool nativeEventFilter(QByteArray const& eventType, void* message, qintptr* result) override;
+#endif
 
 public slots:
   void setLEDState(unsigned int state) override;
