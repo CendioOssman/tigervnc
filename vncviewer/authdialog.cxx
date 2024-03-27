@@ -38,7 +38,7 @@ AuthDialog::AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidg
         passwordText->setEchoMode(QLineEdit::Password);
         passwordText->setFocus();
         formLayout->addRow(tr("Password"), passwordText);
-        connect(passwordText, &QLineEdit::returnPressed, this, &AuthDialog::ok);
+        connect(passwordText, &QLineEdit::returnPressed, this, &AuthDialog::accept);
     }
     layout->addLayout(formLayout);
 
@@ -52,18 +52,18 @@ AuthDialog::AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidg
 
     setLayout(layout);
 
-    connect(cancelBtn, &QPushButton::clicked, this, &AuthDialog::cancel);
-    connect(okBtn, &QPushButton::clicked, this, &AuthDialog::ok);
+    connect(cancelBtn, &QPushButton::clicked, this, &AuthDialog::reject);
+    connect(okBtn, &QPushButton::clicked, this, &AuthDialog::accept);
 }
 
-void AuthDialog::ok()
+void AuthDialog::accept()
 {
-    close();
+    QDialog::accept();
     AppManager::instance()->authenticate(userText ? userText->text() : "", passwordText ? passwordText->text() : "");
 }
 
-void AuthDialog::cancel()
+void AuthDialog::reject()
 {
-    close();
+    QDialog::reject();
     AppManager::instance()->cancelAuth();
 }

@@ -11,8 +11,8 @@ class AuthDialog : public QDialog
 public:
     AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidget *parent = nullptr);
 
-    void ok();
-    void cancel();
+    void accept();
+    void reject();
 
 private:
     QLineEdit* userText = nullptr;
