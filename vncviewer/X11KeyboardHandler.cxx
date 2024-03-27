@@ -103,7 +103,11 @@ X11KeyboardHandler::~X11KeyboardHandler()
 
 }
 
-bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* message, long*)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* message, long* result)
+#else
+bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* message, qintptr* result)
+#endif
 {
   if (eventType == "xcb_generic_event_t") {
     xcb_generic_event_t* ev = static_cast<xcb_generic_event_t*>(message);
