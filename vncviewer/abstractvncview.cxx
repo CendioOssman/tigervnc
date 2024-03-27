@@ -630,7 +630,11 @@ void QAbstractVNCView::wheelEvent(QWheelEvent* event)
 
     int x, y, buttonMask, wheelMask;
     getMouseProperties(event, x, y, buttonMask, wheelMask);
-    filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
+    if (wheelMask) {
+        filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
+    }
+    filterPointerEvent(rfb::Point(x, y), buttonMask);
+    event->accept();
 }
 
 void QAbstractVNCView::focusInEvent(QFocusEvent *event)
