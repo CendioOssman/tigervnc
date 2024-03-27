@@ -13,7 +13,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gettext appstream
           sudo apt-get install -y libgnutls28-dev nettle-dev libgmp-dev
-          sudo apt-get install -y qtbase5-dev qtdeclarative5-dev qtmultimedia5-dev libqt5x11extras5-dev qttools5-dev
+          sudo apt-get install -y qtbase5-dev libqt5x11extras5-dev
           sudo apt-get install -y libxtst-dev libxdamage-dev libxfixes-dev libxrandr-dev libxcursor-dev libpam-dev
           sudo apt-get install -y libavcodec-dev libavutil-dev libswscale-dev
       - name: Configure
@@ -39,7 +39,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gettext appstream
           sudo apt-get install -y libgnutls28-dev nettle-dev libgmp-dev
-          sudo apt-get install -y libgl-dev qt6-base-dev qt6-declarative-dev qt6-multimedia-dev qt6-tools-dev
+          sudo apt-get install -y libgl-dev qt6-base-dev
           sudo apt-get install -y libxtst-dev libxdamage-dev libxfixes-dev libxrandr-dev libpam-dev
           sudo apt-get install -y libavcodec-dev libavutil-dev libswscale-dev
       - name: Configure
@@ -72,8 +72,7 @@ jobs:
             mingw-w64-x86_64-libjpeg-turbo \
             mingw-w64-x86_64-gnutls mingw-w64-x86_64-pixman \
             mingw-w64-x86_64-nettle mingw-w64-x86_64-gmp \
-            mingw-w64-x86_64-qt5-base mingw-w64-x86_64-qt5-declarative \
-            mingw-w64-x86_64-qt5-multimedia mingw-w64-x86_64-qt5-tools
+            mingw-w64-x86_64-qt5-base mingw-w64-x86_64-qt5-tools
       - name: Configure
         run: cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
