@@ -36,7 +36,7 @@ public:
         : QCheckableAction(text, parent)
     {
         connect(this, &QAction::toggled, this, [](bool checked) {
-            AppManager::instance()->view()->fullscreen(checked);
+            AppManager::instance()->window()->fullscreen(checked);
         });
         connect(ViewerConfig::config(), &ViewerConfig::fullScreenChanged, this, [this](bool enabled) {
             setChecked(enabled);
@@ -55,8 +55,7 @@ public:
         connect(this, &QAction::triggered, this, []() {
             QVNCWindow *window = AppManager::instance()->window();
             QAbstractVNCView *view = AppManager::instance()->view();
-            window->normalizedResize(view->width() + window->horizontalScrollBar()->width(), view->height() + window->verticalScrollBar()->height()); // Needed to hide scrollbars.
-            window->normalizedResize(view->width(), view->height());
+            window->resize(view->pixmapSize().width(), view->pixmapSize().height());
         });
         connect(ViewerConfig::config(), &ViewerConfig::fullScreenChanged, this, [this](bool enabled) {
             setEnabled(!enabled); // cf. Viewport::initContextMenu()

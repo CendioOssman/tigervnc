@@ -21,9 +21,6 @@ public slots:
 
 protected:
   bool event(QEvent *e) override;
-  void resizeEvent(QResizeEvent*) override;
-
-  void fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight) override;
 
 signals:
   void message(const QString &msg, int timeout);

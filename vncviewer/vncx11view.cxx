@@ -129,27 +129,6 @@ bool QVNCX11View::event(QEvent *e)
   return QWidget::event(e);
 }
 
-void QVNCX11View::resizeEvent(QResizeEvent *e)
-{
-  QWidget::resizeEvent(e);
-  adjustSize();
-
-  // Try to get the remote size to match our window size, provided
-  // the following conditions are true:
-  //
-  // a) The user has this feature turned on
-  // b) The server supports it
-  // c) We're not still waiting for startup fullscreen to kick in
-  //
-  QVNCConnection *cc = AppManager::instance()->connection();
-  if (!firstUpdate_ && ViewerConfig::config()->remoteResize() && cc->server()->supportsSetDesktopSize) {
-    postRemoteResizeRequest();
-  }
-  // Some systems require a grab after the window size has been changed.
-  // Otherwise they might hold on to displays, resulting in them being unusable.
-  maybeGrabKeyboard();
-}
-
 void QVNCX11View::bell()
 {
 
@@ -182,8 +161,4 @@ bool QVNCX11View::gestureEvent(QGestureEvent *event)
     }
   }
   return true;
-}
-
-void QVNCX11View::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight)
-{
 }

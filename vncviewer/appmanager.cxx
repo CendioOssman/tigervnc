@@ -139,24 +139,17 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   if (!view_) {
     throw rdr::Exception(_("Platform not supported."));
   }
-  connect(view_, &QAbstractVNCView::fullscreenChanged, this, [this](bool enabled) {
-    scroll_->setHorizontalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
-    scroll_->setVerticalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
-  }, Qt::QueuedConnection);
+  connect(view_, &QAbstractVNCView::bufferResized, scroll_, &QVNCWindow::updateScrollbars, Qt::QueuedConnection);
+  connect(view_, &QAbstractVNCView::remoteResizeRequest, scroll_, &QVNCWindow::postRemoteResizeRequest, Qt::QueuedConnection);
 
   view_->resize(width, height);
-  if (!ViewerConfig::config()->remoteResize()) {
-    view_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    view_->setMinimumSize(QSize(width, height));
-    view_->setMaximumSize(QSize(width, height));
-  }
   scroll_->setWidget(view_);
-  scroll_->normalizedResize(width, height);
+  scroll_->resize(width, height);
   scroll_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
   scroll_->show();
 
   if (ViewerConfig::config()->fullScreen()) {
-    view_->fullscreen(true);
+    scroll_->fullscreen(true);
   }
 
   emit vncWindowOpened();

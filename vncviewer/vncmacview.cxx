@@ -106,27 +106,6 @@ bool QVNCMacView::event(QEvent *e)
   return QWidget::event(e);
 }
 
-void QVNCMacView::resizeEvent(QResizeEvent *e)
-{
-    QSize size = e->size();
-    QWidget::resize(size.width(), size.height());
-
-    // Try to get the remote size to match our window size, provided
-    // the following conditions are true:
-    //
-    // a) The user has this feature turned on
-    // b) The server supports it
-    // c) We're not still waiting for startup fullscreen to kick in
-    //
-    QVNCConnection *cc = AppManager::instance()->connection();
-    if (!firstUpdate_ && ViewerConfig::config()->remoteResize() && cc->server()->supportsSetDesktopSize) {
-      postRemoteResizeRequest();
-    }
-    // Some systems require a grab after the window size has been changed.
-    // Otherwise they might hold on to displays, resulting in them being unusable.
-    maybeGrabKeyboard();
-}
-
 void QVNCMacView::bell()
 {
   cocoa_beep();
@@ -140,38 +119,4 @@ void QVNCMacView::handleClipboardData(const char* data)
 
   size_t len = strlen(data);
   vlog.debug("Got clipboard data (%d bytes)", (int)len);
-}
-
-void QVNCMacView::fullscreenOnCurrentDisplay()
-{
-  QVNCWindow *window = AppManager::instance()->window();
-  QScreen *screen = getCurrentScreen();
-  window->windowHandle()->setScreen(screen);
-
-  // Capture the fullscreen geometry.
-  double dpr = effectiveDevicePixelRatio(screen);
-  QRect vg = screen->geometry();
-  fxmin_ = vg.x();
-  fymin_ = vg.y();
-  fw_ = vg.width() * dpr;
-  fh_ = vg.height() * dpr;
-
-  window->move(fxmin_, fymin_);
-  window->resize(fw_, fh_);
-  resize(fw_, fh_);
-  window->setWindowFlag(Qt::FramelessWindowHint, true);
-  window->setWindowState(Qt::WindowFullScreen);
-  grabKeyboard();
-}
-
-void QVNCMacView::fullscreenOnSelectedDisplay(QScreen *screen, int vx, int vy, int vwidth, int vheight)
-{
-  QVNCWindow *window = AppManager::instance()->window();
-  window->windowHandle()->setScreen(screen);
-  window->move(vx, vy);
-  window->resize(vwidth, vheight);
-  resize(vwidth, vheight);
-  window->setWindowFlag(Qt::FramelessWindowHint, true);
-  window->setWindowState(Qt::WindowFullScreen);
-  grabKeyboard();
 }

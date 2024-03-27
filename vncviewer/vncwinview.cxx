@@ -121,29 +121,6 @@ void QVNCWinView::leaveEvent(QEvent *e)
   QWidget::leaveEvent(e);
 }
 
-void QVNCWinView::resizeEvent(QResizeEvent *e)
-{
-  QVNCWindow *window = AppManager::instance()->window();
-  QSize vsize = window->viewport()->size();
-  qDebug() << "QVNCWinView::resizeEvent: w=" << e->size().width() << ", h=" << e->size().height() << ", viewport=" << vsize;
-
-  // Try to get the remote size to match our window size, provided
-  // the following conditions are true:
-  //
-  // a) The user has this feature turned on
-  // b) The server supports it
-  // c) We're not still waiting for startup fullscreen to kick in
-  //
-  QVNCConnection *cc = AppManager::instance()->connection();
-  if (!firstUpdate_ && ViewerConfig::config()->remoteResize() && cc->server()->supportsSetDesktopSize) {
-    postRemoteResizeRequest();
-  }
-  // Some systems require a grab after the window size has been changed.
-  // Otherwise they might hold on to displays, resulting in them being unusable.
-  grabPointer();
-  maybeGrabKeyboard();
-}
-
 int QVNCWinView::handleTouchEvent(UINT message, WPARAM wParam, LPARAM lParam)
 {
   return touchHandler_->processEvent(message, wParam, lParam);
@@ -171,17 +148,4 @@ void QVNCWinView::ungrabKeyboard()
 void QVNCWinView::bell()
 {
   MessageBeep(0xFFFFFFFF); // cf. fltk/src/drivers/WinAPI/Fl_WinAPI_Screen_Driver.cxx:245
-}
-
-void QVNCWinView::moveView(int x, int y)
-{
-  MoveWindow((HWND)window()->winId(), x, y, width(), height(), false);
-}
-
-QRect QVNCWinView::getExtendedFrameProperties()
-{
-  // Returns Windows10's magic number. This method might not be necessary for Qt6 / Windows11.
-  // See the followin URL for more details.
-  // https://stackoverflow.com/questions/42473554/windows-10-screen-coordinates-are-offset-by-7
-  return QRect(7, 7, 7, 7);
 }
