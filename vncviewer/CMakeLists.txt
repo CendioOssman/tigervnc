@@ -217,8 +217,6 @@ if(APPLE)
     set_target_properties(vncviewer PROPERTIES MACOSX_BUNDLE TRUE)
 endif()
 
-target_compile_definitions(vncviewer
-  PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 target_include_directories(vncviewer SYSTEM PUBLIC ${GETTEXT_INCLUDE_DIR})
 target_include_directories(vncviewer PUBLIC ${CMAKE_SOURCE_DIR}/common)
 if(QT_VERSION_MAJOR GREATER_EQUAL 6)

@@ -30,9 +30,6 @@ add_library(rfb_win32 STATIC
   WMShatter.cxx
   WMWindowCopyRect.cxx)
 
-target_compile_definitions(rfb_win32
-  PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
-
 if(BUILD_WINVNC)
   target_sources(rfb_win32 PRIVATE ${RFB_WIN32_SOURCES} CleanDesktop.cxx)
 endif()

@@ -17,10 +17,6 @@ if (GETTEXT_XGETTEXT_EXECUTABLE)
     ${PROJECT_SOURCE_DIR}/vncviewer/*.desktop.in.in
     ${PROJECT_SOURCE_DIR}/vncviewer/*.metainfo.xml.in
   )
-  file(GLOB_RECURSE po_qml_source
-    RELATIVE ${PROJECT_SOURCE_DIR}
-    ${PROJECT_SOURCE_DIR}/vncviewer/*.qml
-  )
 
   add_custom_target(translations_update
     COMMAND
@@ -39,20 +35,6 @@ if (GETTEXT_XGETTEXT_EXECUTABLE)
       --add-location
       --add-comments=TRANSLATORS
       ${po_source}
-    COMMAND
-    ${GETTEXT_XGETTEXT_EXECUTABLE}
-      "--directory=${PROJECT_SOURCE_DIR}"
-      "--output=${CMAKE_CURRENT_SOURCE_DIR}/tigervnc.pot"
-      "--copyright-holder=TigerVNC Team and many others \(see README.rst\)"
-      --msgid-bugs-address=tigervnc-devel@googlegroups.com
-      --join-existing
-      --language=javascript
-      --qt
-      --keyword=qsTr
-      --flag=qsTr:1:qt-format
-      --sort-by-file
-      --add-location
-      ${po_qml_source}
     COMMENT "Updating tigervnc.pot"
     VERBATIM
   )
