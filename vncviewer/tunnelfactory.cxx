@@ -16,7 +16,7 @@ TunnelFactory::TunnelFactory()
 #if defined(WIN32)
   , command(QString(qgetenv("SYSTEMROOT")) + "\\System32\\OpenSSH\\ssh.exe")
 #else
-  , command_("/usr/bin/ssh")
+  , command("/usr/bin/ssh")
   , operationSocketName("vncviewer-tun-" + QString::number(QCoreApplication::applicationPid()))
 #endif
   , process(nullptr)
@@ -67,11 +67,11 @@ void TunnelFactory::run()
   process = new QProcess;
 
 #if !defined(WIN32)
-  if (!process_->execute(command_, args)) {
-    QString serverName = "localhost::" + QString::number(ViewerConfig::config()->gatewayLocalPort());
+  if (!process->execute(command, args)) {
+    QString serverName = "localhost::" + QString::number(ViewerConfig::config()->getGatewayLocalPort());
     ViewerConfig::config()->setAccessPoint(serverName);
   } else {
-    errorOccurred_ = true;
+    errorOccurred = true;
   }
 #else
   connect(process, &QProcess::started, this, []() {
@@ -102,7 +102,7 @@ TunnelFactory::~TunnelFactory()
 void TunnelFactory::close()
 {
 #if !defined(WIN32)
-  if (process_) {
+  if (process) {
     QString gatewayHost = ViewerConfig::config()->gatewayHost();
     QStringList args({
         "-S",
@@ -112,7 +112,7 @@ void TunnelFactory::close()
         gatewayHost,
     });
     QProcess process;
-    process.start(command_, args);
+    process.start(command, args);
     QThread::msleep(500);
   }
 #endif

@@ -24,9 +24,12 @@
 #elif defined(__APPLE__)
 class CGImage;
 #else
-#include <QCursor> // QCursor must be included before X headers to avoid symbol comflicts.
-#include <X11/extensions/XShm.h>
+// clang-format off
+// QCursor must be included before X headers to avoid symbol comflicts.
+#include <QCursor>
 #include <X11/extensions/Xrender.h>
+#include <X11/extensions/XShm.h>
+// clang-format on
 #endif
 
 class Surface

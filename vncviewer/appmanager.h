@@ -1,13 +1,12 @@
 #ifndef APPMANAGER_H
 #define APPMANAGER_H
 
-#include "vncconnection.h"
-
 #include <QObject>
 
 class QAbstractVNCView;
 class QVNCWindow;
 class QTimer;
+class QVNCConnection;
 
 class AppManager : public QObject
 {

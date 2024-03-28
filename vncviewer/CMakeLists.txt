@@ -74,6 +74,7 @@ set(PROJECT_SOURCES
         appmanager.cxx
         BaseKeyboardHandler.cxx
         BaseKeyboardHandler.h
+        contextmenuactions.cxx
         contextmenuactions.h
         vncapplication.cxx
         vncapplication.h

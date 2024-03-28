@@ -2,6 +2,13 @@
 #include "config.h"
 #endif
 
+// clang-format off
+// QEvent must be included before X headers to avoid symbol comflicts.
+#include <QEvent>
+// QAction must be included before X headers to avoid symbol comflicts.
+#include <QAction>
+// clang-format on
+
 #include "BaseKeyboardHandler.h"
 #include "EmulateMB.h"
 #include "PlatformPixelBuffer.h"
@@ -16,7 +23,6 @@
 #include "vncconnection.h"
 
 #include <QAbstractEventDispatcher>
-#include <QAction>
 #include <QApplication>
 #include <QCheckBox>
 #include <QClipboard>
@@ -172,6 +178,7 @@ void QAbstractVNCView::toggleContextMenu()
     createContextMenu();
     removeKeyboardHandler();
     contextMenu->exec(QCursor::pos());
+    contextMenu->setFocus();
   }
 }
 
@@ -196,7 +203,7 @@ void QAbstractVNCView::createContextMenu()
     contextMenuActions << new QInfoDialogAction(p_("ContextMenu|", "Connection &info..."));
     contextMenuActions << new QAboutDialogAction(p_("ContextMenu|", "About &TigerVNC viewer..."));
     QVNCWindow* window = AppManager::instance()->getWindow();
-    contextMenu = new QMenu(window);
+    contextMenu = new QMenu;
 #if defined(__APPLE__)
     contextMenu->setAttribute(Qt::WA_NativeWindow);
     cocoa_set_overlay_property(contextMenu->winId());

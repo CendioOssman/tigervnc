@@ -57,18 +57,18 @@ X11KeyboardHandler::X11KeyboardHandler(QObject* parent)
 {
   qDebug() << "X11KeyboardHandler";
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  display_ = QX11Info::display();
+  display = QX11Info::display();
 #else
-  display_ = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+  display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
 #endif
 
-  XkbSetDetectableAutoRepeat(display_, True, nullptr); // ported from vncviewer.cxx.
+  XkbSetDetectableAutoRepeat(display, True, nullptr); // ported from vncviewer.cxx.
 
-  XkbDescPtr xkb = XkbGetMap(display_, 0, XkbUseCoreKbd);
+  XkbDescPtr xkb = XkbGetMap(display, 0, XkbUseCoreKbd);
   if (!xkb) {
     throw rfb::Exception("XkbGetMap");
   }
-  Status status = XkbGetNames(display_, XkbKeyNamesMask, xkb);
+  Status status = XkbGetNames(display, XkbKeyNamesMask, xkb);
   if (status != Success) {
     throw rfb::Exception("XkbGetNames");
   }

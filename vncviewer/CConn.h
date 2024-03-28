@@ -20,11 +20,10 @@
 #ifndef __CCONN_H__
 #define __CCONN_H__
 
-#include "rfb/CConnection.h"
-#include "rfb/Rect.h"
-
 #include <QString>
-#include <sys/time.h>
+//#include "rdr/types.h"
+#include "rfb/Rect.h"
+#include "rfb/CConnection.h"
 
 class QCursor;
 class QVNCConnection;

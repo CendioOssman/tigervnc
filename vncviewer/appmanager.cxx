@@ -123,11 +123,11 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 #if defined(WIN32)
   view = new QVNCWinView(window);
 #elif defined(__APPLE__)
-  view = new QVNCMacView(scroll_);
+  view = new QVNCMacView(window);
 #elif defined(Q_OS_UNIX)
   QString platform = QApplication::platformName();
   if (platform == "xcb") {
-    view = new QVNCX11View(scroll_);
+    view = new QVNCX11View(window);
   } else if (platform == "wayland") {
     ;
   }

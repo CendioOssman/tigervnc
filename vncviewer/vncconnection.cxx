@@ -2,88 +2,86 @@
 #include <config.h>
 #endif
 
-#include <QApplication>
-#include <QLocalSocket>
-#include <QTcpSocket>
-#include <QSocketNotifier>
-#include <QTimer>
-#include <QProcess>
-#include <QClipboard>
-#include "rfb/Hostname.h"
-#include "rfb/Exception.h"
-#include "rfb/LogWriter.h"
-#include "rfb/CMsgWriter.h"
-#include "network/TcpSocket.h"
-#include "parameters.h"
 #include "appmanager.h"
 #include "i18n.h"
+#include "network/TcpSocket.h"
+#include "parameters.h"
+#include "rfb/CMsgWriter.h"
+#include "rfb/Exception.h"
+#include "rfb/Hostname.h"
+#include "rfb/LogWriter.h"
+
+#include <QApplication>
+#include <QClipboard>
+#include <QLocalSocket>
+#include <QProcess>
+#include <QSocketNotifier>
+#include <QTcpSocket>
+#include <QTimer>
 #undef asprintf
+#include "CConn.h"
 #include "abstractvncview.h"
 #include "tunnelfactory.h"
-#include "CConn.h"
 #include "vncconnection.h"
 #undef asprintf
 
 #if !defined(Q_OS_WIN)
-  #include "network/UnixSocket.h"
+#include "network/UnixSocket.h"
 #endif
 
 #if !defined(Q_OS_WIN) && !defined(Q_OS_MAC)
-  #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    #include <QtX11Extras/QX11Info>
-  #endif
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QtX11Extras/QX11Info>
+#endif
 #endif
 
 static rfb::LogWriter vlog("CConnection");
 
 QVNCConnection::QVNCConnection()
- : QObject(nullptr)
+  : QObject(nullptr)
   , rfbcon(nullptr)
   , socket(nullptr)
- , socketReadNotifier(nullptr)
+  , socketReadNotifier(nullptr)
   , socketWriteNotifier(nullptr)
   , socketErrorNotifier(nullptr)
- , updateTimer(nullptr)
+  , updateTimer(nullptr)
   , tunnelFactory(nullptr)
- , closing(false)
+  , closing(false)
 {
   connect(this, &QVNCConnection::socketReadNotified, this, &QVNCConnection::startProcessing);
   connect(this, &QVNCConnection::socketWriteNotified, this, &QVNCConnection::flushSocket);
 
-  connect(this, &QVNCConnection::writePointerEvent, this, [this](const rfb::Point &pos, int buttonMask) {
+  connect(this, &QVNCConnection::writePointerEvent, this, [this](const rfb::Point& pos, int buttonMask) {
     try {
       rfbcon->writer()->writePointerEvent(pos, buttonMask);
-    }
-    catch (rdr::Exception &e) {
+    } catch (rdr::Exception& e) {
       AppManager::instance()->publishError(e.str());
-    }
-    catch (int &e) {
+    } catch (int& e) {
       AppManager::instance()->publishError(strerror(e));
     }
   });
-  connect(this, &QVNCConnection::writeSetDesktopSize, this, [this](int width, int height, const rfb::ScreenSet &layout) {
-    try {
-      rfbcon->writer()->writeSetDesktopSize(width, height, layout);
-    }
-    catch (rdr::Exception &e) {
-      AppManager::instance()->publishError(e.str());
-    }
-    catch (int &e) {
-      AppManager::instance()->publishError(strerror(e));
-    }
-  });
+  connect(this,
+          &QVNCConnection::writeSetDesktopSize,
+          this,
+          [this](int width, int height, const rfb::ScreenSet& layout) {
+            try {
+              rfbcon->writer()->writeSetDesktopSize(width, height, layout);
+            } catch (rdr::Exception& e) {
+              AppManager::instance()->publishError(e.str());
+            } catch (int& e) {
+              AppManager::instance()->publishError(strerror(e));
+            }
+          });
   connect(this, &QVNCConnection::writeKeyEvent, this, [this](uint32_t keysym, uint32_t keycode, bool down) {
     try {
       rfbcon->writer()->writeKeyEvent(keysym, keycode, down);
-    }
-    catch (rdr::Exception &e) {
+    } catch (rdr::Exception& e) {
       AppManager::instance()->publishError(e.str());
-    }
-    catch (int &e) {
+    } catch (int& e) {
       AppManager::instance()->publishError(strerror(e));
     }
   });
-  
+
   if (ViewerConfig::config()->listenModeEnabled()) {
     listen();
   }
@@ -93,11 +91,9 @@ QVNCConnection::QVNCConnection()
   connect(updateTimer, &QTimer::timeout, this, [this]() {
     try {
       rfbcon->framebufferUpdateEnd();
-    }
-    catch (rdr::Exception &e) {
+    } catch (rdr::Exception& e) {
       AppManager::instance()->publishError(e.str());
-    }
-    catch (int &e) {
+    } catch (int& e) {
       AppManager::instance()->publishError(strerror(e));
     }
   });
@@ -137,7 +133,7 @@ void QVNCConnection::bind(int fd)
     Q_UNUSED(fd)
     emit socketReadNotified();
   });
-  
+
   delete socketWriteNotifier;
   socketWriteNotifier = new QSocketNotifier(fd, QSocketNotifier::Write);
   socketWriteNotifier->setEnabled(false);
@@ -145,7 +141,7 @@ void QVNCConnection::bind(int fd)
     Q_UNUSED(fd)
     emit socketWriteNotified();
   });
-  
+
   delete socketErrorNotifier;
   socketErrorNotifier = new QSocketNotifier(fd, QSocketNotifier::Exception);
   QObject::connect(socketErrorNotifier, &QSocketNotifier::activated, this, [this](int fd) {
@@ -163,8 +159,7 @@ void QVNCConnection::connectToServer(QString addressport)
     if (addressport.isEmpty()) {
       resetConnection();
       addressport = addressport;
-    }
-    else {
+    } else {
       addressport = addressport;
     }
     delete rfbcon;
@@ -172,14 +167,13 @@ void QVNCConnection::connectToServer(QString addressport)
     ViewerConfig::config()->saveViewerParameters("", addressport);
     if (addressport.contains("/")) {
 #ifndef Q_OS_WIN
-      delete socket_;
-      socket_ = new network::UnixSocket(addressport.toStdString().c_str());
-      setHost(socket_->getPeerAddress());
+      delete socket;
+      socket = new network::UnixSocket(addressport.toStdString().c_str());
+      setHost(socket->getPeerAddress());
       vlog.info("Connected to socket %s", host().toStdString().c_str());
-      bind(socket_->getFd());
+      bind(socket->getFd());
 #endif
-    }
-    else {
+    } else {
       std::string shost;
       int port;
       rfb::getHostAndPort(addressport.toStdString().c_str(), &shost, &port);
@@ -189,12 +183,10 @@ void QVNCConnection::connectToServer(QString addressport)
       socket = new network::TcpSocket(shost.c_str(), port);
       bind(socket->getFd());
     }
-  }
-  catch (rdr::Exception &e) {
+  } catch (rdr::Exception& e) {
     resetConnection();
     AppManager::instance()->publishError(e.str(), true);
-  }
-  catch (int &e) {
+  } catch (int& e) {
     resetConnection();
     AppManager::instance()->publishError(strerror(e), true);
   }
@@ -217,7 +209,7 @@ void QVNCConnection::listen()
     while (socket == nullptr) {
       fd_set rfds;
       FD_ZERO(&rfds);
-      for (network::SocketListener *listener : listeners) {
+      for (network::SocketListener* listener : listeners) {
         FD_SET(listener->getFd(), &rfds);
       }
 
@@ -226,13 +218,12 @@ void QVNCConnection::listen()
         if (errno == EINTR) {
           vlog.debug("Interrupted select() system call");
           continue;
-        }
-        else {
+        } else {
           throw rdr::SystemException("select", errno);
         }
       }
 
-      for (network::SocketListener *listener : listeners) {
+      for (network::SocketListener* listener : listeners) {
         if (FD_ISSET(listener->getFd(), &rfds)) {
           socket = listener->accept();
           if (socket) {
@@ -243,8 +234,7 @@ void QVNCConnection::listen()
         }
       }
     }
-  }
-  catch (rdr::Exception &e) {
+  } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
     QCoreApplication::exit(1);
   }
@@ -269,7 +259,7 @@ void QVNCConnection::resetConnection()
   }
   delete socket;
   socket = nullptr;
-  
+
   if (rfbcon) {
     rfbcon->resetConnection();
   }
@@ -284,11 +274,9 @@ void QVNCConnection::announceClipboard(bool available)
   }
   try {
     rfbcon->announceClipboard(available);
-  }
-  catch (rdr::Exception &e) {
+  } catch (rdr::Exception& e) {
     AppManager::instance()->publishError(e.str());
-  }
-  catch (int &e) {
+  } catch (int& e) {
     AppManager::instance()->publishError(strerror(e));
   }
 }
@@ -296,15 +284,13 @@ void QVNCConnection::announceClipboard(bool available)
 void QVNCConnection::refreshFramebuffer()
 {
   try {
-    //qDebug() << "QVNCConnection::refreshFramebuffer: continuousUpdates_=" << continuousUpdates_;
+    // qDebug() << "QVNCConnection::refreshFramebuffer: continuousUpdates_=" << continuousUpdates_;
     emit refreshFramebufferStarted();
     rfbcon->refreshFramebuffer();
-  }
-  catch (rdr::Exception &e) {
+  } catch (rdr::Exception& e) {
     resetConnection();
     AppManager::instance()->publishError(e.str());
-  }
-  catch (int &e) {
+  } catch (int& e) {
     resetConnection();
     AppManager::instance()->publishError(strerror(e));
   }
@@ -314,12 +300,10 @@ void QVNCConnection::setState(int state)
 {
   try {
     rfbcon->setProcessState(state);
-  }
-  catch (rdr::Exception &e) {
+  } catch (rdr::Exception& e) {
     resetConnection();
     AppManager::instance()->publishError(e.str());
-  }
-  catch (int &e) {
+  } catch (int& e) {
     resetConnection();
     AppManager::instance()->publishError(strerror(e));
   }
@@ -332,24 +316,22 @@ void QVNCConnection::startProcessing()
   }
   try {
     rfbcon->getOutStream()->cork(true);
-    
+
     while (rfbcon->processMsg()) {
       QApplication::processEvents();
       if (!socket)
         break;
     }
-    
+
     rfbcon->getOutStream()->cork(false);
-  }
-  catch (rdr::Exception &e) {
+  } catch (rdr::Exception& e) {
     resetConnection();
     AppManager::instance()->publishError(e.str());
-  }
-  catch (int &e) {
+  } catch (int& e) {
     resetConnection();
     AppManager::instance()->publishError(strerror(e));
   }
-  
+
   if (socket)
     socketWriteNotifier->setEnabled(socket->outStream().hasBufferedData());
 }
@@ -359,8 +341,8 @@ void QVNCConnection::flushSocket()
   if (!socket) {
     return;
   }
-  
+
   socket->outStream().flush();
-  
+
   socketWriteNotifier->setEnabled(socket->outStream().hasBufferedData());
 }

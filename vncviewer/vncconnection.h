@@ -1,11 +1,9 @@
 #ifndef VNCCONNECTION_H
 #define VNCCONNECTION_H
 
-// #include "rdr/types.h"
-#include "CConn.h"
+//#include "rdr/types.h"
 #include "rfb/Rect.h"
-
-#include <QObject>
+#include "CConn.h"
 
 class QTimer;
 class QCursor;

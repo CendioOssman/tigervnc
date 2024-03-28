@@ -1,6 +1,7 @@
 #include "infodialog.h"
 
 #include "appmanager.h"
+#include "vncconnection.h"
 
 #include <QLabel>
 #include <QPushButton>

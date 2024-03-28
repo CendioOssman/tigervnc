@@ -8,7 +8,9 @@
 #include "appmanager.h"
 #include "i18n.h"
 #include "parameters.h"
+#include "vncconnection.h"
 #include "rfb/LogWriter.h"
+#include "rfb/ScreenSet.h"
 
 #include <QApplication>
 #include <QDebug>
