@@ -28,15 +28,7 @@ protected:
   void leaveEvent(QEvent*) override;
 
 private:
-  bool altGrArmed_;
-  unsigned int altGrCtrlTime_;
-  QTimer* altGrCtrlTimer_;
-
-  HCURSOR cursor_;
-  bool mouseTracking_;
-  HCURSOR defaultCursor_;
-
-  Win32TouchHandler* touchHandler_;
+  Win32TouchHandler* touchHandler = nullptr;
 
   int handleTouchEvent(UINT message, WPARAM wParam, LPARAM lParam);
 };

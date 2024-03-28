@@ -37,8 +37,8 @@ int main(int argc, char *argv[])
   VNCTranslator translator;
   app.installTranslator(&translator);
 
-  if (!ViewerConfig::config()->serverName().isEmpty()) {
-    AppManager::instance()->connectToServer(ViewerConfig::config()->serverName());
+  if (!ViewerConfig::config()->getServerName().isEmpty()) {
+    AppManager::instance()->connectToServer(ViewerConfig::config()->getServerName());
     return app.exec();
   } else {
     ServerDialog serverDialog;

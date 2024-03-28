@@ -38,21 +38,21 @@ static rfb::LogWriter vlog("CConnection");
 
 QVNCConnection::QVNCConnection()
  : QObject(nullptr)
- , rfbcon_(nullptr)
- , socket_(nullptr)
- , socketReadNotifier_(nullptr)
- , socketWriteNotifier_(nullptr)
- , socketErrorNotifier_(nullptr)
- , updateTimer_(nullptr)
- , tunnelFactory_(nullptr)
- , closing_(false)
+  , rfbcon(nullptr)
+  , socket(nullptr)
+ , socketReadNotifier(nullptr)
+  , socketWriteNotifier(nullptr)
+  , socketErrorNotifier(nullptr)
+ , updateTimer(nullptr)
+  , tunnelFactory(nullptr)
+ , closing(false)
 {
   connect(this, &QVNCConnection::socketReadNotified, this, &QVNCConnection::startProcessing);
   connect(this, &QVNCConnection::socketWriteNotified, this, &QVNCConnection::flushSocket);
 
   connect(this, &QVNCConnection::writePointerEvent, this, [this](const rfb::Point &pos, int buttonMask) {
     try {
-      rfbcon_->writer()->writePointerEvent(pos, buttonMask);
+      rfbcon->writer()->writePointerEvent(pos, buttonMask);
     }
     catch (rdr::Exception &e) {
       AppManager::instance()->publishError(e.str());
@@ -63,7 +63,7 @@ QVNCConnection::QVNCConnection()
   });
   connect(this, &QVNCConnection::writeSetDesktopSize, this, [this](int width, int height, const rfb::ScreenSet &layout) {
     try {
-      rfbcon_->writer()->writeSetDesktopSize(width, height, layout);
+      rfbcon->writer()->writeSetDesktopSize(width, height, layout);
     }
     catch (rdr::Exception &e) {
       AppManager::instance()->publishError(e.str());
@@ -74,7 +74,7 @@ QVNCConnection::QVNCConnection()
   });
   connect(this, &QVNCConnection::writeKeyEvent, this, [this](uint32_t keysym, uint32_t keycode, bool down) {
     try {
-      rfbcon_->writer()->writeKeyEvent(keysym, keycode, down);
+      rfbcon->writer()->writeKeyEvent(keysym, keycode, down);
     }
     catch (rdr::Exception &e) {
       AppManager::instance()->publishError(e.str());
@@ -88,11 +88,11 @@ QVNCConnection::QVNCConnection()
     listen();
   }
 
-  updateTimer_ = new QTimer;
-  updateTimer_->setSingleShot(true);
-  connect(updateTimer_, &QTimer::timeout, this, [this]() {
+  updateTimer = new QTimer;
+  updateTimer->setSingleShot(true);
+  connect(updateTimer, &QTimer::timeout, this, [this]() {
     try {
-      rfbcon_->framebufferUpdateEnd();
+      rfbcon->framebufferUpdateEnd();
     }
     catch (rdr::Exception &e) {
       AppManager::instance()->publishError(e.str());
@@ -103,54 +103,54 @@ QVNCConnection::QVNCConnection()
   });
 
   QString gatewayHost = ViewerConfig::config()->gatewayHost();
-  QString remoteHost = ViewerConfig::config()->serverHost();
+  QString remoteHost = ViewerConfig::config()->getServerHost();
   if (!gatewayHost.isEmpty() && !remoteHost.isEmpty()) {
-    tunnelFactory_ = new TunnelFactory;
-    tunnelFactory_->start();
+    tunnelFactory = new TunnelFactory;
+    tunnelFactory->start();
 #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
     tunnelFactory_->wait(20000);
 #else
-    tunnelFactory_->wait(QDeadlineTimer(20000));
+    tunnelFactory->wait(QDeadlineTimer(20000));
 #endif
   }
 }
 
 QVNCConnection::~QVNCConnection()
 {
-  closing_ = true;
-  if (tunnelFactory_) {
-    tunnelFactory_->close();
+  closing = true;
+  if (tunnelFactory) {
+    tunnelFactory->close();
   }
   resetConnection();
-  updateTimer_->stop();
-  delete updateTimer_;
-  delete tunnelFactory_;
+  updateTimer->stop();
+  delete updateTimer;
+  delete tunnelFactory;
 }
 
 void QVNCConnection::bind(int fd)
 {
-  rfbcon_->setStreams(&socket_->inStream(), &socket_->outStream());
+  rfbcon->setStreams(&socket->inStream(), &socket->outStream());
 
-  delete socketReadNotifier_;
-  socketReadNotifier_ = new QSocketNotifier(fd, QSocketNotifier::Read);
-  QObject::connect(socketReadNotifier_, &QSocketNotifier::activated, this, [this](int fd) {
+  delete socketReadNotifier;
+  socketReadNotifier = new QSocketNotifier(fd, QSocketNotifier::Read);
+  QObject::connect(socketReadNotifier, &QSocketNotifier::activated, this, [this](int fd) {
     Q_UNUSED(fd)
     emit socketReadNotified();
   });
-
-  delete socketWriteNotifier_;
-  socketWriteNotifier_ = new QSocketNotifier(fd, QSocketNotifier::Write);
-  socketWriteNotifier_->setEnabled(false);
-  QObject::connect(socketWriteNotifier_, &QSocketNotifier::activated, this, [this](int fd) {
+  
+  delete socketWriteNotifier;
+  socketWriteNotifier = new QSocketNotifier(fd, QSocketNotifier::Write);
+  socketWriteNotifier->setEnabled(false);
+  QObject::connect(socketWriteNotifier, &QSocketNotifier::activated, this, [this](int fd) {
     Q_UNUSED(fd)
     emit socketWriteNotified();
   });
-
-  delete socketErrorNotifier_;
-  socketErrorNotifier_ = new QSocketNotifier(fd, QSocketNotifier::Exception);
-  QObject::connect(socketErrorNotifier_, &QSocketNotifier::activated, this, [this](int fd) {
+  
+  delete socketErrorNotifier;
+  socketErrorNotifier = new QSocketNotifier(fd, QSocketNotifier::Exception);
+  QObject::connect(socketErrorNotifier, &QSocketNotifier::activated, this, [this](int fd) {
     Q_UNUSED(fd)
-    if (!closing_) {
+    if (!closing) {
       resetConnection();
       throw rdr::Exception("CConnection::bind: socket error.");
     }
@@ -162,13 +162,13 @@ void QVNCConnection::connectToServer(QString addressport)
   try {
     if (addressport.isEmpty()) {
       resetConnection();
-      addressport = addressport_;
+      addressport = addressport;
     }
     else {
-      addressport_ = addressport;
+      addressport = addressport;
     }
-    delete rfbcon_;
-    rfbcon_ = new CConn(this);
+    delete rfbcon;
+    rfbcon = new CConn(this);
     ViewerConfig::config()->saveViewerParameters("", addressport);
     if (addressport.contains("/")) {
 #ifndef Q_OS_WIN
@@ -185,9 +185,9 @@ void QVNCConnection::connectToServer(QString addressport)
       rfb::getHostAndPort(addressport.toStdString().c_str(), &shost, &port);
       setHost(shost.c_str());
       setPort(port);
-      delete socket_;
-      socket_ = new network::TcpSocket(shost.c_str(), port);
-      bind(socket_->getFd());
+      delete socket;
+      socket = new network::TcpSocket(shost.c_str(), port);
+      bind(socket->getFd());
     }
   }
   catch (rdr::Exception &e) {
@@ -205,7 +205,7 @@ void QVNCConnection::listen()
   std::list<network::SocketListener*> listeners;
   try {
     bool ok;
-    int port = ViewerConfig::config()->serverName().toInt(&ok);
+    int port = ViewerConfig::config()->getServerName().toInt(&ok);
     if (!ok) {
       port = 5500;
     }
@@ -214,7 +214,7 @@ void QVNCConnection::listen()
     vlog.info(_("Listening on port %d"), port);
 
     /* Wait for a connection */
-    while (socket_ == nullptr) {
+    while (socket == nullptr) {
       fd_set rfds;
       FD_ZERO(&rfds);
       for (network::SocketListener *listener : listeners) {
@@ -234,10 +234,10 @@ void QVNCConnection::listen()
 
       for (network::SocketListener *listener : listeners) {
         if (FD_ISSET(listener->getFd(), &rfds)) {
-          socket_ = listener->accept();
-          if (socket_) {
+          socket = listener->accept();
+          if (socket) {
             /* Got a connection */
-            bind(socket_->getFd());
+            bind(socket->getFd());
             break;
           }
         }
@@ -258,23 +258,23 @@ void QVNCConnection::listen()
 void QVNCConnection::resetConnection()
 {
   AppManager::instance()->closeVNCWindow();
-  delete socketReadNotifier_;
-  socketReadNotifier_ = nullptr;
-  delete socketWriteNotifier_;
-  socketWriteNotifier_ = nullptr;
-  delete socketErrorNotifier_;
-  socketErrorNotifier_ = nullptr;
-  if (socket_) {
-    socket_->shutdown();
+  delete socketReadNotifier;
+  socketReadNotifier = nullptr;
+  delete socketWriteNotifier;
+  socketWriteNotifier = nullptr;
+  delete socketErrorNotifier;
+  socketErrorNotifier = nullptr;
+  if (socket) {
+    socket->shutdown();
   }
-  delete socket_;
-  socket_ = nullptr;
-
-  if (rfbcon_) {
-    rfbcon_->resetConnection();
+  delete socket;
+  socket = nullptr;
+  
+  if (rfbcon) {
+    rfbcon->resetConnection();
   }
-  delete rfbcon_;
-  rfbcon_ = nullptr;
+  delete rfbcon;
+  rfbcon = nullptr;
 }
 
 void QVNCConnection::announceClipboard(bool available)
@@ -283,7 +283,7 @@ void QVNCConnection::announceClipboard(bool available)
     return;
   }
   try {
-    rfbcon_->announceClipboard(available);
+    rfbcon->announceClipboard(available);
   }
   catch (rdr::Exception &e) {
     AppManager::instance()->publishError(e.str());
@@ -298,7 +298,7 @@ void QVNCConnection::refreshFramebuffer()
   try {
     //qDebug() << "QVNCConnection::refreshFramebuffer: continuousUpdates_=" << continuousUpdates_;
     emit refreshFramebufferStarted();
-    rfbcon_->refreshFramebuffer();
+    rfbcon->refreshFramebuffer();
   }
   catch (rdr::Exception &e) {
     resetConnection();
@@ -313,7 +313,7 @@ void QVNCConnection::refreshFramebuffer()
 void QVNCConnection::setState(int state)
 {
   try {
-    rfbcon_->setProcessState(state);
+    rfbcon->setProcessState(state);
   }
   catch (rdr::Exception &e) {
     resetConnection();
@@ -327,19 +327,19 @@ void QVNCConnection::setState(int state)
 
 void QVNCConnection::startProcessing()
 {
-  if (!socket_) {
+  if (!socket) {
     return;
   }
   try {
-    rfbcon_->getOutStream()->cork(true);
-
-    while (rfbcon_->processMsg()) {
+    rfbcon->getOutStream()->cork(true);
+    
+    while (rfbcon->processMsg()) {
       QApplication::processEvents();
-      if (!socket_)
+      if (!socket)
         break;
     }
-
-    rfbcon_->getOutStream()->cork(false);
+    
+    rfbcon->getOutStream()->cork(false);
   }
   catch (rdr::Exception &e) {
     resetConnection();
@@ -349,18 +349,18 @@ void QVNCConnection::startProcessing()
     resetConnection();
     AppManager::instance()->publishError(strerror(e));
   }
-
-  if (socket_)
-    socketWriteNotifier_->setEnabled(socket_->outStream().hasBufferedData());
+  
+  if (socket)
+    socketWriteNotifier->setEnabled(socket->outStream().hasBufferedData());
 }
 
 void QVNCConnection::flushSocket()
 {
-  if (!socket_) {
+  if (!socket) {
     return;
   }
-
-  socket_->outStream().flush();
-
-  socketWriteNotifier_->setEnabled(socket_->outStream().hasBufferedData());
+  
+  socket->outStream().flush();
+  
+  socketWriteNotifier->setEnabled(socket->outStream().hasBufferedData());
 }

@@ -18,14 +18,14 @@ InfoDialog::InfoDialog(QWidget* parent)
 
   QVBoxLayout* layout = new QVBoxLayout;
   QLabel* label = new QLabel;
-  label->setText(AppManager::instance()->connection()->infoText());
+  label->setText(AppManager::instance()->getConnection()->infoText());
   layout->addWidget(label, 1);
   QPushButton* closeBtn = new QPushButton(tr("Close"));
   layout->addWidget(closeBtn, 0, Qt::AlignRight);
   setLayout(layout);
 
   connect(timer, &QTimer::timeout, this, [=]() {
-    label->setText(AppManager::instance()->connection()->infoText());
+    label->setText(AppManager::instance()->getConnection()->infoText());
   });
   connect(closeBtn, &QPushButton::clicked, this, &QDialog::close);
 }

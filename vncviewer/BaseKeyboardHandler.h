@@ -33,8 +33,8 @@ public:
 
   void setMenuKeyStatus(quint32 keysym, bool checked);
 
-  bool menuCtrlKey() const;
-  bool menuAltKey() const;
+  bool getMenuCtrlKey() const;
+  bool getMenuAltKey() const;
 
   void setContextMenuVisible(bool newContextMenuVisible);
 
@@ -42,13 +42,13 @@ signals:
   void contextMenuKeyPressed(bool menuShortCutMode);
 
 protected:
-  bool keyboardGrabbed_ = false;
+  bool keyboardGrabbed = false;
 
-  DownMap downKeySym_;
+  DownMap downKeySym;
 
-  quint32 menuKeySym_ = XK_F8;
-  bool menuCtrlKey_ = false;
-  bool menuAltKey_ = false;
+  quint32 menuKeySym = XK_F8;
+  bool menuCtrlKey = false;
+  bool menuAltKey = false;
 };
 
 #endif // BASEKEYBOARDHANDLER_H

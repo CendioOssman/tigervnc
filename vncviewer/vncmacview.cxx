@@ -57,7 +57,7 @@ QVNCMacView::QVNCMacView(QWidget* parent, Qt::WindowFlags f)
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
 
-  keyboardHandler_ = new MacKeyboardHandler(this);
+  keyboardHandler = new MacKeyboardHandler(this);
   initKeyboardHandler();
 }
 

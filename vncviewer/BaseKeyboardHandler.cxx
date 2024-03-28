@@ -12,36 +12,36 @@ BaseKeyboardHandler::BaseKeyboardHandler(QObject* parent)
 
 void BaseKeyboardHandler::grabKeyboard()
 {
-  keyboardGrabbed_ = true;
+  keyboardGrabbed = true;
 }
 
 void BaseKeyboardHandler::ungrabKeyboard()
 {
-  keyboardGrabbed_ = true;
+  keyboardGrabbed = true;
 }
 
 void BaseKeyboardHandler::setMenuKeyStatus(quint32 keysym, bool checked)
 {
   if (keysym == XK_Control_L) {
-    menuCtrlKey_ = checked;
+    menuCtrlKey = checked;
   } else if (keysym == XK_Alt_L) {
-    menuAltKey_ = checked;
+    menuAltKey = checked;
   }
 }
 
-bool BaseKeyboardHandler::menuCtrlKey() const
+bool BaseKeyboardHandler::getMenuCtrlKey() const
 {
-  return menuCtrlKey_;
+  return menuCtrlKey;
 }
 
-bool BaseKeyboardHandler::menuAltKey() const
+bool BaseKeyboardHandler::getMenuAltKey() const
 {
-  return menuAltKey_;
+  return menuAltKey;
 }
 
 void BaseKeyboardHandler::resetKeyboard()
 {
-  while (!downKeySym_.empty()) {
-    handleKeyRelease(downKeySym_.begin()->first);
+  while (!downKeySym.empty()) {
+    handleKeyRelease(downKeySym.begin()->first);
   }
 }

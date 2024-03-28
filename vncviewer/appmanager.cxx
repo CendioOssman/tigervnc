@@ -38,28 +38,28 @@
 #include "vncx11view.h"
 #endif
 
-AppManager* AppManager::manager_;
+AppManager* AppManager::manager;
 
 AppManager::AppManager()
   : QObject(nullptr)
-  , error_(0)
-  , facade_(new QVNCConnection)
-  , view_(nullptr)
-  , scroll_(new QVNCWindow)
-  , rfbTimerProxy_(new QTimer)
+  , errorCount(0)
+  , connection(new QVNCConnection)
+  , view(nullptr)
+  , window(new QVNCWindow)
+  , rfbTimerProxy(new QTimer)
 {
-  connect(this, &AppManager::connectToServerRequested, facade_, &QVNCConnection::connectToServer);
-  connect(facade_, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
-  connect(this, &AppManager::resetConnectionRequested, facade_, &QVNCConnection::resetConnection);
-  connect(rfbTimerProxy_, &QTimer::timeout, this, []() {
+  connect(this, &AppManager::connectToServerRequested, connection, &QVNCConnection::connectToServer);
+  connect(connection, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
+  connect(this, &AppManager::resetConnectionRequested, connection, &QVNCConnection::resetConnection);
+  connect(rfbTimerProxy, &QTimer::timeout, this, []() {
     rfb::Timer::checkTimeouts();
   });
   connect(QApplication::eventDispatcher(), &QAbstractEventDispatcher::aboutToBlock, this, [this]() {
     int next = rfb::Timer::checkTimeouts();
     if (next != 0)
-      rfbTimerProxy_->start(next);
+      rfbTimerProxy->start(next);
   });
-  rfbTimerProxy_->setSingleShot(true);
+  rfbTimerProxy->setSingleShot(true);
 
   connect(this, &AppManager::credentialRequested, this, [=](bool secured, bool userNeeded, bool passwordNeeded) {
     AuthDialog d(secured, userNeeded, passwordNeeded);
@@ -69,18 +69,18 @@ AppManager::AppManager()
 
 AppManager::~AppManager()
 {
-  facade_->deleteLater();
-  scroll_->takeWidget();
-  scroll_->deleteLater();
-  if (view_) {
-    view_->deleteLater();
+  connection->deleteLater();
+  window->takeWidget();
+  window->deleteLater();
+  if (view) {
+    view->deleteLater();
   }
-  rfbTimerProxy_->deleteLater();
+  rfbTimerProxy->deleteLater();
 }
 
 int AppManager::initialize()
 {
-  manager_ = new AppManager();
+  manager = new AppManager();
   return 0;
 }
 
@@ -110,7 +110,7 @@ void AppManager::publishError(const QString message, bool quit)
   if (!quit) {
     text = QString::asprintf(_("%s\n\nAttempt to reconnect?"), message.toStdString().c_str());
   }
-  error_++;
+  errorCount++;
 
   AlertDialog d(message, quit);
   d.exec();
@@ -118,39 +118,39 @@ void AppManager::publishError(const QString message, bool quit)
 
 void AppManager::openVNCWindow(int width, int height, QString name)
 {
-  scroll_->takeWidget();
-  delete view_;
+  window->takeWidget();
+  delete view;
 #if defined(WIN32)
-  view_ = new QVNCWinView(scroll_);
+  view = new QVNCWinView(window);
 #elif defined(__APPLE__)
-  view_ = new QVNCMacView(scroll_);
+  view = new QVNCMacView(scroll_);
 #elif defined(Q_OS_UNIX)
   QString platform = QApplication::platformName();
   if (platform == "xcb") {
-    view_ = new QVNCX11View(scroll_);
+    view = new QVNCX11View(scroll_);
   } else if (platform == "wayland") {
     ;
   }
 #endif
 
-  if (!view_) {
+  if (!view) {
     throw rdr::Exception(_("Platform not supported."));
   }
-  connect(view_, &QAbstractVNCView::bufferResized, scroll_, &QVNCWindow::updateScrollbars, Qt::QueuedConnection);
-  connect(view_,
+  connect(view, &QAbstractVNCView::bufferResized, window, &QVNCWindow::updateScrollbars, Qt::QueuedConnection);
+  connect(view,
           &QAbstractVNCView::remoteResizeRequest,
-          scroll_,
+          window,
           &QVNCWindow::postRemoteResizeRequest,
           Qt::QueuedConnection);
 
-  view_->resize(width, height);
-  scroll_->setWidget(view_);
-  scroll_->resize(width, height);
-  scroll_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
-  scroll_->show();
+  view->resize(width, height);
+  window->setWidget(view);
+  window->resize(width, height);
+  window->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+  window->show();
 
   if (ViewerConfig::config()->fullScreen()) {
-    scroll_->fullscreen(true);
+    window->fullscreen(true);
   }
 
   emit vncWindowOpened();
@@ -158,19 +158,19 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 
 void AppManager::closeVNCWindow()
 {
-  QWidget* w = scroll_->takeWidget();
+  QWidget* w = window->takeWidget();
   if (w) {
-    scroll_->setVisible(false);
+    window->setVisible(false);
     w->setVisible(false);
     w->deleteLater();
-    view_ = nullptr;
+    view = nullptr;
     emit vncWindowClosed();
   }
 }
 
 void AppManager::setWindowName(QString name)
 {
-  scroll_->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+  window->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
 }
 
 void AppManager::invalidate(int x0, int y0, int x1, int y1)

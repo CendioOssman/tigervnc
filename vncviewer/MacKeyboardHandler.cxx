@@ -42,8 +42,8 @@ bool MacKeyboardHandler::nativeEventFilter(const QByteArray& eventType, void* me
   Q_UNUSED(result)
   if (eventType == "mac_generic_NSEvent") {
     if (cocoa_is_keyboard_sync(message)) {
-      while (!downKeySym_.empty()) {
-        handleKeyRelease(downKeySym_.begin()->first);
+      while (!downKeySym.empty()) {
+        handleKeyRelease(downKeySym.begin()->first);
       }
       return true;
     }
@@ -81,7 +81,7 @@ bool MacKeyboardHandler::nativeEventFilter(const QByteArray& eventType, void* me
 
 bool MacKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
 {
-  if (menuKeySym_ && keySym == menuKeySym_) {
+  if (menuKeySym && keySym == menuKeySym) {
     if (!menuShortCutMode) {
       emit contextMenuKeyPressed(menuShortCutMode);
       return true;
@@ -120,12 +120,12 @@ bool MacKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuSh
   // symbol on release as when pressed. This breaks the VNC protocol however,
   // so we need to keep track of what keysym a key _code_ generated on press
   // and send the same on release.
-  downKeySym_[keyCode] = keySym;
+  downKeySym[keyCode] = keySym;
 
   //  vlog.debug("Key pressed: 0x%04x => XK_%s (0x%04x)", keyCode, XKeysymToString(keySym), keySym);
 
   try {
-    QVNCConnection* cc = AppManager::instance()->connection();
+    QVNCConnection* cc = AppManager::instance()->getConnection();
     // Fake keycode?
     if (keyCode > 0xff)
       emit cc->writeKeyEvent(keySym, 0, true);
@@ -147,8 +147,8 @@ bool MacKeyboardHandler::handleKeyRelease(int keyCode)
   if (ViewerConfig::config()->viewOnly())
     return false;
 
-  iter = downKeySym_.find(keyCode);
-  if (iter == downKeySym_.end()) {
+  iter = downKeySym.find(keyCode);
+  if (iter == downKeySym.end()) {
     // These occur somewhat frequently so let's not spam them unless
     // logging is turned up.
     vlog.debug("Unexpected release of key code %d", keyCode);
@@ -158,7 +158,7 @@ bool MacKeyboardHandler::handleKeyRelease(int keyCode)
   //  vlog.debug("Key released: 0x%04x => XK_%s (0x%04x)", keyCode, XKeysymToString(iter->second), iter->second);
 
   try {
-    QVNCConnection* cc = AppManager::instance()->connection();
+    QVNCConnection* cc = AppManager::instance()->getConnection();
     if (keyCode > 0xff)
       emit cc->writeKeyEvent(iter->second, 0, false);
     else
@@ -169,7 +169,7 @@ bool MacKeyboardHandler::handleKeyRelease(int keyCode)
     throw;
   }
 
-  downKeySym_.erase(iter);
+  downKeySym.erase(iter);
 
   return true;
 }
@@ -208,9 +208,9 @@ void MacKeyboardHandler::setLEDState(unsigned int state)
 void MacKeyboardHandler::pushLEDState()
 {
   // qDebug() << "MacKeyboardHandler::pushLEDState";
-  QVNCConnection* cc = AppManager::instance()->connection();
+  QVNCConnection* cc = AppManager::instance()->getConnection();
   // Server support?
-  rfb::ServerParams* server = AppManager::instance()->connection()->server();
+  rfb::ServerParams* server = AppManager::instance()->getConnection()->server();
   if (server->ledState() == rfb::ledUnknown) {
     return;
   }

@@ -28,8 +28,8 @@ signals:
   void message(QString const& msg, int timeout);
 
 private:
-  NSView* view_;
-  NSCursor* cursor_;
+  NSView* view;
+  NSCursor* cursor;
 };
 
 #endif // VNCMACVIEW_H

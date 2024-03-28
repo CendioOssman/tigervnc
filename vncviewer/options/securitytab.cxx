@@ -82,13 +82,13 @@ void SecurityTab::apply()
 
 void SecurityTab::reset()
 {
-  securityEncryptionNone->setChecked(ViewerConfig::config()->encNone());
-  securityEncryptionTLSWithAnonymousCerts->setChecked(ViewerConfig::config()->encTLSAnon());
-  securityEncryptionTLSWithX509Certs->setChecked(ViewerConfig::config()->encTLSX509());
+  securityEncryptionNone->setChecked(ViewerConfig::config()->getEncNone());
+  securityEncryptionTLSWithAnonymousCerts->setChecked(ViewerConfig::config()->getEncTLSAnon());
+  securityEncryptionTLSWithX509Certs->setChecked(ViewerConfig::config()->getEncTLSX509());
   securityEncryptionTLSWithX509CATextEdit->setText(ViewerConfig::config()->x509CA());
   securityEncryptionTLSWithX509CRLTextEdit->setText(ViewerConfig::config()->x509CRL());
-  securityEncryptionAES->setChecked(ViewerConfig::config()->encAES());
-  securityAuthenticationNone->setChecked(ViewerConfig::config()->authNone());
-  securityAuthenticationStandard->setChecked(ViewerConfig::config()->authVNC());
-  securityAuthenticationUsernameAndPassword->setChecked(ViewerConfig::config()->authPlain());
+  securityEncryptionAES->setChecked(ViewerConfig::config()->getEncAES());
+  securityAuthenticationNone->setChecked(ViewerConfig::config()->getAuthNone());
+  securityAuthenticationStandard->setChecked(ViewerConfig::config()->getAuthVNC());
+  securityAuthenticationUsernameAndPassword->setChecked(ViewerConfig::config()->getAuthPlain());
 }

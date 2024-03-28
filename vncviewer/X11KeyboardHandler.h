@@ -29,9 +29,9 @@ signals:
   void message(QString const& msg, int timeout);
 
 private:
-  _XDisplay* display_;
-  int eventNumber_;
-  QTimer keyboardGrabberTimer_;
+  _XDisplay* display;
+  int eventNumber;
+  QTimer keyboardGrabberTimer;
 
   unsigned int getModifierMask(unsigned int keysym);
 };

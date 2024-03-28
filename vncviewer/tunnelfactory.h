@@ -12,20 +12,20 @@ public:
   TunnelFactory();
   virtual ~TunnelFactory();
   void close();
-  bool errorOccurred() const { return errorOccurred_; }
-  QProcess::ProcessError error() const { return error_; }
+  bool hasErrorOccurred() const { return errorOccurred; }
+  QProcess::ProcessError getError() const { return error; }
 
 protected:
   void run() override;
 
 private:
-  bool errorOccurred_;
-  QProcess::ProcessError error_;
-  QString command_;
+  bool errorOccurred;
+  QProcess::ProcessError error;
+  QString command;
 #if !defined(WIN32)
-  QString operationSocketName_;
+  QString operationSocketName;
 #endif
-  QProcess *process_;
+  QProcess *process;
 #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
   QStringList splitCommand(QStringView command);
 #endif

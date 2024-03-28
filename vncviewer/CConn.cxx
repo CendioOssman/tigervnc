@@ -219,8 +219,8 @@ void CConn::framebufferUpdateStart()
   updateStartPos = getInStream()->pos();
 
   // Update the screen prematurely for very slow updates
-  facade->updateTimer()->setInterval(1000);
-  facade->updateTimer()->start();
+  facade->getUpdateTimer()->setInterval(1000);
+  facade->getUpdateTimer()->start();
 }
 
 // framebufferUpdateEnd() is called at the end of an update.
@@ -252,8 +252,8 @@ void CConn::framebufferUpdateEnd()
     weight = 200000;
   bpsEstimate = ((bpsEstimate * (1000000 - weight)) +
                  (bps * weight)) / 1000000;
-
-  facade->updateTimer()->stop();
+  
+  facade->getUpdateTimer()->stop();
   emit facade->refreshFramebufferEnded();
 
   // Compute new settings based on updated bandwidth values

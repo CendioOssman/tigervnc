@@ -99,45 +99,44 @@ protected:
 protected:
   static QClipboard* clipboard_;
 
-  quint32 menuKeySym_;
-  QMenu* contextMenu_;
-  QList<QAction*> actions_;
+  // Mouse
+  bool mouseGrabbed = false;
+  DownMap downKeySym;
+  QTimer* mouseButtonEmulationTimer;
+  EmulateMB* mbemu;
+  rfb::Point* lastPointerPos;
+  int lastButtonMask = 0;
+  QTimer* mousePointerTimer;
 
-  bool pendingServerClipboard_;
-  bool pendingClientClipboard_;
-  int clipboardSource_;
-  bool mouseGrabbed_;
-
-  DownMap downKeySym_;
-  QTimer* mouseButtonEmulationTimer_;
-  EmulateMB* mbemu_;
-
-  rfb::Point* lastPointerPos_;
-  int lastButtonMask_;
-  QTimer* mousePointerTimer_;
-
-  BaseKeyboardHandler* keyboardHandler_ = nullptr;
+  // Keyboard handler
+  BaseKeyboardHandler* keyboardHandler = nullptr;
   void initKeyboardHandler();
   void installKeyboardHandler();
   void removeKeyboardHandler();
 
+  // Context menu
+  quint32 menuKeySym;
+  QMenu* contextMenu = nullptr;
+  QList<QAction*> contextMenuActions;
   void createContextMenu();
   void filterPointerEvent(const rfb::Point& pos, int buttonMask);
   void handleMouseButtonEmulationTimeout();
   void sendPointerEvent(const rfb::Point& pos, int buttonMask);
-
   // As QMenu eventFilter
   bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
-  bool firstUpdate_ = true;
-  QTimer* delayedInitializeTimer_;
+  // Initialization
+  bool firstUpdate = true;
+  QTimer* delayedInitializeTimer;
 
-  QTimer* toastTimer_;
+  QTimer* toastTimer;
 
+  // Rendering
   QPixmap pixmap;
   QRegion damage;
 
+  // FPS debugging
 #ifdef QT_DEBUG
   QAtomicInt fpsCounter;
   int fpsValue = 0;

@@ -1,8 +1,9 @@
 #ifndef APPMANAGER_H
 #define APPMANAGER_H
 
-#include <QObject>
 #include "vncconnection.h"
+
+#include <QObject>
 
 class QAbstractVNCView;
 class QVNCWindow;
@@ -11,18 +12,21 @@ class QTimer;
 class AppManager : public QObject
 {
   Q_OBJECT
-  Q_PROPERTY(QVNCConnection *connection READ connection CONSTANT)
-  Q_PROPERTY(QAbstractVNCView *view READ view CONSTANT)
-  Q_PROPERTY(QVNCWindow *window READ window CONSTANT)
 
 public:
   virtual ~AppManager();
-  static AppManager *instance() { return manager_; }
+
+  static AppManager* instance() { return manager; }
+
   static int initialize();
-  QVNCConnection *connection() const { return facade_; }
-  int error() const { return error_; }
-  QAbstractVNCView *view() const { return view_; }
-  QVNCWindow *window() const { return scroll_; }
+
+  QVNCConnection* getConnection() const { return connection; }
+
+  int error() const { return errorCount; }
+
+  QAbstractVNCView* getView() const { return view; }
+
+  QVNCWindow* getWindow() const { return window; }
 
 signals:
   void credentialRequested(bool secured, bool userNeeded, bool passwordNeeded);
@@ -66,12 +70,12 @@ public slots:
   void openMessageDialog(int flags, QString title, QString text);
 
 private:
-  static AppManager *manager_;
-  int error_;
-  QVNCConnection *facade_;
-  QAbstractVNCView *view_;
-  QVNCWindow *scroll_;
-  QTimer *rfbTimerProxy_;
+  static AppManager* manager;
+  int errorCount;
+  QVNCConnection* connection;
+  QAbstractVNCView* view;
+  QVNCWindow* window;
+  QTimer* rfbTimerProxy;
   AppManager();
 };
 

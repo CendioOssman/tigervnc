@@ -41,12 +41,6 @@ static const WORD NoSymbol = 0;
 
 QVNCWinView::QVNCWinView(QWidget* parent, Qt::WindowFlags f)
   : QAbstractVNCView(parent, f)
-  , altGrArmed_(false)
-  , altGrCtrlTimer_(new QTimer)
-  , cursor_(nullptr)
-  , mouseTracking_(false)
-  , defaultCursor_(LoadCursor(NULL, IDC_ARROW))
-  , touchHandler_(nullptr)
 {
   // Do not set either Qt::WA_NoBackground nor Qt::WA_NoSystemBackground
   // for Windows. Otherwise, unneeded ghost image of the toast is shown
@@ -63,26 +57,11 @@ QVNCWinView::QVNCWinView(QWidget* parent, Qt::WindowFlags f)
 
   setFocusPolicy(Qt::StrongFocus);
 
-  altGrCtrlTimer_->setInterval(100);
-  altGrCtrlTimer_->setSingleShot(true);
-  connect(altGrCtrlTimer_, &QTimer::timeout, this, [this]() {
-    altGrArmed_ = false;
-    keyboardHandler_->handleKeyPress(0x1d, XK_Control_L);
-  });
-
-  keyboardHandler_ = new Win32KeyboardHandler(this);
+  keyboardHandler = new Win32KeyboardHandler(this);
   initKeyboardHandler();
 }
 
-QVNCWinView::~QVNCWinView()
-{
-  altGrCtrlTimer_->stop();
-  delete altGrCtrlTimer_;
-
-  DestroyIcon(cursor_);
-
-  delete touchHandler_;
-}
+QVNCWinView::~QVNCWinView() {}
 
 bool QVNCWinView::event(QEvent* e)
 {
@@ -121,12 +100,12 @@ void QVNCWinView::leaveEvent(QEvent* e)
 
 int QVNCWinView::handleTouchEvent(UINT message, WPARAM wParam, LPARAM lParam)
 {
-  return touchHandler_->processEvent(message, wParam, lParam);
+  return touchHandler->processEvent(message, wParam, lParam);
 }
 
 void QVNCWinView::setCursorPos(int x, int y)
 {
-  if (!mouseGrabbed_) {
+  if (!mouseGrabbed) {
     // Do nothing if we do not have the mouse captured.
     return;
   }

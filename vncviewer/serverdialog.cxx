@@ -57,8 +57,8 @@ ServerDialog::ServerDialog(QWidget* parent)
   connect(aboutBtn, &QPushButton::clicked, this, &ServerDialog::openAboutDialog);
   connect(cancelBtn, &QPushButton::clicked, qApp, &QApplication::quit);
   connect(connectBtn, &QPushButton::clicked, this, &ServerDialog::connectTo);
-
-  updateServerList(ViewerConfig::config()->serverHistory());
+  
+  updateServerList(ViewerConfig::config()->getServerHistory());
 }
 
 void ServerDialog::updateServerList(QStringList list)

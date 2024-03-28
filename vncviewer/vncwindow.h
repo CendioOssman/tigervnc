@@ -43,17 +43,17 @@ protected:
   void focusOutEvent(QFocusEvent*) override;
 
 private:
-  QTimer* resizeTimer_;
-  bool fullscreenEnabled_ = false;
-  bool pendingFullscreen_ = false;
-  QByteArray geometry_;
-  double devicePixelRatio_;
+  QTimer* resizeTimer;
+  bool fullscreenEnabled = false;
+  bool pendingFullscreen = false;
+  double devicePixelRatio;
 
-  int fw_;
-  int fh_;
-  int fxmin_;
-  int fymin_;
-  QScreen* fscreen_;
+  int fullscreenWidth;
+  int fullscreenHeight;
+  int fullscreenX;
+  int fullscreenY;
+  QScreen* previousScreen;
+  QByteArray previousGeometry;
 };
 
 #endif // VNCWINDOW_H

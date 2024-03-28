@@ -28,8 +28,8 @@ signals:
   void message(const QString& msg, int timeout);
 
 private:
-  GestureHandler* gestureHandler_;
-  int eventNumber_;
+  GestureHandler* gestureHandler;
+  int eventNumber = 0;
   static QVNCGestureRecognizer* vncGestureRecognizer_;
 
   bool gestureEvent(QGestureEvent* event);

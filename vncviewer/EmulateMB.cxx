@@ -204,7 +204,7 @@ EmulateMB::EmulateMB(QTimer *qtimer)
 
 void EmulateMB::sendPointerEvent(const rfb::Point& pos, int buttonMask)
 {
-  emit AppManager::instance()->connection()->writePointerEvent(pos, buttonMask);
+  emit AppManager::instance()->getConnection()->writePointerEvent(pos, buttonMask);
 }
 
 void EmulateMB::filterPointerEvent(const rfb::Point& pos, int buttonMask)

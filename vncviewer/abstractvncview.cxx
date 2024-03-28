@@ -11,8 +11,6 @@
 #include "locale.h"
 #include "menukey.h"
 #include "rfb/LogWriter.h"
-#include "rfb/PixelBuffer.h"
-#include "rfb/ScreenSet.h"
 #include "rfb/ServerParams.h"
 #include "rfb/util.h"
 #include "vncconnection.h"
@@ -32,7 +30,6 @@
 #include <QTimer>
 #include <QUrl>
 #include <QWindow>
-#include <assert.h>
 #undef asprintf
 #include "abstractvncview.h"
 #include "parameters.h"
@@ -58,19 +55,13 @@ QClipboard* QAbstractVNCView::clipboard_ = nullptr;
 
 QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
   : QWidget(parent, f)
-  , menuKeySym_(XK_F8)
-  , contextMenu_(nullptr)
-  , pendingServerClipboard_(false)
-  , pendingClientClipboard_(false)
-  , clipboardSource_(0)
-  , mouseGrabbed_(false)
-  , mouseButtonEmulationTimer_(new QTimer)
-  , mbemu_(new EmulateMB(mouseButtonEmulationTimer_))
-  , lastPointerPos_(new rfb::Point)
-  , lastButtonMask_(0)
-  , mousePointerTimer_(new QTimer)
-  , delayedInitializeTimer_(new QTimer)
-  , toastTimer_(new QTimer(this))
+  , mouseButtonEmulationTimer(new QTimer)
+  , mbemu(new EmulateMB(mouseButtonEmulationTimer))
+  , lastPointerPos(new rfb::Point)
+  , mousePointerTimer(new QTimer)
+  , menuKeySym(XK_F8)
+  , delayedInitializeTimer(new QTimer)
+  , toastTimer(new QTimer(this))
 #ifdef QT_DEBUG
   , fpsTimer(this)
 #endif
@@ -85,51 +76,51 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
       }
       // qDebug() << "QClipboard::dataChanged: owns=" << clipboard_->ownsClipboard() << ", text=" << clipboard_->text();
       if (!clipboard_->ownsClipboard()) {
-        AppManager::instance()->connection()->announceClipboard(true);
+        AppManager::instance()->getConnection()->announceClipboard(true);
       }
     });
   }
   setContentsMargins(0, 0, 0, 0);
 
-  delayedInitializeTimer_->setInterval(1000);
-  delayedInitializeTimer_->setSingleShot(true);
-  connect(delayedInitializeTimer_, &QTimer::timeout, this, [this]() {
-    AppManager::instance()->connection()->refreshFramebuffer();
+  delayedInitializeTimer->setInterval(1000);
+  delayedInitializeTimer->setSingleShot(true);
+  connect(delayedInitializeTimer, &QTimer::timeout, this, [this]() {
+    AppManager::instance()->getConnection()->refreshFramebuffer();
     emit delayedInitialized();
   });
-  delayedInitializeTimer_->start();
+  delayedInitializeTimer->start();
 
-  mouseButtonEmulationTimer_->setInterval(50);
-  mouseButtonEmulationTimer_->setSingleShot(true);
-  connect(mouseButtonEmulationTimer_, &QTimer::timeout, this, &QAbstractVNCView::handleMouseButtonEmulationTimeout);
+  mouseButtonEmulationTimer->setInterval(50);
+  mouseButtonEmulationTimer->setSingleShot(true);
+  connect(mouseButtonEmulationTimer, &QTimer::timeout, this, &QAbstractVNCView::handleMouseButtonEmulationTimeout);
 
-  mousePointerTimer_->setInterval(ViewerConfig::config()->pointerEventInterval());
-  mousePointerTimer_->setSingleShot(true);
-  connect(mousePointerTimer_, &QTimer::timeout, this, [this]() {
-    mbemu_->filterPointerEvent(*lastPointerPos_, lastButtonMask_);
+  mousePointerTimer->setInterval(ViewerConfig::config()->pointerEventInterval());
+  mousePointerTimer->setSingleShot(true);
+  connect(mousePointerTimer, &QTimer::timeout, this, [this]() {
+    mbemu->filterPointerEvent(*lastPointerPos, lastButtonMask);
   });
 
-  connect(AppManager::instance()->connection(),
+  connect(AppManager::instance()->getConnection(),
           &QVNCConnection::cursorChanged,
           this,
           &QAbstractVNCView::setCursor,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->connection(),
+  connect(AppManager::instance()->getConnection(),
           &QVNCConnection::cursorPositionChanged,
           this,
           &QAbstractVNCView::setCursorPos,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->connection(),
+  connect(AppManager::instance()->getConnection(),
           &QVNCConnection::clipboardDataReceived,
           this,
           &QAbstractVNCView::handleClipboardData,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->connection(),
+  connect(AppManager::instance()->getConnection(),
           &QVNCConnection::bellRequested,
           this,
           &QAbstractVNCView::bell,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->connection(),
+  connect(AppManager::instance()->getConnection(),
           &QVNCConnection::refreshFramebufferEnded,
           this,
           &QAbstractVNCView::updateWindow,
@@ -140,9 +131,9 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
           &QAbstractVNCView::updateWindow,
           Qt::QueuedConnection);
 
-  toastTimer_->setInterval(5000);
-  toastTimer_->setSingleShot(true);
-  connect(toastTimer_, &QTimer::timeout, this, &QAbstractVNCView::hideToast);
+  toastTimer->setInterval(5000);
+  toastTimer->setSingleShot(true);
+  connect(toastTimer, &QTimer::timeout, this, &QAbstractVNCView::hideToast);
   connect(this, &QAbstractVNCView::delayedInitialized, this, &QAbstractVNCView::showToast);
 
 #ifdef QT_DEBUG
@@ -163,64 +154,64 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
 
 QAbstractVNCView::~QAbstractVNCView()
 {
-  for (QAction*& action : actions_) {
+  for (QAction*& action : contextMenuActions) {
     delete action;
   }
-  delete contextMenu_;
-  delete delayedInitializeTimer_;
-  delete mouseButtonEmulationTimer_;
-  delete lastPointerPos_;
-  delete mousePointerTimer_;
+  delete contextMenu;
+  delete delayedInitializeTimer;
+  delete mouseButtonEmulationTimer;
+  delete lastPointerPos;
+  delete mousePointerTimer;
 }
 
 void QAbstractVNCView::toggleContextMenu()
 {
   if (isVisibleContextMenu()) {
-    contextMenu_->hide();
+    contextMenu->hide();
   } else {
     createContextMenu();
     removeKeyboardHandler();
-    contextMenu_->exec(QCursor::pos());
+    contextMenu->exec(QCursor::pos());
   }
 }
 
 void QAbstractVNCView::createContextMenu()
 {
-  if (!contextMenu_) {
-    actions_ << new QDisconnectAction(p_("ContextMenu|", "Dis&connect"));
-    actions_ << new QMenuSeparator();
-    actions_ << new QFullScreenAction(p_("ContextMenu|", "&Full screen"));
-    actions_ << new QMinimizeAction(p_("ContextMenu|", "Minimi&ze"));
-    actions_ << new QRevertSizeAction(p_("ContextMenu|", "Resize &window to session"));
-    actions_ << new QMenuSeparator();
-    actions_ << new QKeyToggleAction(p_("ContextMenu|", "&Ctrl"), 0x1d, XK_Control_L);
-    actions_ << new QKeyToggleAction(p_("ContextMenu|", "&Alt"), 0x38, XK_Alt_L);
-    actions_ << new QMenuKeyAction(
+  if (!contextMenu) {
+    contextMenuActions << new QDisconnectAction(p_("ContextMenu|", "Dis&connect"));
+    contextMenuActions << new QMenuSeparator();
+    contextMenuActions << new QFullScreenAction(p_("ContextMenu|", "&Full screen"));
+    contextMenuActions << new QMinimizeAction(p_("ContextMenu|", "Minimi&ze"));
+    contextMenuActions << new QRevertSizeAction(p_("ContextMenu|", "Resize &window to session"));
+    contextMenuActions << new QMenuSeparator();
+    contextMenuActions << new QKeyToggleAction(p_("ContextMenu|", "&Ctrl"), 0x1d, XK_Control_L);
+    contextMenuActions << new QKeyToggleAction(p_("ContextMenu|", "&Alt"), 0x38, XK_Alt_L);
+    contextMenuActions << new QMenuKeyAction(
         QString::asprintf(p_("ContextMenu|", "Send %s"), ViewerConfig::config()->menuKey().toStdString().c_str()));
-    actions_ << new QCtrlAltDelAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"));
-    actions_ << new QMenuSeparator();
-    actions_ << new QRefreshAction(p_("ContextMenu|", "&Refresh screen"));
-    actions_ << new QMenuSeparator();
-    actions_ << new QOptionDialogAction(p_("ContextMenu|", "&Options..."));
-    actions_ << new QInfoDialogAction(p_("ContextMenu|", "Connection &info..."));
-    actions_ << new QAboutDialogAction(p_("ContextMenu|", "About &TigerVNC viewer..."));
-    QVNCWindow* window = AppManager::instance()->window();
-    contextMenu_ = new QMenu(window);
+    contextMenuActions << new QCtrlAltDelAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"));
+    contextMenuActions << new QMenuSeparator();
+    contextMenuActions << new QRefreshAction(p_("ContextMenu|", "&Refresh screen"));
+    contextMenuActions << new QMenuSeparator();
+    contextMenuActions << new QOptionDialogAction(p_("ContextMenu|", "&Options..."));
+    contextMenuActions << new QInfoDialogAction(p_("ContextMenu|", "Connection &info..."));
+    contextMenuActions << new QAboutDialogAction(p_("ContextMenu|", "About &TigerVNC viewer..."));
+    QVNCWindow* window = AppManager::instance()->getWindow();
+    contextMenu = new QMenu(window);
 #if defined(__APPLE__)
-    contextMenu_->setAttribute(Qt::WA_NativeWindow);
-    cocoa_set_overlay_property(contextMenu_->winId());
+    contextMenu->setAttribute(Qt::WA_NativeWindow);
+    cocoa_set_overlay_property(contextMenu->winId());
 #endif
-    for (QAction*& action : actions_) {
-      contextMenu_->addAction(action);
+    for (QAction*& action : contextMenuActions) {
+      contextMenu->addAction(action);
     }
-    contextMenu_->installEventFilter(this);
-    connect(contextMenu_, &QMenu::aboutToHide, this, &QAbstractVNCView::installKeyboardHandler, Qt::QueuedConnection);
+    contextMenu->installEventFilter(this);
+    connect(contextMenu, &QMenu::aboutToHide, this, &QAbstractVNCView::installKeyboardHandler, Qt::QueuedConnection);
   }
 }
 
 bool QAbstractVNCView::isVisibleContextMenu() const
 {
-  return contextMenu_ && contextMenu_->isVisible();
+  return contextMenu && contextMenu->isVisible();
 }
 
 void QAbstractVNCView::sendContextMenuKey()
@@ -233,29 +224,29 @@ void QAbstractVNCView::sendContextMenuKey()
   int keyCode;
   quint32 keySym;
   ::getMenuKey(&dummy, &keyCode, &keySym);
-  keyboardHandler_->handleKeyPress(keyCode, keySym, true);
-  keyboardHandler_->handleKeyRelease(keyCode);
-  contextMenu_->hide();
+  keyboardHandler->handleKeyPress(keyCode, keySym, true);
+  keyboardHandler->handleKeyRelease(keyCode);
+  contextMenu->hide();
 }
 
 void QAbstractVNCView::sendCtrlAltDel()
 {
-  keyboardHandler_->handleKeyPress(0x1d, XK_Control_L);
-  keyboardHandler_->handleKeyPress(0x38, XK_Alt_L);
-  keyboardHandler_->handleKeyPress(0xd3, XK_Delete);
-  keyboardHandler_->handleKeyRelease(0xd3);
-  keyboardHandler_->handleKeyRelease(0x38);
-  keyboardHandler_->handleKeyRelease(0x1d);
+  keyboardHandler->handleKeyPress(0x1d, XK_Control_L);
+  keyboardHandler->handleKeyPress(0x38, XK_Alt_L);
+  keyboardHandler->handleKeyPress(0xd3, XK_Delete);
+  keyboardHandler->handleKeyRelease(0xd3);
+  keyboardHandler->handleKeyRelease(0x38);
+  keyboardHandler->handleKeyRelease(0x1d);
 }
 
 void QAbstractVNCView::toggleKey(bool toggle, int keyCode, quint32 keySym)
 {
   if (toggle) {
-    keyboardHandler_->handleKeyPress(keyCode, keySym);
+    keyboardHandler->handleKeyPress(keyCode, keySym);
   } else {
-    keyboardHandler_->handleKeyRelease(keyCode);
+    keyboardHandler->handleKeyRelease(keyCode);
   }
-  keyboardHandler_->setMenuKeyStatus(keySym, toggle);
+  keyboardHandler->setMenuKeyStatus(keySym, toggle);
 }
 
 // As QMenu eventFilter
@@ -287,12 +278,12 @@ void QAbstractVNCView::initKeyboardHandler()
           this,
           &QAbstractVNCView::removeKeyboardHandler,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->connection(),
+  connect(AppManager::instance()->getConnection(),
           &QVNCConnection::ledStateChanged,
-          keyboardHandler_,
+          keyboardHandler,
           &BaseKeyboardHandler::setLEDState,
           Qt::QueuedConnection);
-  connect(keyboardHandler_,
+  connect(keyboardHandler,
           &BaseKeyboardHandler::contextMenuKeyPressed,
           this,
           &QAbstractVNCView::toggleContextMenu,
@@ -302,13 +293,13 @@ void QAbstractVNCView::initKeyboardHandler()
 void QAbstractVNCView::installKeyboardHandler()
 {
   qDebug() << "QAbstractVNCView::installKeyboardHandler";
-  QAbstractEventDispatcher::instance()->installNativeEventFilter(keyboardHandler_);
+  QAbstractEventDispatcher::instance()->installNativeEventFilter(keyboardHandler);
 }
 
 void QAbstractVNCView::removeKeyboardHandler()
 {
   qDebug() << "QAbstractVNCView::removeKeyboardHandler";
-  QAbstractEventDispatcher::instance()->removeNativeEventFilter(keyboardHandler_);
+  QAbstractEventDispatcher::instance()->removeNativeEventFilter(keyboardHandler);
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
@@ -321,8 +312,8 @@ QScreen* QAbstractVNCView::screen() const
 
 void QAbstractVNCView::resetKeyboard()
 {
-  if (keyboardHandler_)
-    keyboardHandler_->resetKeyboard();
+  if (keyboardHandler)
+    keyboardHandler->resetKeyboard();
 }
 
 void QAbstractVNCView::setCursorPos(int, int) {}
@@ -335,7 +326,7 @@ void QAbstractVNCView::handleClipboardData(const char* data)
 
 void QAbstractVNCView::maybeGrabKeyboard()
 {
-  QVNCWindow* window = AppManager::instance()->window();
+  QVNCWindow* window = AppManager::instance()->getWindow();
   if (ViewerConfig::config()->fullscreenSystemKeys() && window->allowKeyboardGrab() && hasFocus()) {
     grabKeyboard();
   }
@@ -343,7 +334,7 @@ void QAbstractVNCView::maybeGrabKeyboard()
 
 void QAbstractVNCView::grabKeyboard()
 {
-  keyboardHandler_->grabKeyboard();
+  keyboardHandler->grabKeyboard();
 
   QPoint gpos = QCursor::pos();
   QPoint lpos = mapFromGlobal(gpos);
@@ -355,26 +346,26 @@ void QAbstractVNCView::grabKeyboard()
 
 void QAbstractVNCView::ungrabKeyboard()
 {
-  if (keyboardHandler_)
-    keyboardHandler_->ungrabKeyboard();
+  if (keyboardHandler)
+    keyboardHandler->ungrabKeyboard();
 }
 
 void QAbstractVNCView::grabPointer()
 {
   setMouseTracking(true);
-  mouseGrabbed_ = true;
+  mouseGrabbed = true;
 }
 
 void QAbstractVNCView::ungrabPointer()
 {
   setMouseTracking(false);
-  mouseGrabbed_ = false;
+  mouseGrabbed = false;
 }
 
 void QAbstractVNCView::showToast()
 {
   qDebug() << "QAbstractVNCView::showToast" << toastGeometry();
-  toastTimer_->start();
+  toastTimer->start();
   damage += toastGeometry(); // xTODO
   update(localRectAdjust(damage.boundingRect()));
 }
@@ -382,7 +373,7 @@ void QAbstractVNCView::showToast()
 void QAbstractVNCView::hideToast()
 {
   qDebug() << "QAbstractVNCView::hideToast";
-  toastTimer_->stop();
+  toastTimer->stop();
   damage += toastGeometry(); // xTODO
   update(localRectAdjust(damage.boundingRect()));
 }
@@ -438,12 +429,12 @@ rfb::Point QAbstractVNCView::remotePointAdjust(const rfb::Point& pos)
 void QAbstractVNCView::updateWindow()
 {
   // copied from DesktopWindow.cxx.
-  QVNCConnection* cc = AppManager::instance()->connection();
-  if (firstUpdate_) {
+  QVNCConnection* cc = AppManager::instance()->getConnection();
+  if (firstUpdate) {
     if (cc->server()->supportsSetDesktopSize) {
       emit remoteResizeRequest();
     }
-    firstUpdate_ = false;
+    firstUpdate = false;
   }
 
   PlatformPixelBuffer* framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
@@ -460,7 +451,7 @@ void QAbstractVNCView::updateWindow()
 
 void QAbstractVNCView::paintEvent(QPaintEvent* event)
 {
-  QVNCConnection* cc = AppManager::instance()->connection();
+  QVNCConnection* cc = AppManager::instance()->getConnection();
   PlatformPixelBuffer* framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
 
   if ((framebuffer->width() != pixmap.width()) || (framebuffer->height() != pixmap.height())) {
@@ -496,7 +487,7 @@ void QAbstractVNCView::paintEvent(QPaintEvent* event)
 
   painter.drawPixmap(r, pixmap, remoteRectAdjust(r));
 
-  if (toastTimer_->isActive()) {
+  if (toastTimer->isActive()) {
     painter.setFont(toastFont());
     painter.setPen(Qt::NoPen);
     painter.setRenderHint(QPainter::Antialiasing);
@@ -668,21 +659,21 @@ void QAbstractVNCView::wheelEvent(QWheelEvent* event)
 void QAbstractVNCView::focusInEvent(QFocusEvent* event)
 {
   qDebug() << "QAbstractVNCView::focusInEvent";
-  if (keyboardHandler_) {
+  if (keyboardHandler) {
     maybeGrabKeyboard();
 
     // flushPendingClipboard();
 
     // We may have gotten our lock keys out of sync with the server
     // whilst we didn't have focus. Try to sort this out.
-    keyboardHandler_->pushLEDState();
+    keyboardHandler->pushLEDState();
 
     // Resend Ctrl/Alt if needed
-    if (keyboardHandler_->menuCtrlKey()) {
-      keyboardHandler_->handleKeyPress(0x1d, XK_Control_L);
+    if (keyboardHandler->getMenuCtrlKey()) {
+      keyboardHandler->handleKeyPress(0x1d, XK_Control_L);
     }
-    if (keyboardHandler_->menuAltKey()) {
-      keyboardHandler_->handleKeyPress(0x38, XK_Alt_L);
+    if (keyboardHandler->getMenuAltKey()) {
+      keyboardHandler->handleKeyPress(0x38, XK_Alt_L);
     }
   }
   QWidget::focusInEvent(event);
@@ -713,14 +704,14 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
   if (ViewerConfig::config()->viewOnly()) {
     return;
   }
-  bool instantPosting = ViewerConfig::config()->pointerEventInterval() == 0 || (mask != lastButtonMask_);
-  *lastPointerPos_ = remotePointAdjust(pos);
-  lastButtonMask_ = mask;
+  bool instantPosting = ViewerConfig::config()->pointerEventInterval() == 0 || (mask != lastButtonMask);
+  *lastPointerPos = remotePointAdjust(pos);
+  lastButtonMask = mask;
   if (instantPosting) {
-    mbemu_->filterPointerEvent(*lastPointerPos_, lastButtonMask_);
+    mbemu->filterPointerEvent(*lastPointerPos, lastButtonMask);
   } else {
-    if (!mousePointerTimer_->isActive())
-      mousePointerTimer_->start();
+    if (!mousePointerTimer->isActive())
+      mousePointerTimer->start();
   }
 }
 
@@ -729,5 +720,5 @@ void QAbstractVNCView::handleMouseButtonEmulationTimeout()
   if (ViewerConfig::config()->viewOnly()) {
     return;
   }
-  mbemu_->handleTimeout();
+  mbemu->handleTimeout();
 }

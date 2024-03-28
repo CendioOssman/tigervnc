@@ -95,9 +95,9 @@ X11KeyboardHandler::X11KeyboardHandler(QObject* parent)
 
   XkbFreeKeyboard(xkb, 0, True);
 
-  keyboardGrabberTimer_.setInterval(500);
-  keyboardGrabberTimer_.setSingleShot(true);
-  connect(&keyboardGrabberTimer_, &QTimer::timeout, this, &X11KeyboardHandler::grabKeyboard);
+  keyboardGrabberTimer.setInterval(500);
+  keyboardGrabberTimer.setSingleShot(true);
+  connect(&keyboardGrabberTimer, &QTimer::timeout, this, &X11KeyboardHandler::grabKeyboard);
 }
 
 X11KeyboardHandler::~X11KeyboardHandler()
@@ -131,7 +131,7 @@ bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* me
       kev.type = xevent->response_type;
       kev.serial = xevent->sequence;
       kev.send_event = false;
-      kev.display = display_;
+      kev.display = display;
       kev.window = xevent->event;
       kev.root = xevent->root;
       kev.subwindow = xevent->child;
@@ -191,7 +191,7 @@ bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* me
 bool X11KeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
 {
   qDebug() << "X11KeyboardHandler::handleKeyPress: keyCode=" << keyCode << ", keySym=" << keySym;
-  if (menuKeySym_ && keySym == menuKeySym_) {
+  if (menuKeySym && keySym == menuKeySym) {
     if (!menuShortCutMode) {
       emit contextMenuKeyPressed(menuShortCutMode);
       return true;
@@ -210,12 +210,12 @@ bool X11KeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuSh
   // symbol on release as when pressed. This breaks the VNC protocol however,
   // so we need to keep track of what keysym a key _code_ generated on press
   // and send the same on release.
-  downKeySym_[keyCode] = keySym;
+  downKeySym[keyCode] = keySym;
 
   vlog.debug("Key pressed: 0x%04x => XK_%s (0x%04x)", keyCode, XKeysymToString(keySym), keySym);
 
   try {
-    QVNCConnection* cc = AppManager::instance()->connection();
+    QVNCConnection* cc = AppManager::instance()->getConnection();
     // Fake keycode?
     if (keyCode > 0xff)
       emit cc->writeKeyEvent(keySym, 0, true);
@@ -237,8 +237,8 @@ bool X11KeyboardHandler::handleKeyRelease(int keyCode)
   if (ViewerConfig::config()->viewOnly())
     return false;
 
-  iter = downKeySym_.find(keyCode);
-  if (iter == downKeySym_.end()) {
+  iter = downKeySym.find(keyCode);
+  if (iter == downKeySym.end()) {
     // These occur somewhat frequently so let's not spam them unless
     // logging is turned up.
     vlog.debug("Unexpected release of key code %d", keyCode);
@@ -248,7 +248,7 @@ bool X11KeyboardHandler::handleKeyRelease(int keyCode)
   vlog.debug("Key released: 0x%04x => XK_%s (0x%04x)", keyCode, XKeysymToString(iter->second), iter->second);
 
   try {
-    QVNCConnection* cc = AppManager::instance()->connection();
+    QVNCConnection* cc = AppManager::instance()->getConnection();
     if (keyCode > 0xff)
       emit cc->writeKeyEvent(iter->second, 0, false);
     else
@@ -259,7 +259,7 @@ bool X11KeyboardHandler::handleKeyRelease(int keyCode)
     throw;
   }
 
-  downKeySym_.erase(iter);
+  downKeySym.erase(iter);
 
   return true;
 }
@@ -302,7 +302,7 @@ void X11KeyboardHandler::setLEDState(unsigned int state)
   if (state & rfb::ledScrollLock) {
     values |= mask;
   }
-  Bool ret = XkbLockModifiers(display_, XkbUseCoreKbd, affect, values);
+  Bool ret = XkbLockModifiers(display, XkbUseCoreKbd, affect, values);
   if (!ret) {
     vlog.error(_("Failed to update keyboard LED state"));
   }
@@ -311,14 +311,14 @@ void X11KeyboardHandler::setLEDState(unsigned int state)
 void X11KeyboardHandler::pushLEDState()
 {
   // qDebug() << "X11KeyboardHandler::pushLEDState";
-  QVNCConnection* cc = AppManager::instance()->connection();
+  QVNCConnection* cc = AppManager::instance()->getConnection();
   // Server support?
-  rfb::ServerParams* server = AppManager::instance()->connection()->server();
+  rfb::ServerParams* server = AppManager::instance()->getConnection()->server();
   if (server->ledState() == rfb::ledUnknown) {
     return;
   }
   XkbStateRec xkbState;
-  Status status = XkbGetState(display_, XkbUseCoreKbd, &xkbState);
+  Status status = XkbGetState(display, XkbUseCoreKbd, &xkbState);
   if (status != Success) {
     vlog.error(_("Failed to get keyboard LED state: %d"), status);
     return;
@@ -355,16 +355,16 @@ void X11KeyboardHandler::pushLEDState()
 void X11KeyboardHandler::grabKeyboard()
 {
   qDebug() << "X11KeyboardHandler::grabKeyboard";
-  keyboardGrabberTimer_.stop();
+  keyboardGrabberTimer.stop();
   Window w;
   int revert_to;
-  XGetInputFocus(display_, &w, &revert_to);
-  int ret = XGrabKeyboard(display_, w, True, GrabModeAsync, GrabModeAsync, CurrentTime);
+  XGetInputFocus(display, &w, &revert_to);
+  int ret = XGrabKeyboard(display, w, True, GrabModeAsync, GrabModeAsync, CurrentTime);
   if (ret) {
     if (ret == AlreadyGrabbed) {
       // It seems like we can race with the WM in some cases.
       // Try again in a bit.
-      keyboardGrabberTimer_.start();
+      keyboardGrabberTimer.start();
     } else {
       vlog.error(_("Failure grabbing keyboard"));
     }
@@ -375,10 +375,10 @@ void X11KeyboardHandler::grabKeyboard()
   // change of focus. This causes us to get stuck in an endless loop
   // grabbing and ungrabbing the keyboard. Avoid this by filtering out
   // any focus events generated by XGrabKeyboard().
-  XSync(display_, False);
+  XSync(display, False);
   XEvent xev;
   unsigned long serial;
-  while (XCheckIfEvent(display_, &xev, &eventIsFocusWithSerial, (XPointer)&serial) == True) {
+  while (XCheckIfEvent(display, &xev, &eventIsFocusWithSerial, (XPointer)&serial) == True) {
     vlog.debug("Ignored synthetic focus event cause by grab change");
   }
   BaseKeyboardHandler::grabKeyboard();
@@ -386,8 +386,8 @@ void X11KeyboardHandler::grabKeyboard()
 
 void X11KeyboardHandler::ungrabKeyboard()
 {
-  keyboardGrabberTimer_.stop();
-  XUngrabKeyboard(display_, CurrentTime);
+  keyboardGrabberTimer.stop();
+  XUngrabKeyboard(display, CurrentTime);
   BaseKeyboardHandler::ungrabKeyboard();
 }
 
@@ -398,7 +398,7 @@ void X11KeyboardHandler::releaseKeyboard()
 
 unsigned int X11KeyboardHandler::getModifierMask(unsigned int keysym)
 {
-  XkbDescPtr xkb = XkbGetMap(display_, XkbAllComponentsMask, XkbUseCoreKbd);
+  XkbDescPtr xkb = XkbGetMap(display, XkbAllComponentsMask, XkbUseCoreKbd);
   if (xkb == nullptr) {
     return 0;
   }

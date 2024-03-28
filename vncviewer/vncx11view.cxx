@@ -55,8 +55,7 @@ QVNCGestureRecognizer* QVNCX11View::vncGestureRecognizer_ = nullptr;
 
 QVNCX11View::QVNCX11View(QWidget* parent, Qt::WindowFlags f)
   : QAbstractVNCView(parent, f)
-  , gestureHandler_(new GestureHandler)
-  , eventNumber_(0)
+  , gestureHandler(new GestureHandler)
 #if 0
   , keyboardGrabberTimer_(new QTimer)
 #endif
@@ -75,13 +74,13 @@ QVNCX11View::QVNCX11View(QWidget* parent, Qt::WindowFlags f)
   grabGesture(Qt::CustomGesture);
   QGestureRecognizer::registerRecognizer(vncGestureRecognizer_);
 
-  keyboardHandler_ = new X11KeyboardHandler(this);
+  keyboardHandler = new X11KeyboardHandler(this);
   initKeyboardHandler();
 }
 
 QVNCX11View::~QVNCX11View()
 {
-  delete gestureHandler_;
+  delete gestureHandler;
 }
 
 /*!
@@ -133,11 +132,11 @@ void QVNCX11View::bell()
 {
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  auto display_ = QX11Info::display();
+  auto display = QX11Info::display();
 #else
-  auto display_ = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+  auto display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
 #endif
-  XBell(display_, 0 /* volume */);
+  XBell(display, 0 /* volume */);
 }
 
 void QVNCX11View::handleClipboardData(const char*) {}
@@ -145,7 +144,7 @@ void QVNCX11View::handleClipboardData(const char*) {}
 bool QVNCX11View::gestureEvent(QGestureEvent* event)
 {
   qDebug() << "QVNCX11View::gestureEvent: event=" << event;
-  int eid = eventNumber_++;
+  int eid = eventNumber++;
   for (QGesture*& gesture : event->gestures()) {
     QPoint hotspot(0, 0);
     if (gesture->hasHotSpot()) {
@@ -153,13 +152,13 @@ bool QVNCX11View::gestureEvent(QGestureEvent* event)
     }
     switch (gesture->state()) {
     case Qt::GestureStarted:
-      gestureHandler_->handleTouchBegin(eid, hotspot.x(), hotspot.y());
+      gestureHandler->handleTouchBegin(eid, hotspot.x(), hotspot.y());
       break;
     case Qt::GestureUpdated:
-      gestureHandler_->handleTouchUpdate(eid, hotspot.x(), hotspot.y());
+      gestureHandler->handleTouchUpdate(eid, hotspot.x(), hotspot.y());
       break;
     case Qt::GestureFinished:
-      gestureHandler_->handleTouchEnd(eid);
+      gestureHandler->handleTouchEnd(eid);
       break;
     default:
       break;

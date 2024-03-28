@@ -867,23 +867,23 @@ char* loadViewerParameters(const char *filename) {
 
 ViewerConfig::ViewerConfig()
  : QObject(nullptr)
- , encNone_(false)
- , encTLSAnon_(false)
- , encTLSX509_(false)
- , encAES_(false)
- , authNone_(false)
- , authVNC_(false)
- , authPlain_(false)
- , serverPort_(SERVER_PORT_OFFSET)
- , gatewayLocalPort_(0)
- , messageDir_(nullptr)
+ , encNone(false)
+ , encTLSAnon(false)
+ , encTLSX509(false)
+ , encAES(false)
+ , authNone(false)
+ , authVNC(false)
+ , authPlain(false)
+ , serverPort(SERVER_PORT_OFFSET)
+ , gatewayLocalPort(0)
+  , messageDir(nullptr)
 {
   connect(this, &ViewerConfig::accessPointChanged, this, [this](QString accessPoint) {
-    serverHistory_.removeOne(accessPoint);
-    serverHistory_.push_front(accessPoint);
+        serverHistory.removeOne(accessPoint);
+        serverHistory.push_front(accessPoint);
     parseServerName();
     saveServerHistory();
-    emit serverHistoryChanged(serverHistory_);
+    emit serverHistoryChanged(serverHistory);
   }, Qt::QueuedConnection);
   initializeLogger();
 
@@ -940,11 +940,11 @@ ViewerConfig::ViewerConfig()
       usage();
     }
 
-    serverName_ = argv[i];
+    serverName = argv[i];
     i++;
   }
   // Check if the server name in reality is a configuration file
-  potentiallyLoadConfigurationFile(serverName_);
+  potentiallyLoadConfigurationFile(serverName);
 
   /* Specifying -via and -listen together is nonsense */
   if (::listenMode && ::via.getValueStr().length() > 0) {
@@ -962,12 +962,12 @@ ViewerConfig::ViewerConfig()
   for (auto iter = secTypes.begin(); iter != secTypes.end(); ++iter) {
     switch (*iter) {
     case rfb::secTypeNone:
-      encNone_ = true;
-      authNone_ = true;
+      encNone = true;
+      authNone = true;
       break;
     case rfb::secTypeVncAuth:
-      encNone_ = true;
-      authVNC_ = true;
+      encNone = true;
+      authVNC = true;
       break;
     }
   }
@@ -975,56 +975,56 @@ ViewerConfig::ViewerConfig()
   for (auto iterExt = secTypesExt.begin(); iterExt != secTypesExt.end(); ++iterExt) {
     switch (*iterExt) {
     case rfb::secTypePlain:
-      encNone_ = true;
-      authPlain_ = true;
+      encNone = true;
+      authPlain = true;
       break;
     case rfb::secTypeTLSNone:
-      encTLSAnon_ = true;
-      authNone_ = true;
+      encTLSAnon = true;
+      authNone = true;
       break;
     case rfb::secTypeTLSVnc:
-      encTLSAnon_ = true;
-      authVNC_ = true;
+      encTLSAnon = true;
+      authVNC = true;
       break;
     case rfb::secTypeTLSPlain:
-      encTLSAnon_ = true;
-      authPlain_ = true;
+      encTLSAnon = true;
+      authPlain = true;
       break;
     case rfb::secTypeX509None:
-      encTLSX509_ = true;
-      authNone_ = true;
+      encTLSX509 = true;
+      authNone = true;
       break;
     case rfb::secTypeX509Vnc:
-      encTLSX509_ = true;
-      authVNC_ = true;
+      encTLSX509 = true;
+      authVNC = true;
       break;
     case rfb::secTypeX509Plain:
-      encTLSX509_ = true;
-      authPlain_ = true;
+      encTLSX509 = true;
+      authPlain = true;
       break;
     case rfb::secTypeRA2:
     case rfb::secTypeRA256:
-      encAES_ = true;
-      authVNC_ = true;
-      authPlain_ = true;
+      encAES = true;
+      authVNC = true;
+      authPlain = true;
       break;
     case rfb::secTypeRA2ne:
     case rfb::secTypeRAne256:
-      authVNC_ = true;
-      authPlain_ = true;
+      authVNC = true;
+      authPlain = true;
       break;
     }
   }
   auto keysyms = getMenuKeySymbols();
   for (int i = 0; i < getMenuKeySymbolCount(); i++) {
-    menuKeys_.append(keysyms[i].name);
+    menuKeys.append(keysyms[i].name);
   }
 }
 
 ViewerConfig::~ViewerConfig()
 {
-  if (messageDir_) {
-    free(messageDir_);
+  if (messageDir) {
+    free(messageDir);
   }
 }
 
@@ -1036,13 +1036,13 @@ int ViewerConfig::initialize()
 
 bool ViewerConfig::installedSecurity(int type) const
 {
-  return availableSecurityTypes_.contains(type);
+  return availableSecurityTypes.contains(type);
 }
 
 bool ViewerConfig::enabledSecurity(int type) const
 {
-  auto found = availableSecurityTypes_.find(type);
-  return found != availableSecurityTypes_.end() && *found;
+  auto found = availableSecurityTypes.find(type);
+  return found != availableSecurityTypes.end() && *found;
 }
 
 QString ViewerConfig::toLocalFile(const QUrl url) const
@@ -1052,12 +1052,12 @@ QString ViewerConfig::toLocalFile(const QUrl url) const
 
 void ViewerConfig::saveViewerParameters(QString path, QString serverName)
 {
-  serverHistory_.removeOne(serverName);
-  serverHistory_.push_front(serverName);
+  serverHistory.removeOne(serverName);
+  serverHistory.push_front(serverName);
   parseServerName();
   saveServerHistory();
   ::saveViewerParameters(path.isEmpty() ? nullptr : path.toStdString().c_str(), serverName.toStdString().c_str());
-  emit serverHistoryChanged(serverHistory_);
+  emit serverHistoryChanged(serverHistory);
 }
 
 QString ViewerConfig::loadViewerParameters(QString path)
@@ -1067,10 +1067,10 @@ QString ViewerConfig::loadViewerParameters(QString path)
 
 void ViewerConfig::loadServerHistory()
 {
-  serverHistory_.clear();
+  serverHistory.clear();
 
 #ifdef _WIN32
-  loadHistoryFromRegKey(serverHistory_);
+  loadHistoryFromRegKey(serverHistory);
   return;
 #endif
 
@@ -1123,8 +1123,8 @@ void ViewerConfig::loadServerHistory()
 
     if (len == 0)
       continue;
-
-    serverHistory_.push_back(line);
+    
+    serverHistory.push_back(line);
   }
 
   fclose(f);
@@ -1132,8 +1132,8 @@ void ViewerConfig::loadServerHistory()
 
 void ViewerConfig::setServerHistory(QStringList history)
 {
-  if (serverHistory_ != history) {
-    serverHistory_ = history;
+  if (serverHistory != history) {
+    serverHistory = history;
     saveServerHistory();
     emit serverHistoryChanged(history);
   }
@@ -1141,20 +1141,20 @@ void ViewerConfig::setServerHistory(QStringList history)
 
 void ViewerConfig::addToServerHistory(QString value)
 {
-    if(!serverHistory_.contains(value))
+  if(!serverHistory.contains(value))
     {
-        serverHistory_.append(value);
+    serverHistory.append(value);
         saveServerHistory();
-        emit serverHistoryChanged(serverHistory_);
+    emit serverHistoryChanged(serverHistory);
     }
 }
 
 void ViewerConfig::saveServerHistory()
 {
-  serverName_ = serverHistory_.length() > 0 ? serverHistory_[0] : "";
+  serverName = serverHistory.length() > 0 ? serverHistory[0] : "";
   parseServerName();
 #ifdef _WIN32
-  saveHistoryToRegKey(serverHistory_);
+  saveHistoryToRegKey(serverHistory);
 #else
   const char* homeDir = os::getvnchomedir();
   if (homeDir == nullptr) {
@@ -1336,56 +1336,56 @@ void ViewerConfig::setQualityLevel(int value)
 
 void ViewerConfig::setEncNone(bool value)
 {
-  if (encNone_ != value) {
-    encNone_ = value;
+  if (encNone != value) {
+    encNone = value;
     emit encNoneChanged(value);
   }
 }
 
 void ViewerConfig::setEncTLSAnon(bool value)
 {
-  if (encTLSAnon_ != value) {
-    encTLSAnon_ = value;
+  if (encTLSAnon != value) {
+    encTLSAnon = value;
     emit encTLSAnonChanged(value);
   }
 }
 
 void ViewerConfig::setEncTLSX509(bool value)
 {
-  if (encTLSX509_ != value) {
-    encTLSX509_ = value;
+  if (encTLSX509 != value) {
+    encTLSX509 = value;
     emit encTLSX509Changed(value);
   }
 }
 
 void ViewerConfig::setEncAES(bool value)
 {
-  if (encAES_ != value) {
-    encAES_ = value;
+  if (encAES != value) {
+    encAES = value;
     emit encAESChanged(value);
   }
 }
 
 void ViewerConfig::setAuthNone(bool value)
 {
-  if (authNone_ != value) {
-    authNone_ = value;
+  if (authNone != value) {
+    authNone = value;
     emit authNoneChanged(value);
   }
 }
 
 void ViewerConfig::setAuthVNC(bool value)
 {
-  if (authVNC_ != value) {
-    authVNC_ = value;
+  if (authVNC != value) {
+    authVNC = value;
     emit authVNCChanged(value);
   }
 }
 
 void ViewerConfig::setAuthPlain(bool value)
 {
-  if (authPlain_ != value) {
-    authPlain_ = value;
+  if (authPlain != value) {
+    authPlain = value;
     emit authPlainChanged(value);
   }
 }
@@ -1513,8 +1513,8 @@ void ViewerConfig::setMenuKey(QString value)
 
 int ViewerConfig::menuKeyIndex() const
 {
-  for (int i = 0; i < menuKeys_.size(); i++) {
-    if (menuKeys_[i] == ::menuKey) {
+  for (int i = 0; i < menuKeys.size(); i++) {
+    if (menuKeys[i] == ::menuKey) {
       return i;
     }
   }
@@ -1629,7 +1629,7 @@ void ViewerConfig::handleOptions()
   // a pain. Assume something has changed, as resending the encoding
   // list is cheap. Avoid overriding what the auto logic has selected
   // though.
-  QVNCConnection *cc = AppManager::instance()->connection();
+  QVNCConnection *cc = AppManager::instance()->getConnection();
   if (!::autoSelect) {
     int encNum = encodingNum(::preferredEncoding);
 
@@ -1669,7 +1669,7 @@ bool ViewerConfig::potentiallyLoadConfigurationFile(QString vncServerName)
 #endif
 
     try {
-      serverName_ = loadViewerParameters(vncServerName);
+      serverName = loadViewerParameters(vncServerName);
     }
     catch (rfb::Exception& e) {
       vlog.error("%s", e.str());
@@ -1809,7 +1809,7 @@ void ViewerConfig::initializeLogger()
     QFileInfo locale(localedir);
     // According to the linux document, trailing '/locale' of the message directory path must be removed for passing it to bindtextdomain()
     // but in reallity '/locale' must be given to make gettext() work properly.
-    messageDir_ = strdup(locale.absoluteFilePath().toStdString().c_str());
+    messageDir = strdup(locale.absoluteFilePath().toStdString().c_str());
 #ifdef ENABLE_NLS
     bindtextdomain(PACKAGE_NAME, messageDir_);
 #endif
@@ -1859,35 +1859,35 @@ QString ViewerConfig::gatewayHost() const
 
 void ViewerConfig::parseServerName()
 {
-  if (!QString(::via).isEmpty() && !gatewayLocalPort_) {
+  if (!QString(::via).isEmpty() && !gatewayLocalPort) {
     network::initSockets();
-    gatewayLocalPort_ = network::findFreeTcpPort();
+    gatewayLocalPort = network::findFreeTcpPort();
   }
   bool ok;
-  int ix = serverName_.indexOf(':');
+  int ix = serverName.indexOf(':');
   if (ix >= 0) {
-    int ix2 = serverName_.indexOf("::");
+    int ix2 = serverName.indexOf("::");
     if (ix2 < 0) {
-      int port = SERVER_PORT_OFFSET + serverName_.mid(ix + 1).toInt(&ok, 10);
+      int port = SERVER_PORT_OFFSET + serverName.mid(ix + 1).toInt(&ok, 10);
       if (ok) {
-        serverPort_ = port;
+        serverPort = port;
       }
     }
     else {
-      int port = serverName_.mid(ix + 2).toInt(&ok, 10);
+      int port = serverName.mid(ix + 2).toInt(&ok, 10);
       if (ok) {
-        serverPort_ = port;
+        serverPort = port;
       }
     }
-    serverHost_ = serverName_.left(ix);
+    serverHost = serverName.left(ix);
   }
   else {
-    int port = serverName_.toInt(&ok, 10);
+    int port = serverName.toInt(&ok, 10);
     if (ok) {
-      serverPort_ = port;
+      serverPort = port;
     }
     else {
-      serverHost_ = serverName_;
+      serverHost = serverName;
     }
   }
 }

@@ -35,7 +35,7 @@ InputTab::InputTab(QWidget* parent)
   hbox2->addWidget(label);
   inputKeyboardMenuKeyCombo = new QComboBox;
   QStringListModel* model = new QStringListModel;
-  model->setStringList(ViewerConfig::config()->menuKeys());
+  model->setStringList(ViewerConfig::config()->getMenuKeys());
   inputKeyboardMenuKeyCombo->setModel(model);
   hbox2->addWidget(inputKeyboardMenuKeyCombo);
   hbox2->addStretch(1);

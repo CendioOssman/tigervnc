@@ -38,10 +38,10 @@ static const WORD NoSymbol = 0;
 Win32KeyboardHandler::Win32KeyboardHandler(QObject* parent)
   : BaseKeyboardHandler(parent)
 {
-  altGrCtrlTimer_.setInterval(100);
-  altGrCtrlTimer_.setSingleShot(true);
-  connect(&altGrCtrlTimer_, &QTimer::timeout, this, [=]() {
-    altGrArmed_ = false;
+  altGrCtrlTimer.setInterval(100);
+  altGrCtrlTimer.setSingleShot(true);
+  connect(&altGrCtrlTimer, &QTimer::timeout, this, [=]() {
+    altGrArmed = false;
     handleKeyPress(0x1d, XK_Control_L);
   });
 }
@@ -64,8 +64,8 @@ bool Win32KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* 
 
 void Win32KeyboardHandler::resolveAltGrDetection(bool isAltGrSequence)
 {
-  altGrArmed_ = false;
-  altGrCtrlTimer_.stop();
+  altGrArmed = false;
+  altGrCtrlTimer.stop();
   // when it's not an AltGr sequence we can't supress the Ctrl anymore
   if (!isAltGrSequence)
     handleKeyPress(0x1d, XK_Control_L);
@@ -73,7 +73,7 @@ void Win32KeyboardHandler::resolveAltGrDetection(bool isAltGrSequence)
 
 bool Win32KeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
 {
-  if (menuKeySym_ && keySym == menuKeySym_) {
+  if (menuKeySym && keySym == menuKeySym) {
     if (!menuShortCutMode) {
       emit contextMenuKeyPressed(menuShortCutMode);
       return true;
@@ -92,16 +92,16 @@ bool Win32KeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menu
   // symbol on release as when pressed. This breaks the VNC protocol however,
   // so we need to keep track of what keysym a key _code_ generated on press
   // and send the same on release.
-  downKeySym_[keyCode] = keySym;
+  downKeySym[keyCode] = keySym;
 
   vlog.debug("Key pressed: 0x%04x => 0x%04x", keyCode, keySym);
 
   try {
     // Fake keycode?
     if (keyCode > 0xff)
-      emit AppManager::instance()->connection()->writeKeyEvent(keySym, 0, true);
+      emit AppManager::instance()->getConnection()->writeKeyEvent(keySym, 0, true);
     else
-      emit AppManager::instance()->connection()->writeKeyEvent(keySym, keyCode, true);
+      emit AppManager::instance()->getConnection()->writeKeyEvent(keySym, keyCode, true);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
     AppManager::instance()->publishError(e.str(), true);
@@ -117,8 +117,8 @@ bool Win32KeyboardHandler::handleKeyRelease(int keyCode)
   if (ViewerConfig::config()->viewOnly())
     return false;
 
-  iter = downKeySym_.find(keyCode);
-  if (iter == downKeySym_.end()) {
+  iter = downKeySym.find(keyCode);
+  if (iter == downKeySym.end()) {
     // These occur somewhat frequently so let's not spam them unless
     // logging is turned up.
     vlog.debug("Unexpected release of key code %d", keyCode);
@@ -129,15 +129,15 @@ bool Win32KeyboardHandler::handleKeyRelease(int keyCode)
 
   try {
     if (keyCode > 0xff)
-      emit AppManager::instance()->connection()->writeKeyEvent(iter->second, 0, false);
+      emit AppManager::instance()->getConnection()->writeKeyEvent(iter->second, 0, false);
     else
-      emit AppManager::instance()->connection()->writeKeyEvent(iter->second, keyCode, false);
+      emit AppManager::instance()->getConnection()->writeKeyEvent(iter->second, keyCode, false);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
     AppManager::instance()->publishError(e.str(), true);
   }
 
-  downKeySym_.erase(iter);
+  downKeySym.erase(iter);
 
   return true;
 }
@@ -162,8 +162,8 @@ bool Win32KeyboardHandler::handleKeyDownEvent(UINT message, WPARAM wParam, LPARA
   // to merge those in to a single AltGr event. We detect this case
   // by seeing the two key events directly after each other with a very
   // short time between them (<50ms) and supress the Ctrl event.
-  if (altGrArmed_) {
-    bool altPressed = isExtended && (keyCode == 0x38) && (vKey == VK_MENU) && ((timestamp - altGrCtrlTime_) < 50);
+  if (altGrArmed) {
+    bool altPressed = isExtended && (keyCode == 0x38) && (vKey == VK_MENU) && ((timestamp - altGrCtrlTime) < 50);
     resolveAltGrDetection(altPressed);
   }
 
@@ -235,9 +235,9 @@ bool Win32KeyboardHandler::handleKeyDownEvent(UINT message, WPARAM wParam, LPARA
     }
     // Possible start of AltGr sequence?
     if ((keyCode == 0x1d) && (keySym == XK_Control_L)) {
-      altGrArmed_ = true;
-      altGrCtrlTime_ = timestamp;
-      altGrCtrlTimer_.start();
+      altGrArmed = true;
+      altGrCtrlTime = timestamp;
+      altGrCtrlTimer.start();
       return true;
     }
   }
@@ -273,7 +273,7 @@ bool Win32KeyboardHandler::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM 
 
   // We can't get a release in the middle of an AltGr sequence, so
   // abort that detection
-  if (altGrArmed_) {
+  if (altGrArmed) {
     resolveAltGrDetection(false);
   }
   if (keyCode == SCAN_FAKE) {
@@ -303,10 +303,10 @@ bool Win32KeyboardHandler::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM 
   // Windows has a rather nasty bug where it won't send key release
   // events for a Shift button if the other Shift is still pressed
   if ((keyCode == 0x2a) || (keyCode == 0x36)) {
-    if (downKeySym_.count(0x2a)) {
+    if (downKeySym.count(0x2a)) {
       handleKeyRelease(0x2a);
     }
-    if (downKeySym_.count(0x36)) {
+    if (downKeySym.count(0x36)) {
       handleKeyRelease(0x36);
     }
   }
@@ -318,7 +318,7 @@ void Win32KeyboardHandler::pushLEDState()
 {
   qDebug() << "Win32KeyboardHandler::pushLEDState";
   // Server support?
-  rfb::ServerParams* server = AppManager::instance()->connection()->server();
+  rfb::ServerParams* server = AppManager::instance()->getConnection()->server();
   if (server->ledState() == rfb::ledUnknown) {
     return;
   }
