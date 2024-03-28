@@ -2,37 +2,36 @@
 #include "config.h"
 #endif
 
+#include <QCursor>
 #include <QEvent>
 #include <QResizeEvent>
 #include <QTimer>
-#include <QCursor>
 #include <qt_windows.h>
 #include <windowsx.h>
 
 #define XK_LATIN1
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
-#include "rfb/keysymdef.h"
-#include "rfb/LogWriter.h"
-#include "rfb/ledStates.h"
-#include "rfb/ServerParams.h"
-#include "rdr/Exception.h"
-
-#include "appmanager.h"
-#include "parameters.h"
-#include "vncconnection.h"
 #include "PlatformPixelBuffer.h"
-#include "Win32TouchHandler.h"
 #include "Win32KeyboardHandler.h"
-#include "win32.h"
+#include "Win32TouchHandler.h"
+#include "appmanager.h"
 #include "i18n.h"
+#include "parameters.h"
+#include "rdr/Exception.h"
+#include "rfb/LogWriter.h"
+#include "rfb/ServerParams.h"
+#include "rfb/keysymdef.h"
+#include "rfb/ledStates.h"
+#include "vncconnection.h"
 #include "vncwindow.h"
 #include "vncwinview.h"
+#include "win32.h"
 
 #include <QDebug>
 #include <QMessageBox>
-#include <QTime>
 #include <QScreen>
+#include <QTime>
 
 static rfb::LogWriter vlog("Viewport");
 
@@ -40,14 +39,14 @@ static rfb::LogWriter vlog("Viewport");
 static const WORD SCAN_FAKE = 0xaa;
 static const WORD NoSymbol = 0;
 
-QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
- : QAbstractVNCView(parent, f)
- , altGrArmed_(false)
- , altGrCtrlTimer_(new QTimer)
- , cursor_(nullptr)
- , mouseTracking_(false)
- , defaultCursor_(LoadCursor(NULL, IDC_ARROW))
- , touchHandler_(nullptr)
+QVNCWinView::QVNCWinView(QWidget* parent, Qt::WindowFlags f)
+  : QAbstractVNCView(parent, f)
+  , altGrArmed_(false)
+  , altGrCtrlTimer_(new QTimer)
+  , cursor_(nullptr)
+  , mouseTracking_(false)
+  , defaultCursor_(LoadCursor(NULL, IDC_ARROW))
+  , touchHandler_(nullptr)
 {
   // Do not set either Qt::WA_NoBackground nor Qt::WA_NoSystemBackground
   // for Windows. Otherwise, unneeded ghost image of the toast is shown
@@ -68,7 +67,7 @@ QVNCWinView::QVNCWinView(QWidget *parent, Qt::WindowFlags f)
   altGrCtrlTimer_->setSingleShot(true);
   connect(altGrCtrlTimer_, &QTimer::timeout, this, [this]() {
     altGrArmed_ = false;
-      keyboardHandler_->handleKeyPress(0x1d, XK_Control_L);
+    keyboardHandler_->handleKeyPress(0x1d, XK_Control_L);
   });
 
   keyboardHandler_ = new Win32KeyboardHandler(this);
@@ -85,36 +84,35 @@ QVNCWinView::~QVNCWinView()
   delete touchHandler_;
 }
 
-bool QVNCWinView::event(QEvent *e)
+bool QVNCWinView::event(QEvent* e)
 {
   try {
-    switch(e->type()) {
+    switch (e->type()) {
     case QEvent::CursorChange:
-      //qDebug() << "CursorChange";
+      // qDebug() << "CursorChange";
       e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
       break;
     default:
-      //qDebug() << "Unprocessed Event: " << e->type();
+      // qDebug() << "Unprocessed Event: " << e->type();
       break;
     }
     return QWidget::event(e);
-  }
-  catch (rdr::Exception& e) {
+  } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
     AppManager::instance()->publishError(e.str(), true);
     return false;
   }
 }
 
-void QVNCWinView::enterEvent(QEvent *e)
+void QVNCWinView::enterEvent(QEvent* e)
 {
   qDebug() << "QVNCWinView::enterEvent";
   grabPointer();
-  //SetCursor(cursor_);
+  // SetCursor(cursor_);
   QWidget::enterEvent(e);
 }
 
-void QVNCWinView::leaveEvent(QEvent *e)
+void QVNCWinView::leaveEvent(QEvent* e)
 {
   qDebug() << "QVNCWinView::leaveEvent";
   ungrabPointer();

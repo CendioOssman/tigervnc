@@ -1,8 +1,9 @@
 #ifndef VNCMACVIEW_H
 #define VNCMACVIEW_H
 
-#include <QAbstractNativeEventFilter>
 #include "abstractvncview.h"
+
+#include <QAbstractNativeEventFilter>
 
 class QWindow;
 class QScreen;
@@ -13,8 +14,9 @@ class NSCursor;
 class QVNCMacView : public QAbstractVNCView
 {
   Q_OBJECT
+
 public:
-  QVNCMacView(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Widget);
+  QVNCMacView(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~QVNCMacView();
 
 public slots:
@@ -22,7 +24,7 @@ public slots:
   void bell() override;
 
 protected:
-  bool event(QEvent *e) override;
+  bool event(QEvent* e) override;
 };
 
 #endif // VNCMACVIEW_H

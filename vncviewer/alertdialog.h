@@ -5,9 +5,10 @@
 
 class AlertDialog : public QDialog
 {
-    Q_OBJECT
+  Q_OBJECT
+
 public:
-    AlertDialog(QString message, bool quit, QWidget *parent = nullptr);
+  AlertDialog(QString message, bool quit, QWidget* parent = nullptr);
 };
 
 #endif // ALERTDIALOG_H

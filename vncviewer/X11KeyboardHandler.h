@@ -30,8 +30,8 @@ signals:
 
 private:
   _XDisplay* display_;
-  int        eventNumber_;
-  QTimer     keyboardGrabberTimer_;
+  int eventNumber_;
+  QTimer keyboardGrabberTimer_;
 
   unsigned int getModifierMask(unsigned int keysym);
 };

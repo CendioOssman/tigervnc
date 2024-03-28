@@ -7,21 +7,22 @@ class QComboBox;
 
 class ServerDialog : public QWidget
 {
-    Q_OBJECT
+  Q_OBJECT
+
 public:
-    ServerDialog(QWidget *parent = nullptr);
+  ServerDialog(QWidget* parent = nullptr);
 
-    void updateServerList(QStringList list);
-    void validateServerText(QString text);
-    void connectTo();
+  void updateServerList(QStringList list);
+  void validateServerText(QString text);
+  void connectTo();
 
-    void openOptionDialog();
-    void openAboutDialog();
-    void openLoadConfigDialog();
-    void openSaveConfigDialog();
+  void openOptionDialog();
+  void openAboutDialog();
+  void openLoadConfigDialog();
+  void openSaveConfigDialog();
 
 private:
-    QComboBox* comboBox;
+  QComboBox* comboBox;
 };
 
 #endif // SERVERDIALOG_H

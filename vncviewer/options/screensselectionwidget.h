@@ -6,24 +6,25 @@
 
 class ScreensSelectionWidget : public QWidget
 {
-    Q_OBJECT
+  Q_OBJECT
+
 public:
-    ScreensSelectionWidget(QWidget *parent = nullptr);
+  ScreensSelectionWidget(QWidget* parent = nullptr);
 
-    void getGlobalScreensGeometry(QList<int> screens, int& xmin, int& ymin, qreal& w, qreal& h);
+  void getGlobalScreensGeometry(QList<int> screens, int& xmin, int& ymin, qreal& w, qreal& h);
 
-    void apply();
-    void reset();
+  void apply();
+  void reset();
 
 protected:
-    void showEvent(QShowEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
+  void showEvent(QShowEvent* event) override;
+  void resizeEvent(QResizeEvent* event) override;
 
 private:
-    void moveCheckBoxes();
+  void moveCheckBoxes();
 
-    QList<QCheckBox*> checkBoxes;
-    QButtonGroup* exclusiveButtons;
+  QList<QCheckBox*> checkBoxes;
+  QButtonGroup* exclusiveButtons;
 };
 
 #endif // DISPLAYTAB_H

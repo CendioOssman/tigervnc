@@ -28,7 +28,7 @@ signals:
   void message(QString const& msg, int timeout);
 
 private:
-  NSView*   view_;
+  NSView* view_;
   NSCursor* cursor_;
 };
 

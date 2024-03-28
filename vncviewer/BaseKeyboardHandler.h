@@ -25,11 +25,11 @@ public:
   virtual void ungrabKeyboard();
 
   virtual void setLEDState(unsigned int state) = 0;
-  virtual void pushLEDState()                  = 0;
+  virtual void pushLEDState() = 0;
 
   virtual bool handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) = 0;
-  virtual bool handleKeyRelease(int)                                                      = 0;
-  void         resetKeyboard();
+  virtual bool handleKeyRelease(int) = 0;
+  void resetKeyboard();
 
   void setMenuKeyStatus(quint32 keysym, bool checked);
 
@@ -46,9 +46,9 @@ protected:
 
   DownMap downKeySym_;
 
-  quint32 menuKeySym_         = XK_F8;
-  bool    menuCtrlKey_        = false;
-  bool    menuAltKey_         = false;
+  quint32 menuKeySym_ = XK_F8;
+  bool menuCtrlKey_ = false;
+  bool menuAltKey_ = false;
 };
 
 #endif // BASEKEYBOARDHANDLER_H

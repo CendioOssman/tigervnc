@@ -5,7 +5,8 @@
 
 #include <QDebug>
 
-BaseKeyboardHandler::BaseKeyboardHandler(QObject* parent) : QObject(parent)
+BaseKeyboardHandler::BaseKeyboardHandler(QObject* parent)
+  : QObject(parent)
 {
 }
 
@@ -21,12 +22,9 @@ void BaseKeyboardHandler::ungrabKeyboard()
 
 void BaseKeyboardHandler::setMenuKeyStatus(quint32 keysym, bool checked)
 {
-  if (keysym == XK_Control_L)
-  {
+  if (keysym == XK_Control_L) {
     menuCtrlKey_ = checked;
-  }
-  else if (keysym == XK_Alt_L)
-  {
+  } else if (keysym == XK_Alt_L) {
     menuAltKey_ = checked;
   }
 }
@@ -43,8 +41,7 @@ bool BaseKeyboardHandler::menuAltKey() const
 
 void BaseKeyboardHandler::resetKeyboard()
 {
-  while (!downKeySym_.empty())
-  {
+  while (!downKeySym_.empty()) {
     handleKeyRelease(downKeySym_.begin()->first);
   }
 }

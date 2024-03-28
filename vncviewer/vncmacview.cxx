@@ -2,36 +2,35 @@
 #include "config.h"
 #endif
 
-#include <QApplication>
-#include <QEvent>
-#include <QTextStream>
-#include <QDataStream>
-#include <QUrl>
-#include <QWindow>
-#include <QMenu>
-#include <QImage>
-#include <QBitmap>
-#include <QLabel>
-#include <QTimer>
-#include <QAbstractEventDispatcher>
-#include "rfb/ServerParams.h"
-#include "rfb/LogWriter.h"
-#include "rdr/Exception.h"
-#include "rfb/ledStates.h"
+#include "MacKeyboardHandler.h"
+#include "PlatformPixelBuffer.h"
+#include "appmanager.h"
+#include "cocoa.h"
 #include "i18n.h"
 #include "parameters.h"
-#include "appmanager.h"
+#include "rdr/Exception.h"
+#include "rfb/LogWriter.h"
+#include "rfb/ServerParams.h"
+#include "rfb/ledStates.h"
 #include "vncconnection.h"
-#include "PlatformPixelBuffer.h"
-#include "vncwindow.h"
 #include "vncmacview.h"
-#include "MacKeyboardHandler.h"
+#include "vncwindow.h"
 
+#include <QAbstractEventDispatcher>
+#include <QApplication>
+#include <QBitmap>
+#include <QDataStream>
 #include <QDebug>
+#include <QEvent>
+#include <QImage>
+#include <QLabel>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QScreen>
-
-#include "cocoa.h"
+#include <QTextStream>
+#include <QTimer>
+#include <QUrl>
+#include <QWindow>
 extern const unsigned short code_map_osx_to_qnum[];
 extern const unsigned int code_map_osx_to_qnum_len;
 
@@ -48,9 +47,8 @@ extern const unsigned int code_map_osx_to_qnum_len;
 
 static rfb::LogWriter vlog("QVNCMacView");
 
-
-QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
- : QAbstractVNCView(parent, f)
+QVNCMacView::QVNCMacView(QWidget* parent, Qt::WindowFlags f)
+  : QAbstractVNCView(parent, f)
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   setAttribute(Qt::WA_NoBackground);
@@ -63,44 +61,42 @@ QVNCMacView::QVNCMacView(QWidget *parent, Qt::WindowFlags f)
   initKeyboardHandler();
 }
 
-QVNCMacView::~QVNCMacView()
-{
-}
+QVNCMacView::~QVNCMacView() {}
 
-bool QVNCMacView::event(QEvent *e)
+bool QVNCMacView::event(QEvent* e)
 {
-  switch(e->type()) {
+  switch (e->type()) {
   case QEvent::KeyboardLayoutChange:
     break;
   case QEvent::WindowActivate:
-    //qDebug() << "WindowActivate";
+    // qDebug() << "WindowActivate";
     grabPointer();
     break;
   case QEvent::WindowDeactivate:
-    //qDebug() << "WindowDeactivate";
+    // qDebug() << "WindowDeactivate";
     ungrabPointer();
     break;
   case QEvent::Enter:
   case QEvent::FocusIn:
-    //qDebug() << "Enter/FocusIn";
+    // qDebug() << "Enter/FocusIn";
     setFocus();
     grabPointer();
     break;
   case QEvent::Leave:
   case QEvent::FocusOut:
-    //qDebug() << "Leave/FocusOut";
+    // qDebug() << "Leave/FocusOut";
     clearFocus();
     ungrabPointer();
     break;
   case QEvent::CursorChange:
-    //qDebug() << "CursorChange";
+    // qDebug() << "CursorChange";
     e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
     return true;
- case QEvent::MetaCall:
+  case QEvent::MetaCall:
     // qDebug() << "QEvent::MetaCall (signal-slot call)";
     break;
   default:
-    //qDebug() << "Unprocessed Event: " << e->type();
+    // qDebug() << "Unprocessed Event: " << e->type();
     break;
   }
   return QWidget::event(e);

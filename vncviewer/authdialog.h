@@ -7,16 +7,17 @@ class QLineEdit;
 
 class AuthDialog : public QDialog
 {
-    Q_OBJECT
-public:
-    AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidget *parent = nullptr);
+  Q_OBJECT
 
-    void accept();
-    void reject();
+public:
+  AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidget* parent = nullptr);
+
+  void accept();
+  void reject();
 
 private:
-    QLineEdit* userText = nullptr;
-    QLineEdit* passwordText = nullptr;
+  QLineEdit* userText = nullptr;
+  QLineEdit* passwordText = nullptr;
 };
 
 #endif // AUTHDIALOG_H

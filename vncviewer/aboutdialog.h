@@ -5,9 +5,10 @@
 
 class AboutDialog : public QDialog
 {
-    Q_OBJECT
+  Q_OBJECT
+
 public:
-    AboutDialog(QWidget *parent = nullptr);
+  AboutDialog(QWidget* parent = nullptr);
 };
 
 #endif // ABOUTDIALOG_H

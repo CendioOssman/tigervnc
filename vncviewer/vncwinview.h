@@ -1,9 +1,10 @@
 #ifndef VNCWINVIEW_H
 #define VNCWINVIEW_H
 
-#include <windows.h>
-#include <map>
 #include "abstractvncview.h"
+
+#include <map>
+#include <windows.h>
 
 class QTimer;
 class Win32TouchHandler;
@@ -11,8 +12,9 @@ class Win32TouchHandler;
 class QVNCWinView : public QAbstractVNCView
 {
   Q_OBJECT
+
 public:
-  QVNCWinView(QWidget *parent = nullptr, Qt::WindowFlags f = Qt::Window);
+  QVNCWinView(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Window);
   virtual ~QVNCWinView();
 
 public slots:
@@ -21,20 +23,20 @@ public slots:
   void bell() override;
 
 protected:
-  bool event(QEvent *e) override;
+  bool event(QEvent* e) override;
   void enterEvent(QEvent*) override;
   void leaveEvent(QEvent*) override;
 
 private:
   bool altGrArmed_;
   unsigned int altGrCtrlTime_;
-  QTimer *altGrCtrlTimer_;
+  QTimer* altGrCtrlTimer_;
 
   HCURSOR cursor_;
   bool mouseTracking_;
   HCURSOR defaultCursor_;
 
-  Win32TouchHandler *touchHandler_;
+  Win32TouchHandler* touchHandler_;
 
   int handleTouchEvent(UINT message, WPARAM wParam, LPARAM lParam);
 };

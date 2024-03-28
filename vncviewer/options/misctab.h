@@ -1,23 +1,25 @@
 #ifndef MISCTAB_H
 #define MISCTAB_H
 
-#include <QWidget>
 #include "../optionsdialog.h"
+
+#include <QWidget>
 
 class QCheckBox;
 
 class MiscTab : public TabElement
 {
-    Q_OBJECT
-public:
-    MiscTab(QWidget *parent = nullptr);
+  Q_OBJECT
 
-    void apply();
-    void reset();
+public:
+  MiscTab(QWidget* parent = nullptr);
+
+  void apply();
+  void reset();
 
 private:
-    QCheckBox* shared;
-    QCheckBox* reconnect;
+  QCheckBox* shared;
+  QCheckBox* reconnect;
 };
 
 #endif // MISCTAB_H

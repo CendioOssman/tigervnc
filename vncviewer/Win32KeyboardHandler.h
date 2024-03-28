@@ -25,9 +25,9 @@ public slots:
   void ungrabKeyboard() override;
 
 private:
-  bool         altGrArmed_ = false;
+  bool altGrArmed_ = false;
   unsigned int altGrCtrlTime_;
-  QTimer       altGrCtrlTimer_;
+  QTimer altGrCtrlTimer_;
 
   void resolveAltGrDetection(bool isAltGrSequence);
   bool handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lParam);
