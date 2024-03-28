@@ -2,6 +2,7 @@
 #define VNCWINDOW_H
 
 #include <QScrollArea>
+#include <QScrollBar>
 
 class QMoveEvent;
 class QResizeEvent;
@@ -36,7 +37,6 @@ signals:
   void fullscreenChanged(bool enabled);
 
 protected:
-  void moveEvent(QMoveEvent* e) override;
   void resizeEvent(QResizeEvent* e) override;
   void changeEvent(QEvent* e) override;
   void focusInEvent(QFocusEvent*) override;

@@ -2,34 +2,32 @@
 #include <config.h>
 #endif
 
-#include <QTcpSocket>
-#include <QScreen>
-#include <QProcess>
-#include <QTimer>
 #include <QDebug>
+#include <QProcess>
+#include <QScreen>
+#include <QTcpSocket>
+#include <QTimer>
 #if defined(__APPLE__)
-#include <QtQuickWidgets/QtQuickWidgets>
-#include <QQuickWindow>
 #include "cocoa.h"
 #endif
-#include <QApplication>
-#include <QAbstractEventDispatcher>
-
+#include "i18n.h"
 #include "rdr/Exception.h"
 #include "rfb/Timer.h"
-#include "i18n.h"
+
+#include <QAbstractEventDispatcher>
+#include <QApplication>
 #undef asprintf
-#include "vncconnection.h"
-#include "parameters.h"
-#include "abstractvncview.h"
-#include "vncwindow.h"
-#include "appmanager.h"
 #include "aboutdialog.h"
+#include "abstractvncview.h"
+#include "alertdialog.h"
+#include "appmanager.h"
 #include "authdialog.h"
 #include "infodialog.h"
 #include "messagedialog.h"
-#include "alertdialog.h"
 #include "optionsdialog.h"
+#include "parameters.h"
+#include "vncconnection.h"
+#include "vncwindow.h"
 #undef asprintf
 
 #if defined(WIN32)
@@ -40,20 +38,20 @@
 #include "vncx11view.h"
 #endif
 
-AppManager *AppManager::manager_;
+AppManager* AppManager::manager_;
 
 AppManager::AppManager()
- : QObject(nullptr)
- , error_(0)
- , facade_(new QVNCConnection)
- , view_(nullptr)
- , scroll_(new QVNCWindow)
- , rfbTimerProxy_(new QTimer)
+  : QObject(nullptr)
+  , error_(0)
+  , facade_(new QVNCConnection)
+  , view_(nullptr)
+  , scroll_(new QVNCWindow)
+  , rfbTimerProxy_(new QTimer)
 {
   connect(this, &AppManager::connectToServerRequested, facade_, &QVNCConnection::connectToServer);
   connect(facade_, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
   connect(this, &AppManager::resetConnectionRequested, facade_, &QVNCConnection::resetConnection);
-  connect(rfbTimerProxy_, &QTimer::timeout, this, [this]() {
+  connect(rfbTimerProxy_, &QTimer::timeout, this, []() {
     rfb::Timer::checkTimeouts();
   });
   connect(QApplication::eventDispatcher(), &QAbstractEventDispatcher::aboutToBlock, this, [this]() {
@@ -64,8 +62,8 @@ AppManager::AppManager()
   rfbTimerProxy_->setSingleShot(true);
 
   connect(this, &AppManager::credentialRequested, this, [=](bool secured, bool userNeeded, bool passwordNeeded) {
-      AuthDialog d(secured, userNeeded, passwordNeeded);
-      d.exec();
+    AuthDialog d(secured, userNeeded, passwordNeeded);
+    d.exec();
   });
 }
 
@@ -130,8 +128,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   QString platform = QApplication::platformName();
   if (platform == "xcb") {
     view_ = new QVNCX11View(scroll_);
-  }
-  else if (platform == "wayland") {
+  } else if (platform == "wayland") {
     ;
   }
 #endif
@@ -140,7 +137,11 @@ void AppManager::openVNCWindow(int width, int height, QString name)
     throw rdr::Exception(_("Platform not supported."));
   }
   connect(view_, &QAbstractVNCView::bufferResized, scroll_, &QVNCWindow::updateScrollbars, Qt::QueuedConnection);
-  connect(view_, &QAbstractVNCView::remoteResizeRequest, scroll_, &QVNCWindow::postRemoteResizeRequest, Qt::QueuedConnection);
+  connect(view_,
+          &QAbstractVNCView::remoteResizeRequest,
+          scroll_,
+          &QVNCWindow::postRemoteResizeRequest,
+          Qt::QueuedConnection);
 
   view_->resize(width, height);
   scroll_->setWidget(view_);
@@ -157,7 +158,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 
 void AppManager::closeVNCWindow()
 {
-  QWidget *w = scroll_->takeWidget();
+  QWidget* w = scroll_->takeWidget();
   if (w) {
     scroll_->setVisible(false);
     w->setVisible(false);

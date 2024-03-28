@@ -13,6 +13,7 @@
 #include <QApplication>
 #include <QDebug>
 #include <QGestureEvent>
+#include <QGridLayout>
 #include <QMoveEvent>
 #include <QPainter>
 #include <QResizeEvent>
@@ -37,7 +38,6 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   setAttribute(Qt::WA_NativeWindow);
   setFocusPolicy(Qt::StrongFocus);
 
-  setWidgetResizable(ViewerConfig::config()->remoteResize());
   setContentsMargins(0, 0, 0, 0);
   setViewportMargins(0, 0, 0, 0);
   setFrameStyle(QFrame::NoFrame);
@@ -54,6 +54,21 @@ QVNCWindow::QVNCWindow(QWidget* parent)
 
   setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+  QScrollBar* hScrollBar = horizontalScrollBar();
+  hScrollBar->setParent(this);
+  hScrollBar->setFixedHeight(14);
+  QScrollBar* vScrollBar = verticalScrollBar();
+  vScrollBar->setParent(this);
+  vScrollBar->setFixedWidth(14);
+
+  QGridLayout* scrollAreaLayout = new QGridLayout(this);
+  scrollAreaLayout->setContentsMargins(0, 0, 0, 0);
+  scrollAreaLayout->setSpacing(0);
+  scrollAreaLayout->setRowStretch(0, 1);
+  scrollAreaLayout->setColumnStretch(0, 1);
+  scrollAreaLayout->addWidget(vScrollBar, 0, 1);
+  scrollAreaLayout->addWidget(hScrollBar, 1, 0);
 
   // Support for -geometry option. Note that although we do support
   // negative coordinates, we do not support -XOFF-YOFF (ie
@@ -80,16 +95,6 @@ QVNCWindow::QVNCWindow(QWidget* parent)
     }
   }
 
-  connect(
-      this,
-      &QVNCWindow::fullscreenChanged,
-      this,
-      [this](bool enabled) {
-        setHorizontalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
-        setVerticalScrollBarPolicy(enabled ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
-      },
-      Qt::QueuedConnection);
-
   resizeTimer_->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
   resizeTimer_->setSingleShot(true);
   connect(resizeTimer_, &QTimer::timeout, this, &QVNCWindow::handleDesktopSize);
@@ -97,38 +102,25 @@ QVNCWindow::QVNCWindow(QWidget* parent)
 
 QVNCWindow::~QVNCWindow() {}
 
-void QVNCWindow::moveEvent(QMoveEvent* e)
-{
-  QScrollArea::moveEvent(e);
-}
-
-void QVNCWindow::resizeEvent(QResizeEvent* e)
-{
-  qDebug() << "QVNCWindow::resizeEvent: w=" << e->size().width() << ", h=" << e->size().height()
-           << ", widgetResizable=" << widgetResizable();
-  if (ViewerConfig::config()->remoteResize()) {
-    QSize size = e->size();
-    widget()->resize(size.width(), size.height());
-  } else {
-    scrollContentsBy(0, 0);
-    updateScrollbars();
-  }
-  QScrollArea::resizeEvent(e);
-}
-
 void QVNCWindow::updateScrollbars()
 {
-  if (widget()->width() > width()) {
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+  QAbstractVNCView* view = AppManager::instance()->view();
+  qDebug() << "QVNCWindow::updateScrollbars" << view->pixmapSize() << size();
+
+  if (view->pixmapSize().width() > width()) {
+    horizontalScrollBar()->show();
   } else {
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    horizontalScrollBar()->hide();
   }
 
-  if (widget()->height() > height()) {
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+  if (view->pixmapSize().height() > height()) {
+    verticalScrollBar()->show();
   } else {
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    verticalScrollBar()->hide();
   }
+
+  qDebug() << "QVNCWindow::updateScrollbars"
+           << "END";
 }
 
 QList<int> QVNCWindow::fullscreenScreens() const
@@ -321,6 +313,7 @@ bool QVNCWindow::allowKeyboardGrab() const
 
 void QVNCWindow::handleDesktopSize()
 {
+  qDebug() << "QVNCWindow::handleDesktopSize";
   double f = effectiveDevicePixelRatio();
   if (!ViewerConfig::config()->desktopSize().isEmpty()) {
     int w, h;
@@ -340,6 +333,7 @@ void QVNCWindow::handleDesktopSize()
 
 void QVNCWindow::postRemoteResizeRequest()
 {
+  qDebug() << "QVNCWindow::postRemoteResizeRequest";
   resizeTimer_->start();
 }
 
@@ -473,18 +467,31 @@ void QVNCWindow::remoteResize(int w, int h)
 
 void QVNCWindow::resize(int width, int height)
 {
-  qDebug() << "QVNCWindow::resize: w=" << width << ", h=" << height;
+  qDebug() << "QVNCWindow::resize: w=" << width << ", h=" << height << ", widgetResizable=" << widgetResizable();
   QScrollArea::resize(width, height);
+}
+
+void QVNCWindow::resizeEvent(QResizeEvent* e)
+{
+  qDebug() << "QVNCWindow::resizeEvent: w=" << e->size().width() << ", h=" << e->size().height()
+           << ", widgetResizable=" << widgetResizable();
+
+  QVNCConnection* cc = AppManager::instance()->connection();
+
+  if (ViewerConfig::config()->remoteResize() && cc->server()->supportsSetDesktopSize) {
+    postRemoteResizeRequest();
+  }
+
+  updateScrollbars();
+
+  QScrollArea::resizeEvent(e);
 }
 
 void QVNCWindow::changeEvent(QEvent* e)
 {
   if (e->type() == QEvent::WindowStateChange) {
-    if (ViewerConfig::config()->remoteResize()) {
-      qDebug() << "QVNCWindow::changeEvent: w=" << width() << ",h=" << height() << ",state=" << windowState()
-               << ",oldState=" << (static_cast<QWindowStateChangeEvent*>(e))->oldState();
-      widget()->resize(width(), height());
-    }
+    qDebug() << "QVNCWindow::changeEvent: w=" << width() << ",h=" << height() << ",state=" << windowState()
+             << ",oldState=" << (static_cast<QWindowStateChangeEvent*>(e))->oldState();
   }
   QScrollArea::changeEvent(e);
 }
