@@ -258,11 +258,13 @@ void QAbstractVNCView::initKeyboardHandler()
 
 void QAbstractVNCView::installKeyboardHandler()
 {
+    qDebug() << "QAbstractVNCView::installKeyboardHandler";
     QAbstractEventDispatcher::instance()->installNativeEventFilter(keyboardHandler_);
 }
 
 void QAbstractVNCView::removeKeyboardHandler()
 {
+    qDebug() << "QAbstractVNCView::removeKeyboardHandler";
     QAbstractEventDispatcher::instance()->removeNativeEventFilter(keyboardHandler_);
 }
 

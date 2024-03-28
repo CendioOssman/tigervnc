@@ -94,7 +94,7 @@ bool MacKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuSh
   }
 
   if (ViewerConfig::config()->viewOnly())
-    return true;
+    return false;
 
   if (keyCode == 0) {
     vlog.error(_("No key code specified on key press"));
@@ -150,7 +150,7 @@ bool MacKeyboardHandler::handleKeyRelease(int keyCode)
   DownMap::iterator iter;
 
   if (ViewerConfig::config()->viewOnly())
-    return true;
+    return false;
 
   iter = downKeySym_.find(keyCode);
   if (iter == downKeySym_.end()) {

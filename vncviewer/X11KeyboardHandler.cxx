@@ -224,7 +224,7 @@ bool X11KeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuSh
   }
 
   if (ViewerConfig::config()->viewOnly())
-    return true;
+    return false;
 
   if (keyCode == 0)
   {
@@ -264,7 +264,7 @@ bool X11KeyboardHandler::handleKeyRelease(int keyCode)
   DownMap::iterator iter;
 
   if (ViewerConfig::config()->viewOnly())
-    return true;
+    return false;
 
   iter = downKeySym_.find(keyCode);
   if (iter == downKeySym_.end())
