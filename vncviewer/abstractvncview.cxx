@@ -438,11 +438,15 @@ void QAbstractVNCView::paintEvent(QPaintEvent *event)
     int h = bounds.height();
     rfb::Rect rfbrect(x, y, x+w, y+h);
 
-    data = framebuffer->getBuffer(rfbrect, &stride);
-    QImage image(data, w, h, stride*4, QImage::Format_RGB32);
+    if (rfbrect.enclosed_by(framebuffer->getRect()))
+    {
+        data = framebuffer->getBuffer(rfbrect, &stride);
+        QImage image(data, w, h, stride*4, QImage::Format_RGB32);
 
-    pixmapPainter.drawImage(bounds, image);
+        pixmapPainter.drawImage(bounds, image);
+    }
     damage = QRegion();
+
   }
 
   QPainter painter(this);
