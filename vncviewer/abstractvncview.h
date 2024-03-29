@@ -107,6 +107,7 @@ protected:
   QTimer* mousePointerTimer;
 
   // Keyboard handler
+  bool firstLEDState = true;
   BaseKeyboardHandler* keyboardHandler = nullptr;
   void initKeyboardHandler();
   void installKeyboardHandler();

@@ -179,22 +179,6 @@ void MacKeyboardHandler::setLEDState(unsigned int state)
   // qDebug() << "MacKeyboardHandler::setLEDState";
   vlog.debug("Got server LED state: 0x%08x", state);
 
-  // The first message is just considered to be the server announcing
-  // support for this extension. We will push our state to sync up the
-  // server when we get focus. If we already have focus we need to push
-  // it here though.
-  // if (firstLEDState_) {
-  //     firstLEDState_ = false;
-  //     if (hasFocus()) {
-  //         pushLEDState();
-  //     }
-  //     return;
-  // }
-
-  // if (!hasFocus()) {
-  //     return;
-  // }
-
   int ret = cocoa_set_caps_lock_state(state & rfb::ledCapsLock);
   if (ret == 0) {
     ret = cocoa_set_num_lock_state(state & rfb::ledNumLock);

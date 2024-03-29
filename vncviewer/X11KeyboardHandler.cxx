@@ -269,22 +269,6 @@ void X11KeyboardHandler::setLEDState(unsigned int state)
   // qDebug() << "X11KeyboardHandler::setLEDState";
   vlog.debug("Got server LED state: 0x%08x", state);
 
-  // The first message is just considered to be the server announcing
-  // support for this extension. We will push our state to sync up the
-  // server when we get focus. If we already have focus we need to push
-  // it here though.
-  // if (firstLEDState_) {
-  //     firstLEDState_ = false;
-  //     if (hasFocus()) {
-  //         pushLEDState();
-  //     }
-  //     return;
-  // }
-
-  // if (!hasFocus()) {
-  //     return;
-  // }
-
   unsigned int affect = 0;
   unsigned int values = 0;
 

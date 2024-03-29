@@ -274,11 +274,25 @@ void QAbstractVNCView::initKeyboardHandler()
           this,
           &QAbstractVNCView::removeKeyboardHandler,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->getConnection(),
-          &QVNCConnection::ledStateChanged,
-          keyboardHandler,
-          &BaseKeyboardHandler::setLEDState,
-          Qt::QueuedConnection);
+  connect(
+      AppManager::instance()->getConnection(),
+      &QVNCConnection::ledStateChanged,
+      this,
+      [=](unsigned int state) {
+        // The first message is just considered to be the server announcing
+        // support for this extension. We will push our state to sync up the
+        // server when we get focus. If we already have focus we need to push
+        // it here though.
+        if (firstLEDState) {
+          firstLEDState = false;
+          if (hasFocus()) {
+            keyboardHandler->pushLEDState();
+          }
+        } else if (hasFocus()) {
+          keyboardHandler->setLEDState(state);
+        }
+      },
+      Qt::QueuedConnection);
   connect(keyboardHandler,
           &BaseKeyboardHandler::contextMenuKeyPressed,
           this,
@@ -706,8 +720,7 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
   if (instantPosting) {
     mbemu->filterPointerEvent(pointerPos, mask);
   } else {
-    if (!mousePointerTimer->isActive())
-    {
+    if (!mousePointerTimer->isActive()) {
       mbemu->filterPointerEvent(pointerPos, mask);
       mousePointerTimer->start();
     }
