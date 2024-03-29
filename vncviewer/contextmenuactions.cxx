@@ -23,7 +23,7 @@ QCheckableAction::QCheckableAction(const QString& text, QWidget* parent)
 QFullScreenAction::QFullScreenAction(const QString& text, QWidget* parent)
   : QCheckableAction(text, parent)
 {
-  connect(this, &QAction::toggled, this, [](bool checked) {
+  connect(this, &QAction::triggered, this, [](bool checked) {
     AppManager::instance()->getWindow()->fullscreen(checked);
   });
   connect(ViewerConfig::config(), &ViewerConfig::fullScreenChanged, this, [this](bool enabled) {
@@ -51,7 +51,7 @@ QKeyToggleAction::QKeyToggleAction(const QString& text, int keyCode, quint32 key
   , keyCode(keyCode)
   , keySym(keySym)
 {
-  connect(this, &QAction::toggled, this, [this](bool checked) {
+  connect(this, &QAction::triggered, this, [this](bool checked) {
     QAbstractVNCView* view = AppManager::instance()->getView();
     view->toggleKey(checked, this->keyCode, this->keySym);
   });

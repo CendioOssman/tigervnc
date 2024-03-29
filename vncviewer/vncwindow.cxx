@@ -8,9 +8,9 @@
 #include "appmanager.h"
 #include "i18n.h"
 #include "parameters.h"
-#include "vncconnection.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ScreenSet.h"
+#include "vncconnection.h"
 
 #include <QApplication>
 #include <QDebug>
@@ -179,7 +179,7 @@ double QVNCWindow::effectiveDevicePixelRatio(QScreen* screen) const
 
 void QVNCWindow::fullscreen(bool enabled)
 {
-  // qDebug() << "QVNCWindow::fullscreen: enabled=" << enabled;
+  qDebug() << "QVNCWindow::fullscreen: enabled=" << enabled;
   //  TODO: Flag fullscreenEnabled seems have to be disabled before executing fullscreen().
   bool fullscreenEnabled0 = fullscreenEnabled;
   fullscreenEnabled = false;
@@ -268,7 +268,8 @@ void QVNCWindow::fullscreenOnCurrentDisplay()
   fullscreenWidth = vg.width() * dpr;
   fullscreenHeight = vg.height() * dpr;
 
-  grabKeyboard();
+  QAbstractVNCView* view = AppManager::instance()->getView();
+  view->grabKeyboard();
 }
 
 void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen, int vx, int vy, int, int)
@@ -277,7 +278,8 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen, int vx, int vy, in
   windowHandle()->setScreen(screen);
   move(vx, vy);
   showFullScreen();
-  grabKeyboard();
+  QAbstractVNCView* view = AppManager::instance()->getView();
+  view->grabKeyboard();
 }
 
 void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight)
@@ -285,12 +287,21 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vh
   qDebug() << "QVNCWindow::fullscreenOnSelectedDisplays" << vx << vy << vwidth << vheight;
   setWindowFlag(Qt::WindowStaysOnTopHint, true);
   setWindowFlag(Qt::FramelessWindowHint, true);
+#ifdef Q_OS_LINUX
+  setWindowFlag(Qt::BypassWindowManagerHint, true);
+#endif
 
   move(vx, vy);
   resize(vwidth, vheight);
-  resize(vwidth, vheight);
   showNormal();
-  grabKeyboard();
+  QAbstractVNCView* view = AppManager::instance()->getView();
+  view->grabKeyboard();
+
+#ifdef Q_OS_LINUX
+  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
+    activateWindow();
+  });
+#endif
 }
 
 void QVNCWindow::exitFullscreen()
@@ -298,6 +309,9 @@ void QVNCWindow::exitFullscreen()
   qDebug() << "QVNCWindow::exitFullscreen";
   setWindowFlag(Qt::WindowStaysOnTopHint, false);
   setWindowFlag(Qt::FramelessWindowHint, false);
+#ifdef Q_OS_LINUX
+  setWindowFlag(Qt::BypassWindowManagerHint, false);
+#endif
 
   showNormal();
   move(0, 0);
@@ -471,6 +485,12 @@ void QVNCWindow::resize(int width, int height)
 {
   qDebug() << "QVNCWindow::resize: w=" << width << ", h=" << height << ", widgetResizable=" << widgetResizable();
   QScrollArea::resize(width, height);
+}
+
+void QVNCWindow::moveEvent(QMoveEvent* e)
+{
+  qDebug() << "QVNCWindow::moveEvent: pos=" << e->pos() << "oldPos=" << e->oldPos();
+  QScrollArea::moveEvent(e);
 }
 
 void QVNCWindow::resizeEvent(QResizeEvent* e)

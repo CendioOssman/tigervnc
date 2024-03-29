@@ -367,6 +367,7 @@ void QAbstractVNCView::ungrabKeyboard()
 
 void QAbstractVNCView::grabPointer()
 {
+  activateWindow();
   setMouseTracking(true);
   mouseGrabbed = true;
 }

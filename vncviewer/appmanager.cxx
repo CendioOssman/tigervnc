@@ -147,10 +147,11 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   window->setWidget(view);
   window->resize(width, height);
   window->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
-  window->show();
 
   if (ViewerConfig::config()->fullScreen()) {
     window->fullscreen(true);
+  } else {
+    window->show();
   }
 
   emit vncWindowOpened();
