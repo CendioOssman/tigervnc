@@ -191,7 +191,6 @@ void QAbstractVNCView::createContextMenu()
     contextMenuActions << new QOptionDialogAction(p_("ContextMenu|", "&Options..."));
     contextMenuActions << new QInfoDialogAction(p_("ContextMenu|", "Connection &info..."));
     contextMenuActions << new QAboutDialogAction(p_("ContextMenu|", "About &TigerVNC viewer..."));
-    QVNCWindow* window = AppManager::instance()->getWindow();
     contextMenu = new QMenu;
 #if defined(__APPLE__)
     contextMenu->setAttribute(Qt::WA_NativeWindow);
@@ -279,6 +278,7 @@ void QAbstractVNCView::initKeyboardHandler()
       &QVNCConnection::ledStateChanged,
       this,
       [=](unsigned int state) {
+        qDebug() << "QVNCConnection::ledStateChanged";
         // The first message is just considered to be the server announcing
         // support for this extension. We will push our state to sync up the
         // server when we get focus. If we already have focus we need to push
@@ -286,9 +286,11 @@ void QAbstractVNCView::initKeyboardHandler()
         if (firstLEDState) {
           firstLEDState = false;
           if (hasFocus()) {
+            qDebug() << "pushLEDState";
             keyboardHandler->pushLEDState();
           }
         } else if (hasFocus()) {
+          qDebug() << "setLEDState";
           keyboardHandler->setLEDState(state);
         }
       },
@@ -326,7 +328,10 @@ void QAbstractVNCView::resetKeyboard()
     keyboardHandler->resetKeyboard();
 }
 
-void QAbstractVNCView::setCursorPos(int, int) {}
+void QAbstractVNCView::setCursorPos(int, int)
+{
+  qDebug() << "QAbstractVNCView::setCursorPos";
+}
 
 void QAbstractVNCView::handleClipboardData(const char* data)
 {
@@ -676,6 +681,7 @@ void QAbstractVNCView::focusInEvent(QFocusEvent* event)
 
     // We may have gotten our lock keys out of sync with the server
     // whilst we didn't have focus. Try to sort this out.
+    qDebug() << "pushLEDState";
     keyboardHandler->pushLEDState();
 
     // Resend Ctrl/Alt if needed

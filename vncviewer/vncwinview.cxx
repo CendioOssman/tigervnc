@@ -105,6 +105,7 @@ int QVNCWinView::handleTouchEvent(UINT message, WPARAM wParam, LPARAM lParam)
 
 void QVNCWinView::setCursorPos(int x, int y)
 {
+  qDebug() << "QVNCWinView::setCursorPos" << mouseGrabbed;
   if (!mouseGrabbed) {
     // Do nothing if we do not have the mouse captured.
     return;
