@@ -42,8 +42,6 @@ public:
 
   bool hasFocus() const { return QWidget::hasFocus() || isActiveWindow(); }
 
-  QClipboard* clipboard() const { return clipboard_; }
-
   bool isVisibleContextMenu() const;
   void sendContextMenuKey();
   void sendCtrlAltDel();
@@ -59,7 +57,10 @@ public:
 
 public slots:
   virtual void setCursorPos(int x, int y);
-  virtual void handleClipboardData(const char* data);
+   void flushPendingClipboard();
+   void handleClipboardChange();
+   void handleClipboardAnnounce(bool available);
+   void handleClipboardData(const char* data);
   virtual void maybeGrabKeyboard();
   virtual void grabKeyboard();
   virtual void ungrabKeyboard();
@@ -97,8 +98,6 @@ protected:
   void resizeEvent(QResizeEvent* event) override;
 
 protected:
-  static QClipboard* clipboard_;
-
   // Mouse
   bool mouseGrabbed = false;
   EmulateMB* mbemu;
@@ -121,6 +120,10 @@ protected:
   void sendPointerEvent(const rfb::Point& pos, int buttonMask);
   // As QMenu eventFilter
   bool eventFilter(QObject* watched, QEvent* event) override;
+
+  // Clipboard
+  bool pendingServerClipboard = false;
+  bool pendingClientClipboard = false;
 
 private:
   // Initialization

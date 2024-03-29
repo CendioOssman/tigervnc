@@ -94,6 +94,8 @@ public slots:
   void startProcessing();
   void flushSocket();
   void refreshFramebuffer();
+  void sendClipboardData();
+  void requestClipboard();
 
   QString infoText() { return rfbcon ? rfbcon->connectionInfo() : ""; }
 

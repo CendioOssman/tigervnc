@@ -369,7 +369,6 @@ void CConn::handleClipboardRequest()
 void CConn::handleClipboardAnnounce(bool available)
 {
   emit facade->clipboardAnnounced(available);
-  requestClipboard();
 }
 
 void CConn::handleClipboardData(const char* data)

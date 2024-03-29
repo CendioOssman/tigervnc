@@ -57,8 +57,6 @@
 
 static rfb::LogWriter vlog("VNCView");
 
-QClipboard* QAbstractVNCView::clipboard_ = nullptr;
-
 QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
   : QWidget(parent, f)
   , mbemu(new EmulateMB)
@@ -71,20 +69,9 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
 #endif
 {
   setAttribute(Qt::WA_OpaquePaintEvent, true);
-
-  if (!clipboard_) {
-    clipboard_ = QGuiApplication::clipboard();
-    connect(clipboard_, &QClipboard::dataChanged, this, []() {
-      if (!ViewerConfig::config()->sendClipboard()) {
-        return;
-      }
-      // qDebug() << "QClipboard::dataChanged: owns=" << clipboard_->ownsClipboard() << ", text=" << clipboard_->text();
-      if (!clipboard_->ownsClipboard()) {
-        AppManager::instance()->getConnection()->announceClipboard(true);
-      }
-    });
-  }
   setContentsMargins(0, 0, 0, 0);
+
+  connect(QGuiApplication::clipboard(), &QClipboard::dataChanged, this, &QAbstractVNCView::handleClipboardChange);
 
   delayedInitializeTimer->setInterval(1000);
   delayedInitializeTimer->setSingleShot(true);
@@ -106,6 +93,11 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
           &QVNCConnection::cursorPositionChanged,
           this,
           &QAbstractVNCView::setCursorPos,
+          Qt::QueuedConnection);
+  connect(AppManager::instance()->getConnection(),
+          &QVNCConnection::clipboardAnnounced,
+          this,
+          &QAbstractVNCView::handleClipboardAnnounce,
           Qt::QueuedConnection);
   connect(AppManager::instance()->getConnection(),
           &QVNCConnection::clipboardDataReceived,
@@ -333,10 +325,77 @@ void QAbstractVNCView::setCursorPos(int, int)
   qDebug() << "QAbstractVNCView::setCursorPos";
 }
 
+void QAbstractVNCView::flushPendingClipboard()
+{
+  if (pendingServerClipboard) {
+    vlog.debug("Focus regained after remote clipboard change, requesting data");
+    AppManager::instance()->getConnection()->requestClipboard();
+  }
+
+  if (pendingClientClipboard) {
+    vlog.debug("Focus regained after local clipboard change, notifying server");
+    AppManager::instance()->getConnection()->announceClipboard(true);
+    AppManager::instance()->getConnection()->sendClipboardData();
+  }
+
+  pendingServerClipboard = false;
+  pendingClientClipboard = false;
+}
+
+void QAbstractVNCView::handleClipboardChange()
+{
+  qDebug() << "QClipboard::dataChanged:" << QGuiApplication::clipboard()->text();
+
+  if (!ViewerConfig::config()->sendClipboard()) {
+    return;
+  }
+
+  pendingServerClipboard = false;
+
+  if (!hasFocus()) {
+    vlog.debug("Local clipboard changed whilst not focused, will notify server later");
+    pendingClientClipboard = true;
+    // Clear any older client clipboard from the server
+    AppManager::instance()->getConnection()->announceClipboard(false);
+    return;
+  }
+
+  vlog.debug("Local clipboard changed, notifying server");
+  AppManager::instance()->getConnection()->announceClipboard(true);
+  AppManager::instance()->getConnection()->sendClipboardData();
+}
+
+void QAbstractVNCView::handleClipboardAnnounce(bool available)
+{
+  qDebug() << "QAbstractVNCView::handleClipboardAnnounce" << available;
+
+  if (!ViewerConfig::config()->acceptClipboard())
+    return;
+
+  if (!available) {
+    vlog.debug("Clipboard is no longer available on server");
+    pendingServerClipboard = false;
+    return;
+  }
+
+  pendingClientClipboard = false;
+
+  if (!hasFocus()) {
+    vlog.debug("Got notification of new clipboard on server whilst not focused, will request data later");
+    pendingServerClipboard = true;
+    return;
+  }
+
+  vlog.debug("Got notification of new clipboard on server, requesting data");
+  QVNCConnection* cc = AppManager::instance()->getConnection();
+  cc->requestClipboard();
+}
+
 void QAbstractVNCView::handleClipboardData(const char* data)
 {
+  qDebug() << "QAbstractVNCView::handleClipboardData" << data;
   vlog.debug("Got clipboard data (%d bytes)", (int)strlen(data));
-  clipboard_->setText(data);
+  QGuiApplication::clipboard()->setText(data);
 }
 
 void QAbstractVNCView::maybeGrabKeyboard()
@@ -678,7 +737,7 @@ void QAbstractVNCView::focusInEvent(QFocusEvent* event)
   if (keyboardHandler) {
     maybeGrabKeyboard();
 
-    // flushPendingClipboard();
+    flushPendingClipboard();
 
     // We may have gotten our lock keys out of sync with the server
     // whilst we didn't have focus. Try to sort this out.

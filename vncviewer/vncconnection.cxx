@@ -296,6 +296,28 @@ void QVNCConnection::refreshFramebuffer()
   }
 }
 
+void QVNCConnection::sendClipboardData()
+{
+  try {
+    rfbcon->sendClipboardContent();
+  } catch (rdr::Exception& e) {
+    AppManager::instance()->publishError(e.str());
+  } catch (int& e) {
+    AppManager::instance()->publishError(strerror(e));
+  }
+}
+
+void QVNCConnection::requestClipboard()
+{
+  try {
+    rfbcon->requestClipboard();
+  } catch (rdr::Exception& e) {
+    AppManager::instance()->publishError(e.str());
+  } catch (int& e) {
+    AppManager::instance()->publishError(strerror(e));
+  }
+}
+
 void QVNCConnection::setState(int state)
 {
   try {
