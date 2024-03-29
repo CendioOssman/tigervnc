@@ -102,7 +102,6 @@ protected:
   // Mouse
   bool mouseGrabbed = false;
   DownMap downKeySym;
-  QTimer* mouseButtonEmulationTimer;
   EmulateMB* mbemu;
   rfb::Point* lastPointerPos;
   int lastButtonMask = 0;
@@ -120,7 +119,6 @@ protected:
   QList<QAction*> contextMenuActions;
   void createContextMenu();
   void filterPointerEvent(const rfb::Point& pos, int buttonMask);
-  void handleMouseButtonEmulationTimeout();
   void sendPointerEvent(const rfb::Point& pos, int buttonMask);
   // As QMenu eventFilter
   bool eventFilter(QObject* watched, QEvent* event) override;

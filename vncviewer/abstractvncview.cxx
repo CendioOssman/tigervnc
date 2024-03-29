@@ -61,8 +61,7 @@ QClipboard* QAbstractVNCView::clipboard_ = nullptr;
 
 QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
   : QWidget(parent, f)
-  , mouseButtonEmulationTimer(new QTimer)
-  , mbemu(new EmulateMB(mouseButtonEmulationTimer))
+  , mbemu(new EmulateMB)
   , lastPointerPos(new rfb::Point)
   , mousePointerTimer(new QTimer)
   , menuKeySym(XK_F8)
@@ -95,10 +94,6 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
     emit delayedInitialized();
   });
   delayedInitializeTimer->start();
-
-  mouseButtonEmulationTimer->setInterval(50);
-  mouseButtonEmulationTimer->setSingleShot(true);
-  connect(mouseButtonEmulationTimer, &QTimer::timeout, this, &QAbstractVNCView::handleMouseButtonEmulationTimeout);
 
   mousePointerTimer->setInterval(ViewerConfig::config()->pointerEventInterval());
   mousePointerTimer->setSingleShot(true);
@@ -165,7 +160,6 @@ QAbstractVNCView::~QAbstractVNCView()
   }
   delete contextMenu;
   delete delayedInitializeTimer;
-  delete mouseButtonEmulationTimer;
   delete lastPointerPos;
   delete mousePointerTimer;
 }
@@ -720,12 +714,4 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
     if (!mousePointerTimer->isActive())
       mousePointerTimer->start();
   }
-}
-
-void QAbstractVNCView::handleMouseButtonEmulationTimeout()
-{
-  if (ViewerConfig::config()->viewOnly()) {
-    return;
-  }
-  mbemu->handleTimeout();
 }

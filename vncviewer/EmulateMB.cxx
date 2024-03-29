@@ -56,11 +56,10 @@
 
 #include <rfb/Exception.h>
 
-#include <QTimer>
-#include "parameters.h"
-#include "i18n.h"
 #include "appmanager.h"
+#include "parameters.h"
 #include "vncconnection.h"
+#include "i18n.h"
 #include "EmulateMB.h"
 
 /*
@@ -107,104 +106,100 @@
  *      <new emulation state>.
  */
 static const signed char stateTab[11][5][3] = {
-/* 0 ground */
-  {
-    {  0,  0,  0 },   /* nothing -> ground (no change) */
-    {  0,  0,  1 },   /* left -> delayed left */
-    {  0,  0,  2 },   /* right -> delayed right */
-    {  2,  0,  3 },   /* left & right (middle press) -> pressed middle */
-    {  0,  0, -1 }    /* timeout N/A */
-  },
-/* 1 delayed left */
-  {
-    {  1, -1,  0 },   /* nothing (left event) -> ground */
-    {  0,  0,  1 },   /* left -> delayed left (no change) */
-    {  1, -1,  2 },   /* right (left event) -> delayed right */
-    {  2,  0,  3 },   /* left & right (middle press) -> pressed middle */
-    {  1,  0,  4 },   /* timeout (left press) -> pressed left */
-  },
-/* 2 delayed right */
-  {
-    {  3, -3,  0 },   /* nothing (right event) -> ground */
-    {  3, -3,  1 },   /* left (right event) -> delayed left (no change) */
-    {  0,  0,  2 },   /* right -> delayed right (no change) */
-    {  2,  0,  3 },   /* left & right (middle press) -> pressed middle */
-    {  3,  0,  5 },   /* timeout (right press) -> pressed right */
-  },
-/* 3 pressed middle */
-  {
-    { -2,  0,  0 },   /* nothing (middle release) -> ground */
-    {  0,  0,  7 },   /* left -> released right */
-    {  0,  0,  6 },   /* right -> released left */
-    {  0,  0,  3 },   /* left & right -> pressed middle (no change) */
-    {  0,  0, -1 },   /* timeout N/A */
-  },
-/* 4 pressed left */
-  {
-    { -1,  0,  0 },   /* nothing (left release) -> ground */
-    {  0,  0,  4 },   /* left -> pressed left (no change) */
-    { -1,  0,  2 },   /* right (left release) -> delayed right */
-    {  3,  0, 10 },   /* left & right (right press) -> pressed both */
-    {  0,  0, -1 },   /* timeout N/A */
-  },
-/* 5 pressed right */
-  {
-    { -3,  0,  0 },   /* nothing (right release) -> ground */
-    { -3,  0,  1 },   /* left (right release) -> delayed left */
-    {  0,  0,  5 },   /* right -> pressed right (no change) */
-    {  1,  0, 10 },   /* left & right (left press) -> pressed both */
-    {  0,  0, -1 },   /* timeout N/A */
-  },
-/* 6 released left */
-  {
-    { -2,  0,  0 },   /* nothing (middle release) -> ground */
-    { -2,  0,  1 },   /* left (middle release) -> delayed left */
-    {  0,  0,  6 },   /* right -> released left (no change) */
-    {  1,  0,  8 },   /* left & right (left press) -> repressed left */
-    {  0,  0, -1 },   /* timeout N/A */
-  },
-/* 7 released right */
-  {
-    { -2,  0,  0 },   /* nothing (middle release) -> ground */
-    {  0,  0,  7 },   /* left -> released right (no change) */
-    { -2,  0,  2 },   /* right (middle release) -> delayed right */
-    {  3,  0,  9 },   /* left & right (right press) -> repressed right */
-    {  0,  0, -1 },   /* timeout N/A */
-  },
-/* 8 repressed left */
-  {
-    { -2, -1,  0 },   /* nothing (middle release, left release) -> ground */
-    { -2,  0,  4 },   /* left (middle release) -> pressed left */
-    { -1,  0,  6 },   /* right (left release) -> released left */
-    {  0,  0,  8 },   /* left & right -> repressed left (no change) */
-    {  0,  0, -1 },   /* timeout N/A */
-  },
-/* 9 repressed right */
-  {
-    { -2, -3,  0 },   /* nothing (middle release, right release) -> ground */
-    { -3,  0,  7 },   /* left (right release) -> released right */
-    { -2,  0,  5 },   /* right (middle release) -> pressed right */
-    {  0,  0,  9 },   /* left & right -> repressed right (no change) */
-    {  0,  0, -1 },   /* timeout N/A */
-  },
-/* 10 pressed both */
-  {
-    { -1, -3,  0 },   /* nothing (left release, right release) -> ground */
-    { -3,  0,  4 },   /* left (right release) -> pressed left */
-    { -1,  0,  5 },   /* right (left release) -> pressed right */
-    {  0,  0, 10 },   /* left & right -> pressed both (no change) */
-    {  0,  0, -1 },   /* timeout N/A */
-  },
-};
+  /* 0 ground */
+    {
+        {  0,  0,  0 },   /* nothing -> ground (no change) */
+        {  0,  0,  1 },   /* left -> delayed left */
+        {  0,  0,  2 },   /* right -> delayed right */
+        {  2,  0,  3 },   /* left & right (middle press) -> pressed middle */
+        {  0,  0, -1 }    /* timeout N/A */
+    },
+  /* 1 delayed left */
+    {
+        {  1, -1,  0 },   /* nothing (left event) -> ground */
+        {  0,  0,  1 },   /* left -> delayed left (no change) */
+        {  1, -1,  2 },   /* right (left event) -> delayed right */
+        {  2,  0,  3 },   /* left & right (middle press) -> pressed middle */
+        {  1,  0,  4 },   /* timeout (left press) -> pressed left */
+    },
+  /* 2 delayed right */
+    {
+        {  3, -3,  0 },   /* nothing (right event) -> ground */
+        {  3, -3,  1 },   /* left (right event) -> delayed left (no change) */
+        {  0,  0,  2 },   /* right -> delayed right (no change) */
+        {  2,  0,  3 },   /* left & right (middle press) -> pressed middle */
+        {  3,  0,  5 },   /* timeout (right press) -> pressed right */
+    },
+  /* 3 pressed middle */
+    {
+        { -2,  0,  0 },   /* nothing (middle release) -> ground */
+        {  0,  0,  7 },   /* left -> released right */
+        {  0,  0,  6 },   /* right -> released left */
+        {  0,  0,  3 },   /* left & right -> pressed middle (no change) */
+        {  0,  0, -1 },   /* timeout N/A */
+    },
+  /* 4 pressed left */
+    {
+        { -1,  0,  0 },   /* nothing (left release) -> ground */
+        {  0,  0,  4 },   /* left -> pressed left (no change) */
+        { -1,  0,  2 },   /* right (left release) -> delayed right */
+        {  3,  0, 10 },   /* left & right (right press) -> pressed both */
+        {  0,  0, -1 },   /* timeout N/A */
+    },
+  /* 5 pressed right */
+    {
+        { -3,  0,  0 },   /* nothing (right release) -> ground */
+        { -3,  0,  1 },   /* left (right release) -> delayed left */
+        {  0,  0,  5 },   /* right -> pressed right (no change) */
+        {  1,  0, 10 },   /* left & right (left press) -> pressed both */
+        {  0,  0, -1 },   /* timeout N/A */
+    },
+  /* 6 released left */
+    {
+        { -2,  0,  0 },   /* nothing (middle release) -> ground */
+        { -2,  0,  1 },   /* left (middle release) -> delayed left */
+        {  0,  0,  6 },   /* right -> released left (no change) */
+        {  1,  0,  8 },   /* left & right (left press) -> repressed left */
+        {  0,  0, -1 },   /* timeout N/A */
+    },
+  /* 7 released right */
+    {
+        { -2,  0,  0 },   /* nothing (middle release) -> ground */
+        {  0,  0,  7 },   /* left -> released right (no change) */
+        { -2,  0,  2 },   /* right (middle release) -> delayed right */
+        {  3,  0,  9 },   /* left & right (right press) -> repressed right */
+        {  0,  0, -1 },   /* timeout N/A */
+    },
+  /* 8 repressed left */
+    {
+        { -2, -1,  0 },   /* nothing (middle release, left release) -> ground */
+        { -2,  0,  4 },   /* left (middle release) -> pressed left */
+        { -1,  0,  6 },   /* right (left release) -> released left */
+        {  0,  0,  8 },   /* left & right -> repressed left (no change) */
+        {  0,  0, -1 },   /* timeout N/A */
+    },
+  /* 9 repressed right */
+    {
+        { -2, -3,  0 },   /* nothing (middle release, right release) -> ground */
+        { -3,  0,  7 },   /* left (right release) -> released right */
+        { -2,  0,  5 },   /* right (middle release) -> pressed right */
+        {  0,  0,  9 },   /* left & right -> repressed right (no change) */
+        {  0,  0, -1 },   /* timeout N/A */
+    },
+  /* 10 pressed both */
+    {
+        { -1, -3,  0 },   /* nothing (left release, right release) -> ground */
+        { -3,  0,  4 },   /* left (right release) -> pressed left */
+        { -1,  0,  5 },   /* right (left release) -> pressed right */
+        {  0,  0, 10 },   /* left & right -> pressed both (no change) */
+        {  0,  0, -1 },   /* timeout N/A */
+    },
+    };
 
-EmulateMB::EmulateMB(QTimer *qtimer)
-  : state(0), emulatedButtonMask(0), timer(qtimer)
+EmulateMB::EmulateMB()
+  : state(0), emulatedButtonMask(0), timer(this)
 {
-}
 
-void EmulateMB::sendPointerEvent(const rfb::Point& pos, int buttonMask)
-{
-  emit AppManager::instance()->getConnection()->writePointerEvent(pos, buttonMask);
 }
 
 void EmulateMB::filterPointerEvent(const rfb::Point& pos, int buttonMask)
@@ -215,8 +210,8 @@ void EmulateMB::filterPointerEvent(const rfb::Point& pos, int buttonMask)
 
   // Just pass through events if the emulate setting is disabled
   if (!ViewerConfig::config()->emulateMiddleButton()) {
-     sendPointerEvent(pos, buttonMask);
-     return;
+    sendPointerEvent(pos, buttonMask);
+    return;
   }
 
   lastButtonMask = buttonMask;
@@ -265,7 +260,7 @@ void EmulateMB::filterPointerEvent(const rfb::Point& pos, int buttonMask)
   // However if the timer is running then we are supressing _all_
   // events, even movement. The pointer's actual position will be
   // sent once the timer fires or is abandoned.
-  if ((action1 == 0) && (action2 == 0) && !timer->isActive()) {
+  if ((action1 == 0) && (action2 == 0) && !timer.isStarted()) {
     buttonMask = createButtonMask(buttonMask);
     sendPointerEvent(pos, buttonMask);
   }
@@ -274,26 +269,38 @@ void EmulateMB::filterPointerEvent(const rfb::Point& pos, int buttonMask)
   state = stateTab[state][btstate][2];
 
   if (lastState != state) {
-    timer->stop();
+    timer.stop();
 
     if (stateTab[state][4][2] >= 0) {
       // We need to save the original position so that
       // drags start from the correct position
       origPos = pos;
-      timer->start(50);
+      timer.start(50);
     }
   }
 }
 
-void EmulateMB::handleTimeout()
+void EmulateMB::sendPointerEvent(const rfb::Point &pos, int buttonMask)
 {
+  emit AppManager::instance()->getConnection()->writePointerEvent(pos, buttonMask);
+}
+
+bool EmulateMB::handleTimeout(rfb::Timer *t)
+{
+  if (ViewerConfig::config()->viewOnly()) {
+    return false;
+  }
+
   int action1, action2;
   int buttonMask;
+
+  if (&timer != t)
+    return false;
 
   if ((state > 10) || (state < 0))
     throw rfb::Exception(_("Invalid state for 3 button emulation"));
 
-  // Timeout shouldn't trigger when there's no timeout action
+         // Timeout shouldn't trigger when there's no timeout action
   assert(stateTab[state][4][2] >= 0);
 
   action1 = stateTab[state][4][0];
@@ -315,6 +322,8 @@ void EmulateMB::handleTimeout()
   }
 
   state = stateTab[state][4][2];
+
+  return false;
 }
 
 void EmulateMB::sendAction(const rfb::Point& pos, int buttonMask, int action)
@@ -335,6 +344,6 @@ int EmulateMB::createButtonMask(int buttonMask)
   // Unset left and right buttons in the mask
   buttonMask &= ~0x5;
 
-  // Set the left and right buttons according to the action
+         // Set the left and right buttons according to the action
   return buttonMask |= emulatedButtonMask;
 }
