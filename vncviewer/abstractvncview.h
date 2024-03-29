@@ -103,7 +103,6 @@ protected:
   bool mouseGrabbed = false;
   DownMap downKeySym;
   EmulateMB* mbemu;
-  rfb::Point* lastPointerPos;
   int lastButtonMask = 0;
   QTimer* mousePointerTimer;
 
