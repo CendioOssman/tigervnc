@@ -6,7 +6,6 @@
 
 #include <QProcess>
 #include <QScreen>
-#include <QTcpSocket>
 #include <QTimer>
 #if defined(__APPLE__)
 #include "cocoa.h"
