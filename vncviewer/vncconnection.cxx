@@ -158,9 +158,9 @@ void QVNCConnection::connectToServer(QString addressport)
   try {
     if (addressport.isEmpty()) {
       resetConnection();
-      addressport = addressport;
+      this->addressport = addressport;
     } else {
-      addressport = addressport;
+      this->addressport = addressport;
     }
     delete rfbcon;
     rfbcon = new CConn(this);
