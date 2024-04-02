@@ -40,15 +40,6 @@
 #include <X11/Xcursor/Xcursor.h>
 #include <X11/extensions/Xrender.h>
 
-extern const struct _code_map_xkb_to_qnum {
-  const char* from;
-  const unsigned short to;
-} code_map_xkb_to_qnum[];
-
-extern const unsigned int code_map_xkb_to_qnum_len;
-
-static int code_map_keycode_to_qnum[256];
-
 static rfb::LogWriter vlog("QVNCX11View");
 
 QVNCGestureRecognizer* QVNCX11View::vncGestureRecognizer_ = nullptr;
