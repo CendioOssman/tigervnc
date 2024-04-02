@@ -6,6 +6,7 @@
 #include "i18n.h"
 #include "network/TcpSocket.h"
 #include "parameters.h"
+#include "viewerconfig.h"
 #include "rfb/CMsgWriter.h"
 #include "rfb/Exception.h"
 #include "rfb/Hostname.h"
@@ -82,7 +83,7 @@ QVNCConnection::QVNCConnection()
     }
   });
 
-  if (ViewerConfig::config()->listenModeEnabled()) {
+  if (::listenMode) {
     listen();
   }
 
@@ -98,8 +99,8 @@ QVNCConnection::QVNCConnection()
     }
   });
 
-  QString gatewayHost = ViewerConfig::config()->gatewayHost();
-  QString remoteHost = ViewerConfig::config()->getServerHost();
+  QString gatewayHost = ViewerConfig::instance()->gatewayHost();
+  QString remoteHost = ViewerConfig::instance()->getServerHost();
   if (!gatewayHost.isEmpty() && !remoteHost.isEmpty()) {
     tunnelFactory = new TunnelFactory;
     tunnelFactory->start();
@@ -164,7 +165,7 @@ void QVNCConnection::connectToServer(QString addressport)
     }
     delete rfbcon;
     rfbcon = new CConn(this);
-    ViewerConfig::config()->saveViewerParameters("", addressport);
+    ViewerConfig::instance()->saveViewerParameters("", addressport);
     if (addressport.contains("/")) {
 #ifndef Q_OS_WIN
       delete socket;
@@ -197,7 +198,7 @@ void QVNCConnection::listen()
   std::list<network::SocketListener*> listeners;
   try {
     bool ok;
-    int port = ViewerConfig::config()->getServerName().toInt(&ok);
+    int port = ViewerConfig::instance()->getServerName().toInt(&ok);
     if (!ok) {
       port = 5500;
     }
@@ -269,7 +270,7 @@ void QVNCConnection::resetConnection()
 
 void QVNCConnection::announceClipboard(bool available)
 {
-  if (ViewerConfig::config()->viewOnly()) {
+  if (::viewOnly) {
     return;
   }
   try {

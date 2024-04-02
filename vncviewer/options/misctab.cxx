@@ -19,12 +19,12 @@ MiscTab::MiscTab(QWidget* parent)
 
 void MiscTab::apply()
 {
-  ViewerConfig::config()->setShared(shared->isChecked());
-  ViewerConfig::config()->setReconnectOnError(reconnect->isChecked());
+  ::shared.setParam(shared->isChecked());
+  ::reconnectOnError.setParam(reconnect->isChecked());
 }
 
 void MiscTab::reset()
 {
-  shared->setChecked(ViewerConfig::config()->shared());
-  reconnect->setChecked(ViewerConfig::config()->reconnectOnError());
+  shared->setChecked(::shared);
+  reconnect->setChecked(::reconnectOnError);
 }

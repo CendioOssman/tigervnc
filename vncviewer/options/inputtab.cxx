@@ -1,6 +1,7 @@
 #include "inputtab.h"
 
 #include "parameters.h"
+#include "menukey.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -35,7 +36,12 @@ InputTab::InputTab(QWidget* parent)
   hbox2->addWidget(label);
   inputKeyboardMenuKeyCombo = new QComboBox;
   QStringListModel* model = new QStringListModel;
-  model->setStringList(ViewerConfig::config()->getMenuKeys());
+  QStringList menuKeys;
+  auto keysyms = getMenuKeySymbols();
+  for (int i = 0; i < getMenuKeySymbolCount(); i++) {
+    menuKeys.append(keysyms[i].name);
+  }
+  model->setStringList(menuKeys);
   inputKeyboardMenuKeyCombo->setModel(model);
   hbox2->addWidget(inputKeyboardMenuKeyCombo);
   hbox2->addStretch(1);
@@ -66,30 +72,30 @@ InputTab::InputTab(QWidget* parent)
 
 void InputTab::apply()
 {
-  ViewerConfig::config()->setViewOnly(inputViewOnly->isChecked());
-  ViewerConfig::config()->setEmulateMiddleButton(inputMouseEmulateMiddleButton->isChecked());
-  ViewerConfig::config()->setDotWhenNoCursor(inputMouseShowDot->isChecked());
-  ViewerConfig::config()->setFullscreenSystemKeys(inputKeyboardPassSystemKeys->isChecked());
-  ViewerConfig::config()->setMenuKey(inputKeyboardMenuKeyCombo->currentText());
-  ViewerConfig::config()->setAcceptClipboard(inputClipboardFromServer->isChecked());
-  ViewerConfig::config()->setSendClipboard(inputClipboardToServer->isChecked());
+  ::viewOnly.setParam(inputViewOnly->isChecked());
+  ::emulateMiddleButton.setParam(inputMouseEmulateMiddleButton->isChecked());
+  ::dotWhenNoCursor.setParam(inputMouseShowDot->isChecked());
+  ::fullscreenSystemKeys.setParam(inputKeyboardPassSystemKeys->isChecked());
+  ::menuKey.setParam(inputKeyboardMenuKeyCombo->currentText().toStdString().c_str());
+  ::acceptClipboard.setParam(inputClipboardFromServer->isChecked());
+  ::sendClipboard.setParam(inputClipboardToServer->isChecked());
 #if !defined(WIN32) && !defined(__APPLE__)
-  ViewerConfig::config()->setShouldSetPrimary(inputSetPrimary->isChecked());
-  ViewerConfig::config()->setSendPrimary(inputSendPrimary->isChecked());
+  ::setPrimary.setParam(inputSetPrimary->isChecked());
+  ::sendPrimary.setParam(inputSendPrimary->isChecked());
 #endif
 }
 
 void InputTab::reset()
 {
-  inputViewOnly->setChecked(ViewerConfig::config()->viewOnly());
-  inputMouseEmulateMiddleButton->setChecked(ViewerConfig::config()->emulateMiddleButton());
-  inputMouseShowDot->setChecked(ViewerConfig::config()->dotWhenNoCursor());
-  inputKeyboardPassSystemKeys->setChecked(ViewerConfig::config()->fullscreenSystemKeys());
-  inputKeyboardMenuKeyCombo->setCurrentIndex(ViewerConfig::config()->menuKeyIndex());
-  inputClipboardFromServer->setChecked(ViewerConfig::config()->acceptClipboard());
-  inputClipboardToServer->setChecked(ViewerConfig::config()->sendClipboard());
+  inputViewOnly->setChecked(::viewOnly);
+  inputMouseEmulateMiddleButton->setChecked(::emulateMiddleButton);
+  inputMouseShowDot->setChecked(::dotWhenNoCursor);
+  inputKeyboardPassSystemKeys->setChecked(::fullscreenSystemKeys);
+  inputKeyboardMenuKeyCombo->setCurrentText(::menuKey.getValueStr().c_str());
+  inputClipboardFromServer->setChecked(::acceptClipboard);
+  inputClipboardToServer->setChecked(::sendClipboard);
 #if !defined(WIN32) && !defined(__APPLE__)
-  inputSetPrimary->setChecked(ViewerConfig::config()->shouldSetPrimary());
-  inputSendPrimary->setChecked(ViewerConfig::config()->sendPrimary());
+  inputSetPrimary->setChecked(::setPrimary);
+  inputSendPrimary->setChecked(::sendPrimary);
 #endif
 }

@@ -15,9 +15,7 @@ class AppManager : public QObject
 public:
   virtual ~AppManager();
 
-  static AppManager* instance() { return manager; }
-
-  static int initialize();
+  static AppManager* instance();
 
   QVNCConnection* getConnection() const { return connection; }
 
@@ -69,9 +67,9 @@ public slots:
   void openOptionDialog();
   void openAboutDialog();
   void openMessageDialog(int flags, QString title, QString text);
+  void handleOptions();
 
 private:
-  static AppManager* manager;
   int errorCount;
   QVNCConnection* connection;
   QAbstractVNCView* view;

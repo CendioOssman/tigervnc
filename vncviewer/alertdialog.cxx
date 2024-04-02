@@ -21,7 +21,7 @@ AlertDialog::AlertDialog(bool staysOnTop, QString message, bool quit, QWidget* p
 
   QHBoxLayout* btnsLayout = new QHBoxLayout;
   btnsLayout->addStretch(1);
-  if (ViewerConfig::config()->reconnectOnError() && !quit) {
+  if (::reconnectOnError && !quit) {
     QPushButton* reconnectBtn = new QPushButton(tr("Reconnect"));
     btnsLayout->addWidget(reconnectBtn, 0, Qt::AlignRight);
     connect(reconnectBtn, &QPushButton::clicked, this, [=]() {

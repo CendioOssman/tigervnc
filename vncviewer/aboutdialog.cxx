@@ -1,6 +1,6 @@
 #include "aboutdialog.h"
 
-#include "parameters.h"
+#include "viewerconfig.h"
 
 #include <QLabel>
 #include <QPushButton>
@@ -13,7 +13,7 @@ AboutDialog::AboutDialog(bool staysOnTop, QWidget* parent)
   setWindowFlag(Qt::WindowStaysOnTopHint, staysOnTop);
 
   QVBoxLayout* layout = new QVBoxLayout;
-  layout->addWidget(new QLabel(ViewerConfig::config()->aboutText()));
+  layout->addWidget(new QLabel(ViewerConfig::aboutText()));
   QPushButton* closeBtn = new QPushButton(tr("Close"));
   layout->addWidget(closeBtn, 0, Qt::AlignRight);
   setLayout(layout);

@@ -1,6 +1,8 @@
 #include "compressiontab.h"
 
 #include "parameters.h"
+#include "viewerconfig.h"
+#include "rfb/encodings.h"
 
 #include <QCheckBox>
 #include <QGroupBox>
@@ -28,7 +30,7 @@ CompressionTab::CompressionTab(QWidget* parent)
   compressionEncodingHextile = new QRadioButton(tr("Hextile"));
   vbox1->addWidget(compressionEncodingHextile);
   compressionEncodingH264 = new QRadioButton(tr("H264"));
-  compressionEncodingH264->setEnabled(ViewerConfig::config()->haveH264());
+  compressionEncodingH264->setEnabled(ViewerConfig::hasH264());
   vbox1->addWidget(compressionEncodingH264);
   compressionEncodingRaw = new QRadioButton(tr("Raw"));
   vbox1->addWidget(compressionEncodingRaw);
@@ -80,52 +82,52 @@ CompressionTab::CompressionTab(QWidget* parent)
 
 void CompressionTab::apply()
 {
-  ViewerConfig::config()->setAutoSelect(compressionAutoSelect->isChecked());
+  ::autoSelect.setParam(compressionAutoSelect->isChecked());
   if (compressionEncodingTight->isChecked()) {
-    ViewerConfig::config()->setPreferredEncodingNum(7);
+    ::preferredEncoding.setParam(rfb::encodingName(7));
   }
   if (compressionEncodingZRLE->isChecked()) {
-    ViewerConfig::config()->setPreferredEncodingNum(16);
+    ::preferredEncoding.setParam(rfb::encodingName(16));
   }
   if (compressionEncodingHextile->isChecked()) {
-    ViewerConfig::config()->setPreferredEncodingNum(5);
+    ::preferredEncoding.setParam(rfb::encodingName(5));
   }
   if (compressionEncodingH264->isChecked()) {
-    ViewerConfig::config()->setPreferredEncodingNum(50);
+    ::preferredEncoding.setParam(rfb::encodingName(50));
   }
   if (compressionEncodingRaw->isChecked()) {
-    ViewerConfig::config()->setPreferredEncodingNum(0);
+    ::preferredEncoding.setParam(rfb::encodingName(0));
   }
-  ViewerConfig::config()->setFullColour(compressionColorLevelFull->isChecked());
+  ::fullColour.setParam(compressionColorLevelFull->isChecked());
   if (compressionColorLevelMedium->isChecked()) {
-    ViewerConfig::config()->setLowColourLevel(2);
+    ::lowColourLevel.setParam(2);
   }
   if (compressionColorLevelLow->isChecked()) {
-    ViewerConfig::config()->setLowColourLevel(1);
+    ::lowColourLevel.setParam(1);
   }
   if (compressionColorLevelVeryLow->isChecked()) {
-    ViewerConfig::config()->setLowColourLevel(0);
+    ::lowColourLevel.setParam(0);
   }
-  ViewerConfig::config()->setCustomCompressLevel(compressionCustomCompressionLevel->isChecked());
-  ViewerConfig::config()->setCompressLevel(compressionCustomCompressionLevelTextEdit->value());
-  ViewerConfig::config()->setNoJpeg(!compressionJPEGCompression->isChecked());
-  ViewerConfig::config()->setQualityLevel(compressionJPEGCompressionTextEdit->value());
+  ::customCompressLevel.setParam(compressionCustomCompressionLevel->isChecked());
+  ::compressLevel.setParam(compressionCustomCompressionLevelTextEdit->value());
+  ::noJpeg.setParam(!compressionJPEGCompression->isChecked());
+  ::qualityLevel.setParam(compressionJPEGCompressionTextEdit->value());
 }
 
 void CompressionTab::reset()
 {
-  compressionAutoSelect->setChecked(ViewerConfig::config()->autoSelect());
-  compressionEncodingTight->setChecked(ViewerConfig::config()->preferredEncodingNum() == 7);
-  compressionEncodingZRLE->setChecked(ViewerConfig::config()->preferredEncodingNum() == 16);
-  compressionEncodingHextile->setChecked(ViewerConfig::config()->preferredEncodingNum() == 5);
-  compressionEncodingH264->setChecked(ViewerConfig::config()->preferredEncodingNum() == 50);
-  compressionEncodingRaw->setChecked(ViewerConfig::config()->preferredEncodingNum() == 0);
-  compressionColorLevelFull->setChecked(ViewerConfig::config()->fullColour());
-  compressionColorLevelMedium->setChecked(ViewerConfig::config()->lowColourLevel() == 2);
-  compressionColorLevelLow->setChecked(ViewerConfig::config()->lowColourLevel() == 1);
-  compressionColorLevelVeryLow->setChecked(ViewerConfig::config()->lowColourLevel() == 0);
-  compressionCustomCompressionLevel->setChecked(ViewerConfig::config()->customCompressLevel());
-  compressionCustomCompressionLevelTextEdit->setValue(ViewerConfig::config()->compressLevel());
-  compressionJPEGCompression->setChecked(!ViewerConfig::config()->noJpeg());
-  compressionJPEGCompressionTextEdit->setValue(ViewerConfig::config()->qualityLevel());
+  compressionAutoSelect->setChecked(::autoSelect);
+  compressionEncodingTight->setChecked(rfb::encodingNum(::preferredEncoding) == 7);
+  compressionEncodingZRLE->setChecked(rfb::encodingNum(::preferredEncoding) == 16);
+  compressionEncodingHextile->setChecked(rfb::encodingNum(::preferredEncoding) == 5);
+  compressionEncodingH264->setChecked(rfb::encodingNum(::preferredEncoding) == 50);
+  compressionEncodingRaw->setChecked(rfb::encodingNum(::preferredEncoding) == 0);
+  compressionColorLevelFull->setChecked(::fullColour);
+  compressionColorLevelMedium->setChecked(::lowColourLevel == 2);
+  compressionColorLevelLow->setChecked(::lowColourLevel == 1);
+  compressionColorLevelVeryLow->setChecked(::lowColourLevel == 0);
+  compressionCustomCompressionLevel->setChecked(::customCompressLevel);
+  compressionCustomCompressionLevelTextEdit->setValue(::compressLevel);
+  compressionJPEGCompression->setChecked(!::noJpeg);
+  compressionJPEGCompressionTextEdit->setValue(::qualityLevel);
 }

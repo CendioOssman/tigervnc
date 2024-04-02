@@ -70,7 +70,7 @@ void getMenuKey(int *fltkcode, int *keycode, uint32_t *keysym)
 {
   QString menuKeyStr;
 
-  menuKeyStr = ViewerConfig::config()->menuKey();
+  menuKeyStr = ::menuKey;
   qDebug() << menuKeyStr;
   for(int i = 0; i < getMenuKeySymbolCount(); i++) {
     if (menuKeyStr == menuSymbols[i].name) {

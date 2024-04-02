@@ -76,12 +76,12 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   // coordinates relative to the right edge / bottom edge) at this
   // time.
   int geom_x = 0, geom_y = 0;
-  if (!ViewerConfig::config()->geometry().isEmpty()) {
+  if (!QString(::geometry).isEmpty()) {
     int nfields =
-        sscanf((const char*)ViewerConfig::config()->geometry().toStdString().c_str(), "+%d+%d", &geom_x, &geom_y);
+        sscanf(QString(::geometry).toStdString().c_str(), "+%d+%d", &geom_x, &geom_y);
     if (nfields != 2) {
       int geom_w, geom_h;
-      nfields = sscanf((const char*)ViewerConfig::config()->geometry().toStdString().c_str(),
+      nfields = sscanf(QString(::geometry).toStdString().c_str(),
                        "%dx%d+%d+%d",
                        &geom_w,
                        &geom_h,
@@ -131,12 +131,12 @@ QList<int> QVNCWindow::fullscreenScreens() const
   QApplication* app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
   QList<int> applicableScreens;
-  if (ViewerConfig::config()->fullScreenMode() == ViewerConfig::FSAll) {
+  if (!strcasecmp(::fullScreenMode, "all")) {
     for (int i = 0; i < screens.length(); i++) {
       applicableScreens << i;
     }
-  } else if (ViewerConfig::config()->fullScreenMode() == ViewerConfig::FSSelected) {
-    for (int& id : ViewerConfig::config()->selectedScreens()) {
+  } else if (!strcasecmp(::fullScreenMode, "selected")) {
+    for (int const& id : ::fullScreenSelectedMonitors.getParam()) {
       int i = id - 1; // Screen ID in config is 1-origin.
       if (i < screens.length()) {
         applicableScreens << i;
@@ -195,9 +195,9 @@ void QVNCWindow::fullscreen(bool enabled)
       previousScreen = getCurrentScreen();
     }
 
-    auto mode = ViewerConfig::config()->fullScreenMode();
+    auto mode = ::fullScreenMode;
     QList<int> selectedScreens = fullscreenScreens();
-    if (mode != ViewerConfig::FSCurrent && selectedScreens.length() > 0) {
+    if (strcasecmp(mode, "current") && selectedScreens.length() > 0) {
       QScreen* selectedPrimaryScreen = screens[selectedScreens[0]];
       int xmin = INT_MAX;
       int ymin = INT_MAX;
@@ -247,7 +247,7 @@ void QVNCWindow::fullscreen(bool enabled)
   raise();
 
   if (!enabled) {
-    ViewerConfig::config()->setFullScreen(false);
+    ::fullScreen.setParam(false);
   }
   if (fullscreenEnabled != fullscreenEnabled0) {
     emit fullscreenChanged(fullscreenEnabled);
@@ -337,15 +337,15 @@ void QVNCWindow::handleDesktopSize()
 {
   qDebug() << "QVNCWindow::handleDesktopSize";
   double f = effectiveDevicePixelRatio();
-  if (!ViewerConfig::config()->desktopSize().isEmpty()) {
+  if (!QString(::desktopSize).isEmpty()) {
     int w, h;
     // An explicit size has been requested
-    if (sscanf(ViewerConfig::config()->desktopSize().toStdString().c_str(), "%dx%d", &w, &h) != 2) {
+    if (sscanf(::desktopSize, "%dx%d", &w, &h) != 2) {
       return;
     }
     remoteResize(w * f, h * f);
     // qDebug() << "QVNCWindow::handleDesktopSize(explicit): width=" << w << ", height=" << h;
-  } else if (ViewerConfig::config()->remoteResize()) {
+  } else if (::remoteResize) {
     // No explicit size, but remote resizing is on so make sure it
     // matches whatever size the window ended up being
     remoteResize(width() * f, height() * f);
@@ -511,7 +511,7 @@ void QVNCWindow::resizeEvent(QResizeEvent* e)
 
   QVNCConnection* cc = AppManager::instance()->getConnection();
 
-  if (ViewerConfig::config()->remoteResize() && cc->server()->supportsSetDesktopSize) {
+  if (::remoteResize && cc->server()->supportsSetDesktopSize) {
     postRemoteResizeRequest();
   }
 
@@ -542,7 +542,7 @@ void QVNCWindow::focusInEvent(QFocusEvent*)
 void QVNCWindow::focusOutEvent(QFocusEvent*)
 {
   qDebug() << "QVNCWindow::focusOutEvent";
-  if (ViewerConfig::config()->fullscreenSystemKeys()) {
+  if (::fullscreenSystemKeys) {
     QAbstractVNCView* view = AppManager::instance()->getView();
     if (view)
       view->ungrabKeyboard();

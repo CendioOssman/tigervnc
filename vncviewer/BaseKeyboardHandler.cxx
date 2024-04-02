@@ -36,7 +36,7 @@ bool BaseKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuS
     }
   }
 
-  if (ViewerConfig::config()->viewOnly())
+  if (::viewOnly)
     return false;
 
   if (keyCode == 0) {
@@ -70,7 +70,7 @@ bool BaseKeyboardHandler::handleKeyRelease(int keyCode)
 {
   DownMap::iterator iter;
 
-  if (ViewerConfig::config()->viewOnly())
+  if (::viewOnly)
     return false;
 
   iter = downKeySym.find(keyCode);

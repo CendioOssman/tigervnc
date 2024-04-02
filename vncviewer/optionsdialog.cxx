@@ -1,5 +1,6 @@
 #include "optionsdialog.h"
 
+#include "appmanager.h"
 #include "options/compressiontab.h"
 #include "options/displaytab.h"
 #include "options/inputtab.h"
@@ -68,6 +69,7 @@ void OptionsDialog::apply()
       w->apply();
     }
   }
+  AppManager::instance()->handleOptions();
   close();
 }
 

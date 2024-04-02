@@ -20,262 +20,70 @@
 #ifndef __PARAMETERS_H__
 #define __PARAMETERS_H__
 
-#include <QHash>
-#include <QList>
-#include <QObject>
-#include <QUrl>
+#include <rfb/Configuration.h>
+#include "MonitorIndicesParameter.h"
 
-class ViewerConfig : public QObject
-{
-  Q_OBJECT
-
-public:
-  const char* SERVER_HISTORY = "tigervnc.history";
-  static const int SERVER_PORT_OFFSET = 5900; // ??? 5500;
-
-  enum FullScreenMode {
-    FSCurrent,
-    FSAll,
-    FSSelected,
-  };
-  Q_ENUM(FullScreenMode)
-
-  virtual ~ViewerConfig();
-
-  static ViewerConfig* config() { return config_; };
-
-  static int initialize();
-  //
-  QString desktopSize() const;
-  void setDesktopSize(QString value);
-  bool remoteResize() const;
-  void setRemoteResize(bool value);
-  QString geometry() const;
-  void setGeometry(QString value);
-  //
-  bool autoSelect() const;
-  void setAutoSelect(bool value);
-  bool fullColour() const;
-  void setFullColour(bool value);
-  int lowColourLevel() const;
-  void setLowColourLevel(int value);
-  QString preferredEncoding() const;
-  void setPreferredEncoding(QString value);
-  int preferredEncodingNum() const;
-  void setPreferredEncodingNum(int value);
-  bool customCompressLevel() const;
-  void setCustomCompressLevel(bool value);
-  int compressLevel() const;
-  void setCompressLevel(int value);
-  bool noJpeg() const;
-  void setNoJpeg(bool value);
-  int qualityLevel() const;
-  void setQualityLevel(int value);
-
-  //
-  bool getEncNone() const { return encNone; }
-
-  void setEncNone(bool value);
-
-  bool getEncTLSAnon() const { return encTLSAnon; }
-
-  void setEncTLSAnon(bool value);
-
-  bool getEncTLSX509() const { return encTLSX509; }
-
-  void setEncTLSX509(bool value);
-
-  bool getEncAES() const { return encAES; }
-
-  void setEncAES(bool value);
-
-  bool getAuthNone() const { return authNone; }
-
-  void setAuthNone(bool value);
-
-  bool getAuthVNC() const { return authVNC; }
-
-  void setAuthVNC(bool value);
-
-  bool getAuthPlain() const { return authPlain; }
-
-  void setAuthPlain(bool value);
-  QString x509CA() const;
-  void setX509CA(QString value);
-  QString x509CRL() const;
-  void setX509CRL(QString value);
-  //
-  bool viewOnly() const;
-  void setViewOnly(bool value);
-  int pointerEventInterval() const;
-  void setPointerEventInterval(int value);
-  bool emulateMiddleButton() const;
-  void setEmulateMiddleButton(bool value);
-  bool dotWhenNoCursor() const;
-  void setDotWhenNoCursor(bool value);
-  bool fullscreenSystemKeys() const;
-  void setFullscreenSystemKeys(bool value);
-  QString menuKey() const;
-  void setMenuKey(QString value);
-  int menuKeyIndex() const;
-
-  QStringList getMenuKeys() const { return menuKeys; }
-
-  bool acceptClipboard() const;
-  void setAcceptClipboard(bool value);
-  bool sendClipboard() const;
-  void setSendClipboard(bool value);
-  bool shouldSetPrimary() const;
-  void setShouldSetPrimary(bool value);
-  bool sendPrimary() const;
-  void setSendPrimary(bool value);
-  //
-  bool fullScreen() const;
-  void setFullScreen(bool value);
-  ViewerConfig::FullScreenMode fullScreenMode() const;
-  void setFullScreenMode(ViewerConfig::FullScreenMode value);
-  QList<int> selectedScreens() const;
-  void setSelectedScreens(QList<int> value);
-  //
-  bool shared() const;
-  void setShared(bool value);
-  bool reconnectOnError() const;
-  void setReconnectOnError(bool value);
-
-  //
-  QStringList getServerHistory() const { return serverHistory; }
-
-  void setServerHistory(QStringList history);
-  void addToServerHistory(QString value);
-
-  QString getServerName() const { return serverName; }
-
-  void usage();
-  bool listenModeEnabled() const;
-
-  QString getServerHost() const { return serverHost; }
-
-  int getServerPort() const { return serverPort; }
-
-  QString gatewayHost() const;
-
-  int getGatewayLocalPort() const { return gatewayLocalPort; }
-
-  void setAccessPoint(QString accessPoint);
-
-  //
-  int qtVersionMajor() const { return QT_VERSION_MAJOR; }
-
-  int qtVersionMinor() const { return QT_VERSION_MINOR; }
-
-  bool haveGNUTLS() const
-  {
-#if defined(HAVE_GNUTLS)
-    return true;
-#else
-    return false;
+#ifdef _WIN32
+#include <vector>
+#include <string>
 #endif
-  }
 
-  bool haveNETTLE() const
-  {
-#if defined(HAVE_NETTLE)
-    return true;
-#else
-    return false;
+#define SERVER_HISTORY_SIZE 20
+
+
+extern rfb::IntParameter pointerEventInterval;
+extern rfb::BoolParameter emulateMiddleButton;
+extern rfb::BoolParameter dotWhenNoCursor;
+
+extern rfb::StringParameter passwordFile;
+
+extern rfb::BoolParameter autoSelect;
+extern rfb::BoolParameter fullColour;
+extern rfb::AliasParameter fullColourAlias;
+extern rfb::IntParameter lowColourLevel;
+extern rfb::AliasParameter lowColourLevelAlias;
+extern rfb::StringParameter preferredEncoding;
+extern rfb::BoolParameter customCompressLevel;
+extern rfb::IntParameter compressLevel;
+extern rfb::BoolParameter noJpeg;
+extern rfb::IntParameter qualityLevel;
+
+extern rfb::BoolParameter maximize;
+extern rfb::BoolParameter fullScreen;
+extern rfb::StringParameter fullScreenMode;
+extern rfb::BoolParameter fullScreenAllMonitors; // deprecated
+extern MonitorIndicesParameter fullScreenSelectedMonitors;
+extern rfb::StringParameter desktopSize;
+extern rfb::StringParameter geometry;
+extern rfb::BoolParameter remoteResize;
+
+extern rfb::BoolParameter listenMode;
+
+extern rfb::BoolParameter viewOnly;
+extern rfb::BoolParameter shared;
+
+extern rfb::BoolParameter acceptClipboard;
+extern rfb::BoolParameter setPrimary;
+extern rfb::BoolParameter sendClipboard;
+#if !defined(WIN32) && !defined(__APPLE__)
+extern rfb::BoolParameter sendPrimary;
+extern rfb::StringParameter display;
 #endif
-  }
 
-  bool haveH264() const
-  {
-#if defined(HAVE_H264)
-    return true;
-#else
-    return false;
+extern rfb::StringParameter menuKey;
+
+extern rfb::BoolParameter fullscreenSystemKeys;
+extern rfb::BoolParameter alertOnFatalError;
+extern rfb::BoolParameter reconnectOnError;
+
+extern rfb::StringParameter via;
+
+void saveViewerParameters(const char *filename, const char *servername=NULL);
+char* loadViewerParameters(const char *filename);
+
+#ifdef _WIN32
+void loadHistoryFromRegKey(std::vector<std::string>& serverHistory);
+void saveHistoryToRegKey(const std::vector<std::string>& serverHistory);
 #endif
-  }
-
-  bool canFullScreenOnMultiDisplays() const;
-
-signals:
-  //
-  void desktopSizeChanged(QString value);
-  void remoteResizeChanged(bool value);
-  void geometryChanged(QString value);
-  //
-  void autoSelectChanged(bool value);
-  void fullColourChanged(bool value);
-  void lowColourLevelChanged(int value);
-  void preferredEncodingChanged(QString value);
-  void customCompressLevelChanged(bool value);
-  void compressLevelChanged(int value);
-  void noJpegChanged(bool value);
-  void qualityLevelChanged(int value);
-  //
-  void encNoneChanged(bool value);
-  void encTLSAnonChanged(bool value);
-  void encTLSX509Changed(bool value);
-  void encAESChanged(bool value);
-  void authNoneChanged(bool value);
-  void authVNCChanged(bool value);
-  void authPlainChanged(bool value);
-  void x509CAChanged(QString path);
-  void x509CRLChanged(QString path);
-  //
-  void viewOnlyChanged(bool value);
-  void pointerEventIntervalChanged(int value);
-  void emulateMiddleButtonChanged(bool value);
-  void dotWhenNoCursorChanged(bool value);
-  void fullscreenSystemKeysChanged(bool value);
-  void menuKeyChanged(QString value);
-  void menuKeyIndexChanged(QString value);
-  void acceptClipboardChanged(bool value);
-  void sendClipboardChanged(bool value);
-  //
-  void fullScreenChanged(bool value);
-  void fullScreenModeChanged(ViewerConfig::FullScreenMode value);
-  void selectedScreensChanged(QList<int> value);
-  //
-  void sharedChanged(bool value);
-  void reconnectOnErrorChanged(bool value);
-  //
-  void serverHistoryChanged(QStringList history);
-  void accessPointChanged(QString accessPoint);
-
-public slots:
-  bool installedSecurity(int type) const;
-  bool enabledSecurity(int type) const;
-  QString toLocalFile(const QUrl url) const;
-  void saveViewerParameters(QString path, QString serverName);
-  QString loadViewerParameters(QString path);
-  void loadServerHistory();
-  void saveServerHistory();
-  void handleOptions(); // <- CConn::handleOptions()
-  QString aboutText();
-
-private:
-  static ViewerConfig* config_;
-  //
-  QHash<int, bool> availableSecurityTypes; // Each element is a pair of (availableSecurityId, userPreferenceToUseIt).
-  QStringList menuKeys;
-  bool encNone;
-  bool encTLSAnon;
-  bool encTLSX509;
-  bool encAES;
-  bool authNone;
-  bool authVNC;
-  bool authPlain;
-  QStringList serverHistory;
-  QString serverName;
-  QString serverHost;
-  int serverPort;
-  int gatewayLocalPort;
-  char* messageDir;
-  ViewerConfig();
-  bool potentiallyLoadConfigurationFile(QString vncServerName);
-  QString getlocaledir();
-  void initializeLogger();
-  void parseServerName();
-};
 
 #endif

@@ -1,6 +1,7 @@
 #include "screensselectionwidget.h"
 
 #include "parameters.h"
+#include "viewerconfig.h"
 
 #include <QApplication>
 #include <QButtonGroup>
@@ -85,13 +86,13 @@ void ScreensSelectionWidget::getGlobalScreensGeometry(QList<int> screens, int& x
 
 void ScreensSelectionWidget::apply()
 {
-  QList<int> selectedScreens;
-  for (auto const& c : checkBoxes) {
+  std::set<int> selectedScreens;
+  for (auto const& c : qAsConst(checkBoxes)) {
     if (c->isChecked()) {
-      selectedScreens << c->property("screenIndex").toInt() + 1;
+      selectedScreens.insert(c->property("screenIndex").toInt() + 1);
     }
   }
-  ViewerConfig::config()->setSelectedScreens(selectedScreens);
+  ::fullScreenSelectedMonitors.setParam(selectedScreens);
 }
 
 void ScreensSelectionWidget::reset()
@@ -129,12 +130,12 @@ void ScreensSelectionWidget::reset()
     newCheckBox->resize(lw, lh);
     newCheckBox->move(lx, ly);
     newCheckBox->setProperty("screenIndex", screenIndex);
-    if (ViewerConfig::config()->selectedScreens().contains(screenIndex + 1))
+    if (::fullScreenSelectedMonitors.getParam().count(screenIndex + 1))
       newCheckBox->setChecked(true);
     connect(newCheckBox, &QCheckBox::clicked, this, [=](bool checked) {
       if (!checked) {
         bool noChecked = true;
-        for (auto const& c : checkBoxes) {
+        for (auto const& c : qAsConst(checkBoxes)) {
           if (c->isChecked()) {
             noChecked = false;
             break;
@@ -148,7 +149,7 @@ void ScreensSelectionWidget::reset()
     });
 
     checkBoxes.append(newCheckBox);
-    if (!ViewerConfig::config()->canFullScreenOnMultiDisplays()) {
+    if (!ViewerConfig::canFullScreenOnMultiDisplays()) {
       exclusiveButtons->addButton(newCheckBox);
     }
   }

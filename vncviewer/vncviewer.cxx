@@ -5,6 +5,8 @@
 #include <QIcon>
 #include "parameters.h"
 #include "appmanager.h"
+#include "loggerconfig.h"
+#include "viewerconfig.h"
 #include "vncapplication.h"
 #include "vnctranslator.h"
 #include "serverdialog.h"
@@ -31,18 +33,17 @@ int main(int argc, char *argv[])
   app.setApplicationDisplayName("TigerVNC Viewer");
   app.setWindowIcon(QIcon(":/tigervnc.png"));
 
-  ViewerConfig::initialize();
-  AppManager::initialize();
+  LoggerConfig logger;
 
   VNCTranslator translator;
   app.installTranslator(&translator);
 
-  if (!ViewerConfig::config()->getServerName().isEmpty()) {
-    AppManager::instance()->connectToServer(ViewerConfig::config()->getServerName());
+  if (!ViewerConfig::instance()->getServerName().isEmpty()) {
+    AppManager::instance()->connectToServer(ViewerConfig::instance()->getServerName());
     return app.exec();
   } else {
     ServerDialog serverDialog;
-    serverDialog.setVisible(!ViewerConfig::config()->listenModeEnabled());
+    serverDialog.setVisible(!::listenMode);
     QObject::connect(AppManager::instance(), &AppManager::vncWindowOpened, &serverDialog, &QWidget::hide);
     return app.exec();
   }

@@ -106,6 +106,10 @@ set(PROJECT_SOURCES
         GestureEvent.h
         toast.cxx
         toast.h
+        loggerconfig.cxx
+        loggerconfig.h
+        viewerconfig.cxx
+        viewerconfig.h
         serverdialog.cxx
         serverdialog.h
         aboutdialog.cxx

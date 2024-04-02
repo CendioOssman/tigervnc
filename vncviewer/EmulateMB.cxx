@@ -209,7 +209,7 @@ void EmulateMB::filterPointerEvent(const rfb::Point& pos, int buttonMask)
   int lastState;
 
   // Just pass through events if the emulate setting is disabled
-  if (!ViewerConfig::config()->emulateMiddleButton()) {
+  if (!::emulateMiddleButton) {
     sendPointerEvent(pos, buttonMask);
     return;
   }
@@ -287,7 +287,7 @@ void EmulateMB::sendPointerEvent(const rfb::Point &pos, int buttonMask)
 
 bool EmulateMB::handleTimeout(rfb::Timer *t)
 {
-  if (ViewerConfig::config()->viewOnly()) {
+  if (::viewOnly) {
     return false;
   }
 

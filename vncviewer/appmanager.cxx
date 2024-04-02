@@ -38,8 +38,6 @@
 #include "vncx11view.h"
 #endif
 
-AppManager* AppManager::manager;
-
 AppManager::AppManager()
   : QObject(nullptr)
   , errorCount(0)
@@ -78,10 +76,10 @@ AppManager::~AppManager()
   rfbTimerProxy->deleteLater();
 }
 
-int AppManager::initialize()
+AppManager *AppManager::instance()
 {
-  manager = new AppManager();
-  return 0;
+  static AppManager manager;
+  return &manager;
 }
 
 bool AppManager::isFullScreen() const
@@ -154,7 +152,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   window->resize(width, height);
   window->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
 
-  if (ViewerConfig::config()->fullScreen()) {
+  if (::fullScreen) {
     window->fullscreen(true);
   } else {
     window->show();
@@ -218,4 +216,52 @@ void AppManager::openMessageDialog(int flags, QString title, QString text)
   MessageDialog d(isFullScreen(), flags, title, text);
   int response = d.exec() == QDialog::Accepted ? 1 : 0;
   emit messageResponded(response);
+}
+
+void AppManager::handleOptions()
+{
+  /* CConn::handleOptions() */
+
+  // Checking all the details of the current set of encodings is just
+  // a pain. Assume something has changed, as resending the encoding
+  // list is cheap. Avoid overriding what the auto logic has selected
+  // though.
+  QVNCConnection* cc = AppManager::instance()->getConnection();
+  if (!::autoSelect) {
+    int encNum = encodingNum(::preferredEncoding);
+
+    if (encNum != -1)
+      cc->setPreferredEncoding(encNum);
+  }
+
+  if (::customCompressLevel)
+    cc->setCompressLevel(::compressLevel);
+  else
+    cc->setCompressLevel(-1);
+
+  if (!::noJpeg && !::autoSelect)
+    cc->setQualityLevel(::qualityLevel);
+  else
+    cc->setQualityLevel(-1);
+
+  cc->updatePixelFormat();
+
+  /* DesktopWindow::handleOptions() */
+  auto view = AppManager::instance()->getView();
+  if (view) {
+    if (::fullscreenSystemKeys)
+      view->maybeGrabKeyboard();
+    else
+      view->ungrabKeyboard();
+  }
+
+  auto window = AppManager::instance()->getWindow();
+  if (window) {
+    // Call fullscreen_on even if active since it handles
+    // fullScreenMode
+    if (::fullScreen)
+      window->fullscreen(true);
+    else if (!::fullScreen && window->isFullScreen())
+      window->fullscreen(false);
+  }
 }

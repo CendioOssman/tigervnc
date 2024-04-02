@@ -83,7 +83,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
   });
   delayedInitializeTimer->start();
 
-  mousePointerTimer->setInterval(ViewerConfig::config()->pointerEventInterval());
+  mousePointerTimer->setInterval(::pointerEventInterval);
   mousePointerTimer->setSingleShot(true);
 
   connect(AppManager::instance()->getConnection(),
@@ -170,14 +170,25 @@ void QAbstractVNCView::createContextMenu()
   if (!contextMenu) {
     contextMenuActions << new QDisconnectAction(p_("ContextMenu|", "Dis&connect"));
     contextMenuActions << new QMenuSeparator();
-    contextMenuActions << new QFullScreenAction(p_("ContextMenu|", "&Full screen"));
+    auto fullScreenAction = new QFullScreenAction(p_("ContextMenu|", "&Full screen"));
+    connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
+      fullScreenAction->setChecked(::fullScreen);
+    });
+    contextMenuActions << fullScreenAction;
     contextMenuActions << new QMinimizeAction(p_("ContextMenu|", "Minimi&ze"));
-    contextMenuActions << new QRevertSizeAction(p_("ContextMenu|", "Resize &window to session"));
+    auto revertSizeAction = new QRevertSizeAction(p_("ContextMenu|", "Resize &window to session"));
+    connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
+      revertSizeAction->setChecked(!::fullScreen);
+    });
+    contextMenuActions << revertSizeAction;
     contextMenuActions << new QMenuSeparator();
     contextMenuActions << new QKeyToggleAction(p_("ContextMenu|", "&Ctrl"), 0x1d, XK_Control_L);
     contextMenuActions << new QKeyToggleAction(p_("ContextMenu|", "&Alt"), 0x38, XK_Alt_L);
-    contextMenuActions << new QMenuKeyAction(
-        QString::asprintf(p_("ContextMenu|", "Send %s"), ViewerConfig::config()->menuKey().toStdString().c_str()));
+    auto menuKeyAction = new QMenuKeyAction();
+    contextMenuActions << menuKeyAction;
+    connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
+      menuKeyAction->setText(QString::asprintf(p_("ContextMenu|", "Send %s"), ::menuKey.getValueStr().c_str()));
+    });
     contextMenuActions << new QCtrlAltDelAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"));
     contextMenuActions << new QMenuSeparator();
     contextMenuActions << new QRefreshAction(p_("ContextMenu|", "&Refresh screen"));
@@ -205,7 +216,7 @@ bool QAbstractVNCView::isVisibleContextMenu() const
 
 void QAbstractVNCView::sendContextMenuKey()
 {
-  if (ViewerConfig::config()->viewOnly()) {
+  if (::viewOnly) {
     return;
   }
   qDebug() << "QAbstractVNCView::sendContextMenuKey";
@@ -244,7 +255,7 @@ bool QAbstractVNCView::eventFilter(QObject* obj, QEvent* event)
   if (event->type() == QEvent::KeyPress) {
     QKeyEvent* e = static_cast<QKeyEvent*>(event);
     if (isVisibleContextMenu()) {
-      if (QKeySequence(e->key()).toString() == ViewerConfig::config()->menuKey()) {
+      if (QKeySequence(e->key()).toString() == ::menuKey.getValueStr().c_str()) {
         toggleContextMenu();
         return true;
       }
@@ -356,13 +367,15 @@ void QAbstractVNCView::handleClipboardChange(QClipboard::Mode mode)
   qDebug() << "QAbstractVNCView::handleClipboardChange: ownsClipboard=" << QGuiApplication::clipboard()->ownsClipboard();
   qDebug() << "QAbstractVNCView::handleClipboardChange: hasText=" << QGuiApplication::clipboard()->mimeData(mode)->hasText();
 
-  if (!ViewerConfig::config()->sendClipboard()) {
+  if (!::sendClipboard) {
     return;
   }
 
-  if (mode == QClipboard::Mode::Selection && !ViewerConfig::config()->sendPrimary()) {
+#if !defined(WIN32) && !defined(__APPLE__)
+  if (mode == QClipboard::Mode::Selection && !::sendPrimary) {
     return;
   }
+#endif
 
   if(mode == QClipboard::Mode::Clipboard && QGuiApplication::clipboard()->ownsClipboard()) {
     return;
@@ -395,7 +408,7 @@ void QAbstractVNCView::handleClipboardAnnounce(bool available)
 {
   qDebug() << "QAbstractVNCView::handleClipboardAnnounce" << available;
 
-  if (!ViewerConfig::config()->acceptClipboard())
+  if (!::acceptClipboard)
     return;
 
   if (!available) {
@@ -423,14 +436,16 @@ void QAbstractVNCView::handleClipboardData(const char* data)
   qDebug() << "QAbstractVNCView::handleClipboardData" << data;
   vlog.debug("Got clipboard data (%d bytes)", (int)strlen(data));
   QGuiApplication::clipboard()->setText(data);
-  if (ViewerConfig::config()->shouldSetPrimary())
+#if !defined(WIN32) && !defined(__APPLE__)
+  if (::setPrimary)
     QGuiApplication::clipboard()->setText(data, QClipboard::Mode::Selection);
+#endif
 }
 
 void QAbstractVNCView::maybeGrabKeyboard()
 {
   QVNCWindow* window = AppManager::instance()->getWindow();
-  if (ViewerConfig::config()->fullscreenSystemKeys() && window->allowKeyboardGrab() && hasFocus()) {
+  if (::fullscreenSystemKeys && window->allowKeyboardGrab() && hasFocus()) {
     grabKeyboard();
   }
 }
@@ -666,7 +681,7 @@ void QAbstractVNCView::mousePressEvent(QMouseEvent* event)
 {
   qDebug() << "QAbstractVNCView::mousePressEvent";
 
-  if (ViewerConfig::config()->viewOnly()) {
+  if (::viewOnly) {
     return;
   }
 
@@ -684,7 +699,7 @@ void QAbstractVNCView::mouseReleaseEvent(QMouseEvent* event)
 {
   qDebug() << "QAbstractVNCView::mouseReleaseEvent";
 
-  if (ViewerConfig::config()->viewOnly()) {
+  if (::viewOnly) {
     return;
   }
 
@@ -738,7 +753,7 @@ void QAbstractVNCView::focusInEvent(QFocusEvent* event)
 void QAbstractVNCView::focusOutEvent(QFocusEvent* event)
 {
   qDebug() << "QAbstractVNCView::focusOutEvent";
-  if (ViewerConfig::config()->fullscreenSystemKeys()) {
+  if (::fullscreenSystemKeys) {
     ungrabKeyboard();
   }
   // We won't get more key events, so reset our knowledge about keys
@@ -776,10 +791,10 @@ bool QAbstractVNCView::event(QEvent *event)
 
 void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
 {
-  if (ViewerConfig::config()->viewOnly()) {
+  if (::viewOnly) {
     return;
   }
-  bool instantPosting = ViewerConfig::config()->pointerEventInterval() == 0 || (mask != lastButtonMask);
+  bool instantPosting = ::pointerEventInterval == 0 || (mask != lastButtonMask);
   rfb::Point pointerPos = remotePointAdjust(pos);
   lastButtonMask = mask;
   if (instantPosting) {

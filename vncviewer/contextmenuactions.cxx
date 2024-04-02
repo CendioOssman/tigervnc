@@ -26,11 +26,7 @@ QFullScreenAction::QFullScreenAction(const QString& text, QWidget* parent)
   connect(this, &QAction::triggered, this, [](bool checked) {
     AppManager::instance()->getWindow()->fullscreen(checked);
   });
-  connect(ViewerConfig::config(), &ViewerConfig::fullScreenChanged, this, [this](bool enabled) {
-    setChecked(enabled);
-  });
-
-  setChecked(ViewerConfig::config()->fullScreen());
+  setChecked(::fullScreen);
 }
 
 QRevertSizeAction::QRevertSizeAction(const QString& text, QWidget* parent)
@@ -40,9 +36,6 @@ QRevertSizeAction::QRevertSizeAction(const QString& text, QWidget* parent)
     QVNCWindow* window = AppManager::instance()->getWindow();
     QAbstractVNCView* view = AppManager::instance()->getView();
     window->resize(view->pixmapSize().width(), view->pixmapSize().height());
-  });
-  connect(ViewerConfig::config(), &ViewerConfig::fullScreenChanged, this, [this](bool enabled) {
-    setEnabled(!enabled); // cf. Viewport::initContextMenu()
   });
 }
 
@@ -57,8 +50,8 @@ QKeyToggleAction::QKeyToggleAction(const QString& text, int keyCode, quint32 key
   });
 }
 
-QMenuKeyAction::QMenuKeyAction(const QString& text, QWidget* parent)
-  : QAction(text, parent)
+QMenuKeyAction::QMenuKeyAction(QWidget* parent)
+  : QAction(parent)
 {
   connect(this, &QAction::triggered, this, []() {
     QAbstractVNCView* view = AppManager::instance()->getView();

@@ -1,6 +1,8 @@
 #include "securitytab.h"
 
-#include "parameters.h"
+#include "viewerconfig.h"
+#include "rfb/Security.h"
+#include "rfb/SecurityClient.h"
 
 #include <QCheckBox>
 #include <QGroupBox>
@@ -18,23 +20,23 @@ SecurityTab::SecurityTab(QWidget* parent)
   securityEncryptionNone = new QCheckBox(tr("None"));
   vbox1->addWidget(securityEncryptionNone);
   securityEncryptionTLSWithAnonymousCerts = new QCheckBox(tr("TLS with anonymous certificates"));
-  securityEncryptionTLSWithAnonymousCerts->setEnabled(ViewerConfig::config()->haveGNUTLS());
+  securityEncryptionTLSWithAnonymousCerts->setEnabled(ViewerConfig::hasGNUTLS());
   vbox1->addWidget(securityEncryptionTLSWithAnonymousCerts);
   securityEncryptionTLSWithX509Certs = new QCheckBox(tr("TLS with X509 certificates"));
-  securityEncryptionTLSWithX509Certs->setEnabled(ViewerConfig::config()->haveGNUTLS());
+  securityEncryptionTLSWithX509Certs->setEnabled(ViewerConfig::hasGNUTLS());
   vbox1->addWidget(securityEncryptionTLSWithX509Certs);
   QLabel* securityEncryptionTLSWithX509CALabel = new QLabel(tr("Path to X509 CA certificate"));
   vbox1->addWidget(securityEncryptionTLSWithX509CALabel);
   securityEncryptionTLSWithX509CATextEdit = new QLineEdit;
-  securityEncryptionTLSWithX509CATextEdit->setEnabled(ViewerConfig::config()->haveGNUTLS());
+  securityEncryptionTLSWithX509CATextEdit->setEnabled(ViewerConfig::hasGNUTLS());
   vbox1->addWidget(securityEncryptionTLSWithX509CATextEdit);
   QLabel* securityEncryptionTLSWithX509CRLLabel = new QLabel(tr("Path to X509 CRL file"));
   vbox1->addWidget(securityEncryptionTLSWithX509CRLLabel);
   securityEncryptionTLSWithX509CRLTextEdit = new QLineEdit;
-  securityEncryptionTLSWithX509CRLTextEdit->setEnabled(ViewerConfig::config()->haveGNUTLS());
+  securityEncryptionTLSWithX509CRLTextEdit->setEnabled(ViewerConfig::hasGNUTLS());
   vbox1->addWidget(securityEncryptionTLSWithX509CRLTextEdit);
   securityEncryptionAES = new QCheckBox(tr("RSA-AES"));
-  securityEncryptionAES->setEnabled(ViewerConfig::config()->haveNETTLE());
+  securityEncryptionAES->setEnabled(ViewerConfig::hasNETTLE());
   vbox1->addWidget(securityEncryptionAES);
   groupBox1->setLayout(vbox1);
   layout->addWidget(groupBox1);
@@ -53,7 +55,7 @@ SecurityTab::SecurityTab(QWidget* parent)
   layout->addStretch(1);
   setLayout(layout);
 
-  setEnabled(ViewerConfig::config()->haveGNUTLS() || ViewerConfig::config()->haveNETTLE());
+  setEnabled(ViewerConfig::hasGNUTLS() || ViewerConfig::hasNETTLE());
 
   connect(securityEncryptionTLSWithX509Certs, &QCheckBox::toggled, this, [=](bool checked) {
     securityEncryptionTLSWithX509CATextEdit->setEnabled(checked);
@@ -69,26 +71,137 @@ SecurityTab::SecurityTab(QWidget* parent)
 
 void SecurityTab::apply()
 {
-  ViewerConfig::config()->setEncNone(securityEncryptionNone->isChecked());
-  ViewerConfig::config()->setEncTLSAnon(securityEncryptionTLSWithAnonymousCerts->isChecked());
-  ViewerConfig::config()->setEncTLSX509(securityEncryptionTLSWithX509Certs->isChecked());
-  ViewerConfig::config()->setX509CA(securityEncryptionTLSWithX509CATextEdit->text());
-  ViewerConfig::config()->setX509CRL(securityEncryptionTLSWithX509CRLTextEdit->text());
-  ViewerConfig::config()->setEncAES(securityEncryptionAES->isChecked());
-  ViewerConfig::config()->setAuthNone(securityAuthenticationNone->isChecked());
-  ViewerConfig::config()->setAuthVNC(securityAuthenticationStandard->isChecked());
-  ViewerConfig::config()->setAuthPlain(securityAuthenticationUsernameAndPassword->isChecked());
+  /* Security */
+  rfb::Security security;
+
+  /* Process security types which don't use encryption */
+  if (securityEncryptionNone->isChecked()) {
+    if (securityAuthenticationNone->isChecked())
+      security.EnableSecType(rfb::secTypeNone);
+    if (securityAuthenticationStandard->isChecked()) {
+      security.EnableSecType(rfb::secTypeVncAuth);
+#ifdef HAVE_NETTLE
+      security.EnableSecType(secTypeRA2ne);
+      security.EnableSecType(secTypeRAne256);
+#endif
+    }
+    if (securityAuthenticationUsernameAndPassword->isChecked()) {
+      security.EnableSecType(rfb::secTypePlain);
+#ifdef HAVE_NETTLE
+      security.EnableSecType(rfb::secTypeRA2ne);
+      security.EnableSecType(rfb::secTypeRAne256);
+      security.EnableSecType(rfb::secTypeDH);
+      security.EnableSecType(rfb::secTypeMSLogonII);
+#endif
+    }
+  }
+
+#ifdef HAVE_GNUTLS
+  /* Process security types which use TLS encryption */
+  if (securityEncryptionTLSWithAnonymousCerts->isChecked()) {
+    if (securityAuthenticationNone->isChecked())
+      security.EnableSecType(rfb::secTypeTLSNone);
+    if (securityAuthenticationStandard->isChecked())
+      security.EnableSecType(rfb::secTypeTLSVnc);
+    if (securityAuthenticationUsernameAndPassword->isChecked())
+      security.EnableSecType(rfb::secTypeTLSPlain);
+  }
+
+  /* Process security types which use X509 encryption */
+  if (securityEncryptionTLSWithX509Certs->isChecked()) {
+    if (securityAuthenticationNone->isChecked())
+      security.EnableSecType(rfb::secTypeX509None);
+    if (securityAuthenticationStandard->isChecked())
+      security.EnableSecType(rfb::secTypeX509Vnc);
+    if (securityAuthenticationUsernameAndPassword->isChecked())
+      security.EnableSecType(rfb::secTypeX509Plain);
+  }
+
+  rfb::CSecurityTLS::X509CA.setParam(securityEncryptionTLSWithX509CATextEdit->text().toStdString().c_str());
+  rfb::CSecurityTLS::X509CRL.setParam(securityEncryptionTLSWithX509CRLTextEdit->text().toStdString().c_str());
+#endif
+
+#ifdef HAVE_NETTLE
+  if (securityEncryptionAES->isChecked()) {
+    security.EnableSecType(rfb::secTypeRA2);
+    security.EnableSecType(rfb::secTypeRA256);
+  }
+#endif
+  rfb::SecurityClient::secTypes.setParam(security.ToString());
 }
 
 void SecurityTab::reset()
 {
-  securityEncryptionNone->setChecked(ViewerConfig::config()->getEncNone());
-  securityEncryptionTLSWithAnonymousCerts->setChecked(ViewerConfig::config()->getEncTLSAnon());
-  securityEncryptionTLSWithX509Certs->setChecked(ViewerConfig::config()->getEncTLSX509());
-  securityEncryptionTLSWithX509CATextEdit->setText(ViewerConfig::config()->x509CA());
-  securityEncryptionTLSWithX509CRLTextEdit->setText(ViewerConfig::config()->x509CRL());
-  securityEncryptionAES->setChecked(ViewerConfig::config()->getEncAES());
-  securityAuthenticationNone->setChecked(ViewerConfig::config()->getAuthNone());
-  securityAuthenticationStandard->setChecked(ViewerConfig::config()->getAuthVNC());
-  securityAuthenticationUsernameAndPassword->setChecked(ViewerConfig::config()->getAuthPlain());
+  rfb::Security security(rfb::SecurityClient::secTypes);
+  auto secTypes = security.GetEnabledSecTypes();
+  for (auto iter = secTypes.begin(); iter != secTypes.end(); ++iter) {
+    switch (*iter) {
+    case rfb::secTypeNone:
+      securityEncryptionNone->setChecked(true);
+      securityAuthenticationNone->setChecked(true);
+      break;
+    case rfb::secTypeVncAuth:
+      securityEncryptionNone->setChecked(true);
+      securityAuthenticationStandard->setChecked(true);
+      break;
+    }
+  }
+
+  auto secTypesExt = security.GetEnabledExtSecTypes();
+  for (auto iterExt = secTypesExt.begin(); iterExt != secTypesExt.end(); ++iterExt) {
+    switch (*iterExt) {
+    case rfb::secTypePlain:
+      securityEncryptionNone->setChecked(true);
+      securityAuthenticationUsernameAndPassword->setChecked(true);
+      break;
+#ifdef HAVE_GNUTLS
+    case rfb::secTypeTLSNone:
+      securityEncryptionTLSWithAnonymousCerts->setChecked(true);
+      securityAuthenticationNone->setChecked(true);
+      break;
+    case rfb::secTypeTLSVnc:
+      securityEncryptionTLSWithAnonymousCerts->setChecked(true);
+      securityAuthenticationStandard->setChecked(true);
+      break;
+    case rfb::secTypeTLSPlain:
+      securityEncryptionTLSWithAnonymousCerts->setChecked(true);
+      securityAuthenticationUsernameAndPassword->setChecked(true);
+      break;
+    case rfb::secTypeX509None:
+      securityEncryptionTLSWithX509Certs->setChecked(true);
+      securityAuthenticationNone->setChecked(true);
+      break;
+    case rfb::secTypeX509Vnc:
+      securityEncryptionTLSWithX509Certs->setChecked(true);
+      securityAuthenticationStandard->setChecked(true);
+      break;
+    case rfb::secTypeX509Plain:
+      securityEncryptionTLSWithX509Certs->setChecked(true);
+      securityAuthenticationUsernameAndPassword->setChecked(true);
+      break;
+#endif
+#ifdef HAVE_NETTLE
+    case rfb::secTypeRA2:
+    case rfb::secTypeRA256:
+      securityEncryptionAES->setChecked(true);
+      securityAuthenticationStandard->setChecked(true);
+      securityAuthenticationUsernameAndPassword->setChecked(true);
+      break;
+    case rfb::secTypeRA2ne:
+    case rfb::secTypeRAne256:
+      securityAuthenticationStandard->setChecked(true);
+      /* fall through */
+    case rfb::secTypeDH:
+    case rfb::secTypeMSLogonII:
+      securityEncryptionNone->setChecked(true);
+      securityAuthenticationUsernameAndPassword->setChecked(true);
+      break;
+#endif
+    }
+  }
+
+#ifdef HAVE_GNUTLS
+  securityEncryptionTLSWithX509CATextEdit->setText(rfb::CSecurityTLS::X509CA);
+  securityEncryptionTLSWithX509CRLTextEdit->setText(rfb::CSecurityTLS::X509CRL);
+#endif
 }

@@ -40,7 +40,7 @@ private:
 class QMenuKeyAction : public QAction
 {
 public:
-  QMenuKeyAction(const QString& text, QWidget* parent = nullptr);
+  QMenuKeyAction(QWidget* parent = nullptr);
 };
 
 class QCtrlAltDelAction : public QAction

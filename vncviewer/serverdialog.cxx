@@ -1,7 +1,7 @@
 #include "serverdialog.h"
 
 #include "appmanager.h"
-#include "parameters.h"
+#include "viewerconfig.h"
 
 #include <QApplication>
 #include <QComboBox>
@@ -47,7 +47,6 @@ ServerDialog::ServerDialog(QWidget* parent)
 
   setLayout(layout);
 
-  connect(ViewerConfig::config(), &ViewerConfig::serverHistoryChanged, this, &ServerDialog::updateServerList);
   connect(comboBox->lineEdit(), &QLineEdit::returnPressed, this, &ServerDialog::connectTo);
 
   connect(optionsBtn, &QPushButton::clicked, this, &ServerDialog::openOptionDialog);
@@ -58,7 +57,7 @@ ServerDialog::ServerDialog(QWidget* parent)
   connect(cancelBtn, &QPushButton::clicked, qApp, &QApplication::quit);
   connect(connectBtn, &QPushButton::clicked, this, &ServerDialog::connectTo);
   
-  updateServerList(ViewerConfig::config()->getServerHistory());
+  updateServerList(ViewerConfig::instance()->getServerHistory());
 }
 
 void ServerDialog::updateServerList(QStringList list)
@@ -74,7 +73,7 @@ void ServerDialog::validateServerText(QString text)
   if (model && model->stringList().contains(text)) {
     comboBox->setCurrentText(text);
   } else {
-    ViewerConfig::config()->addToServerHistory(text);
+    ViewerConfig::instance()->addServer(text);
   }
 }
 
@@ -102,7 +101,7 @@ void ServerDialog::openLoadConfigDialog()
                                                   {},
                                                   tr("TigerVNC configuration (*.tigervnc);;All files (*)"));
   if (!filename.isEmpty()) {
-    QString server = ViewerConfig::config()->loadViewerParameters(filename);
+    QString server = ViewerConfig::instance()->loadViewerParameters(filename);
     validateServerText(server);
   }
 }
@@ -114,6 +113,6 @@ void ServerDialog::openSaveConfigDialog()
                                                   {},
                                                   tr("TigerVNC configuration (*.tigervnc);;All files (*)"));
   if (!filename.isEmpty()) {
-    ViewerConfig::config()->saveViewerParameters(filename, comboBox->currentText());
+    ViewerConfig::instance()->saveViewerParameters(filename, comboBox->currentText());
   }
 }

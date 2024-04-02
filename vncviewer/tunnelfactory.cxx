@@ -6,7 +6,7 @@
 #if !defined(WIN32)
 #include <QCoreApplication>
 #endif
-#include "parameters.h"
+#include "viewerconfig.h"
 #include "tunnelfactory.h"
 
 TunnelFactory::TunnelFactory()
@@ -25,16 +25,16 @@ TunnelFactory::TunnelFactory()
 
 void TunnelFactory::run()
 {
-  QString gatewayHost = ViewerConfig::config()->gatewayHost();
+  QString gatewayHost = ViewerConfig::instance()->gatewayHost();
   if (gatewayHost.isEmpty()) {
     return;
   }
-  QString remoteHost = ViewerConfig::config()->getServerHost();
+  QString remoteHost = ViewerConfig::instance()->getServerHost();
   if (remoteHost.isEmpty()) {
     return;
   }
-  int remotePort = ViewerConfig::config()->getServerPort();
-  int localPort = ViewerConfig::config()->getGatewayLocalPort();
+  int remotePort = ViewerConfig::instance()->getServerPort();
+  int localPort = ViewerConfig::instance()->getGatewayLocalPort();
 
   QString viacmd(qgetenv("VNC_VIA_CMD"));
   qputenv("G", gatewayHost.toUtf8());
@@ -68,15 +68,15 @@ void TunnelFactory::run()
 
 #if !defined(WIN32)
   if (!process->execute(command, args)) {
-    QString serverName = "localhost::" + QString::number(ViewerConfig::config()->getGatewayLocalPort());
-    ViewerConfig::config()->setAccessPoint(serverName);
+    QString serverName = "localhost::" + QString::number(ViewerConfig::instance()->getGatewayLocalPort());
+    ViewerConfig::instance()->addServer(serverName);
   } else {
     errorOccurred = true;
   }
 #else
   connect(process, &QProcess::started, this, []() {
-    QString serverName = "localhost::" + QString::number(ViewerConfig::config()->getGatewayLocalPort());
-    ViewerConfig::config()->setAccessPoint(serverName);
+    QString serverName = "localhost::" + QString::number(ViewerConfig::instance()->getGatewayLocalPort());
+    ViewerConfig::instance()->addServer(serverName);
   });
   connect(process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError e) {
     errorOccurred = true;
@@ -103,7 +103,7 @@ void TunnelFactory::close()
 {
 #if !defined(WIN32)
   if (process) {
-    QString gatewayHost = ViewerConfig::config()->gatewayHost();
+    QString gatewayHost = ViewerConfig::instance()->gatewayHost();
     QStringList args({
         "-S",
         operationSocketName,
