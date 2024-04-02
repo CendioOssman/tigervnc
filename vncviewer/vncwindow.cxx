@@ -36,8 +36,6 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   , resizeTimer(new QTimer(this))
   , devicePixelRatio(devicePixelRatioF())
 {
-  setAttribute(Qt::WA_InputMethodTransparent);
-  setAttribute(Qt::WA_NativeWindow);
   setFocusPolicy(Qt::StrongFocus);
 
   setContentsMargins(0, 0, 0, 0);
