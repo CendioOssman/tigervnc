@@ -7,8 +7,9 @@
 #include "options/securitytab.h"
 
 #include <QLabel>
+#include <QListWidget>
 #include <QPushButton>
-#include <QTabWidget>
+#include <QStackedWidget>
 #include <QVBoxLayout>
 
 OptionsDialog::OptionsDialog(QWidget* parent)
@@ -18,14 +19,27 @@ OptionsDialog::OptionsDialog(QWidget* parent)
 
   QVBoxLayout* layout = new QVBoxLayout;
 
-  tabWidget = new QTabWidget;
-  tabWidget->addTab(new CompressionTab, tr("Compression"));
-  tabWidget->addTab(new SecurityTab, tr("Security"));
-  tabWidget->addTab(new InputTab, tr("Input"));
-  tabWidget->addTab(new DisplayTab, tr("Display"));
-  tabWidget->addTab(new MiscTab, tr("Misc"));
+  QHBoxLayout* hLayout = new QHBoxLayout;
 
-  layout->addWidget(tabWidget);
+  QListWidget* listWidget = new QListWidget;
+  QStringList tabs = {tr("Compression"), tr("Security"), tr("Input"), tr("Display"), tr("Misc")};
+  listWidget->addItems(tabs);
+  listWidget->setCurrentRow(0);
+
+  hLayout->addWidget(listWidget);
+
+  tabWidget = new QStackedWidget;
+  tabWidget->addWidget(new CompressionTab);
+  tabWidget->addWidget(new SecurityTab);
+  tabWidget->addWidget(new InputTab);
+  tabWidget->addWidget(new DisplayTab);
+  tabWidget->addWidget(new MiscTab);
+
+  hLayout->addWidget(tabWidget, 1);
+
+  connect(listWidget, &QListWidget::currentRowChanged, tabWidget, &QStackedWidget::setCurrentIndex);
+
+  layout->addLayout(hLayout);
 
   QHBoxLayout* btnsLayout = new QHBoxLayout;
   btnsLayout->addStretch(1);

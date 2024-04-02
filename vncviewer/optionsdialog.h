@@ -3,7 +3,7 @@
 
 #include <QDialog>
 
-class QTabWidget;
+class QStackedWidget;
 
 class TabElement : public QWidget
 {
@@ -30,7 +30,7 @@ public:
   void reset();
 
 private:
-  QTabWidget* tabWidget = nullptr;
+  QStackedWidget* tabWidget = nullptr;
 };
 
 #endif // OPTIONSDIALOG_H
