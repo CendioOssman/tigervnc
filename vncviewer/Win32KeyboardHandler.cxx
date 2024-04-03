@@ -1,4 +1,5 @@
 #include "Win32KeyboardHandler.h"
+#include "abstractvncview.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -400,16 +401,16 @@ void Win32KeyboardHandler::setLEDState(unsigned int state)
 void Win32KeyboardHandler::grabKeyboard()
 {
   BaseKeyboardHandler::grabKeyboard();
-  // int ret = win32_enable_lowlevel_keyboard((HWND)winId());
-  // if (ret != 0)
-  // {
-  //     vlog.error(_("Failure grabbing keyboard"));
-  //     return;
-  // }
+  int ret = win32_enable_lowlevel_keyboard((HWND)AppManager::instance()->getView()->winId());
+  if (ret != 0)
+  {
+      vlog.error(_("Failure grabbing keyboard"));
+      return;
+  }
 }
 
 void Win32KeyboardHandler::ungrabKeyboard()
 {
-  // win32_disable_lowlevel_keyboard((HWND)winId());
+  win32_disable_lowlevel_keyboard((HWND)AppManager::instance()->getView()->winId());
   BaseKeyboardHandler::ungrabKeyboard();
 }
