@@ -356,12 +356,21 @@ void QAbstractVNCView::handleClipboardRequest()
 void QAbstractVNCView::handleClipboardChange(QClipboard::Mode mode)
 {
   qDebug() << "QAbstractVNCView::handleClipboardChange:" << mode << QGuiApplication::clipboard()->text(mode);
+  qDebug() << "QAbstractVNCView::handleClipboardChange:" << QGuiApplication::clipboard()->ownsClipboard();
 
   if (!ViewerConfig::config()->sendClipboard()) {
     return;
   }
 
   if (mode == QClipboard::Mode::Selection && !ViewerConfig::config()->sendPrimary()) {
+    return;
+  }
+
+  if(mode == QClipboard::Mode::Clipboard && QGuiApplication::clipboard()->ownsClipboard()) {
+    return;
+  }
+
+  if(mode == QClipboard::Mode::Selection && QGuiApplication::clipboard()->ownsSelection()) {
     return;
   }
 
