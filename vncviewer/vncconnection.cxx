@@ -296,10 +296,10 @@ void QVNCConnection::refreshFramebuffer()
   }
 }
 
-void QVNCConnection::sendClipboardData()
+void QVNCConnection::sendClipboardData(QString data)
 {
   try {
-    rfbcon->sendClipboardContent();
+    rfbcon->sendClipboardContent(data.toStdString().c_str());
   } catch (rdr::Exception& e) {
     AppManager::instance()->publishError(e.str());
   } catch (int& e) {

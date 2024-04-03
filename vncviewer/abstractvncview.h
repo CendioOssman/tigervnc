@@ -1,6 +1,7 @@
 #ifndef ABSTRACTVNCVIEW_H
 #define ABSTRACTVNCVIEW_H
 
+#include <QClipboard>
 #include <QLabel>
 #include <QList>
 #include <QScrollArea>
@@ -57,10 +58,11 @@ public:
 
 public slots:
   virtual void setCursorPos(int x, int y);
-   void flushPendingClipboard();
-   void handleClipboardChange();
-   void handleClipboardAnnounce(bool available);
-   void handleClipboardData(const char* data);
+  void flushPendingClipboard();
+  void handleClipboardRequest();
+  void handleClipboardChange(QClipboard::Mode mode);
+  void handleClipboardAnnounce(bool available);
+  void handleClipboardData(const char* data);
   virtual void maybeGrabKeyboard();
   virtual void grabKeyboard();
   virtual void ungrabKeyboard();
@@ -124,6 +126,7 @@ protected:
   // Clipboard
   bool pendingServerClipboard = false;
   bool pendingClientClipboard = false;
+  QString pendingClientData;
 
 private:
   // Initialization

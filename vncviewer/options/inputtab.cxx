@@ -47,8 +47,16 @@ InputTab::InputTab(QWidget* parent)
   QVBoxLayout* vbox3 = new QVBoxLayout;
   inputClipboardFromServer = new QCheckBox(tr("Accept clipboard from server"));
   vbox3->addWidget(inputClipboardFromServer);
+#if !defined(WIN32) && !defined(__APPLE__)
+  inputSetPrimary = new QCheckBox(tr("Also set primary selection"));
+  vbox3->addWidget(inputSetPrimary);
+#endif
   inputClipboardToServer = new QCheckBox(tr("Send clipboard to server"));
   vbox3->addWidget(inputClipboardToServer);
+#if !defined(WIN32) && !defined(__APPLE__)
+  inputSendPrimary = new QCheckBox(tr("Send primary selection as keyboard"));
+  vbox3->addWidget(inputSendPrimary);
+#endif
   groupBox3->setLayout(vbox3);
   layout->addWidget(groupBox3);
 
@@ -65,6 +73,10 @@ void InputTab::apply()
   ViewerConfig::config()->setMenuKey(inputKeyboardMenuKeyCombo->currentText());
   ViewerConfig::config()->setAcceptClipboard(inputClipboardFromServer->isChecked());
   ViewerConfig::config()->setSendClipboard(inputClipboardToServer->isChecked());
+#if !defined(WIN32) && !defined(__APPLE__)
+  ViewerConfig::config()->setShouldSetPrimary(inputSetPrimary->isChecked());
+  ViewerConfig::config()->setSendPrimary(inputSendPrimary->isChecked());
+#endif
 }
 
 void InputTab::reset()
@@ -76,4 +88,8 @@ void InputTab::reset()
   inputKeyboardMenuKeyCombo->setCurrentIndex(ViewerConfig::config()->menuKeyIndex());
   inputClipboardFromServer->setChecked(ViewerConfig::config()->acceptClipboard());
   inputClipboardToServer->setChecked(ViewerConfig::config()->sendClipboard());
+#if !defined(WIN32) && !defined(__APPLE__)
+  inputSetPrimary->setChecked(ViewerConfig::config()->shouldSetPrimary());
+  inputSendPrimary->setChecked(ViewerConfig::config()->sendPrimary());
+#endif
 }

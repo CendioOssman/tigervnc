@@ -26,6 +26,10 @@ private:
   QComboBox* inputKeyboardMenuKeyCombo;
   QCheckBox* inputClipboardFromServer;
   QCheckBox* inputClipboardToServer;
+#if !defined(WIN32) && !defined(__APPLE__)
+  QCheckBox* inputSetPrimary;
+  QCheckBox* inputSendPrimary;
+#endif
 };
 
 #endif // INPUTTAB_H

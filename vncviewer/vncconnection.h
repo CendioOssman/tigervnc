@@ -76,6 +76,7 @@ signals:
   void cursorChanged(const QCursor& cursor);
   void cursorPositionChanged(int x, int y);
   void ledStateChanged(unsigned int state);
+  void clipboardRequested();
   void clipboardAnnounced(bool available);
   void clipboardDataReceived(const char* data);
   void framebufferResized(int width, int height);
@@ -94,7 +95,7 @@ public slots:
   void startProcessing();
   void flushSocket();
   void refreshFramebuffer();
-  void sendClipboardData();
+  void sendClipboardData(QString data);
   void requestClipboard();
 
   QString infoText() { return rfbcon ? rfbcon->connectionInfo() : ""; }

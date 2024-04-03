@@ -130,8 +130,6 @@ void QVNCX11View::bell()
   XBell(display, 0 /* volume */);
 }
 
-void QVNCX11View::handleClipboardData(const char*) {}
-
 bool QVNCX11View::gestureEvent(QGestureEvent* event)
 {
   qDebug() << "QVNCX11View::gestureEvent: event=" << event;

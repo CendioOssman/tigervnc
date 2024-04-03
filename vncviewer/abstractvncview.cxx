@@ -71,7 +71,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
   setAttribute(Qt::WA_OpaquePaintEvent, true);
   setContentsMargins(0, 0, 0, 0);
 
-  connect(QGuiApplication::clipboard(), &QClipboard::dataChanged, this, &QAbstractVNCView::handleClipboardChange);
+  connect(QGuiApplication::clipboard(), &QClipboard::changed, this, &QAbstractVNCView::handleClipboardChange);
 
   delayedInitializeTimer->setInterval(1000);
   delayedInitializeTimer->setSingleShot(true);
@@ -93,6 +93,11 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
           &QVNCConnection::cursorPositionChanged,
           this,
           &QAbstractVNCView::setCursorPos,
+          Qt::QueuedConnection);
+  connect(AppManager::instance()->getConnection(),
+          &QVNCConnection::clipboardRequested,
+          this,
+          &QAbstractVNCView::handleClipboardRequest,
           Qt::QueuedConnection);
   connect(AppManager::instance()->getConnection(),
           &QVNCConnection::clipboardAnnounced,
@@ -335,22 +340,33 @@ void QAbstractVNCView::flushPendingClipboard()
   if (pendingClientClipboard) {
     vlog.debug("Focus regained after local clipboard change, notifying server");
     AppManager::instance()->getConnection()->announceClipboard(true);
-    AppManager::instance()->getConnection()->sendClipboardData();
   }
 
   pendingServerClipboard = false;
   pendingClientClipboard = false;
 }
 
-void QAbstractVNCView::handleClipboardChange()
+void QAbstractVNCView::handleClipboardRequest()
 {
-  qDebug() << "QClipboard::dataChanged:" << QGuiApplication::clipboard()->text();
+  qDebug() << "QAbstractVNCView::handleClipboardRequest" << pendingClientData;
+  AppManager::instance()->getConnection()->sendClipboardData(pendingClientData);
+  pendingClientData = "";
+}
+
+void QAbstractVNCView::handleClipboardChange(QClipboard::Mode mode)
+{
+  qDebug() << "QAbstractVNCView::handleClipboardChange:" << mode << QGuiApplication::clipboard()->text(mode);
 
   if (!ViewerConfig::config()->sendClipboard()) {
     return;
   }
 
+  if (mode == QClipboard::Mode::Selection && !ViewerConfig::config()->sendPrimary()) {
+    return;
+  }
+
   pendingServerClipboard = false;
+  pendingClientData = QGuiApplication::clipboard()->text(mode);
 
   if (!hasFocus()) {
     vlog.debug("Local clipboard changed whilst not focused, will notify server later");
@@ -362,7 +378,6 @@ void QAbstractVNCView::handleClipboardChange()
 
   vlog.debug("Local clipboard changed, notifying server");
   AppManager::instance()->getConnection()->announceClipboard(true);
-  AppManager::instance()->getConnection()->sendClipboardData();
 }
 
 void QAbstractVNCView::handleClipboardAnnounce(bool available)
@@ -379,6 +394,7 @@ void QAbstractVNCView::handleClipboardAnnounce(bool available)
   }
 
   pendingClientClipboard = false;
+  pendingClientData = "";
 
   if (!hasFocus()) {
     vlog.debug("Got notification of new clipboard on server whilst not focused, will request data later");
@@ -396,6 +412,8 @@ void QAbstractVNCView::handleClipboardData(const char* data)
   qDebug() << "QAbstractVNCView::handleClipboardData" << data;
   vlog.debug("Got clipboard data (%d bytes)", (int)strlen(data));
   QGuiApplication::clipboard()->setText(data);
+  if (ViewerConfig::config()->shouldSetPrimary())
+    QGuiApplication::clipboard()->setText(data, QClipboard::Mode::Selection);
 }
 
 void QAbstractVNCView::maybeGrabKeyboard()

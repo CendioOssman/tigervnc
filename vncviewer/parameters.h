@@ -125,6 +125,10 @@ public:
   void setAcceptClipboard(bool value);
   bool sendClipboard() const;
   void setSendClipboard(bool value);
+  bool shouldSetPrimary() const;
+  void setShouldSetPrimary(bool value);
+  bool sendPrimary() const;
+  void setSendPrimary(bool value);
   //
   bool fullScreen() const;
   void setFullScreen(bool value);

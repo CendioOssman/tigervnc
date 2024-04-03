@@ -156,10 +156,9 @@ ModifiablePixelBuffer *CConn::framebuffer()
   return getFramebuffer();
 }
 
-void CConn::sendClipboardContent()
+void CConn::sendClipboardContent(const char* data)
 {
-  QString text = QGuiApplication::clipboard()->text();
-  CConnection::sendClipboardData(text.toStdString().c_str());
+  CConnection::sendClipboardData(data);
 }
 
 void CConn::setProcessState(int state)
@@ -363,7 +362,7 @@ void CConn::setLEDState(unsigned int state)
 
 void CConn::handleClipboardRequest()
 {
-  sendClipboardContent();
+  emit facade->clipboardRequested();
 }
 
 void CConn::handleClipboardAnnounce(bool available)

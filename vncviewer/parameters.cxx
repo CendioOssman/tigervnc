@@ -1533,6 +1533,41 @@ void ViewerConfig::setSendClipboard(bool value)
   }
 }
 
+bool ViewerConfig::shouldSetPrimary() const
+{
+#if !defined(WIN32) && !defined(__APPLE__)
+  return ::setPrimary;
+#endif
+  return false;
+}
+
+void ViewerConfig::setShouldSetPrimary(bool value)
+{
+#if !defined(WIN32) && !defined(__APPLE__)
+  if (shouldSetPrimary() != value) {
+    ::setPrimary.setParam(value);
+  }
+#endif
+}
+
+bool ViewerConfig::sendPrimary() const
+{
+#if !defined(WIN32) && !defined(__APPLE__)
+  return ::sendPrimary;
+#endif
+  return false;
+}
+
+void ViewerConfig::setSendPrimary(bool value)
+{
+#if !defined(WIN32) && !defined(__APPLE__)
+  if (sendPrimary() != value) {
+    ::sendPrimary.setParam(value);
+  }
+#endif
+}
+
+
 bool ViewerConfig::fullScreen() const
 {
   return ::fullScreen;

@@ -106,13 +106,3 @@ void QVNCMacView::bell()
 {
   cocoa_beep();
 }
-
-void QVNCMacView::handleClipboardData(const char* data)
-{
-  if (!hasFocus()) {
-    return;
-  }
-
-  size_t len = strlen(data);
-  vlog.debug("Got clipboard data (%d bytes)", (int)len);
-}

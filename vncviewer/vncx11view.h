@@ -18,7 +18,6 @@ public:
   virtual ~QVNCX11View();
 
 public slots:
-  void handleClipboardData(const char* data) override;
   void bell() override;
 
 protected:

@@ -49,7 +49,7 @@ public:
   // CConnection callback methods
   void initDone() override;
 
-  void sendClipboardContent();
+  void sendClipboardContent(const char *data);
 
   void setName(const char* name) override;
 
