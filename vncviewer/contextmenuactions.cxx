@@ -79,8 +79,8 @@ QMinimizeAction::QMinimizeAction(const QString& text, QWidget* parent)
   : QAction(text, parent)
 {
   connect(this, &QAction::triggered, this, []() {
-    QAbstractVNCView* view = AppManager::instance()->getView();
-    view->showMinimized();
+    QVNCWindow* window = AppManager::instance()->getWindow();
+    window->showMinimized();
   });
 }
 
