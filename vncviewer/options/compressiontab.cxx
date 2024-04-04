@@ -30,7 +30,9 @@ CompressionTab::CompressionTab(QWidget* parent)
   compressionEncodingHextile = new QRadioButton(tr("Hextile"));
   vbox1->addWidget(compressionEncodingHextile);
   compressionEncodingH264 = new QRadioButton(tr("H264"));
-  compressionEncodingH264->setEnabled(ViewerConfig::hasH264());
+#ifndef HAVE_H264
+  compressionEncodingH264->setVisible(false);
+#endif
   vbox1->addWidget(compressionEncodingH264);
   compressionEncodingRaw = new QRadioButton(tr("Raw"));
   vbox1->addWidget(compressionEncodingRaw);

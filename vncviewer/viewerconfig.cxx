@@ -139,33 +139,6 @@ bool ViewerConfig::canFullScreenOnMultiDisplays()
 #endif
 }
 
-bool ViewerConfig::hasGNUTLS()
-{
-#if defined(HAVE_GNUTLS)
-  return true;
-#else
-  return false;
-#endif
-}
-
-bool ViewerConfig::hasNETTLE()
-{
-#if defined(HAVE_NETTLE)
-  return true;
-#else
-  return false;
-#endif
-}
-
-bool ViewerConfig::hasH264()
-{
-#if defined(HAVE_H264)
-  return true;
-#else
-  return false;
-#endif
-}
-
 void ViewerConfig::saveViewerParameters(QString path, QString serverName)
 {
   addServer(serverName);

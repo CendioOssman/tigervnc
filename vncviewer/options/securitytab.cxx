@@ -20,23 +20,33 @@ SecurityTab::SecurityTab(QWidget* parent)
   securityEncryptionNone = new QCheckBox(tr("None"));
   vbox1->addWidget(securityEncryptionNone);
   securityEncryptionTLSWithAnonymousCerts = new QCheckBox(tr("TLS with anonymous certificates"));
-  securityEncryptionTLSWithAnonymousCerts->setEnabled(ViewerConfig::hasGNUTLS());
+#ifndef HAVE_GNUTLS
+  securityEncryptionTLSWithAnonymousCerts->setVisible(false);
+#endif
   vbox1->addWidget(securityEncryptionTLSWithAnonymousCerts);
   securityEncryptionTLSWithX509Certs = new QCheckBox(tr("TLS with X509 certificates"));
-  securityEncryptionTLSWithX509Certs->setEnabled(ViewerConfig::hasGNUTLS());
+#ifndef HAVE_GNUTLS
+  securityEncryptionTLSWithX509Certs->setVisible(false);
+#endif
   vbox1->addWidget(securityEncryptionTLSWithX509Certs);
   QLabel* securityEncryptionTLSWithX509CALabel = new QLabel(tr("Path to X509 CA certificate"));
   vbox1->addWidget(securityEncryptionTLSWithX509CALabel);
   securityEncryptionTLSWithX509CATextEdit = new QLineEdit;
-  securityEncryptionTLSWithX509CATextEdit->setEnabled(ViewerConfig::hasGNUTLS());
+#ifndef HAVE_GNUTLS
+  securityEncryptionTLSWithX509CATextEdit->setVisible(false);
+#endif
   vbox1->addWidget(securityEncryptionTLSWithX509CATextEdit);
   QLabel* securityEncryptionTLSWithX509CRLLabel = new QLabel(tr("Path to X509 CRL file"));
   vbox1->addWidget(securityEncryptionTLSWithX509CRLLabel);
   securityEncryptionTLSWithX509CRLTextEdit = new QLineEdit;
-  securityEncryptionTLSWithX509CRLTextEdit->setEnabled(ViewerConfig::hasGNUTLS());
+#ifndef HAVE_GNUTLS
+  securityEncryptionTLSWithX509CRLTextEdit->setVisible(false);
+#endif
   vbox1->addWidget(securityEncryptionTLSWithX509CRLTextEdit);
   securityEncryptionAES = new QCheckBox(tr("RSA-AES"));
-  securityEncryptionAES->setEnabled(ViewerConfig::hasNETTLE());
+#ifndef HAVE_NETTLE
+  securityEncryptionAES->setVisible(false);
+#endif
   vbox1->addWidget(securityEncryptionAES);
   groupBox1->setLayout(vbox1);
   layout->addWidget(groupBox1);
@@ -54,8 +64,6 @@ SecurityTab::SecurityTab(QWidget* parent)
 
   layout->addStretch(1);
   setLayout(layout);
-
-  setEnabled(ViewerConfig::hasGNUTLS() || ViewerConfig::hasNETTLE());
 
   connect(securityEncryptionTLSWithX509Certs, &QCheckBox::toggled, this, [=](bool checked) {
     securityEncryptionTLSWithX509CATextEdit->setEnabled(checked);

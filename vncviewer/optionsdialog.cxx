@@ -24,7 +24,13 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   QHBoxLayout* hLayout = new QHBoxLayout;
 
   QListWidget* listWidget = new QListWidget;
-  QStringList tabs = {tr("Compression"), tr("Security"), tr("Input"), tr("Display"), tr("Misc")};
+  QStringList tabs = {tr("Compression"),
+#if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
+                      tr("Security"),
+#endif
+                      tr("Input"),
+                      tr("Display"),
+                      tr("Misc")};
   listWidget->addItems(tabs);
   listWidget->setCurrentRow(0);
 
@@ -32,7 +38,9 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
 
   tabWidget = new QStackedWidget;
   tabWidget->addWidget(new CompressionTab);
+#if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
   tabWidget->addWidget(new SecurityTab);
+#endif
   tabWidget->addWidget(new InputTab);
   tabWidget->addWidget(new DisplayTab);
   tabWidget->addWidget(new MiscTab);

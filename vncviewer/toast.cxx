@@ -47,8 +47,7 @@ QFont Toast::toastFont() const
 
 QString Toast::toastText() const
 {
-  return QString::asprintf(_("Press %s to open the context menu"),
-                           ViewerConfig::config()->menuKey().toStdString().c_str());
+  return QString::asprintf(_("Press %s to open the context menu"), ::menuKey.getValueStr().c_str());
 }
 
 QRect Toast::toastGeometry() const

@@ -36,9 +36,6 @@ public:
   static ViewerConfig* instance();
   static QString aboutText();
   static bool canFullScreenOnMultiDisplays();
-  static bool hasGNUTLS();
-  static bool hasNETTLE();
-  static bool hasH264();
   static void usage();
 
   QStringList getServerHistory() const { return serverHistory; }
