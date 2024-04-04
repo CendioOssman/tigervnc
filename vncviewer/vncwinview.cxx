@@ -13,13 +13,10 @@
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
 #include "Win32KeyboardHandler.h"
-#include "Win32TouchHandler.h"
 #include "appmanager.h"
-#include "rdr/Exception.h"
 #include "rfb/LogWriter.h"
 #include "vncwinview.h"
 
-#include <QDebug>
 #include <QMessageBox>
 #include <QScreen>
 #include <QTime>
@@ -29,13 +26,6 @@ static rfb::LogWriter vlog("Viewport");
 QVNCWinView::QVNCWinView(QWidget* parent, Qt::WindowFlags f)
   : QAbstractVNCView(parent, f)
 {
-  grabGesture(Qt::TapGesture);
-  grabGesture(Qt::TapAndHoldGesture);
-  grabGesture(Qt::PanGesture);
-  grabGesture(Qt::PinchGesture);
-  grabGesture(Qt::SwipeGesture);
-  grabGesture(Qt::CustomGesture);
-
   keyboardHandler = new Win32KeyboardHandler(this);
   initKeyboardHandler();
 }
@@ -45,11 +35,6 @@ QVNCWinView::~QVNCWinView() {}
 bool QVNCWinView::event(QEvent* e)
 {
   return QAbstractVNCView::event(e);
-}
-
-int QVNCWinView::handleTouchEvent(UINT message, WPARAM wParam, LPARAM lParam)
-{
-  return touchHandler->processEvent(message, wParam, lParam);
 }
 
 void QVNCWinView::ungrabKeyboard()

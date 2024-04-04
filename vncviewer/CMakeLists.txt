@@ -29,8 +29,6 @@ if (WIN32)
   set(OS_DEP_SOURCES
       vncwinview.cxx
       vncwinview.h
-      Win32TouchHandler.cxx
-      Win32TouchHandler.h
       Win32KeyboardHandler.cxx
       Win32KeyboardHandler.h
       win32.c
@@ -50,16 +48,8 @@ else()
   set(OS_DEP_SOURCES
       vncx11view.cxx
       vncx11view.h
-      X11TouchHandler.cxx
-      X11TouchHandler.h
       X11KeyboardHandler.cxx
       X11KeyboardHandler.h
-      GestureHandler.cxx
-      GestureHandler.h
-      vncgesture.h
-      vncgesture.cxx
-      vncgesturerecognizer.h
-      vncgesturerecognizer.cxx
       x11utils.h
       x11utils.cxx
       xkb_to_qnum.c
@@ -103,9 +93,6 @@ set(PROJECT_SOURCES
         EmulateMB.cxx
         CConn.h
         CConn.cxx
-        BaseTouchHandler.cxx
-        BaseTouchHandler.h
-        GestureEvent.h
         toast.cxx
         toast.h
         loggerconfig.cxx
@@ -138,6 +125,18 @@ set(PROJECT_SOURCES
         options/securitytab.h
         options/screensselectionwidget.cxx
         options/screensselectionwidget.h
+        clicksalternativegesture.cxx
+        clicksalternativegesture.h
+        clicksalternativegesturerecognizer.cxx
+        clicksalternativegesturerecognizer.h
+        panzoomgesture.cxx
+        panzoomgesture.h
+        panzoomgesturerecognizer.cxx
+        panzoomgesturerecognizer.h
+        tapdraggesture.cxx
+        tapdraggesture.h
+        tapdraggesturerecognizer.cxx
+        tapdraggesturerecognizer.h
         res.qrc
         ${OS_DEP_SOURCES}
 )
