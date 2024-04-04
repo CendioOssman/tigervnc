@@ -44,22 +44,7 @@ QVNCWinView::~QVNCWinView() {}
 
 bool QVNCWinView::event(QEvent* e)
 {
-  try {
-    switch (e->type()) {
-    case QEvent::CursorChange:
-      // qDebug() << "CursorChange";
-      e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
-      break;
-    default:
-      // qDebug() << "Unprocessed Event: " << e->type();
-      break;
-    }
-    return QWidget::event(e);
-  } catch (rdr::Exception& e) {
-    vlog.error("%s", e.str());
-    AppManager::instance()->publishError(e.str(), true);
-    return false;
-  }
+  return QAbstractVNCView::event(e);
 }
 
 void QVNCWinView::enterEvent(QEvent* e)

@@ -63,31 +63,16 @@ QVNCX11View::~QVNCX11View()
   delete gestureHandler;
 }
 
-/*!
-    \reimp
-*/
 bool QVNCX11View::event(QEvent* e)
 {
   switch (e->type()) {
-  case QEvent::WindowActivate:
-    // qDebug() << "WindowActivate";
-    grabPointer();
-    break;
-  case QEvent::WindowDeactivate:
-    // qDebug() << "WindowDeactivate";
-    ungrabPointer();
-    break;
-  case QEvent::CursorChange:
-    // qDebug() << "CursorChange";
-    e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
-    return true;
   case QEvent::Gesture:
     gestureEvent(reinterpret_cast<QGestureEvent*>(e));
+    break;
   default:
-    // qDebug() << "Unprocessed Event: " << e->type();
     break;
   }
-  return QWidget::event(e);
+  return QAbstractVNCView::event(e);
 }
 
 void QVNCX11View::bell()

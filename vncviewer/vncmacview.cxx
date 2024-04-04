@@ -27,39 +27,7 @@ QVNCMacView::~QVNCMacView() {}
 
 bool QVNCMacView::event(QEvent* e)
 {
-  switch (e->type()) {
-  case QEvent::WindowActivate:
-    // qDebug() << "WindowActivate";
-    grabPointer();
-    break;
-  case QEvent::WindowDeactivate:
-    // qDebug() << "WindowDeactivate";
-    ungrabPointer();
-    break;
-  case QEvent::Enter:
-  case QEvent::FocusIn:
-    // qDebug() << "Enter/FocusIn";
-    setFocus();
-    grabPointer();
-    break;
-  case QEvent::Leave:
-  case QEvent::FocusOut:
-    // qDebug() << "Leave/FocusOut";
-    clearFocus();
-    ungrabPointer();
-    break;
-  case QEvent::CursorChange:
-    // qDebug() << "CursorChange";
-    e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
-    return true;
-  case QEvent::MetaCall:
-    // qDebug() << "QEvent::MetaCall (signal-slot call)";
-    break;
-  default:
-    // qDebug() << "Unprocessed Event: " << e->type();
-    break;
-  }
-  return QWidget::event(e);
+  return QAbstractVNCView::event(e);
 }
 
 void QVNCMacView::bell()

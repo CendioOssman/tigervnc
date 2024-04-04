@@ -804,6 +804,25 @@ void QAbstractVNCView::resizeEvent(QResizeEvent* event)
   maybeGrabKeyboard();
 }
 
+bool QAbstractVNCView::event(QEvent *event)
+{
+  switch (event->type()) {
+  case QEvent::WindowActivate:
+    // qDebug() << "WindowActivate";
+    grabPointer();
+    break;
+  case QEvent::WindowDeactivate:
+    // qDebug() << "WindowDeactivate";
+    ungrabPointer();
+    break;
+  case QEvent::CursorChange:
+    // qDebug() << "CursorChange";
+    event->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
+    return true;
+  }
+  return QWidget::event(event);
+}
+
 void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
 {
   if (ViewerConfig::config()->viewOnly()) {
