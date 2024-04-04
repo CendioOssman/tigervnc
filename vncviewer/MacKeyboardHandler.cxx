@@ -14,6 +14,7 @@
 #include "rfb/ServerParams.h"
 #include "rfb/ledStates.h"
 #include "vncconnection.h"
+#include "vncwindow.h"
 
 #include <QDebug>
 extern const unsigned short code_map_osx_to_qnum[];
@@ -81,21 +82,6 @@ bool MacKeyboardHandler::nativeEventFilter(const QByteArray& eventType, void* me
 
 bool MacKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
 {
-  if (menuKeySym && keySym == menuKeySym) {
-    if (!menuShortCutMode) {
-      emit contextMenuKeyPressed(menuShortCutMode);
-      return true;
-    }
-  }
-
-  if (ViewerConfig::config()->viewOnly())
-    return false;
-
-  if (keyCode == 0) {
-    vlog.error(_("No key code specified on key press"));
-    return false;
-  }
-
   // Alt on OS X behaves more like AltGr on other systems, and to get
   // sane behaviour we should translate things in that manner for the
   // remote VNC server. However that means we lose the ability to use
@@ -116,62 +102,7 @@ bool MacKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuSh
     break;
   }
 
-  // Because of the way keyboards work, we cannot expect to have the same
-  // symbol on release as when pressed. This breaks the VNC protocol however,
-  // so we need to keep track of what keysym a key _code_ generated on press
-  // and send the same on release.
-  downKeySym[keyCode] = keySym;
-
-  //  vlog.debug("Key pressed: 0x%04x => XK_%s (0x%04x)", keyCode, XKeysymToString(keySym), keySym);
-
-  try {
-    QVNCConnection* cc = AppManager::instance()->getConnection();
-    // Fake keycode?
-    if (keyCode > 0xff)
-      emit cc->writeKeyEvent(keySym, 0, true);
-    else
-      emit cc->writeKeyEvent(keySym, keyCode, true);
-  } catch (rdr::Exception& e) {
-    vlog.error("%s", e.str());
-    e.abort = true;
-    throw;
-  }
-
-  return true;
-}
-
-bool MacKeyboardHandler::handleKeyRelease(int keyCode)
-{
-  DownMap::iterator iter;
-
-  if (ViewerConfig::config()->viewOnly())
-    return false;
-
-  iter = downKeySym.find(keyCode);
-  if (iter == downKeySym.end()) {
-    // These occur somewhat frequently so let's not spam them unless
-    // logging is turned up.
-    vlog.debug("Unexpected release of key code %d", keyCode);
-    return false;
-  }
-
-  //  vlog.debug("Key released: 0x%04x => XK_%s (0x%04x)", keyCode, XKeysymToString(iter->second), iter->second);
-
-  try {
-    QVNCConnection* cc = AppManager::instance()->getConnection();
-    if (keyCode > 0xff)
-      emit cc->writeKeyEvent(iter->second, 0, false);
-    else
-      emit cc->writeKeyEvent(iter->second, keyCode, false);
-  } catch (rdr::Exception& e) {
-    vlog.error("%s", e.str());
-    e.abort = true;
-    throw;
-  }
-
-  downKeySym.erase(iter);
-
-  return true;
+  return BaseKeyboardHandler::handleKeyPress(keyCode, keySym, menuShortCutMode);
 }
 
 void MacKeyboardHandler::setLEDState(unsigned int state)
@@ -238,16 +169,16 @@ void MacKeyboardHandler::pushLEDState()
 
 void MacKeyboardHandler::grabKeyboard()
 {
-  // int ret = cocoa_capture_displays(view_, fullscreenScreens());
-  // if (ret != 0) {
-  //     vlog.error(_("Failure grabbing keyboard"));
-  //     return;
-  // }
+  int ret = cocoa_capture_displays(cocoa_get_view(AppManager::instance()->getWindow()), AppManager::instance()->getWindow()->fullscreenScreens());
+  if (ret != 0) {
+      vlog.error(_("Failure grabbing keyboard"));
+      return;
+  }
   BaseKeyboardHandler::grabKeyboard();
 }
 
 void MacKeyboardHandler::ungrabKeyboard()
 {
-  // cocoa_release_displays(view_, fullscreenEnabled_);
+  cocoa_release_displays(cocoa_get_view(AppManager::instance()->getWindow()), AppManager::instance()->getWindow()->allowKeyboardGrab());
   BaseKeyboardHandler::ungrabKeyboard();
 }

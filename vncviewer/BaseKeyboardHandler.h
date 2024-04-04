@@ -27,8 +27,8 @@ public:
   virtual void setLEDState(unsigned int state) = 0;
   virtual void pushLEDState() = 0;
 
-  virtual bool handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) = 0;
-  virtual bool handleKeyRelease(int) = 0;
+  virtual bool handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false);
+  virtual bool handleKeyRelease(int keyCode);
   void resetKeyboard();
 
   void setMenuKeyStatus(quint32 keysym, bool checked);

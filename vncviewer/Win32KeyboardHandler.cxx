@@ -72,77 +72,6 @@ void Win32KeyboardHandler::resolveAltGrDetection(bool isAltGrSequence)
     handleKeyPress(0x1d, XK_Control_L);
 }
 
-bool Win32KeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
-{
-  if (menuKeySym && keySym == menuKeySym) {
-    if (!menuShortCutMode) {
-      emit contextMenuKeyPressed(menuShortCutMode);
-      return true;
-    }
-  }
-
-  if (ViewerConfig::config()->viewOnly())
-    return false;
-
-  if (keyCode == 0) {
-    vlog.error(_("No key code specified on key press"));
-    return false;
-  }
-
-  // Because of the way keyboards work, we cannot expect to have the same
-  // symbol on release as when pressed. This breaks the VNC protocol however,
-  // so we need to keep track of what keysym a key _code_ generated on press
-  // and send the same on release.
-  downKeySym[keyCode] = keySym;
-
-  vlog.debug("Key pressed: 0x%04x => 0x%04x", keyCode, keySym);
-
-  try {
-    // Fake keycode?
-    if (keyCode > 0xff)
-      emit AppManager::instance()->getConnection()->writeKeyEvent(keySym, 0, true);
-    else
-      emit AppManager::instance()->getConnection()->writeKeyEvent(keySym, keyCode, true);
-  } catch (rdr::Exception& e) {
-    vlog.error("%s", e.str());
-    AppManager::instance()->publishError(e.str(), true);
-  }
-
-  return true;
-}
-
-bool Win32KeyboardHandler::handleKeyRelease(int keyCode)
-{
-  DownMap::iterator iter;
-
-  if (ViewerConfig::config()->viewOnly())
-    return false;
-
-  iter = downKeySym.find(keyCode);
-  if (iter == downKeySym.end()) {
-    // These occur somewhat frequently so let's not spam them unless
-    // logging is turned up.
-    vlog.debug("Unexpected release of key code %d", keyCode);
-    return false;
-  }
-
-  vlog.debug("Key released: 0x%04x => 0x%04x", keyCode, iter->second);
-
-  try {
-    if (keyCode > 0xff)
-      emit AppManager::instance()->getConnection()->writeKeyEvent(iter->second, 0, false);
-    else
-      emit AppManager::instance()->getConnection()->writeKeyEvent(iter->second, keyCode, false);
-  } catch (rdr::Exception& e) {
-    vlog.error("%s", e.str());
-    AppManager::instance()->publishError(e.str(), true);
-  }
-
-  downKeySym.erase(iter);
-
-  return true;
-}
-
 bool Win32KeyboardHandler::handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lParam)
 {
   Q_UNUSED(message);
@@ -315,43 +244,6 @@ bool Win32KeyboardHandler::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM 
   return true;
 }
 
-void Win32KeyboardHandler::pushLEDState()
-{
-  qDebug() << "Win32KeyboardHandler::pushLEDState";
-  // Server support?
-  rfb::ServerParams* server = AppManager::instance()->getConnection()->server();
-  if (server->ledState() == rfb::ledUnknown) {
-    return;
-  }
-
-  unsigned int state = 0;
-  if (GetKeyState(VK_CAPITAL) & 0x1) {
-    state |= rfb::ledCapsLock;
-  }
-  if (GetKeyState(VK_NUMLOCK) & 0x1) {
-    state |= rfb::ledNumLock;
-  }
-  if (GetKeyState(VK_SCROLL) & 0x1) {
-    state |= rfb::ledScrollLock;
-  }
-
-  if ((state & rfb::ledCapsLock) != (server->ledState() & rfb::ledCapsLock)) {
-    vlog.debug("Inserting fake CapsLock to get in sync with server");
-    handleKeyPress(0x3a, XK_Caps_Lock);
-    handleKeyRelease(0x3a);
-  }
-  if ((state & rfb::ledNumLock) != (server->ledState() & rfb::ledNumLock)) {
-    vlog.debug("Inserting fake NumLock to get in sync with server");
-    handleKeyPress(0x45, XK_Num_Lock);
-    handleKeyRelease(0x45);
-  }
-  if ((state & rfb::ledScrollLock) != (server->ledState() & rfb::ledScrollLock)) {
-    vlog.debug("Inserting fake ScrollLock to get in sync with server");
-    handleKeyPress(0x46, XK_Scroll_Lock);
-    handleKeyRelease(0x46);
-  }
-}
-
 void Win32KeyboardHandler::setLEDState(unsigned int state)
 {
   qDebug() << "Win32KeyboardHandler::setLEDState";
@@ -395,6 +287,44 @@ void Win32KeyboardHandler::setLEDState(unsigned int state)
   UINT ret = SendInput(count, input, sizeof(*input));
   if (ret < count) {
     vlog.error(_("Failed to update keyboard LED state: %lu"), GetLastError());
+  }
+}
+
+void Win32KeyboardHandler::pushLEDState()
+{
+  qDebug() << "Win32KeyboardHandler::pushLEDState";
+  QVNCConnection* cc = AppManager::instance()->getConnection();
+  // Server support?
+  rfb::ServerParams* server = AppManager::instance()->getConnection()->server();
+  if (server->ledState() == rfb::ledUnknown) {
+    return;
+  }
+
+  unsigned int state = 0;
+  if (GetKeyState(VK_CAPITAL) & 0x1) {
+    state |= rfb::ledCapsLock;
+  }
+  if (GetKeyState(VK_NUMLOCK) & 0x1) {
+    state |= rfb::ledNumLock;
+  }
+  if (GetKeyState(VK_SCROLL) & 0x1) {
+    state |= rfb::ledScrollLock;
+  }
+
+  if ((state & rfb::ledCapsLock) != (cc->server()->ledState() & rfb::ledCapsLock)) {
+    vlog.debug("Inserting fake CapsLock to get in sync with server");
+    handleKeyPress(0x3a, XK_Caps_Lock);
+    handleKeyRelease(0x3a);
+  }
+  if ((state & rfb::ledNumLock) != (cc->server()->ledState() & rfb::ledNumLock)) {
+    vlog.debug("Inserting fake NumLock to get in sync with server");
+    handleKeyPress(0x45, XK_Num_Lock);
+    handleKeyRelease(0x45);
+  }
+  if ((state & rfb::ledScrollLock) != (cc->server()->ledState() & rfb::ledScrollLock)) {
+    vlog.debug("Inserting fake ScrollLock to get in sync with server");
+    handleKeyPress(0x46, XK_Scroll_Lock);
+    handleKeyRelease(0x46);
   }
 }
 

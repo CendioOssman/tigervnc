@@ -16,7 +16,6 @@ public:
   bool nativeEventFilter(QByteArray const& eventType, void* message, long* result) override;
 
   bool handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
-  bool handleKeyRelease(int keyCode) override;
 
 public slots:
   void setLEDState(unsigned int state) override;

@@ -14,9 +14,6 @@ public:
   ~X11KeyboardHandler();
 
   bool nativeEventFilter(QByteArray const& eventType, void* message, long*) override;
-
-  bool handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
-  bool handleKeyRelease(int keyCode) override;
   void releaseKeyboard();
 
 public slots:

@@ -199,6 +199,12 @@ NSView *cocoa_create_view(QWidget *parent, CGImageRef iref)
   return view;
 }
 
+NSView *cocoa_get_view(QWidget *widget)
+{
+  NSView *view = (__bridge NSView*)reinterpret_cast<void *>(widget->winId());
+  return view;
+}
+
 void cocoa_draw(NSView *view, int x, int y, int w, int h)
 {
   NSRect r = NSMakeRect(x, y, w, h);

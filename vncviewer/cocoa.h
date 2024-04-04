@@ -30,6 +30,7 @@ class QWidget;
 class QCursor;
 
 NSView *cocoa_create_view(QWidget *parent, CGImage *bitmap);
+NSView *cocoa_get_view(QWidget *widget);
 void cocoa_beep();
 void cocoa_resize(NSView *view, CGImage *iref);
 NSCursor *cocoa_set_cursor(NSView *view, const QCursor *cursor);
