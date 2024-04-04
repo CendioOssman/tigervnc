@@ -84,6 +84,11 @@ int AppManager::initialize()
   return 0;
 }
 
+bool AppManager::isFullScreen() const
+{
+  return window && window->isFullscreenEnabled();
+}
+
 void AppManager::connectToServer(const QString addressport)
 {
   emit connectToServerRequested(addressport);
@@ -112,7 +117,7 @@ void AppManager::publishError(const QString message, bool quit)
   }
   errorCount++;
 
-  AlertDialog d(message, quit);
+  AlertDialog d(isFullScreen(), message, quit);
   d.exec();
 }
 
@@ -197,19 +202,19 @@ void AppManager::openInfoDialog()
 
 void AppManager::openOptionDialog()
 {
-  OptionsDialog d;
+  OptionsDialog d(isFullScreen());
   d.exec();
 }
 
 void AppManager::openAboutDialog()
 {
-  AboutDialog d;
+  AboutDialog d(isFullScreen());
   d.exec();
 }
 
 void AppManager::openMessageDialog(int flags, QString title, QString text)
 {
-  MessageDialog d(flags, title, text);
+  MessageDialog d(isFullScreen(), flags, title, text);
   int response = d.exec() == QDialog::Accepted ? 1 : 0;
   emit messageResponded(response);
 }

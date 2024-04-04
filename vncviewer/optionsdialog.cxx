@@ -12,10 +12,11 @@
 #include <QStackedWidget>
 #include <QVBoxLayout>
 
-OptionsDialog::OptionsDialog(QWidget* parent)
+OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   : QDialog{parent}
 {
   setWindowTitle(tr("TigerVNC Options"));
+  setWindowFlag(Qt::WindowStaysOnTopHint, staysOnTop);
 
   QVBoxLayout* layout = new QVBoxLayout;
 

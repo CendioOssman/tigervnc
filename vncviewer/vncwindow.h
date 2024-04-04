@@ -26,6 +26,7 @@ public:
   void fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight);
   void exitFullscreen();
   bool allowKeyboardGrab() const;
+  bool isFullscreenEnabled() const;
 
   // Remote resize
   void handleDesktopSize();

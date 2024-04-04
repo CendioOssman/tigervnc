@@ -8,7 +8,7 @@ class AboutDialog : public QDialog
   Q_OBJECT
 
 public:
-  AboutDialog(QWidget* parent = nullptr);
+  AboutDialog(bool staysOnTop, QWidget* parent = nullptr);
 };
 
 #endif // ABOUTDIALOG_H

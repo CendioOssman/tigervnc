@@ -27,6 +27,8 @@ public:
 
   QVNCWindow* getWindow() const { return window; }
 
+  bool isFullScreen() const;
+
 signals:
   void credentialRequested(bool secured, bool userNeeded, bool passwordNeeded);
   void messageDialogRequested(int flags, QString title, QString text);

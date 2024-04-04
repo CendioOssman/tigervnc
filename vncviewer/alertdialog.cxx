@@ -8,10 +8,11 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-AlertDialog::AlertDialog(QString message, bool quit, QWidget* parent)
+AlertDialog::AlertDialog(bool staysOnTop, QString message, bool quit, QWidget* parent)
   : QDialog{parent}
 {
   setWindowTitle(tr("TigerVNC Viewer"));
+  setWindowFlag(Qt::WindowStaysOnTopHint, staysOnTop);
 
   QVBoxLayout* layout = new QVBoxLayout;
   QLabel* label = new QLabel(message);

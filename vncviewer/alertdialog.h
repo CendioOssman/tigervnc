@@ -8,7 +8,7 @@ class AlertDialog : public QDialog
   Q_OBJECT
 
 public:
-  AlertDialog(QString message, bool quit, QWidget* parent = nullptr);
+  AlertDialog(bool staysOnTop, QString message, bool quit, QWidget* parent = nullptr);
 };
 
 #endif // ALERTDIALOG_H

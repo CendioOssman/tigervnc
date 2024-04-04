@@ -24,7 +24,7 @@ class OptionsDialog : public QDialog
   Q_OBJECT
 
 public:
-  OptionsDialog(QWidget* parent = nullptr);
+  OptionsDialog(bool staysOnTop, QWidget* parent = nullptr);
 
   void apply();
   void reset();

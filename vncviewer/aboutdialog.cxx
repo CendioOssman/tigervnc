@@ -6,10 +6,11 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-AboutDialog::AboutDialog(QWidget* parent)
+AboutDialog::AboutDialog(bool staysOnTop, QWidget* parent)
   : QDialog{parent}
 {
   setWindowTitle(tr("About TigerVNC Viewer"));
+  setWindowFlag(Qt::WindowStaysOnTopHint, staysOnTop);
 
   QVBoxLayout* layout = new QVBoxLayout;
   layout->addWidget(new QLabel(ViewerConfig::config()->aboutText()));

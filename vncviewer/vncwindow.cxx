@@ -325,6 +325,11 @@ bool QVNCWindow::allowKeyboardGrab() const
   return fullscreenEnabled || pendingFullscreen;
 }
 
+bool QVNCWindow::isFullscreenEnabled() const
+{
+  return fullscreenEnabled;
+}
+
 void QVNCWindow::handleDesktopSize()
 {
   qDebug() << "QVNCWindow::handleDesktopSize";

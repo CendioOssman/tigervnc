@@ -5,10 +5,11 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
-MessageDialog::MessageDialog(int flags, QString title, QString text, QWidget* parent)
+MessageDialog::MessageDialog(bool staysOnTop, int flags, QString title, QString text, QWidget* parent)
   : QDialog{parent}
 {
   setWindowTitle(title);
+  setWindowFlag(Qt::WindowStaysOnTopHint, staysOnTop);
 
   QVBoxLayout* layout = new QVBoxLayout;
   QLabel* label = new QLabel;

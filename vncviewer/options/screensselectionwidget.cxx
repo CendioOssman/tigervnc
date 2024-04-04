@@ -30,19 +30,19 @@ protected:
       if (isChecked())
         p.setBrush(QColor("#ff5454ff"));
       else
-        p.setBrush(QColor("#fff3f3f3"));
+        p.setBrush(palette().brush(QPalette::Base));
     } else {
       if (isChecked())
         p.setBrush(QColor("#ffafafe7"));
       else
-        p.setBrush(QColor("#ff808080"));
+        p.setBrush(palette().brush(QPalette::Window));
     }
 
     QPen pen;
-    int w = 2;
+    int w = 1;
     pen.setWidth(w);
     p.setPen(pen);
-    p.drawRoundedRect(rect().adjusted(w, w, -w, -w), 10, 10);
+    p.drawRect(rect().adjusted(w, w, -w, -w));
   }
 };
 
