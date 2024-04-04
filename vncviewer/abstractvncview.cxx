@@ -1,3 +1,5 @@
+#include "abstractvncview.h"
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -21,6 +23,12 @@
 #include "rfb/ServerParams.h"
 #include "rfb/util.h"
 #include "vncconnection.h"
+#include "clicksalternativegesture.h"
+#include "clicksalternativegesturerecognizer.h"
+#include "panzoomgesture.h"
+#include "panzoomgesturerecognizer.h"
+#include "tapdraggesture.h"
+#include "tapdraggesturerecognizer.h"
 
 #include <QAbstractEventDispatcher>
 #include <QApplication>
@@ -36,8 +44,9 @@
 #include <QUrl>
 #include <QWindow>
 #include <QMimeData>
+#include <QGestureRecognizer>
+#include <QGesture>
 #undef asprintf
-#include "abstractvncview.h"
 #include "parameters.h"
 #include "vncwindow.h"
 #undef asprintf
@@ -71,6 +80,152 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
   setContentsMargins(0, 0, 0, 0);
+
+  // 257
+  registerGesture(new ClicksAlternativeGestureRecognizer, [=](Qt::GestureType type, QGestureEvent* event){
+    if (ClicksAlternativeGesture *gesture = static_cast<ClicksAlternativeGesture *>(event->gesture(type))) {
+      if (gesture->state() == Qt::GestureFinished) {
+        QPoint pos = gesture->getPosition();
+        keyboardHandler->handleKeyRelease(0x1d); // Prevents non handling of PanZoomGesture Finished
+        if (gesture->getType() == ClicksAlternativeGesture::TwoPoints) {
+          vlog.debug("Cendio Right click alternative gesture");
+          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 4 /* RightButton */);
+          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+          event->accept();
+          return true;
+        } else if (gesture->getType() == ClicksAlternativeGesture::ThreePoints) {
+          vlog.debug("Cendio Middle click gesture");
+          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 2 /* MiddleButton */);
+          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+          event->accept();
+          return true;
+        }
+      }
+    }
+    return false;
+  });
+
+  // 258
+  registerGesture(new PanZoomGestureRecognizer, [=](Qt::GestureType type, QGestureEvent* event){
+    static bool panZoomGesture = false;
+    if (PanZoomGesture *gesture = static_cast<PanZoomGesture *>(event->gesture(type))) {
+      if (gesture->state() == Qt::GestureUpdated) {
+        if (gesture->getType() == PanZoomGesture::Pan) {
+          QPoint pos = gesture->hotSpot().toPoint();
+          int wheelMask = 0;
+          if (gesture->getOffsetDelta().y() > 0) {
+            wheelMask |= 8;
+          }
+          if (gesture->getOffsetDelta().y() < 0) {
+            wheelMask |= 16;
+          }
+          if (gesture->getOffsetDelta().x() > 0) {
+            wheelMask |= 32;
+          }
+          if (gesture->getOffsetDelta().x() < 0) {
+            wheelMask |= 64;
+          }
+          vlog.debug("Cendio Pan / Scroll gesture x=%f y=%f mask=%d",
+                     gesture->getOffsetDelta().x(),
+                     gesture->getOffsetDelta().y(),
+                     wheelMask);
+          if (!panZoomGesture) {
+            panZoomGesture = true;
+            QTimer::singleShot(100, this, [=](){
+              panZoomGesture = false;
+              filterPointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
+              mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+            });
+          }
+        }
+
+        if (gesture->getType() == PanZoomGesture::Pinch) {
+          QPoint pos = gesture->hotSpot().toPoint();
+          int wheelMask = 0;
+          if (gesture->getScaleFactor() > 1.00) {
+            wheelMask |= 8;
+          }
+          if (gesture->getScaleFactor() < 1.00) {
+            wheelMask |= 16;
+          }
+          vlog.debug("Cendio Zoom gesture %d %f", wheelMask, gesture->getScaleFactor());
+          keyboardHandler->handleKeyPress(0x1d, XK_Control_L);
+          if (!panZoomGesture) {
+            panZoomGesture = true;
+            QTimer::singleShot(100, this, [=](){
+              panZoomGesture = false;
+              filterPointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
+              mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+            });
+          }
+          event->accept();
+          return true;
+        }
+
+        if (gesture->getType() == PanZoomGesture::Undefined) {
+          vlog.debug("Cendio UNDEFINED gesture");
+        }
+      } else {
+        event->accept();
+        keyboardHandler->handleKeyRelease(0x1d);
+        return true;
+      }
+    }
+    return false;
+  });
+
+  // 259
+  registerGesture(new TapDragGestureRecognizer, [=](Qt::GestureType type, QGestureEvent* event){
+    if (TapDragGesture *gesture = static_cast<TapDragGesture *>(event->gesture(type))) {
+      QPoint pos = gesture->getPosition().toPoint();
+
+      if (gesture->getType() == TapDragGesture::Drag) {
+        static bool dragGesture = false;
+        if (gesture->state() == Qt::GestureUpdated) {
+          vlog.debug("Cendio Drag gesture");
+          if (!dragGesture) {
+            dragGesture = true;
+            QPoint startPos = gesture->getStartPosition().toPoint();
+            filterPointerEvent(rfb::Point(startPos.x(), startPos.y()), 1 /* LeftButton */);
+          }
+          filterPointerEvent(rfb::Point(pos.x(), pos.y()), 1 /* LeftButton */);
+          event->accept();
+          return true;
+        } else if (gesture->state() == Qt::GestureFinished) {
+          dragGesture = false;
+          filterPointerEvent(rfb::Point(pos.x(), pos.y()), 0);
+          event->accept();
+          return true;
+        }
+      }
+
+      if (gesture->getType() == TapDragGesture::TapAndHold) {
+        if (gesture->state() == Qt::GestureFinished) {
+          vlog.debug("Cendio Right click gesture");
+          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 4 /* RightButton */);
+          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+          event->accept();
+          return true;
+        }
+      }
+
+      if (gesture->getType() == TapDragGesture::Tap) {
+        if(gesture->state() == Qt::GestureFinished) {
+          vlog.debug("Cendio Click gesture");
+          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 1 /* LeftButton */);
+          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+          event->accept();
+          return true;
+        }
+      }
+    }
+    return false;
+  });
+
+  for (auto type : gestureRecognizers.keys()) {
+    grabGesture(type);
+    vlog.debug("QGestureRecognizer::registerRecognizer type=%d", type);
+  }
 
   connect(QGuiApplication::clipboard(), &QClipboard::changed, this, &QAbstractVNCView::handleClipboardChange);
 
@@ -163,6 +318,10 @@ QAbstractVNCView::~QAbstractVNCView()
     delete action;
   }
   delete contextMenu;
+  for (auto gr : gestureRecognizers.keys()) {
+    QGestureRecognizer::unregisterRecognizer(gr);
+    delete gestureRecognizers.value(gr).first;
+  }
 }
 
 void QAbstractVNCView::toggleContextMenu()
@@ -644,10 +803,9 @@ bool QAbstractVNCView::handleTimeout(rfb::Timer* t)
 }
 #endif
 
-void QAbstractVNCView::getMouseProperties(QMouseEvent* event, int& x, int& y, int& buttonMask, int& wheelMask)
+void QAbstractVNCView::getMouseProperties(QMouseEvent* event, int& x, int& y, int& buttonMask)
 {
   buttonMask = 0;
-  wheelMask = 0;
   if (event->buttons() & Qt::LeftButton) {
     buttonMask |= 1;
   }
@@ -662,7 +820,7 @@ void QAbstractVNCView::getMouseProperties(QMouseEvent* event, int& x, int& y, in
   y = event->y();
 }
 
-void QAbstractVNCView::getMouseProperties(QWheelEvent* event, int& x, int& y, int& buttonMask, int& wheelMask)
+void QAbstractVNCView::getMouseWheelProperties(QWheelEvent* event, int& x, int& y, int& buttonMask, int& wheelMask)
 {
   buttonMask = 0;
   wheelMask = 0;
@@ -694,16 +852,26 @@ void QAbstractVNCView::getMouseProperties(QWheelEvent* event, int& x, int& y, in
 
 void QAbstractVNCView::mouseMoveEvent(QMouseEvent* event)
 {
+  if(event->source() != Qt::MouseEventNotSynthesized) {
+    return;
+  }
+
   grabPointer();
   maybeGrabKeyboard();
-  int x, y, buttonMask, wheelMask;
-  getMouseProperties(event, x, y, buttonMask, wheelMask);
-  filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
+  int x, y, buttonMask;
+  getMouseProperties(event, x, y, buttonMask);
+  filterPointerEvent(rfb::Point(x, y), buttonMask);
 }
 
 void QAbstractVNCView::mousePressEvent(QMouseEvent* event)
 {
   vlog.debug("QAbstractVNCView::mousePressEvent");
+
+  if(event->source() != Qt::MouseEventNotSynthesized) {
+    vlog.debug("!MouseEventNotSynthesized");
+    event->accept();
+    return;
+  }
 
   if (::viewOnly) {
     return;
@@ -711,8 +879,8 @@ void QAbstractVNCView::mousePressEvent(QMouseEvent* event)
 
   setFocus(Qt::FocusReason::MouseFocusReason);
 
-  int x, y, buttonMask, wheelMask;
-  getMouseProperties(event, x, y, buttonMask, wheelMask);
+  int x, y, buttonMask;
+  getMouseProperties(event, x, y, buttonMask);
   filterPointerEvent(rfb::Point(x, y), buttonMask);
 
   grabPointer();
@@ -723,14 +891,20 @@ void QAbstractVNCView::mouseReleaseEvent(QMouseEvent* event)
 {
   vlog.debug("QAbstractVNCView::mouseReleaseEvent");
 
+  if(event->source() != Qt::MouseEventNotSynthesized) {
+    vlog.debug("!MouseEventNotSynthesized");
+    event->accept();
+    return;
+  }
+
   if (::viewOnly) {
     return;
   }
 
   setFocus(Qt::FocusReason::MouseFocusReason);
 
-  int x, y, buttonMask, wheelMask;
-  getMouseProperties(event, x, y, buttonMask, wheelMask);
+  int x, y, buttonMask;
+  getMouseProperties(event, x, y, buttonMask);
   filterPointerEvent(rfb::Point(x, y), buttonMask);
 
   grabPointer();
@@ -742,7 +916,7 @@ void QAbstractVNCView::wheelEvent(QWheelEvent* event)
   vlog.debug("QAbstractVNCView::wheelEvent");
 
   int x, y, buttonMask, wheelMask;
-  getMouseProperties(event, x, y, buttonMask, wheelMask);
+  getMouseWheelProperties(event, x, y, buttonMask, wheelMask);
   if (wheelMask) {
     filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
   }
@@ -827,9 +1001,10 @@ bool QAbstractVNCView::event(QEvent *event)
     ungrabPointer();
     break;
   case QEvent::CursorChange:
-    vlog.debug("QAbstractVNCView::CursorChange");
     event->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
     return true;
+  case QEvent::Gesture:
+    return gestureEvent(reinterpret_cast<QGestureEvent*>(event));
   default:
     break;
   }
@@ -851,4 +1026,33 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
       mousePointerTimer->start();
     }
   }
+}
+
+bool QAbstractVNCView::gestureEvent(QGestureEvent* event)
+{
+  vlog.debug("QAbstractVNCView::gestureEvent");
+
+  if (::viewOnly) {
+    return true;
+  }
+
+  static QMap<QTapGesture*, bool> tapGestures;
+  for(auto g : event->gestures()) {
+    vlog.debug("QAbstractVNCView::gestureEvent: %d %s",
+               g->gestureType(),
+               QVariant::fromValue(g->state()).toString().toStdString().c_str());
+  }
+
+  for (auto gr : gestureRecognizers) {
+    if (gr.second(event))
+      return true;
+  }
+
+  return true;
+}
+
+void QAbstractVNCView::registerGesture(QGestureRecognizer *gr, GestureCallbackWithType cb)
+{
+  auto type = QGestureRecognizer::registerRecognizer(gr);
+  gestureRecognizers.insert(type, QPair<QGestureRecognizer*, GestureCallback>(gr, std::bind(cb, type, std::placeholders::_1)));
 }

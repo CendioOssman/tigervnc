@@ -3,9 +3,10 @@
 
 #include <QClipboard>
 #include <QLabel>
-#include <QList>
+#include <QMap>
 #include <QScrollArea>
 #include <QWidget>
+#include <functional>
 
 #include "rfb/Rect.h"
 #include "rfb/Timer.h"
@@ -22,6 +23,7 @@ class QVNCToast;
 class EmulateMB;
 class GestureHandler;
 class BaseKeyboardHandler;
+class QGestureRecognizer;
 
 namespace rfb
 {
@@ -83,8 +85,8 @@ protected:
 #ifdef QT_DEBUG
   bool handleTimeout(rfb::Timer* t) override;
 #endif
-  void getMouseProperties(QMouseEvent* event, int& x, int& y, int& buttonMask, int& wheelMask);
-  void getMouseProperties(QWheelEvent* event, int& x, int& y, int& buttonMask, int& wheelMask);
+  void getMouseProperties(QMouseEvent* event, int& x, int& y, int& buttonMask);
+  void getMouseWheelProperties(QWheelEvent* event, int& x, int& y, int& buttonMask, int& wheelMask);
   void mouseMoveEvent(QMouseEvent* event) override;
   void mousePressEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event) override;
@@ -124,6 +126,13 @@ protected:
 #ifdef __APPLE__
   QString serverReceivedData;
 #endif
+
+  // Gestures
+  typedef std::function<bool(QGestureEvent*)> GestureCallback;
+  typedef std::function<bool(Qt::GestureType, QGestureEvent*)> GestureCallbackWithType;
+  QMap<Qt::GestureType, QPair<QGestureRecognizer*, GestureCallback>> gestureRecognizers;
+  bool gestureEvent(QGestureEvent *event);
+  void registerGesture(QGestureRecognizer* gr, GestureCallbackWithType cb);
 
 private:
   // Initialization

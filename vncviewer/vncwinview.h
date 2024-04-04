@@ -3,11 +3,9 @@
 
 #include "abstractvncview.h"
 
-#include <map>
 #include <windows.h>
 
 class QTimer;
-class Win32TouchHandler;
 
 class QVNCWinView : public QAbstractVNCView
 {
@@ -23,11 +21,6 @@ public slots:
 
 protected:
   bool event(QEvent* e) override;
-
-private:
-  Win32TouchHandler* touchHandler = nullptr;
-
-  int handleTouchEvent(UINT message, WPARAM wParam, LPARAM lParam);
 };
 
 #endif // VNCWINVIEW_H

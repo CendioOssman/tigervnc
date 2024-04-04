@@ -25,7 +25,6 @@
 #include "vncconnection.h"
 #include "win32.h"
 
-#include <QDebug>
 #include <QMessageBox>
 #include <QScreen>
 #include <QTime>
