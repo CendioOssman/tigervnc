@@ -36,6 +36,7 @@
 #include <QTimer>
 #include <QUrl>
 #include <QWindow>
+#include <QMimeData>
 #undef asprintf
 #include "abstractvncview.h"
 #include "parameters.h"
@@ -358,7 +359,8 @@ void QAbstractVNCView::handleClipboardRequest()
 void QAbstractVNCView::handleClipboardChange(QClipboard::Mode mode)
 {
   qDebug() << "QAbstractVNCView::handleClipboardChange:" << mode << QGuiApplication::clipboard()->text(mode);
-  qDebug() << "QAbstractVNCView::handleClipboardChange:" << QGuiApplication::clipboard()->ownsClipboard();
+  qDebug() << "QAbstractVNCView::handleClipboardChange: ownsClipboard=" << QGuiApplication::clipboard()->ownsClipboard();
+  qDebug() << "QAbstractVNCView::handleClipboardChange: hasText=" << QGuiApplication::clipboard()->mimeData(mode)->hasText();
 
   if (!ViewerConfig::config()->sendClipboard()) {
     return;
@@ -373,6 +375,10 @@ void QAbstractVNCView::handleClipboardChange(QClipboard::Mode mode)
   }
 
   if(mode == QClipboard::Mode::Selection && QGuiApplication::clipboard()->ownsSelection()) {
+    return;
+  }
+
+  if (!QGuiApplication::clipboard()->mimeData(mode)->hasText()) {
     return;
   }
 
