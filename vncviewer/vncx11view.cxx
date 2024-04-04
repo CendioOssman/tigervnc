@@ -20,19 +20,10 @@
 #endif
 
 #include "GestureHandler.h"
-#include "PlatformPixelBuffer.h"
 #include "X11KeyboardHandler.h"
 #include "appmanager.h"
-#include "i18n.h"
-#include "parameters.h"
-#include "rfb/CMsgWriter.h"
-#include "rfb/Exception.h"
 #include "rfb/LogWriter.h"
-#include "rfb/ServerParams.h"
-#include "rfb/ledStates.h"
-#include "vncconnection.h"
 #include "vncgesturerecognizer.h"
-#include "vncwindow.h"
 #include "vncx11view.h"
 
 #include <X11/XKBlib.h>
@@ -80,16 +71,6 @@ QVNCX11View::~QVNCX11View()
 bool QVNCX11View::event(QEvent* e)
 {
   switch (e->type()) {
-  case QEvent::KeyboardLayoutChange:
-    break;
-  case QEvent::WindowBlocked:
-    //      if (hwnd_)
-    //        EnableWindow(hwnd_, false);
-    break;
-  case QEvent::WindowUnblocked:
-    //      if (hwnd_)
-    //        EnableWindow(hwnd_, true);
-    break;
   case QEvent::WindowActivate:
     // qDebug() << "WindowActivate";
     grabPointer();
@@ -98,14 +79,6 @@ bool QVNCX11View::event(QEvent* e)
     // qDebug() << "WindowDeactivate";
     ungrabPointer();
     break;
-    //    case QEvent::Enter:
-    //      qDebug() << "Enter";
-    //      grabPointer();
-    //      break;
-    //    case QEvent::Leave:
-    //      qDebug() << "Leave";
-    //      ungrabPointer();
-    //      break;
   case QEvent::CursorChange:
     // qDebug() << "CursorChange";
     e->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
