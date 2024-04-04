@@ -47,21 +47,6 @@ bool QVNCWinView::event(QEvent* e)
   return QAbstractVNCView::event(e);
 }
 
-void QVNCWinView::enterEvent(QEvent* e)
-{
-  qDebug() << "QVNCWinView::enterEvent";
-  grabPointer();
-  // SetCursor(cursor_);
-  QWidget::enterEvent(e);
-}
-
-void QVNCWinView::leaveEvent(QEvent* e)
-{
-  qDebug() << "QVNCWinView::leaveEvent";
-  ungrabPointer();
-  QWidget::leaveEvent(e);
-}
-
 int QVNCWinView::handleTouchEvent(UINT message, WPARAM wParam, LPARAM lParam)
 {
   return touchHandler->processEvent(message, wParam, lParam);

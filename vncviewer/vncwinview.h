@@ -24,8 +24,6 @@ public slots:
 
 protected:
   bool event(QEvent* e) override;
-  void enterEvent(QEvent*) override;
-  void leaveEvent(QEvent*) override;
 
 private:
   Win32TouchHandler* touchHandler = nullptr;
