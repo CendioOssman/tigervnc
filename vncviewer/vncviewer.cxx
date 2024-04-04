@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
 
   if (!ViewerConfig::instance()->getServerName().isEmpty()) {
     AppManager::instance()->connectToServer(ViewerConfig::instance()->getServerName());
+    app.setQuitOnLastWindowClosed(false);
     return app.exec();
   } else {
     ServerDialog serverDialog;

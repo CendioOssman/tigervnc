@@ -115,8 +115,10 @@ void AppManager::publishError(const QString message, bool quit)
   }
   errorCount++;
 
+  qApp->setQuitOnLastWindowClosed(true);
   AlertDialog d(isFullScreen(), message, quit);
   d.exec();
+  qApp->setQuitOnLastWindowClosed(false);
 }
 
 void AppManager::openVNCWindow(int width, int height, QString name)
@@ -152,6 +154,31 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   window->resize(width, height);
   window->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
 
+  // Support for -geometry option. Note that although we do support
+  // negative coordinates, we do not support -XOFF-YOFF (ie
+  // coordinates relative to the right edge / bottom edge) at this
+  // time.
+  int geom_x = 0, geom_y = 0;
+  if (!QString(::geometry).isEmpty()) {
+    int nfields =
+        sscanf(::geometry.getValueStr().c_str(), "+%d+%d", &geom_x, &geom_y);
+    if (nfields != 2) {
+      int geom_w, geom_h;
+      nfields = sscanf(::geometry.getValueStr().c_str(),
+                       "%dx%d+%d+%d",
+                       &geom_w,
+                       &geom_h,
+                       &geom_x,
+                       &geom_y);
+      if (nfields != 4) {
+        qDebug() << _("Invalid geometry specified!");
+      }
+    }
+    if (nfields == 2 || nfields == 4) {
+      window->move(geom_x, geom_y);
+    }
+  }
+
   if (::fullScreen) {
     window->fullscreen(true);
   } else {
@@ -159,10 +186,12 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   }
 
   emit vncWindowOpened();
+  qApp->setQuitOnLastWindowClosed(true);
 }
 
 void AppManager::closeVNCWindow()
 {
+  qApp->setQuitOnLastWindowClosed(false);
   QWidget* w = window->takeWidget();
   if (w) {
     window->setVisible(false);

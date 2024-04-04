@@ -71,31 +71,6 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   scrollAreaLayout->addWidget(vScrollBar, 0, 1);
   scrollAreaLayout->addWidget(hScrollBar, 1, 0);
 
-  // Support for -geometry option. Note that although we do support
-  // negative coordinates, we do not support -XOFF-YOFF (ie
-  // coordinates relative to the right edge / bottom edge) at this
-  // time.
-  int geom_x = 0, geom_y = 0;
-  if (!QString(::geometry).isEmpty()) {
-    int nfields =
-        sscanf(QString(::geometry).toStdString().c_str(), "+%d+%d", &geom_x, &geom_y);
-    if (nfields != 2) {
-      int geom_w, geom_h;
-      nfields = sscanf(QString(::geometry).toStdString().c_str(),
-                       "%dx%d+%d+%d",
-                       &geom_w,
-                       &geom_h,
-                       &geom_x,
-                       &geom_y);
-      if (nfields != 4) {
-        vlog.error(_("Invalid geometry specified!"));
-      }
-    }
-    if (nfields == 2 || nfields == 4) {
-      move(geom_x, geom_y);
-    }
-  }
-
   resizeTimer->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
   resizeTimer->setSingleShot(true);
   connect(resizeTimer, &QTimer::timeout, this, &QVNCWindow::handleDesktopSize);
