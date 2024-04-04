@@ -29,7 +29,6 @@ if (WIN32)
   set(OS_DEP_SOURCES
       vncwinview.cxx
       vncwinview.h
-      Surface_Win32.cxx
       Win32TouchHandler.cxx
       Win32TouchHandler.h
       Win32KeyboardHandler.cxx
@@ -41,7 +40,6 @@ elseif(APPLE)
   set(OS_DEP_SOURCES
       vncmacview.cxx
       vncmacview.h
-      Surface_OSX.cxx
       MacKeyboardHandler.cxx
       MacKeyboardHandler.h
       cocoa.h
@@ -52,7 +50,6 @@ else()
   set(OS_DEP_SOURCES
       vncx11view.cxx
       vncx11view.h
-      Surface_X11.cxx
       X11TouchHandler.cxx
       X11TouchHandler.h
       X11KeyboardHandler.cxx
@@ -100,8 +97,6 @@ set(PROJECT_SOURCES
         MonitorIndicesParameter.h
         PlatformPixelBuffer.h
         PlatformPixelBuffer.cxx
-        Surface.h
-        Surface.cxx
         EmulateMB.h
         EmulateMB.cxx
         CConn.h

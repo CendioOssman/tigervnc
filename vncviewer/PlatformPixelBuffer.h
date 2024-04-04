@@ -19,16 +19,14 @@
 #ifndef __PLATFORMPIXELBUFFER_H__
 #define __PLATFORMPIXELBUFFER_H__
 
-#include <list>
+#include <QPixmap>
 
 #include <os/Mutex.h>
 
 #include <rfb/PixelBuffer.h>
 #include <rfb/Region.h>
 
-#include "Surface.h"
-
-class PlatformPixelBuffer: public rfb::FullFramePixelBuffer, public Surface {
+class PlatformPixelBuffer: public rfb::FullFramePixelBuffer {
 public:
   PlatformPixelBuffer(int width, int height);
   ~PlatformPixelBuffer();
@@ -37,12 +35,16 @@ public:
 
   rfb::Rect getDamage(void);
 
+  int width() { return image.width(); }
+  int height() { return image.height(); }
+
   using rfb::FullFramePixelBuffer::width;
   using rfb::FullFramePixelBuffer::height;
 
 protected:
   os::Mutex mutex;
   rfb::Region damage;
+  QImage image;
 };
 
 #endif
