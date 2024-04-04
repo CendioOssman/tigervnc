@@ -19,9 +19,6 @@ static rfb::LogWriter vlog("QVNCMacView");
 QVNCMacView::QVNCMacView(QWidget* parent, Qt::WindowFlags f)
   : QAbstractVNCView(parent, f)
 {
-  setAttribute(Qt::WA_AcceptTouchEvents);
-  setFocusPolicy(Qt::StrongFocus);
-
   keyboardHandler = new MacKeyboardHandler(this);
   initKeyboardHandler();
 }

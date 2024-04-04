@@ -45,8 +45,6 @@ QVNCX11View::QVNCX11View(QWidget* parent, Qt::WindowFlags f)
   if (!vncGestureRecognizer_) {
     vncGestureRecognizer_ = new QVNCGestureRecognizer;
   }
-  setAttribute(Qt::WA_AcceptTouchEvents);
-  setFocusPolicy(Qt::StrongFocus);
 
   grabGesture(Qt::TapGesture);
   grabGesture(Qt::TapAndHoldGesture);

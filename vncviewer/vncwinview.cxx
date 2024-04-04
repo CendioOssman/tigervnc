@@ -29,16 +29,12 @@ static rfb::LogWriter vlog("Viewport");
 QVNCWinView::QVNCWinView(QWidget* parent, Qt::WindowFlags f)
   : QAbstractVNCView(parent, f)
 {
-  setAttribute(Qt::WA_AcceptTouchEvents);
-
   grabGesture(Qt::TapGesture);
   grabGesture(Qt::TapAndHoldGesture);
   grabGesture(Qt::PanGesture);
   grabGesture(Qt::PinchGesture);
   grabGesture(Qt::SwipeGesture);
   grabGesture(Qt::CustomGesture);
-
-  setFocusPolicy(Qt::StrongFocus);
 
   keyboardHandler = new Win32KeyboardHandler(this);
   initKeyboardHandler();
