@@ -69,6 +69,8 @@ public:
 
   void setPreferredEncoding(int encoding) { rfbcon->setPreferredEncoding(encoding); }
 
+  bool hasConnection() const { return rfbcon; }
+
 signals:
   void socketReadNotified();
   void socketWriteNotified();

@@ -168,17 +168,18 @@ void QAbstractVNCView::toggleContextMenu()
 void QAbstractVNCView::createContextMenu()
 {
   if (!contextMenu) {
+    contextMenu = new QMenu;
     contextMenuActions << new QDisconnectAction(p_("ContextMenu|", "Dis&connect"));
     contextMenuActions << new QMenuSeparator();
     auto fullScreenAction = new QFullScreenAction(p_("ContextMenu|", "&Full screen"));
     connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      fullScreenAction->setChecked(::fullScreen);
+      fullScreenAction->setChecked(AppManager::instance()->getWindow()->isFullscreenEnabled());
     });
     contextMenuActions << fullScreenAction;
     contextMenuActions << new QMinimizeAction(p_("ContextMenu|", "Minimi&ze"));
     auto revertSizeAction = new QRevertSizeAction(p_("ContextMenu|", "Resize &window to session"));
     connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      revertSizeAction->setChecked(!::fullScreen);
+      revertSizeAction->setChecked(!AppManager::instance()->getWindow()->isFullscreenEnabled());
     });
     contextMenuActions << revertSizeAction;
     contextMenuActions << new QMenuSeparator();
@@ -196,7 +197,6 @@ void QAbstractVNCView::createContextMenu()
     contextMenuActions << new QOptionDialogAction(p_("ContextMenu|", "&Options..."));
     contextMenuActions << new QInfoDialogAction(p_("ContextMenu|", "Connection &info..."));
     contextMenuActions << new QAboutDialogAction(p_("ContextMenu|", "About &TigerVNC viewer..."));
-    contextMenu = new QMenu;
 #if defined(__APPLE__)
     contextMenu->setAttribute(Qt::WA_NativeWindow);
     cocoa_set_overlay_property(contextMenu->winId());

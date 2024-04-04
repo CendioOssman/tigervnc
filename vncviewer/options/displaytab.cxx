@@ -54,8 +54,8 @@ void DisplayTab::apply()
 void DisplayTab::reset()
 {
   displayWindowed->setChecked(!::fullScreen);
-  displayFullScreenOnCurrentMonitor->setChecked(::fullScreen && !strcasecmp(::fullScreenMode, "current"));
-  displayFullScreenOnAllMonitors->setChecked(::fullScreen && !strcasecmp(::fullScreenMode, "all"));
-  displayFullScreenOnSelectedMonitors->setChecked(::fullScreen && !strcasecmp(::fullScreenMode, "selected"));
+  displayFullScreenOnCurrentMonitor->setChecked(::fullScreen && !strcasecmp(::fullScreenMode.getValueStr().c_str(), "current"));
+  displayFullScreenOnAllMonitors->setChecked(::fullScreen && !strcasecmp(::fullScreenMode.getValueStr().c_str(), "all"));
+  displayFullScreenOnSelectedMonitors->setChecked(::fullScreen && !strcasecmp(::fullScreenMode.getValueStr().c_str(), "selected"));
   selectedScreens->reset();
 }

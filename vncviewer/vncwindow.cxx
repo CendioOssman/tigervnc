@@ -106,11 +106,11 @@ QList<int> QVNCWindow::fullscreenScreens() const
   QApplication* app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
   QList<int> applicableScreens;
-  if (!strcasecmp(::fullScreenMode, "all")) {
+  if (!strcasecmp(::fullScreenMode.getValueStr().c_str(), "all")) {
     for (int i = 0; i < screens.length(); i++) {
       applicableScreens << i;
     }
-  } else if (!strcasecmp(::fullScreenMode, "selected")) {
+  } else if (!strcasecmp(::fullScreenMode.getValueStr().c_str(), "selected")) {
     for (int const& id : ::fullScreenSelectedMonitors.getParam()) {
       int i = id - 1; // Screen ID in config is 1-origin.
       if (i < screens.length()) {
@@ -170,9 +170,8 @@ void QVNCWindow::fullscreen(bool enabled)
       previousScreen = getCurrentScreen();
     }
 
-    auto mode = ::fullScreenMode;
     QList<int> selectedScreens = fullscreenScreens();
-    if (strcasecmp(mode, "current") && selectedScreens.length() > 0) {
+    if (strcasecmp(::fullScreenMode.getValueStr().c_str(), "current") && selectedScreens.length() > 0) {
       QScreen* selectedPrimaryScreen = screens[selectedScreens[0]];
       int xmin = INT_MAX;
       int ymin = INT_MAX;
@@ -233,7 +232,8 @@ void QVNCWindow::fullscreenOnCurrentDisplay()
 {
   QScreen* screen = getCurrentScreen();
   qDebug() << "QVNCWindow::fullscreenOnCurrentDisplay" << screen->geometry();
-  windowHandle()->setScreen(screen);
+  if (windowHandle())
+    windowHandle()->setScreen(screen);
   showFullScreen();
 
   // Capture the fullscreen geometry.

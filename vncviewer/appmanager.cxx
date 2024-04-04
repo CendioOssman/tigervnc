@@ -256,24 +256,26 @@ void AppManager::handleOptions()
   // list is cheap. Avoid overriding what the auto logic has selected
   // though.
   QVNCConnection* cc = AppManager::instance()->getConnection();
-  if (!::autoSelect) {
-    int encNum = encodingNum(::preferredEncoding);
+  if (cc && cc->hasConnection()) {
+    if (!::autoSelect) {
+      int encNum = encodingNum(::preferredEncoding);
 
-    if (encNum != -1)
-      cc->setPreferredEncoding(encNum);
+      if (encNum != -1)
+        cc->setPreferredEncoding(encNum);
+    }
+
+    if (::customCompressLevel)
+      cc->setCompressLevel(::compressLevel);
+    else
+      cc->setCompressLevel(-1);
+
+    if (!::noJpeg && !::autoSelect)
+      cc->setQualityLevel(::qualityLevel);
+    else
+      cc->setQualityLevel(-1);
+
+    cc->updatePixelFormat();
   }
-
-  if (::customCompressLevel)
-    cc->setCompressLevel(::compressLevel);
-  else
-    cc->setCompressLevel(-1);
-
-  if (!::noJpeg && !::autoSelect)
-    cc->setQualityLevel(::qualityLevel);
-  else
-    cc->setQualityLevel(-1);
-
-  cc->updatePixelFormat();
 
   /* DesktopWindow::handleOptions() */
   auto view = AppManager::instance()->getView();
@@ -282,15 +284,15 @@ void AppManager::handleOptions()
       view->maybeGrabKeyboard();
     else
       view->ungrabKeyboard();
-  }
 
-  auto window = AppManager::instance()->getWindow();
-  if (window) {
-    // Call fullscreen_on even if active since it handles
-    // fullScreenMode
-    if (::fullScreen)
-      window->fullscreen(true);
-    else if (!::fullScreen && window->isFullScreen())
-      window->fullscreen(false);
+    auto window = AppManager::instance()->getWindow();
+    if (window) {
+      // Call fullscreen_on even if active since it handles
+      // fullScreenMode
+      if (::fullScreen)
+        window->fullscreen(true);
+      else if (!::fullScreen && window->isFullscreenEnabled())
+        window->fullscreen(false);
+    }
   }
 }

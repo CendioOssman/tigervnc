@@ -72,8 +72,8 @@ public slots:
 private:
   int errorCount;
   QVNCConnection* connection;
-  QAbstractVNCView* view;
-  QVNCWindow* window;
+  QAbstractVNCView* view = nullptr;
+  QVNCWindow* window = nullptr;
   QTimer* rfbTimerProxy;
   AppManager();
 };
