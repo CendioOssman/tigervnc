@@ -3,6 +3,9 @@
 #include "viewerconfig.h"
 #include "rfb/Security.h"
 #include "rfb/SecurityClient.h"
+#ifdef HAVE_GNUTLS
+#include "rfb/CSecurityTLS.h"
+#endif
 
 #include <QCheckBox>
 #include <QGroupBox>
@@ -89,8 +92,8 @@ void SecurityTab::apply()
     if (securityAuthenticationStandard->isChecked()) {
       security.EnableSecType(rfb::secTypeVncAuth);
 #ifdef HAVE_NETTLE
-      security.EnableSecType(secTypeRA2ne);
-      security.EnableSecType(secTypeRAne256);
+      security.EnableSecType(rfb::secTypeRA2ne);
+      security.EnableSecType(rfb::secTypeRAne256);
 #endif
     }
     if (securityAuthenticationUsernameAndPassword->isChecked()) {
@@ -209,7 +212,7 @@ void SecurityTab::reset()
   }
 
 #ifdef HAVE_GNUTLS
-  securityEncryptionTLSWithX509CATextEdit->setText(rfb::CSecurityTLS::X509CA);
-  securityEncryptionTLSWithX509CRLTextEdit->setText(rfb::CSecurityTLS::X509CRL);
+  securityEncryptionTLSWithX509CATextEdit->setText(rfb::CSecurityTLS::X509CA.getValueStr().c_str());
+  securityEncryptionTLSWithX509CRLTextEdit->setText(rfb::CSecurityTLS::X509CRL.getValueStr().c_str());
 #endif
 }

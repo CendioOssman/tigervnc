@@ -1,5 +1,10 @@
 #include "loggerconfig.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "i18n.h"
 #include "viewerconfig.h"
 #include "rfb/Logger_stdio.h"
 #include "rfb/LogWriter.h"
@@ -14,6 +19,7 @@
 
 #include <Carbon/Carbon.h>
 #endif
+
 
 LoggerConfig::LoggerConfig()
 {
