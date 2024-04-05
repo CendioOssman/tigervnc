@@ -7,6 +7,10 @@
 #include "rfb/LogWriter.h"
 #include "vncconnection.h"
 
+#if !defined(WIN32) && !defined(__APPLE__)
+#include <X11/XKBlib.h>
+#endif
+
 #include <QDebug>
 
 static rfb::LogWriter vlog("BaseKeyboardHandler");
@@ -50,6 +54,14 @@ bool BaseKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuS
   // and send the same on release.
   downKeySym[keyCode] = keySym;
 
+#if defined(WIN32) || defined(__APPLE__)
+  vlog.debug("Key pressed: 0x%04x => 0x%04x", keyCode, keySym);
+#else
+  vlog.debug("Key pressed: 0x%04x => XK_%s (0x%04x)",
+             keyCode, XKeysymToString(keySym), keySym);
+#endif
+
+
   try {
     QVNCConnection* cc = AppManager::instance()->getConnection();
     // Fake keycode?
@@ -80,6 +92,13 @@ bool BaseKeyboardHandler::handleKeyRelease(int keyCode)
     vlog.debug("Unexpected release of key code %d", keyCode);
     return false;
   }
+
+#if defined(WIN32) || defined(__APPLE__)
+  vlog.debug("Key released: 0x%04x => 0x%04x", keyCode, iter->second);
+#else
+  vlog.debug("Key released: 0x%04x => XK_%s (0x%04x)",
+             keyCode, XKeysymToString(iter->second), iter->second);
+#endif
 
   try {
     QVNCConnection* cc = AppManager::instance()->getConnection();

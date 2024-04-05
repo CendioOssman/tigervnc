@@ -14,7 +14,6 @@ public:
   MacKeyboardHandler(QObject* parent = nullptr);
 
   bool nativeEventFilter(QByteArray const& eventType, void* message, long* result) override;
-
   bool handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
 
 public slots:

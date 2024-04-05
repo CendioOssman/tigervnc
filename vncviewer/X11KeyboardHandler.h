@@ -14,7 +14,6 @@ public:
   ~X11KeyboardHandler();
 
   bool nativeEventFilter(QByteArray const& eventType, void* message, long*) override;
-  void releaseKeyboard();
 
 public slots:
   void setLEDState(unsigned int state) override;

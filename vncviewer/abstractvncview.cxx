@@ -357,6 +357,7 @@ void QAbstractVNCView::flushPendingClipboard()
 void QAbstractVNCView::handleClipboardRequest()
 {
   qDebug() << "QAbstractVNCView::handleClipboardRequest" << pendingClientData;
+  vlog.debug("Sending clipboard data (%d bytes)", (int)pendingClientData.size());
   AppManager::instance()->getConnection()->sendClipboardData(pendingClientData);
   pendingClientData = "";
 }

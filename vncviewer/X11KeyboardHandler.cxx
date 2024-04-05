@@ -89,7 +89,7 @@ X11KeyboardHandler::X11KeyboardHandler(QObject* parent)
       code_map_keycode_to_qnum[keycode] = rfbcode;
     } else {
       code_map_keycode_to_qnum[keycode] = keycode;
-      // vlog.debug("No key mapping for key %.4s", keyname);
+      vlog.debug("No key mapping for key %.4s", keyname);
     }
   }
 
@@ -190,7 +190,6 @@ bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* me
 
 void X11KeyboardHandler::setLEDState(unsigned int state)
 {
-  // qDebug() << "X11KeyboardHandler::setLEDState";
   vlog.debug("Got server LED state: 0x%08x", state);
 
   unsigned int affect = 0;
@@ -297,11 +296,6 @@ void X11KeyboardHandler::ungrabKeyboard()
   keyboardGrabberTimer.stop();
   XUngrabKeyboard(display, CurrentTime);
   BaseKeyboardHandler::ungrabKeyboard();
-}
-
-void X11KeyboardHandler::releaseKeyboard()
-{
-  // Intentionally do nothing, in order to prevent Qt (on X11) from releasing the keyboard on focus out.
 }
 
 unsigned int X11KeyboardHandler::getModifierMask(unsigned int keysym)

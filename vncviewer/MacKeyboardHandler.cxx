@@ -107,7 +107,6 @@ bool MacKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuSh
 
 void MacKeyboardHandler::setLEDState(unsigned int state)
 {
-  // qDebug() << "MacKeyboardHandler::setLEDState";
   vlog.debug("Got server LED state: 0x%08x", state);
 
   int ret = cocoa_set_caps_lock_state(state & rfb::ledCapsLock);

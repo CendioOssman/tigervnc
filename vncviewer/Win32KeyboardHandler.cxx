@@ -246,7 +246,6 @@ bool Win32KeyboardHandler::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM 
 
 void Win32KeyboardHandler::setLEDState(unsigned int state)
 {
-  qDebug() << "Win32KeyboardHandler::setLEDState";
   vlog.debug("Got server LED state: 0x%08x", state);
 
   INPUT input[6];
