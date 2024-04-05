@@ -25,14 +25,12 @@ Toast::Toast(QWidget* parent)
 
 void Toast::showToast()
 {
-  qDebug() << "Toast::showToast" << toastGeometry();
   toastTimer->start();
   show();
 }
 
 void Toast::hideToast()
 {
-  qDebug() << "Toast::hideToast";
   toastTimer->stop();
   hide();
 }

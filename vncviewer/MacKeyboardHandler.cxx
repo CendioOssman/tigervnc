@@ -50,7 +50,6 @@ bool MacKeyboardHandler::nativeEventFilter(const QByteArray& eventType, void* me
     }
     if (cocoa_is_keyboard_event(message)) {
       int keyCode = cocoa_event_keycode(message);
-      // qDebug() << "nativeEvent: keyEvent: keyCode=" << keyCode << ", hexKeyCode=" << Qt::hex << keyCode;
       if ((unsigned)keyCode >= code_map_osx_to_qnum_len) {
         keyCode = 0;
       } else {
@@ -121,7 +120,6 @@ void MacKeyboardHandler::setLEDState(unsigned int state)
 
 void MacKeyboardHandler::pushLEDState()
 {
-  // qDebug() << "MacKeyboardHandler::pushLEDState";
   QVNCConnection* cc = AppManager::instance()->getConnection();
   // Server support?
   rfb::ServerParams* server = AppManager::instance()->getConnection()->server();

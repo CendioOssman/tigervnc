@@ -32,7 +32,7 @@ void BaseKeyboardHandler::ungrabKeyboard()
 
 bool BaseKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
 {
-  qDebug() << "X11KeyboardHandler::handleKeyPress: keyCode=" << keyCode << ", keySym=" << keySym;
+  vlog.debug("BaseKeyboardHandler::handleKeyPress");
   if (menuKeySym && keySym == menuKeySym) {
     if (!menuShortCutMode) {
       emit contextMenuKeyPressed(menuShortCutMode);
@@ -80,6 +80,7 @@ bool BaseKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuS
 
 bool BaseKeyboardHandler::handleKeyRelease(int keyCode)
 {
+  vlog.debug("BaseKeyboardHandler::handleKeyRelease");
   DownMap::iterator iter;
 
   if (::viewOnly)

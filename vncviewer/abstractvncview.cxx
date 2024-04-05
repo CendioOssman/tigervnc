@@ -218,10 +218,10 @@ bool QAbstractVNCView::isVisibleContextMenu() const
 
 void QAbstractVNCView::sendContextMenuKey()
 {
+  vlog.debug("QAbstractVNCView::sendContextMenuKey");
   if (::viewOnly) {
     return;
   }
-  qDebug() << "QAbstractVNCView::sendContextMenuKey";
   int dummy;
   int keyCode;
   quint32 keySym;
@@ -268,7 +268,7 @@ bool QAbstractVNCView::eventFilter(QObject* obj, QEvent* event)
 
 void QAbstractVNCView::resize(int width, int height)
 {
-  qDebug() << "QAbstractVNCView::resize: w=" << width << ", h=" << height;
+  vlog.debug("QAbstractVNCView::resize size=(%d, %d)", width, height);
   QWidget::resize(width, height);
 }
 
@@ -285,7 +285,7 @@ void QAbstractVNCView::initKeyboardHandler()
       &QVNCConnection::ledStateChanged,
       this,
       [=](unsigned int state) {
-        qDebug() << "QVNCConnection::ledStateChanged";
+        vlog.debug("QVNCConnection::ledStateChanged");
         // The first message is just considered to be the server announcing
         // support for this extension. We will push our state to sync up the
         // server when we get focus. If we already have focus we need to push
@@ -293,11 +293,11 @@ void QAbstractVNCView::initKeyboardHandler()
         if (firstLEDState) {
           firstLEDState = false;
           if (hasFocus()) {
-            qDebug() << "pushLEDState";
+            vlog.debug("KeyboardHandler::pushLEDState");
             keyboardHandler->pushLEDState();
           }
         } else if (hasFocus()) {
-          qDebug() << "setLEDState";
+          vlog.debug("KeyboardHandler::setLEDState");
           keyboardHandler->setLEDState(state);
         }
       },
@@ -311,13 +311,13 @@ void QAbstractVNCView::initKeyboardHandler()
 
 void QAbstractVNCView::installKeyboardHandler()
 {
-  qDebug() << "QAbstractVNCView::installKeyboardHandler";
+  vlog.debug("QAbstractVNCView::installKeyboardHandler");
   QAbstractEventDispatcher::instance()->installNativeEventFilter(keyboardHandler);
 }
 
 void QAbstractVNCView::removeKeyboardHandler()
 {
-  qDebug() << "QAbstractVNCView::removeKeyboardHandler";
+  vlog.debug("QAbstractVNCView::removeNativeEventFilter");
   QAbstractEventDispatcher::instance()->removeNativeEventFilter(keyboardHandler);
 }
 
@@ -337,7 +337,7 @@ void QAbstractVNCView::resetKeyboard()
 
 void QAbstractVNCView::setCursorPos(int, int)
 {
-  qDebug() << "QAbstractVNCView::setCursorPos";
+  vlog.debug("QAbstractVNCView::setCursorPos");
 }
 
 void QAbstractVNCView::flushPendingClipboard()
@@ -358,7 +358,7 @@ void QAbstractVNCView::flushPendingClipboard()
 
 void QAbstractVNCView::handleClipboardRequest()
 {
-  qDebug() << "QAbstractVNCView::handleClipboardRequest" << pendingClientData;
+  vlog.debug("QAbstractVNCView::handleClipboardRequest: %s", pendingClientData.toStdString().c_str());
   vlog.debug("Sending clipboard data (%d bytes)", (int)pendingClientData.size());
   AppManager::instance()->getConnection()->sendClipboardData(pendingClientData);
   pendingClientData = "";
@@ -366,9 +366,10 @@ void QAbstractVNCView::handleClipboardRequest()
 
 void QAbstractVNCView::handleClipboardChange(QClipboard::Mode mode)
 {
-  qDebug() << "QAbstractVNCView::handleClipboardChange:" << mode << QGuiApplication::clipboard()->text(mode);
-  qDebug() << "QAbstractVNCView::handleClipboardChange: ownsClipboard=" << QGuiApplication::clipboard()->ownsClipboard();
-  qDebug() << "QAbstractVNCView::handleClipboardChange: hasText=" << QGuiApplication::clipboard()->mimeData(mode)->hasText();
+  vlog.debug("QAbstractVNCView::handleClipboardChange: mode=%d", mode);
+  vlog.debug("QAbstractVNCView::handleClipboardChange: text=%s", QGuiApplication::clipboard()->text(mode).toStdString().c_str());
+  vlog.debug("QAbstractVNCView::handleClipboardChange: ownsClipboard=%d", QGuiApplication::clipboard()->ownsClipboard());
+  vlog.debug("QAbstractVNCView::handleClipboardChange: hasText=%d", QGuiApplication::clipboard()->mimeData(mode)->hasText());
 
   if (!::sendClipboard) {
     return;
@@ -409,7 +410,7 @@ void QAbstractVNCView::handleClipboardChange(QClipboard::Mode mode)
 
 void QAbstractVNCView::handleClipboardAnnounce(bool available)
 {
-  qDebug() << "QAbstractVNCView::handleClipboardAnnounce" << available;
+  vlog.debug("QAbstractVNCView::handleClipboardAnnounce: available=%d", available);
 
   if (!::acceptClipboard)
     return;
@@ -436,7 +437,7 @@ void QAbstractVNCView::handleClipboardAnnounce(bool available)
 
 void QAbstractVNCView::handleClipboardData(const char* data)
 {
-  qDebug() << "QAbstractVNCView::handleClipboardData" << data;
+  vlog.debug("QAbstractVNCView::handleClipboardData: %s", data);
   vlog.debug("Got clipboard data (%d bytes)", (int)strlen(data));
   QGuiApplication::clipboard()->setText(data);
 #if !defined(WIN32) && !defined(__APPLE__)
@@ -539,7 +540,8 @@ void QAbstractVNCView::paintEvent(QPaintEvent* event)
     pixmap = QPixmap(framebuffer->width(), framebuffer->height());
     damage = QRegion(0, 0, pixmap.width(), pixmap.height());
     resize(pixmap.width(), pixmap.height());
-    qDebug() << "bufferResized" << pixmap.size() << size();
+    vlog.debug("QAbstractVNCView::bufferResized pixmapSize=(%d, %d) size=(%d, %d)",
+               pixmap.size().width(), pixmap.size().height(), width(), height());
     emit bufferResized();
   }
 
@@ -680,7 +682,6 @@ void QAbstractVNCView::getMouseProperties(QWheelEvent* event, int& x, int& y, in
 
 void QAbstractVNCView::mouseMoveEvent(QMouseEvent* event)
 {
-  // qDebug() << "QAbstractVNCView::mousePressEvent" << event->x() << event->y();
   grabPointer();
   maybeGrabKeyboard();
   int x, y, buttonMask, wheelMask;
@@ -690,7 +691,7 @@ void QAbstractVNCView::mouseMoveEvent(QMouseEvent* event)
 
 void QAbstractVNCView::mousePressEvent(QMouseEvent* event)
 {
-  qDebug() << "QAbstractVNCView::mousePressEvent";
+  vlog.debug("QAbstractVNCView::mousePressEvent");
 
   if (::viewOnly) {
     return;
@@ -708,7 +709,7 @@ void QAbstractVNCView::mousePressEvent(QMouseEvent* event)
 
 void QAbstractVNCView::mouseReleaseEvent(QMouseEvent* event)
 {
-  qDebug() << "QAbstractVNCView::mouseReleaseEvent";
+  vlog.debug("QAbstractVNCView::mouseReleaseEvent");
 
   if (::viewOnly) {
     return;
@@ -726,7 +727,7 @@ void QAbstractVNCView::mouseReleaseEvent(QMouseEvent* event)
 
 void QAbstractVNCView::wheelEvent(QWheelEvent* event)
 {
-  qDebug() << "QAbstractVNCView::wheelEvent";
+  vlog.debug("QAbstractVNCView::wheelEvent");
 
   int x, y, buttonMask, wheelMask;
   getMouseProperties(event, x, y, buttonMask, wheelMask);
@@ -739,7 +740,7 @@ void QAbstractVNCView::wheelEvent(QWheelEvent* event)
 
 void QAbstractVNCView::focusInEvent(QFocusEvent* event)
 {
-  qDebug() << "QAbstractVNCView::focusInEvent";
+  vlog.debug("QAbstractVNCView::focusInEvent");
   if (keyboardHandler) {
     maybeGrabKeyboard();
 
@@ -747,7 +748,7 @@ void QAbstractVNCView::focusInEvent(QFocusEvent* event)
 
     // We may have gotten our lock keys out of sync with the server
     // whilst we didn't have focus. Try to sort this out.
-    qDebug() << "pushLEDState";
+    vlog.debug("KeyboardHandler::pushLEDState");
     keyboardHandler->pushLEDState();
 
     // Resend Ctrl/Alt if needed
@@ -763,7 +764,7 @@ void QAbstractVNCView::focusInEvent(QFocusEvent* event)
 
 void QAbstractVNCView::focusOutEvent(QFocusEvent* event)
 {
-  qDebug() << "QAbstractVNCView::focusOutEvent";
+  vlog.debug("QAbstractVNCView::focusOutEvent");
   if (::fullscreenSystemKeys) {
     ungrabKeyboard();
   }
@@ -774,7 +775,9 @@ void QAbstractVNCView::focusOutEvent(QFocusEvent* event)
 
 void QAbstractVNCView::resizeEvent(QResizeEvent* event)
 {
-  qDebug() << "QAbstractVNCView::resizeEvent" << event->size();
+  vlog.debug("QAbstractVNCView::resizeEvent size=(%d, %d)",
+             event->size().width(),
+             event->size().height());
   // Some systems require a grab after the window size has been changed.
   // Otherwise they might hold on to displays, resulting in them being unusable.
   grabPointer();
@@ -785,17 +788,19 @@ bool QAbstractVNCView::event(QEvent *event)
 {
   switch (event->type()) {
   case QEvent::WindowActivate:
-    // qDebug() << "WindowActivate";
+    vlog.debug("QAbstractVNCView::WindowActivate");
     grabPointer();
     break;
   case QEvent::WindowDeactivate:
-    // qDebug() << "WindowDeactivate";
+    vlog.debug("QAbstractVNCView::WindowDeactivate");
     ungrabPointer();
     break;
   case QEvent::CursorChange:
-    // qDebug() << "CursorChange";
+    vlog.debug("QAbstractVNCView::CursorChange");
     event->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
     return true;
+  default:
+    break;
   }
   return QWidget::event(event);
 }

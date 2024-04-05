@@ -83,7 +83,8 @@ QVNCWindow::~QVNCWindow() {}
 void QVNCWindow::updateScrollbars()
 {
   QAbstractVNCView* view = AppManager::instance()->getView();
-  qDebug() << "QVNCWindow::updateScrollbars" << view->pixmapSize() << size();
+  vlog.debug("QVNCWindow::updateScrollbars pixmapSize=(%d, %d) size=(%d, %d)",
+             view->pixmapSize().width(), view->pixmapSize().height(), width(), height());
 
   if (view->pixmapSize().width() > width()) {
     horizontalScrollBar()->show();
@@ -96,9 +97,6 @@ void QVNCWindow::updateScrollbars()
   } else {
     verticalScrollBar()->hide();
   }
-
-  qDebug() << "QVNCWindow::updateScrollbars"
-           << "END";
 }
 
 QList<int> QVNCWindow::fullscreenScreens() const
@@ -155,8 +153,7 @@ double QVNCWindow::effectiveDevicePixelRatio(QScreen* screen) const
 
 void QVNCWindow::fullscreen(bool enabled)
 {
-  qDebug() << "QVNCWindow::fullscreen: enabled=" << enabled;
-  //  TODO: Flag fullscreenEnabled seems have to be disabled before executing fullscreen().
+  vlog.debug("QVNCWindow::fullscreen enabled=%d", enabled);
   bool fullscreenEnabled0 = fullscreenEnabled;
   fullscreenEnabled = false;
   pendingFullscreen = enabled;
@@ -196,7 +193,7 @@ void QVNCWindow::fullscreen(bool enabled)
       }
       int w = xmax - xmin;
       int h = ymax - ymin;
-      // qDebug() << "Fullsize Geometry=" << QRect(xmin, ymin, w, h);
+      vlog.debug("QVNCWindow::fullscreen geometry=(%d, %d, %d, %d)", xmin, ymin, w, h);
       //  Capture the fullscreen geometry.
       fullscreenX = xmin;
       fullscreenY = ymin;
@@ -231,7 +228,11 @@ void QVNCWindow::fullscreen(bool enabled)
 void QVNCWindow::fullscreenOnCurrentDisplay()
 {
   QScreen* screen = getCurrentScreen();
-  qDebug() << "QVNCWindow::fullscreenOnCurrentDisplay" << screen->geometry();
+  vlog.debug("QVNCWindow::fullscreenOnCurrentDisplay geometry=(%d, %d, %d, %d)",
+             screen->geometry().x(),
+             screen->geometry().y(),
+             screen->geometry().width(),
+             screen->geometry().height());
   if (windowHandle())
     windowHandle()->setScreen(screen);
   showFullScreen();
@@ -250,7 +251,11 @@ void QVNCWindow::fullscreenOnCurrentDisplay()
 
 void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen, int vx, int vy, int, int)
 {
-  qDebug() << "QVNCWindow::fullscreenOnSelectedDisplay" << screen->geometry();
+  vlog.debug("QVNCWindow::fullscreenOnSelectedDisplay geometry=(%d, %d, %d, %d)",
+             screen->geometry().x(),
+             screen->geometry().y(),
+             screen->geometry().width(),
+             screen->geometry().height());
   windowHandle()->setScreen(screen);
   move(vx, vy);
   showFullScreen();
@@ -260,7 +265,11 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen, int vx, int vy, in
 
 void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight)
 {
-  qDebug() << "QVNCWindow::fullscreenOnSelectedDisplays" << vx << vy << vwidth << vheight;
+  vlog.debug("QVNCWindow::fullscreenOnSelectedDisplays geometry=(%d, %d, %d, %d)",
+             vx,
+             vy,
+             vwidth,
+             vheight);
   setWindowFlag(Qt::WindowStaysOnTopHint, true);
   setWindowFlag(Qt::FramelessWindowHint, true);
 #ifdef Q_OS_LINUX
@@ -282,7 +291,7 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vh
 
 void QVNCWindow::exitFullscreen()
 {
-  qDebug() << "QVNCWindow::exitFullscreen";
+  vlog.debug("QVNCWindow::exitFullscreen");
   setWindowFlag(Qt::WindowStaysOnTopHint, false);
   setWindowFlag(Qt::FramelessWindowHint, false);
 #ifdef Q_OS_LINUX
@@ -310,7 +319,7 @@ bool QVNCWindow::isFullscreenEnabled() const
 
 void QVNCWindow::handleDesktopSize()
 {
-  qDebug() << "QVNCWindow::handleDesktopSize";
+  vlog.debug("QVNCWindow::handleDesktopSize");
   double f = effectiveDevicePixelRatio();
   if (!QString(::desktopSize).isEmpty()) {
     int w, h;
@@ -319,18 +328,18 @@ void QVNCWindow::handleDesktopSize()
       return;
     }
     remoteResize(w * f, h * f);
-    // qDebug() << "QVNCWindow::handleDesktopSize(explicit): width=" << w << ", height=" << h;
+    vlog.debug("QVNCWindow::handleDesktopSize(explicit) size=(%d, %d)", w, h);
   } else if (::remoteResize) {
     // No explicit size, but remote resizing is on so make sure it
     // matches whatever size the window ended up being
     remoteResize(width() * f, height() * f);
-    // qDebug() << "QVNCWindow::handleDesktopSize(implicit): width=" << width() << ", height=" << height();
+    vlog.debug("QVNCWindow::handleDesktopSize(implicit) size=(%d, %d)", width(), height());
   }
 }
 
 void QVNCWindow::postRemoteResizeRequest()
 {
-  qDebug() << "QVNCWindow::postRemoteResizeRequest";
+  vlog.debug("QVNCWindow::postRemoteResizeRequest");
   resizeTimer->start();
 }
 
@@ -458,13 +467,13 @@ void QVNCWindow::remoteResize(int w, int h)
   } else {
     vlog.debug("%s", buffer);
   }
-  qDebug() << "QVNCWindow::remoteResize: w=" << w << ", h=" << h << ", layout=" << buffer;
+  vlog.debug("QVNCWindow::remoteResize size=(%d, %d) layout=%s", w, h, buffer);
   emit AppManager::instance()->getConnection()->writeSetDesktopSize(w, h, layout);
 }
 
 void QVNCWindow::resize(int width, int height)
 {
-  qDebug() << "QVNCWindow::resize: w=" << width << ", h=" << height << ", widgetResizable=" << widgetResizable();
+  vlog.debug("QVNCWindow::resize size=(%d, %d) widgetResizable=%d", width, height, widgetResizable());
   QScrollArea::resize(width, height);
 }
 
@@ -475,14 +484,13 @@ void QVNCWindow::showToast()
 
 void QVNCWindow::moveEvent(QMoveEvent* e)
 {
-  qDebug() << "QVNCWindow::moveEvent: pos=" << e->pos() << "oldPos=" << e->oldPos();
+  vlog.debug("QVNCWindow::moveEvent pos=(%d, %d) oldPos=(%d, %d)", e->pos().x(), e->pos().y(), e->oldPos().x(), e->oldPos().y());
   QScrollArea::moveEvent(e);
 }
 
 void QVNCWindow::resizeEvent(QResizeEvent* e)
 {
-  qDebug() << "QVNCWindow::resizeEvent: w=" << e->size().width() << ", h=" << e->size().height()
-           << ", widgetResizable=" << widgetResizable();
+  vlog.debug("QVNCWindow::resizeEvent size=(%d, %d) widgetResizable=%d", e->size().width(), e->size().height(), widgetResizable());
 
   QVNCConnection* cc = AppManager::instance()->getConnection();
 
@@ -500,15 +508,18 @@ void QVNCWindow::resizeEvent(QResizeEvent* e)
 void QVNCWindow::changeEvent(QEvent* e)
 {
   if (e->type() == QEvent::WindowStateChange) {
-    qDebug() << "QVNCWindow::changeEvent: w=" << width() << ",h=" << height() << ",state=" << windowState()
-             << ",oldState=" << (static_cast<QWindowStateChangeEvent*>(e))->oldState();
+    vlog.debug("QVNCWindow::changeEvent size=(%d, %d) state=%s oldState=%s",
+               width(),
+               height(),
+               QVariant::fromValue(windowState()).toString().toStdString().c_str(),
+               QVariant::fromValue((static_cast<QWindowStateChangeEvent*>(e))->oldState()).toString().toStdString().c_str());
   }
   QScrollArea::changeEvent(e);
 }
 
 void QVNCWindow::focusInEvent(QFocusEvent*)
 {
-  qDebug() << "QVNCWindow::focusInEvent";
+  vlog.debug("QVNCWindow::focusInEvent");
   QAbstractVNCView* view = AppManager::instance()->getView();
   if (view)
     view->maybeGrabKeyboard();
@@ -516,7 +527,7 @@ void QVNCWindow::focusInEvent(QFocusEvent*)
 
 void QVNCWindow::focusOutEvent(QFocusEvent*)
 {
-  qDebug() << "QVNCWindow::focusOutEvent";
+  vlog.debug("QVNCWindow::focusOutEvent");
   if (::fullscreenSystemKeys) {
     QAbstractVNCView* view = AppManager::instance()->getView();
     if (view)

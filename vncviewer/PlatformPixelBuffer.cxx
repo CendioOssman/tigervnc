@@ -20,13 +20,11 @@
 #include <config.h>
 #endif
 
-#include <assert.h>
 #include <stdlib.h>
 
 #include <rfb/LogWriter.h>
 #include <rdr/Exception.h>
 #include "PlatformPixelBuffer.h"
-#include "appmanager.h"
 
 #include <QDebug>
 
@@ -51,9 +49,6 @@ void PlatformPixelBuffer::commitBufferRW(const rfb::Rect& r)
   mutex.lock();
   damage.assign_union(rfb::Region(r));
   mutex.unlock();
-
-  AppManager::instance()->invalidate(r.tl.x, r.tl.y, r.br.x, r.br.y);
-//  qDebug() << "PlatformPixelBuffer::commitBufferRW(): Rect=(" << r.tl.x << "," << r.tl.y << ")-(" << r.br.x << "," << r.br.y << ")";
 }
 
 rfb::Rect PlatformPixelBuffer::getDamage(void)

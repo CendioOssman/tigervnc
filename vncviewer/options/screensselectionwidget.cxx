@@ -65,7 +65,7 @@ void ScreensSelectionWidget::getGlobalScreensGeometry(QList<int> screens, int& x
   for (int& screenIndex : screens) {
     QScreen* screen = appScreens[screenIndex];
     QRect rect = screen->geometry();
-    qDebug() << screenIndex << rect;
+
     if (xmin > rect.x()) {
       xmin = rect.x();
     }
@@ -79,7 +79,7 @@ void ScreensSelectionWidget::getGlobalScreensGeometry(QList<int> screens, int& x
       ymax = rect.y() + rect.height();
     }
   }
-  qDebug() << "ScreensSelectionWidget::getGlobalScreensGeometry" << xmin << ymin << xmax << ymax;
+
   w = xmax - xmin;
   h = ymax - ymin;
 }
@@ -106,8 +106,6 @@ void ScreensSelectionWidget::reset()
     availableScreens << i;
   }
 
-  qDebug() << "ScreensSelectionWidget::reset" << availableScreens;
-
   int xmin = INT_MAX;
   int ymin = INT_MAX;
   qreal w = INT_MAX;
@@ -120,12 +118,12 @@ void ScreensSelectionWidget::reset()
     qreal ry = (screen->geometry().y() - ymin) / h;
     qreal rw = screen->geometry().width() / w;
     qreal rh = screen->geometry().height() / h;
-    qDebug() << "screen[" << screenIndex << "] rx=" << rx << ", ry=" << ry << ", rw=" << rw << ", rh=" << rh;
+
     int lw = rw * width();
     int lh = rh * height();
     int lx = rx * width();
     int ly = ry * height();
-    qDebug() << "screen[" << screenIndex << "] lx=" << lx << ", ly=" << ly << ", lw=" << lw << ", lh=" << lh;
+
     CheckBox* newCheckBox = new CheckBox(this);
     newCheckBox->resize(lw, lh);
     newCheckBox->move(lx, ly);
@@ -157,21 +155,18 @@ void ScreensSelectionWidget::reset()
 
 void ScreensSelectionWidget::showEvent(QShowEvent* event)
 {
-  qDebug() << "ScreensSelectionWidget::showEvent";
   moveCheckBoxes();
   QWidget::showEvent(event);
 }
 
 void ScreensSelectionWidget::resizeEvent(QResizeEvent* event)
 {
-  qDebug() << "ScreensSelectionWidget::resizeEvent";
   moveCheckBoxes();
   QWidget::resizeEvent(event);
 }
 
 void ScreensSelectionWidget::moveCheckBoxes()
 {
-  qDebug() << "ScreensSelectionWidget::moveCheckBoxes" << geometry();
   QList<QScreen*> screens = qApp->screens();
   QList<int> availableScreens;
   for (int i = 0; i < screens.length(); i++) {
@@ -184,7 +179,6 @@ void ScreensSelectionWidget::moveCheckBoxes()
   qreal h = INT_MAX;
   getGlobalScreensGeometry(availableScreens, xmin, ymin, w, h);
   qreal ratio = qMin((width() / w), (height() / h));
-  qDebug() << "ratio" << (width() / w) << (height() / h);
 
   for (int& screenIndex : availableScreens) {
     QScreen* screen = screens[screenIndex];
@@ -192,12 +186,10 @@ void ScreensSelectionWidget::moveCheckBoxes()
     qreal ry = (screen->geometry().y() - ymin);
     qreal rw = screen->geometry().width();
     qreal rh = screen->geometry().height();
-    qDebug() << "screen[" << screenIndex << "] rx=" << rx << ", ry=" << ry << ", rw=" << rw << ", rh=" << rh;
     int lw = rw * ratio;
     int lh = rh * ratio;
     int lx = rx * ratio;
     int ly = ry * ratio;
-    qDebug() << "screen[" << screenIndex << "] lx=" << lx << ", ly=" << ly << ", lw=" << lw << ", lh=" << lh;
 
     auto it = std::find_if(checkBoxes.begin(), checkBoxes.end(), [=](QCheckBox* const& c) {
       return c->property("screenIndex") == screenIndex;

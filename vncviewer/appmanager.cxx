@@ -13,6 +13,7 @@
 #include "i18n.h"
 #include "rdr/Exception.h"
 #include "rfb/Timer.h"
+#include "rfb/LogWriter.h"
 
 #include <QAbstractEventDispatcher>
 #include <QApplication>
@@ -37,6 +38,8 @@
 #elif defined(Q_OS_UNIX)
 #include "vncx11view.h"
 #endif
+
+static rfb::LogWriter vlog("AppManager");
 
 AppManager::AppManager()
   : QObject(nullptr)
@@ -171,7 +174,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
                        &geom_x,
                        &geom_y);
       if (nfields != 4) {
-        qDebug() << _("Invalid geometry specified!");
+        vlog.debug(_("Invalid geometry specified!"));
       }
     }
     if (nfields == 2 || nfields == 4) {
@@ -205,11 +208,6 @@ void AppManager::closeVNCWindow()
 void AppManager::setWindowName(QString name)
 {
   window->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
-}
-
-void AppManager::invalidate(int x0, int y0, int x1, int y1)
-{
-  emit invalidateRequested(x0, y0, x1, y1);
 }
 
 void AppManager::refresh()

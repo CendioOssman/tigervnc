@@ -325,7 +325,6 @@ void CConn::setCursor(int width, int height, const Point &hotspot,
     }
   }
   else {
-    //qDebug() << "QVNCConnection::setCursor: w=" << width << ", h=" << height << ", data=" << data;
     QImage image(data, width, height, QImage::Format_RGBA8888);
     delete cursor;
     cursor = new QCursor(QPixmap::fromImage(image), hotspot.x, hotspot.y);
@@ -353,7 +352,6 @@ void CConn::fence(uint32_t flags, unsigned len, const char data[])
 
 void CConn::setLEDState(unsigned int state)
 {
-//  qDebug() << "QVNCConnection::setLEDState";
   vlog.debug("Got server LED state: 0x%08x", state);
   CConnection::setLEDState(state);
 
@@ -380,7 +378,6 @@ void CConn::handleClipboardData(const char* data)
 
 void CConn::resizeFramebuffer()
 {
-  //qDebug() << "QVNCConnection::resizeFramebuffer(): width=" << server.width() << ",height=" << server.height();
   PlatformPixelBuffer *framebuffer = new PlatformPixelBuffer(server.width(), server.height());
   setFramebuffer(framebuffer);
 
@@ -404,8 +401,6 @@ void CConn::resizeFramebuffer()
 //
 void CConn::autoSelectFormatAndEncoding()
 {
-  //qDebug() << "QVNCConnection::autoSelectFormatAndEncoding";
-
   // Always use Tight
   setPreferredEncoding(encodingTight);
 

@@ -285,7 +285,6 @@ void QVNCConnection::announceClipboard(bool available)
 void QVNCConnection::refreshFramebuffer()
 {
   try {
-    // qDebug() << "QVNCConnection::refreshFramebuffer: continuousUpdates_=" << continuousUpdates_;
     emit refreshFramebufferStarted();
     rfbcon->refreshFramebuffer();
   } catch (rdr::Exception& e) {

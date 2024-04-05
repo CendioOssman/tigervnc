@@ -55,7 +55,6 @@ Bool eventIsFocusWithSerial(Display* display, XEvent* event, XPointer arg)
 X11KeyboardHandler::X11KeyboardHandler(QObject* parent)
   : BaseKeyboardHandler(parent)
 {
-  qDebug() << "X11KeyboardHandler";
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   display = QX11Info::display();
 #else
@@ -102,7 +101,7 @@ X11KeyboardHandler::X11KeyboardHandler(QObject* parent)
 
 X11KeyboardHandler::~X11KeyboardHandler()
 {
-  qDebug() << "~X11KeyboardHandler";
+
 }
 
 bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* message, long*)
@@ -110,11 +109,8 @@ bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* me
   if (eventType == "xcb_generic_event_t") {
     xcb_generic_event_t* ev = static_cast<xcb_generic_event_t*>(message);
     uint16_t xcbEventType = ev->response_type;
-    // qDebug() << "X11KeyboardHandler::nativeEvent: xcbEventType=" << xcbEventType << ",eventType=" << eventType;
     if (xcbEventType == XCB_KEY_PRESS) {
       xcb_key_press_event_t* xevent = reinterpret_cast<xcb_key_press_event_t*>(message);
-      qDebug() << "X11KeyboardHandler::nativeEvent: XCB_KEY_PRESS: keycode=0x" << Qt::hex << xevent->detail
-               << ", state=0x" << xevent->state << ", mapped_keycode=0x" << code_map_keycode_to_qnum[xevent->detail];
 
       int keycode = code_map_keycode_to_qnum[xevent->detail];
 
@@ -180,9 +176,6 @@ bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* me
       if (!handleKeyRelease(keycode))
         return false;
       return true;
-    } else if (xcbEventType == XCB_EXPOSE) {
-    } else {
-      // qDebug() << "nativeEvent: eventtype=" << xcbEventType;
     }
   }
   return false;
@@ -217,7 +210,6 @@ void X11KeyboardHandler::setLEDState(unsigned int state)
 
 void X11KeyboardHandler::pushLEDState()
 {
-  // qDebug() << "X11KeyboardHandler::pushLEDState";
   QVNCConnection* cc = AppManager::instance()->getConnection();
   // Server support?
   rfb::ServerParams* server = AppManager::instance()->getConnection()->server();
@@ -261,7 +253,6 @@ void X11KeyboardHandler::pushLEDState()
 
 void X11KeyboardHandler::grabKeyboard()
 {
-  qDebug() << "X11KeyboardHandler::grabKeyboard";
   keyboardGrabberTimer.stop();
   Window w;
   int revert_to;

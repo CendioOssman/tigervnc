@@ -84,7 +84,6 @@ void TunnelFactory::run()
   });
   process->start(command, args);
   while (true) {
-    // qDebug() << "state=" << process_->state();
     if (process->state() == QProcess::Running || errorOccurred) {
       break;
     }

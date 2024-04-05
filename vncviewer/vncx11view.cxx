@@ -88,7 +88,6 @@ void QVNCX11View::bell()
 
 bool QVNCX11View::gestureEvent(QGestureEvent* event)
 {
-  qDebug() << "QVNCX11View::gestureEvent: event=" << event;
   int eid = eventNumber++;
   for (QGesture*& gesture : event->gestures()) {
     QPoint hotspot(0, 0);

@@ -1,6 +1,9 @@
 #include <QDebug>
 #include "rdr/Exception.h"
+#include "rfb/LogWriter.h"
 #include "vncapplication.h"
+
+static rfb::LogWriter vlog("QVNCApplication");
 
 QVNCApplication::QVNCApplication(int &argc, char **argv)
   : QApplication(argc, argv)
@@ -17,7 +20,7 @@ bool QVNCApplication::notify(QObject *receiver, QEvent *e)
     return QApplication::notify(receiver, e);
   }
   catch (rdr::Exception &e) {
-    qDebug() << "Error: " << e.str();
+    vlog.error("Error: %s", e.str());
     //AppManager::instance()->publishError(e.str());
     // Above 'emit' code is functional only when VNC connection class is running on a thread
     // other than GUI main thread.
@@ -29,12 +32,12 @@ bool QVNCApplication::notify(QObject *receiver, QEvent *e)
     QCoreApplication::exit(1);
   }
   catch (int &e) {
-    qDebug() << "Error: " << strerror(e);
+    vlog.error("Error: %s", strerror(e));
     //AppManager::instance()->publishError(strerror(e));
     QCoreApplication::exit(1);
   }
   catch (...) {
-    qDebug() << "Error: (unhandled)";
+    vlog.error("Error: (unhandled)");
     QCoreApplication::exit(1);
   }
   return true;

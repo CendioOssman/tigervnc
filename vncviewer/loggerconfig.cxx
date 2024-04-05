@@ -75,7 +75,11 @@ LoggerConfig::LoggerConfig()
 #else
   rfb::initFileLogger("/tmp/vncviewer.log");
 #endif
+#ifdef QT_DEBUG
+  rfb::LogWriter::setLogParams("*:stderr:100");
+#else
   rfb::LogWriter::setLogParams("*:stderr:30");
+#endif
 }
 
 LoggerConfig::~LoggerConfig()

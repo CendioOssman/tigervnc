@@ -52,15 +52,6 @@ public slots:
   void openVNCWindow(int width, int height, QString name);
   void closeVNCWindow();
   void setWindowName(QString name);
-  /**
-   * @brief Request the framebuffer to add the given dirty region. Typically, called
-   * by PlatformPixelBuffer::commitBufferRW().
-   * @param x0 X of the top left point.
-   * @param y0 Y of the top left point.
-   * @param x1 X of the bottom right point.
-   * @param y1 Y of the bottom right point.
-   */
-  void invalidate(int x0, int y0, int x1, int y1);
   void refresh();
   void openContextMenu();
   void openInfoDialog();

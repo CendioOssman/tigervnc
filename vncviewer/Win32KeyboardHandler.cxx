@@ -291,7 +291,6 @@ void Win32KeyboardHandler::setLEDState(unsigned int state)
 
 void Win32KeyboardHandler::pushLEDState()
 {
-  qDebug() << "Win32KeyboardHandler::pushLEDState";
   QVNCConnection* cc = AppManager::instance()->getConnection();
   // Server support?
   rfb::ServerParams* server = AppManager::instance()->getConnection()->server();
