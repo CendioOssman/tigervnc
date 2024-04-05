@@ -659,11 +659,17 @@ void QAbstractVNCView::getMouseProperties(QWheelEvent* event, int& x, int& y, in
   if (event->buttons() & Qt::XButton2) {
     wheelMask |= 64;
   }
-  if (event->delta() > 0) {
+  if (event->angleDelta().y() > 0) {
     wheelMask |= 8;
   }
-  if (event->delta() < 0) {
+  if (event->angleDelta().y() < 0) {
     wheelMask |= 16;
+  }
+  if (event->angleDelta().x() > 0) {
+    wheelMask |= 32;
+  }
+  if (event->angleDelta().x() < 0) {
+    wheelMask |= 64;
   }
 
   x = event->x();
