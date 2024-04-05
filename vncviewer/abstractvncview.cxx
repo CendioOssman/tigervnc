@@ -61,9 +61,9 @@ static rfb::LogWriter vlog("VNCView");
 QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
   : QWidget(parent, f)
   , mbemu(new EmulateMB)
-  , mousePointerTimer(new QTimer)
+  , mousePointerTimer(new QTimer(this))
   , menuKeySym(XK_F8)
-  , delayedInitializeTimer(new QTimer)
+  , delayedInitializeTimer(new QTimer(this))
 #ifdef QT_DEBUG
   , fpsTimer(this)
 #endif
@@ -85,6 +85,10 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
 
   mousePointerTimer->setInterval(::pointerEventInterval);
   mousePointerTimer->setSingleShot(true);
+  connect(mousePointerTimer, &QTimer::timeout, this, [this]() {
+    mbemu->filterPointerEvent(lastPointerPos, lastButtonMask);
+  });
+
 
   connect(AppManager::instance()->getConnection(),
           &QVNCConnection::cursorChanged,
@@ -149,8 +153,6 @@ QAbstractVNCView::~QAbstractVNCView()
     delete action;
   }
   delete contextMenu;
-  delete delayedInitializeTimer;
-  delete mousePointerTimer;
 }
 
 void QAbstractVNCView::toggleContextMenu()
@@ -804,13 +806,12 @@ void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
     return;
   }
   bool instantPosting = ::pointerEventInterval == 0 || (mask != lastButtonMask);
-  rfb::Point pointerPos = remotePointAdjust(pos);
+  lastPointerPos = remotePointAdjust(pos);
   lastButtonMask = mask;
   if (instantPosting) {
-    mbemu->filterPointerEvent(pointerPos, mask);
+    mbemu->filterPointerEvent(lastPointerPos, mask);
   } else {
     if (!mousePointerTimer->isActive()) {
-      mbemu->filterPointerEvent(pointerPos, mask);
       mousePointerTimer->start();
     }
   }

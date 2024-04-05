@@ -6,7 +6,9 @@
 #include <QList>
 #include <QScrollArea>
 #include <QWidget>
-#include <rfb/Timer.h>
+
+#include "rfb/Rect.h"
+#include "rfb/Timer.h"
 
 class QMenu;
 class QAction;
@@ -99,6 +101,7 @@ protected:
   // Mouse
   bool mouseGrabbed = false;
   EmulateMB* mbemu;
+  rfb::Point lastPointerPos;
   int lastButtonMask = 0;
   QTimer* mousePointerTimer;
 
