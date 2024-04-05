@@ -554,8 +554,10 @@ void QAbstractVNCView::paintEvent(QPaintEvent* event)
     if (rfbrect.enclosed_by(framebuffer->getRect())) {
       data = framebuffer->getBuffer(rfbrect, &stride);
       QImage image(data, w, h, stride * 4, QImage::Format_RGB32);
+#ifdef __APPLE__
       pixmapPainter.fillRect(bounds, QColor("#ff000000"));
       pixmapPainter.setCompositionMode(QPainter::CompositionMode_Plus);
+#endif
       pixmapPainter.drawImage(bounds, image);
     }
     damage = QRegion();
