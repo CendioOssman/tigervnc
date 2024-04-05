@@ -51,6 +51,7 @@ ScreensSelectionWidget::ScreensSelectionWidget(QWidget* parent)
 {
   setMinimumSize(200, 100);
   setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+  exclusiveButtons = new QButtonGroup(this);
 }
 
 void ScreensSelectionWidget::getGlobalScreensGeometry(QList<int> screens, int& xmin, int& ymin, qreal& w, qreal& h)
