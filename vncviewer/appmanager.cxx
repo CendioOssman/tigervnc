@@ -147,6 +147,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
           window,
           &QVNCWindow::postRemoteResizeRequest,
           Qt::QueuedConnection);
+  connect(view, &QAbstractVNCView::delayedInitialized, window, &QVNCWindow::showToast);
 
   view->resize(width, height);
   window->setWidget(view);

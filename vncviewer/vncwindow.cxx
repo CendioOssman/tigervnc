@@ -10,6 +10,7 @@
 #include "parameters.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ScreenSet.h"
+#include "toast.h"
 #include "vncconnection.h"
 
 #include <QApplication>
@@ -98,6 +99,8 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   resizeTimer->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
   resizeTimer->setSingleShot(true);
   connect(resizeTimer, &QTimer::timeout, this, &QVNCWindow::handleDesktopSize);
+
+  toast = new Toast(this);
 }
 
 QVNCWindow::~QVNCWindow() {}
@@ -490,6 +493,11 @@ void QVNCWindow::resize(int width, int height)
   QScrollArea::resize(width, height);
 }
 
+void QVNCWindow::showToast()
+{
+  toast->showToast();
+}
+
 void QVNCWindow::moveEvent(QMoveEvent* e)
 {
   qDebug() << "QVNCWindow::moveEvent: pos=" << e->pos() << "oldPos=" << e->oldPos();
@@ -508,6 +516,8 @@ void QVNCWindow::resizeEvent(QResizeEvent* e)
   }
 
   updateScrollbars();
+
+  toast->setGeometry(rect());
 
   QScrollArea::resizeEvent(e);
 }

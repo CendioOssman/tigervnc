@@ -109,6 +109,8 @@ set(PROJECT_SOURCES
         BaseTouchHandler.cxx
         BaseTouchHandler.h
         GestureEvent.h
+        toast.cxx
+        toast.h
         serverdialog.cxx
         serverdialog.h
         aboutdialog.cxx

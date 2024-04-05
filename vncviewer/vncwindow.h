@@ -6,6 +6,7 @@
 
 class QMoveEvent;
 class QResizeEvent;
+class Toast;
 
 class QVNCWindow : public QScrollArea
 {
@@ -34,6 +35,8 @@ public:
   void remoteResize(int width, int height);
   void resize(int width, int height);
 
+  void showToast();
+
 signals:
   void fullscreenChanged(bool enabled);
 
@@ -56,6 +59,8 @@ private:
   int fullscreenY;
   QScreen* previousScreen;
   QByteArray previousGeometry;
+
+  Toast* toast;
 };
 
 #endif // VNCWINDOW_H

@@ -69,8 +69,6 @@ public slots:
   virtual void grabPointer();
   virtual void ungrabPointer();
   virtual void bell() = 0;
-  void showToast();
-  void hideToast();
 
 signals:
   void delayedInitialized();
@@ -78,9 +76,6 @@ signals:
   void remoteResizeRequest();
 
 protected:
-  QFont toastFont() const;
-  QString toastText() const;
-  QRect toastGeometry() const;
   QRect localRectAdjust(QRect r);
   QRect remoteRectAdjust(QRect r);
   rfb::Point remotePointAdjust(rfb::Point const& pos);
@@ -133,8 +128,6 @@ private:
   // Initialization
   bool firstUpdate = true;
   QTimer* delayedInitializeTimer;
-
-  QTimer* toastTimer;
 
   // Rendering
   QPixmap pixmap;

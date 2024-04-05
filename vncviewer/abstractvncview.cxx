@@ -64,7 +64,6 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
   , mousePointerTimer(new QTimer)
   , menuKeySym(XK_F8)
   , delayedInitializeTimer(new QTimer)
-  , toastTimer(new QTimer(this))
 #ifdef QT_DEBUG
   , fpsTimer(this)
 #endif
@@ -127,11 +126,6 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
           this,
           &QAbstractVNCView::updateWindow,
           Qt::QueuedConnection);
-
-  toastTimer->setInterval(5000);
-  toastTimer->setSingleShot(true);
-  connect(toastTimer, &QTimer::timeout, this, &QAbstractVNCView::hideToast);
-  connect(this, &QAbstractVNCView::delayedInitialized, this, &QAbstractVNCView::showToast);
 
 #ifdef QT_DEBUG
   gettimeofday(&fpsLast, NULL);
@@ -472,47 +466,6 @@ void QAbstractVNCView::ungrabPointer()
   mouseGrabbed = false;
 }
 
-void QAbstractVNCView::showToast()
-{
-  qDebug() << "QAbstractVNCView::showToast" << toastGeometry();
-  toastTimer->start();
-  damage += toastGeometry(); // xTODO
-  update(localRectAdjust(damage.boundingRect()));
-}
-
-void QAbstractVNCView::hideToast()
-{
-  qDebug() << "QAbstractVNCView::hideToast";
-  toastTimer->stop();
-  damage += toastGeometry(); // xTODO
-  update(localRectAdjust(damage.boundingRect()));
-}
-
-QFont QAbstractVNCView::toastFont() const
-{
-  QFont f;
-  f.setBold(true);
-  f.setPixelSize(14);
-  return f;
-}
-
-QString QAbstractVNCView::toastText() const
-{
-  return QString::asprintf(_("Press %s to open the context menu"),
-                           ViewerConfig::config()->menuKey().toStdString().c_str());
-}
-
-QRect QAbstractVNCView::toastGeometry() const
-{
-  QFontMetrics fm(toastFont());
-  int b = 8;
-  QRect r = fm.boundingRect(toastText()).adjusted(-2 * b, -2 * b, 2 * b, 2 * b);
-
-  int x = (width() - r.width()) / 2;
-  int y = 50;
-  return QRect(QPoint(x, y), r.size());
-}
-
 QRect QAbstractVNCView::localRectAdjust(QRect r)
 {
   return r.adjusted((width() - pixmap.width()) / 2,
@@ -598,21 +551,12 @@ void QAbstractVNCView::paintEvent(QPaintEvent* event)
 
   painter.drawPixmap(r, pixmap, remoteRectAdjust(r));
 
-  if (toastTimer->isActive()) {
-    painter.setFont(toastFont());
-    painter.setPen(Qt::NoPen);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setBrush(QColor("#96101010"));
-    painter.drawRoundedRect(toastGeometry(), 15, 15, Qt::AbsoluteSize);
-    QPen p;
-    p.setColor("#e0ffffff");
-    painter.setPen(p);
-    painter.drawText(toastGeometry(), toastText(), QTextOption(Qt::AlignCenter));
-  }
-
 #ifdef QT_DEBUG
   fpsCounter++;
-  painter.setFont(toastFont());
+  QFont f;
+  f.setBold(true);
+  f.setPixelSize(14);
+  painter.setFont(f);
   painter.setPen(Qt::NoPen);
   painter.setRenderHint(QPainter::Antialiasing);
   painter.setBrush(QColor("#96101010"));
