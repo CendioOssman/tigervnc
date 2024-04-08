@@ -29,6 +29,16 @@
 #if defined(WIN32)
 #include <windows.h>
 #endif
+#ifdef Q_OS_LINUX
+#include <X11/Xlib.h>
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QX11Info>
+#else
+#include <QGuiApplication>
+#include <xcb/xcb.h>
+#endif
+#endif
 
 static rfb::LogWriter vlog("VNCWindow");
 
@@ -132,7 +142,7 @@ QScreen* QVNCWindow::getCurrentScreen() const
 {
   QList<QScreen*> screens = qApp->screens();
   for (QScreen*& screen : screens) {
-    if (screen->geometry().contains(mapToGlobal(cursor().pos()))) {
+    if (screen->geometry().contains(QCursor::pos())) {
       return screen;
     }
   }
@@ -168,8 +178,10 @@ void QVNCWindow::fullscreen(bool enabled)
     }
 
     QList<int> selectedScreens = fullscreenScreens();
+    int top, bottom, left, right;
+    QScreen* selectedPrimaryScreen = screens[selectedScreens[0]];
+    top = bottom = left = right = selectedScreens[0];
     if (strcasecmp(::fullScreenMode.getValueStr().c_str(), "current") && selectedScreens.length() > 0) {
-      QScreen* selectedPrimaryScreen = screens[selectedScreens[0]];
       int xmin = INT_MAX;
       int ymin = INT_MAX;
       int xmax = INT_MIN;
@@ -179,15 +191,19 @@ void QVNCWindow::fullscreen(bool enabled)
         QRect rect = screen->geometry();
         double dpr = effectiveDevicePixelRatio(screen);
         if (xmin > rect.x()) {
+          left = screenIndex;
           xmin = rect.x();
         }
         if (xmax < rect.x() + rect.width() * dpr) {
+          right = screenIndex;
           xmax = rect.x() + rect.width() * dpr;
         }
         if (ymin > rect.y()) {
+          top = screenIndex;
           ymin = rect.y();
         }
         if (ymax < rect.y() + rect.height() * dpr) {
+          bottom = screenIndex;
           ymax = rect.y() + rect.height() * dpr;
         }
       }
@@ -201,12 +217,24 @@ void QVNCWindow::fullscreen(bool enabled)
       fullscreenHeight = h;
 
       if (selectedScreens.length() == 1) { // Fullscreen on the selected single display.
-        fullscreenOnSelectedDisplay(selectedPrimaryScreen, xmin, ymin, w, h);
+#ifdef Q_OS_LINUX
+        fullscreenOnSelectedDisplays(top, top, top, top);
+#else
+        fullscreenOnSelectedDisplay(selectedPrimaryScreen);
+#endif
       } else { // Fullscreen on multiple displays.
+#ifdef Q_OS_LINUX
+        fullscreenOnSelectedDisplays(top, bottom, left, right);
+#else
         fullscreenOnSelectedDisplays(xmin, ymin, w, h);
+#endif
       }
     } else { // Fullscreen on the current single display.
+#ifdef Q_OS_LINUX
+      fullscreenOnSelectedDisplays(top, top, top, top);
+#else
       fullscreenOnCurrentDisplay();
+#endif
     }
   } else { // Exit fullscreen mode.
     exitFullscreen();
@@ -227,14 +255,16 @@ void QVNCWindow::fullscreen(bool enabled)
 
 void QVNCWindow::fullscreenOnCurrentDisplay()
 {
+#ifdef Q_OS_LINUX
+
+#else
   QScreen* screen = getCurrentScreen();
   vlog.debug("QVNCWindow::fullscreenOnCurrentDisplay geometry=(%d, %d, %d, %d)",
              screen->geometry().x(),
              screen->geometry().y(),
              screen->geometry().width(),
              screen->geometry().height());
-  if (windowHandle())
-    windowHandle()->setScreen(screen);
+  windowHandle()->setScreen(screen);
   showFullScreen();
 
   // Capture the fullscreen geometry.
@@ -247,9 +277,10 @@ void QVNCWindow::fullscreenOnCurrentDisplay()
 
   QAbstractVNCView* view = AppManager::instance()->getView();
   view->grabKeyboard();
+#endif
 }
 
-void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen, int vx, int vy, int, int)
+void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
 {
   vlog.debug("QVNCWindow::fullscreenOnSelectedDisplay geometry=(%d, %d, %d, %d)",
              screen->geometry().x(),
@@ -257,47 +288,105 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen, int vx, int vy, in
              screen->geometry().width(),
              screen->geometry().height());
   windowHandle()->setScreen(screen);
-  move(vx, vy);
+  move(screen->geometry().x(), screen->geometry().y());
   showFullScreen();
   QAbstractVNCView* view = AppManager::instance()->getView();
   view->grabKeyboard();
 }
 
-void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight)
+#ifdef Q_OS_LINUX
+void QVNCWindow::fullscreenOnSelectedDisplays(int top, int bottom, int left, int right) // screens indices
+{
+  vlog.debug("QVNCWindow::fullscreenOnSelectedDisplays top=%d bottom=%d left=%d right=%d",
+             top,
+             bottom,
+             left,
+             right);
+
+  show();
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  auto display = QX11Info::display();
+#else
+  auto display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+  int screen = DefaultScreen(display);
+
+  XEvent e1;
+  e1.xany.type = ClientMessage;
+  e1.xany.window = winId();
+  e1.xclient.message_type = XInternAtom(display, "_NET_WM_FULLSCREEN_MONITORS", 0);
+  e1.xclient.format = 32;
+  e1.xclient.data.l[0] = top;
+  e1.xclient.data.l[1] = bottom;
+  e1.xclient.data.l[2] = left;
+  e1.xclient.data.l[3] = right;
+  e1.xclient.data.l[4] = 0;
+  XSendEvent(display, RootWindow(display, screen),
+             0, SubstructureNotifyMask | SubstructureRedirectMask,
+             &e1);
+  XEvent e2;
+  e2.xany.type = ClientMessage;
+  e2.xany.window = winId();
+  e2.xclient.message_type = XInternAtom(display, "_NET_WM_STATE", 0);
+  e2.xclient.format = 32;
+  e2.xclient.data.l[0] = 1; // add
+  e2.xclient.data.l[1] = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", 0);
+  XSendEvent(display, RootWindow(display, screen),
+             0, SubstructureNotifyMask | SubstructureRedirectMask,
+             &e2);
+  QApplication::sync();
+
+  QAbstractVNCView* view = AppManager::instance()->getView();
+  view->grabKeyboard();
+
+  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
+    activateWindow();
+  });
+}
+#else
+void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight) // pixels
 {
   vlog.debug("QVNCWindow::fullscreenOnSelectedDisplays geometry=(%d, %d, %d, %d)",
              vx,
              vy,
              vwidth,
              vheight);
-  setWindowFlag(Qt::WindowStaysOnTopHint, true);
-  setWindowFlag(Qt::FramelessWindowHint, true);
-#ifdef Q_OS_LINUX
-  setWindowFlag(Qt::BypassWindowManagerHint, true);
-#endif
 
   move(vx, vy);
   resize(vwidth, vheight);
   showNormal();
   QAbstractVNCView* view = AppManager::instance()->getView();
   view->grabKeyboard();
-
-#ifdef Q_OS_LINUX
-  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
-    activateWindow();
-  });
-#endif
 }
+#endif
 
 void QVNCWindow::exitFullscreen()
 {
   vlog.debug("QVNCWindow::exitFullscreen");
   setWindowFlag(Qt::WindowStaysOnTopHint, false);
   setWindowFlag(Qt::FramelessWindowHint, false);
-#ifdef Q_OS_LINUX
-  setWindowFlag(Qt::BypassWindowManagerHint, false);
-#endif
 
+#ifdef Q_OS_LINUX
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  auto display = QX11Info::display();
+#else
+  auto display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+  int screen = DefaultScreen(display);
+
+  XEvent e2;
+  e2.xany.type = ClientMessage;
+  e2.xany.window = winId();
+  e2.xclient.message_type = XInternAtom(display, "_NET_WM_STATE", 0);
+  e2.xclient.format = 32;
+  e2.xclient.data.l[0] = 2; // toggle
+  e2.xclient.data.l[1] = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", 0);
+  XSendEvent(display, RootWindow(display, screen),
+             0, SubstructureNotifyMask | SubstructureRedirectMask,
+             &e2);
+  QApplication::sync();
+#else
   showNormal();
   move(0, 0);
   windowHandle()->setScreen(previousScreen);
@@ -305,6 +394,7 @@ void QVNCWindow::exitFullscreen()
   showNormal();
   QAbstractVNCView* view = AppManager::instance()->getView();
   view->ungrabKeyboard();
+#endif
 }
 
 bool QVNCWindow::allowKeyboardGrab() const
