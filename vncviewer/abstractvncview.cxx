@@ -393,6 +393,13 @@ void QAbstractVNCView::handleClipboardChange(QClipboard::Mode mode)
     return;
   }
 
+#ifdef __APPLE__
+  if (QGuiApplication::clipboard()->text(mode) == serverReceivedData) {
+    serverReceivedData = "";
+    return;
+  }
+#endif
+
   pendingServerClipboard = false;
   pendingClientData = QGuiApplication::clipboard()->text(mode);
 
@@ -439,6 +446,9 @@ void QAbstractVNCView::handleClipboardData(const char* data)
 {
   vlog.debug("QAbstractVNCView::handleClipboardData: %s", data);
   vlog.debug("Got clipboard data (%d bytes)", (int)strlen(data));
+#ifdef __APPLE__
+  serverReceivedData = data;
+#endif
   QGuiApplication::clipboard()->setText(data);
 #if !defined(WIN32) && !defined(__APPLE__)
   if (::setPrimary)

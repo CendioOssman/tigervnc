@@ -126,6 +126,9 @@ protected:
   bool pendingServerClipboard = false;
   bool pendingClientClipboard = false;
   QString pendingClientData;
+#ifdef __APPLE__
+  QString serverReceivedData;
+#endif
 
 private:
   // Initialization
