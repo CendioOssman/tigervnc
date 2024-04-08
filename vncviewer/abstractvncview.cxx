@@ -643,12 +643,6 @@ void QAbstractVNCView::getMouseProperties(QMouseEvent* event, int& x, int& y, in
   if (event->buttons() & Qt::RightButton) {
     buttonMask |= 4;
   }
-  if (event->buttons() & Qt::XButton1) {
-    wheelMask |= 32;
-  }
-  if (event->buttons() & Qt::XButton2) {
-    wheelMask |= 64;
-  }
 
   x = event->x();
   y = event->y();
@@ -666,12 +660,6 @@ void QAbstractVNCView::getMouseProperties(QWheelEvent* event, int& x, int& y, in
   }
   if (event->buttons() & Qt::RightButton) {
     buttonMask |= 4;
-  }
-  if (event->buttons() & Qt::XButton1) {
-    wheelMask |= 32;
-  }
-  if (event->buttons() & Qt::XButton2) {
-    wheelMask |= 64;
   }
   if (event->angleDelta().y() > 0) {
     wheelMask |= 8;
