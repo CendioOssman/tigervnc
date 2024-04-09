@@ -333,9 +333,19 @@ void QVNCConnection::setState(int state)
 
 void QVNCConnection::startProcessing()
 {
+  static bool recursing = false;
+
   if (!socket) {
     return;
   }
+
+  // I don't think processMsg() is recursion safe, so add this check
+  assert(!recursing);
+
+  recursing = true;
+  socketReadNotifier->setEnabled(false);
+  socketWriteNotifier->setEnabled(false);
+
   try {
     rfbcon->getOutStream()->cork(true);
 
@@ -354,8 +364,12 @@ void QVNCConnection::startProcessing()
     AppManager::instance()->publishError(strerror(e));
   }
 
-  if (socket)
+  if (socket) {
+    socketReadNotifier->setEnabled(true);
     socketWriteNotifier->setEnabled(socket->outStream().hasBufferedData());
+  }
+
+  recursing = false;
 }
 
 void QVNCConnection::flushSocket()
