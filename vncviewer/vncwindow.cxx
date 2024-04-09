@@ -172,7 +172,7 @@ void QVNCWindow::fullscreen(bool enabled)
   QList<QScreen*> screens = app->screens();
   if (enabled) {
     // cf. DesktopWindow::fullscreen_on()
-    if (!fullscreenEnabled) {
+    if (!fullscreenEnabled0) {
       previousGeometry = saveGeometry();
       previousScreen = getCurrentScreen();
     }
@@ -233,7 +233,7 @@ void QVNCWindow::fullscreen(bool enabled)
 #ifdef Q_OS_LINUX
       fullscreenOnSelectedDisplays(top, top, top, top);
 #else
-      fullscreenOnCurrentDisplay();
+      fullscreenOnSelectedDisplay(selectedPrimaryScreen);
 #endif
     }
   } else { // Exit fullscreen mode.
@@ -264,6 +264,8 @@ void QVNCWindow::fullscreenOnCurrentDisplay()
              screen->geometry().y(),
              screen->geometry().width(),
              screen->geometry().height());
+  show();
+  QApplication::sync();
   windowHandle()->setScreen(screen);
   showFullScreen();
 
@@ -287,11 +289,15 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
              screen->geometry().y(),
              screen->geometry().width(),
              screen->geometry().height());
-  windowHandle()->setScreen(screen);
-  move(screen->geometry().x(), screen->geometry().y());
-  showFullScreen();
-  QAbstractVNCView* view = AppManager::instance()->getView();
-  view->grabKeyboard();
+  show();
+  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
+    windowHandle()->setScreen(screen);
+    move(screen->geometry().x(), screen->geometry().y());
+    resize(screen->geometry().width(), screen->geometry().height());
+    showFullScreen();
+    QAbstractVNCView* view = AppManager::instance()->getView();
+    view->grabKeyboard();
+  });
 }
 
 #ifdef Q_OS_LINUX
@@ -352,21 +358,24 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vh
              vy,
              vwidth,
              vheight);
+  setWindowFlag(Qt::WindowStaysOnTopHint, true);
+  setWindowFlag(Qt::FramelessWindowHint, true);
 
-  move(vx, vy);
-  resize(vwidth, vheight);
-  showNormal();
-  QAbstractVNCView* view = AppManager::instance()->getView();
-  view->grabKeyboard();
+  show();
+  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
+    move(vx, vy);
+    resize(vwidth, vheight);
+    raise();
+    activateWindow();
+    QAbstractVNCView* view = AppManager::instance()->getView();
+    view->grabKeyboard();
+  });
 }
 #endif
 
 void QVNCWindow::exitFullscreen()
 {
   vlog.debug("QVNCWindow::exitFullscreen");
-  setWindowFlag(Qt::WindowStaysOnTopHint, false);
-  setWindowFlag(Qt::FramelessWindowHint, false);
-
 #ifdef Q_OS_LINUX
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   auto display = QX11Info::display();
@@ -387,6 +396,9 @@ void QVNCWindow::exitFullscreen()
              &e2);
   QApplication::sync();
 #else
+  setWindowFlag(Qt::WindowStaysOnTopHint, false);
+  setWindowFlag(Qt::FramelessWindowHint, false);
+
   showNormal();
   move(0, 0);
   windowHandle()->setScreen(previousScreen);

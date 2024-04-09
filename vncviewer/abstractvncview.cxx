@@ -787,7 +787,9 @@ bool QAbstractVNCView::event(QEvent *event)
   switch (event->type()) {
   case QEvent::WindowActivate:
     vlog.debug("QAbstractVNCView::WindowActivate");
-    grabPointer();
+    if(!mouseGrabbed) {
+      grabPointer();
+    }
     break;
   case QEvent::WindowDeactivate:
     vlog.debug("QAbstractVNCView::WindowDeactivate");
