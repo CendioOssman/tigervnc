@@ -54,12 +54,8 @@ public:
 
   QSize pixmapSize() const { return pixmap.size(); };
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
-  QScreen* screen() const;
-#endif
-
 public slots:
-  virtual void setCursorPos(int x, int y);
+  void setCursorPos(int x, int y);
   void flushPendingClipboard();
   void handleClipboardRequest();
   void handleClipboardChange(QClipboard::Mode mode);
@@ -78,6 +74,7 @@ signals:
   void remoteResizeRequest();
 
 protected:
+  QPoint localPointAdjust(QPoint p);
   QRect localRectAdjust(QRect r);
   QRect remoteRectAdjust(QRect r);
   rfb::Point remotePointAdjust(rfb::Point const& pos);

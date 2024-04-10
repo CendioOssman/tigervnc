@@ -18,7 +18,6 @@ public:
   virtual ~QVNCWinView();
 
 public slots:
-  void setCursorPos(int x, int y) override;
   void ungrabKeyboard() override;
   void bell() override;
 

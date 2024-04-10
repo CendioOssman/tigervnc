@@ -89,7 +89,6 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
     mbemu->filterPointerEvent(lastPointerPos, lastButtonMask);
   });
 
-
   connect(AppManager::instance()->getConnection(),
           &QVNCConnection::cursorChanged,
           this,
@@ -321,23 +320,25 @@ void QAbstractVNCView::removeKeyboardHandler()
   QAbstractEventDispatcher::instance()->removeNativeEventFilter(keyboardHandler);
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
-QScreen* QAbstractVNCView::screen() const
-{
-  // FIXME: check best overlap
-  return qApp->screens()[0];
-}
-#endif
-
 void QAbstractVNCView::resetKeyboard()
 {
   if (keyboardHandler)
     keyboardHandler->resetKeyboard();
 }
 
-void QAbstractVNCView::setCursorPos(int, int)
+void QAbstractVNCView::setCursorPos(int x, int y)
 {
-  vlog.debug("QAbstractVNCView::setCursorPos");
+  vlog.debug("QAbstractVNCView::setCursorPos mouseGrabbed=%d", mouseGrabbed);
+  if (!mouseGrabbed) {
+    // Do nothing if we do not have the mouse captured.
+    return;
+  }
+  QPoint gp = mapToGlobal(localPointAdjust(QPoint(x, y)));
+  vlog.debug("QAbstractVNCView::setCursorPos local x=%d y=%d", x, y);
+  vlog.debug("QAbstractVNCView::setCursorPos screen x=%d y=%d", gp.x(), gp.y());
+  x = gp.x();
+  y = gp.y();
+  QCursor::setPos(x, y);
 }
 
 void QAbstractVNCView::flushPendingClipboard()
@@ -493,6 +494,13 @@ void QAbstractVNCView::ungrabPointer()
 {
   setMouseTracking(false);
   mouseGrabbed = false;
+}
+
+QPoint QAbstractVNCView::localPointAdjust(QPoint p)
+{
+  p.rx() += (width() - pixmap.width()) / 2;
+  p.ry() += (height() - pixmap.height()) / 2;
+  return p;
 }
 
 QRect QAbstractVNCView::localRectAdjust(QRect r)

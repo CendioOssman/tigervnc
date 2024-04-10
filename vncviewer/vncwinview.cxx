@@ -52,20 +52,6 @@ int QVNCWinView::handleTouchEvent(UINT message, WPARAM wParam, LPARAM lParam)
   return touchHandler->processEvent(message, wParam, lParam);
 }
 
-void QVNCWinView::setCursorPos(int x, int y)
-{
-  vlog.debug("QVNCWinView::setCursorPos mouseGrabbed=%d", mouseGrabbed);
-  if (!mouseGrabbed) {
-    // Do nothing if we do not have the mouse captured.
-    return;
-  }
-  QPoint gp = mapToGlobal(QPoint(x, y));
-  vlog.debug("QVNCWinView::setCursorPos local x=%d y=%d, screen x=%d y=%d", x, y, gp.x(), gp.y());
-  x = gp.x();
-  y = gp.y();
-  SetCursorPos(x, y);
-}
-
 void QVNCWinView::ungrabKeyboard()
 {
   ungrabPointer();
