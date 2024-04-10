@@ -23,9 +23,10 @@ public:
 
   }
 
-  QSize sizeHint (const QStyleOptionViewItem & option, const QModelIndex & index ) const
+  QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
   {
-    return QSize(100, 40);
+    int width = option.fontMetrics.boundingRect(index.data().toString()).width();
+    return QSize(width + 40, 40);
   }
 };
 
@@ -44,20 +45,22 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   QListWidget* listWidget = new QListWidget;
   listWidget->setFrameShape(QFrame::NoFrame);
   listWidget->setItemDelegate(new OptionsDelegate(this));
-  QStringList tabs = {tr("Compression"),
+  QStringList tabs = {"   " + tr("Compression"),
 #if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
-                      tr("Security"),
+                      "   " + tr("Security"),
 #endif
-                      tr("Input"),
-                      tr("Display"),
-                      tr("Misc")};
+                      "   " + tr("Input"),
+                      "   " + tr("Display"),
+                      "   " + tr("Misc")};
   listWidget->addItems(tabs);
   listWidget->setCurrentRow(0);
+  listWidget->setFixedWidth(listWidget->sizeHintForColumn(0));
 
   hLayout->addWidget(listWidget);
 
   QFrame* vFrame = new QFrame;
-  vFrame->setFrameShape(QFrame::VLine);
+  vFrame->setFrameShape(QFrame::StyledPanel);
+  vFrame->setFixedWidth(1);
   hLayout->addWidget(vFrame);
 
   tabWidget = new QStackedWidget;
@@ -76,7 +79,8 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   layout->addLayout(hLayout);
 
   QFrame* hFrame = new QFrame;
-  hFrame->setFrameShape(QFrame::HLine);
+  hFrame->setFrameShape(QFrame::StyledPanel);
+  hFrame->setFixedHeight(1);
   layout->addWidget(hFrame);
 
   QHBoxLayout* btnsLayout = new QHBoxLayout;
