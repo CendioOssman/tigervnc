@@ -186,10 +186,10 @@ void QVNCConnection::connectToServer(QString addressport)
     }
   } catch (rdr::Exception& e) {
     resetConnection();
-    AppManager::instance()->publishError(e.str(), true);
+    AppManager::instance()->publishError(e.str());
   } catch (int& e) {
     resetConnection();
-    AppManager::instance()->publishError(strerror(e), true);
+    AppManager::instance()->publishError(strerror(e));
   }
 }
 

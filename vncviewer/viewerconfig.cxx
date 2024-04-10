@@ -368,6 +368,9 @@ void ViewerConfig::parseServerName()
 
 void ViewerConfig::addServer(QString serverName)
 {
+  if (serverName.isEmpty())
+    return;
+
   serverHistory.removeOne(serverName);
   serverHistory.push_front(serverName);
   parseServerName();

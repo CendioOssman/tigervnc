@@ -12,6 +12,22 @@
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QVBoxLayout>
+#include <QStyledItemDelegate>
+
+class OptionsDelegate : public QStyledItemDelegate
+{
+public:
+  explicit OptionsDelegate(QObject *parent = nullptr)
+    : QStyledItemDelegate(parent)
+  {
+
+  }
+
+  QSize sizeHint (const QStyleOptionViewItem & option, const QModelIndex & index ) const
+  {
+    return QSize(100, 40);
+  }
+};
 
 OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   : QDialog{parent}
@@ -20,10 +36,14 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   setWindowFlag(Qt::WindowStaysOnTopHint, staysOnTop);
 
   QVBoxLayout* layout = new QVBoxLayout;
+  layout->setContentsMargins(0,0,0,0);
+  layout->setSpacing(0);
 
   QHBoxLayout* hLayout = new QHBoxLayout;
 
   QListWidget* listWidget = new QListWidget;
+  listWidget->setFrameShape(QFrame::NoFrame);
+  listWidget->setItemDelegate(new OptionsDelegate(this));
   QStringList tabs = {tr("Compression"),
 #if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
                       tr("Security"),
@@ -35,6 +55,10 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   listWidget->setCurrentRow(0);
 
   hLayout->addWidget(listWidget);
+
+  QFrame* vFrame = new QFrame;
+  vFrame->setFrameShape(QFrame::VLine);
+  hLayout->addWidget(vFrame);
 
   tabWidget = new QStackedWidget;
   tabWidget->addWidget(new CompressionTab);
@@ -51,7 +75,12 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
 
   layout->addLayout(hLayout);
 
+  QFrame* hFrame = new QFrame;
+  hFrame->setFrameShape(QFrame::HLine);
+  layout->addWidget(hFrame);
+
   QHBoxLayout* btnsLayout = new QHBoxLayout;
+  btnsLayout->setContentsMargins(10,10,10,10);
   btnsLayout->addStretch(1);
   QPushButton* applyBtn = new QPushButton(tr("Apply"));
   btnsLayout->addWidget(applyBtn, 0, Qt::AlignRight);
