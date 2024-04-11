@@ -140,13 +140,7 @@ QList<int> QVNCWindow::fullscreenScreens() const
 
 QScreen* QVNCWindow::getCurrentScreen() const
 {
-  QList<QScreen*> screens = qApp->screens();
-  for (QScreen*& screen : screens) {
-    if (screen->geometry().contains(QCursor::pos())) {
-      return screen;
-    }
-  }
-  return screens[0];
+  return windowHandle()->screen();
 }
 
 double QVNCWindow::effectiveDevicePixelRatio(QScreen* screen) const
