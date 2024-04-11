@@ -123,7 +123,7 @@ QList<int> QVNCWindow::fullscreenScreens() const
 
 QScreen* QVNCWindow::getCurrentScreen() const
 {
-  return windowHandle()->screen();
+  return windowHandle() ? windowHandle()->screen() : qApp->primaryScreen();
 }
 
 double QVNCWindow::effectiveDevicePixelRatio(QScreen* screen) const
