@@ -255,7 +255,7 @@ void QVNCWindow::fullscreenOnCurrentDisplay()
   fullscreenHeight = vg.height() * dpr;
 
   QAbstractVNCView* view = AppManager::instance()->getView();
-  view->grabKeyboard();
+  view->maybeGrabKeyboard();
 #endif
 }
 
@@ -273,7 +273,7 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
     resize(screen->geometry().width(), screen->geometry().height());
     showFullScreen();
     QAbstractVNCView* view = AppManager::instance()->getView();
-    view->grabKeyboard();
+    view->maybeGrabKeyboard();
   });
 }
 
@@ -321,7 +321,7 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int top, int bottom, int left, int
   QApplication::sync();
 
   QAbstractVNCView* view = AppManager::instance()->getView();
-  view->grabKeyboard();
+  view->maybeGrabKeyboard();
 
   QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
     activateWindow();
@@ -345,7 +345,7 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vh
     raise();
     activateWindow();
     QAbstractVNCView* view = AppManager::instance()->getView();
-    view->grabKeyboard();
+    view->maybeGrabKeyboard();
   });
 }
 #endif
