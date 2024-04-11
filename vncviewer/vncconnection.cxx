@@ -368,6 +368,7 @@ void QVNCConnection::startProcessing()
                  "the session could be established."));
     QString message = _("The connection was dropped by the server "
                       "before the session could be established.");
+    resetConnection();
     AppManager::instance()->publishError(message);
   } catch (rdr::Exception& e) {
     resetConnection();
