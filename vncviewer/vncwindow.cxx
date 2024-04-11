@@ -139,6 +139,7 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   setPalette(p);
   setBackgroundRole(QPalette::Window);
 
+  // FIXME: this is a lot faster than before
   resizeTimer->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
   resizeTimer->setSingleShot(true);
   connect(resizeTimer, &QTimer::timeout, this, &QVNCWindow::handleDesktopSize);
