@@ -51,6 +51,11 @@ public:
 
   void sendClipboardContent(const char *data);
 
+  void setDesktopSize(int w, int h);
+  void setExtendedDesktopSize(unsigned reason, unsigned result,
+                                      int w, int h,
+                                      const rfb::ScreenSet& layout);
+
   void setName(const char* name) override;
 
   void setColourMapEntries(int firstColour, int nColours, uint16_t* rgbs) override;

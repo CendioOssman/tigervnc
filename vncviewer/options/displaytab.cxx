@@ -3,6 +3,7 @@
 #include "parameters.h"
 #include "screensselectionwidget.h"
 #include "viewerconfig.h"
+#include "i18n.h"
 
 #include <QGroupBox>
 #include <QRadioButton>
@@ -13,16 +14,16 @@ DisplayTab::DisplayTab(QWidget* parent)
 {
   QVBoxLayout* layout = new QVBoxLayout;
 
-  QGroupBox* groupBox1 = new QGroupBox(tr("Display mode"));
+  QGroupBox* groupBox1 = new QGroupBox(_("Display mode"));
   QVBoxLayout* vbox1 = new QVBoxLayout;
-  displayWindowed = new QRadioButton(tr("Windowed"));
+  displayWindowed = new QRadioButton(_("Windowed"));
   vbox1->addWidget(displayWindowed);
-  displayFullScreenOnCurrentMonitor = new QRadioButton(tr("Full screen on current monitor"));
+  displayFullScreenOnCurrentMonitor = new QRadioButton(_("Full screen on current monitor"));
   vbox1->addWidget(displayFullScreenOnCurrentMonitor);
-  displayFullScreenOnAllMonitors = new QRadioButton(tr("Full screen on all monitors"));
+  displayFullScreenOnAllMonitors = new QRadioButton(_("Full screen on all monitors"));
   displayFullScreenOnAllMonitors->setEnabled(ViewerConfig::canFullScreenOnMultiDisplays());
   vbox1->addWidget(displayFullScreenOnAllMonitors);
-  displayFullScreenOnSelectedMonitors = new QRadioButton(tr("Full screen on selected monitor(s)"));
+  displayFullScreenOnSelectedMonitors = new QRadioButton(_("Full screen on selected monitor(s)"));
   vbox1->addWidget(displayFullScreenOnSelectedMonitors);
   selectedScreens = new ScreensSelectionWidget;
   selectedScreens->setEnabled(false);

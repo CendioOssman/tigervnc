@@ -2,6 +2,7 @@
 
 #include "parameters.h"
 #include "menukey.h"
+#include "i18n.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -15,24 +16,24 @@ InputTab::InputTab(QWidget* parent)
 {
   QVBoxLayout* layout = new QVBoxLayout;
 
-  inputViewOnly = new QCheckBox(tr("View only (ignore mouse and keyboard)"));
+  inputViewOnly = new QCheckBox(_("View only (ignore mouse and keyboard)"));
   layout->addWidget(inputViewOnly);
 
-  QGroupBox* groupBox1 = new QGroupBox(tr("Mouse"));
+  QGroupBox* groupBox1 = new QGroupBox(_("Mouse"));
   QVBoxLayout* vbox1 = new QVBoxLayout;
-  inputMouseEmulateMiddleButton = new QCheckBox(tr("Emulate middle mouse button"));
+  inputMouseEmulateMiddleButton = new QCheckBox(_("Emulate middle mouse button"));
   vbox1->addWidget(inputMouseEmulateMiddleButton);
-  inputMouseShowDot = new QCheckBox(tr("Show dot when no cursor"));
+  inputMouseShowDot = new QCheckBox(_("Show dot when no cursor"));
   vbox1->addWidget(inputMouseShowDot);
   groupBox1->setLayout(vbox1);
   layout->addWidget(groupBox1);
 
-  QGroupBox* groupBox2 = new QGroupBox(tr("Keyboard"));
+  QGroupBox* groupBox2 = new QGroupBox(_("Keyboard"));
   QVBoxLayout* vbox2 = new QVBoxLayout;
-  inputKeyboardPassSystemKeys = new QCheckBox(tr("Pass system keys directly to server (full screen)"));
+  inputKeyboardPassSystemKeys = new QCheckBox(_("Pass system keys directly to server (full screen)"));
   vbox2->addWidget(inputKeyboardPassSystemKeys);
   QHBoxLayout* hbox2 = new QHBoxLayout;
-  QLabel* label = new QLabel(tr("Menu key"));
+  QLabel* label = new QLabel(_("Menu key"));
   hbox2->addWidget(label);
   inputKeyboardMenuKeyCombo = new QComboBox;
   QStringListModel* model = new QStringListModel;
@@ -49,18 +50,18 @@ InputTab::InputTab(QWidget* parent)
   groupBox2->setLayout(vbox2);
   layout->addWidget(groupBox2);
 
-  QGroupBox* groupBox3 = new QGroupBox(tr("Clipboard"));
+  QGroupBox* groupBox3 = new QGroupBox(_("Clipboard"));
   QVBoxLayout* vbox3 = new QVBoxLayout;
-  inputClipboardFromServer = new QCheckBox(tr("Accept clipboard from server"));
+  inputClipboardFromServer = new QCheckBox(_("Accept clipboard from server"));
   vbox3->addWidget(inputClipboardFromServer);
 #if !defined(WIN32) && !defined(__APPLE__)
-  inputSetPrimary = new QCheckBox(tr("Also set primary selection"));
+  inputSetPrimary = new QCheckBox(_("Also set primary selection"));
   vbox3->addWidget(inputSetPrimary);
 #endif
-  inputClipboardToServer = new QCheckBox(tr("Send clipboard to server"));
+  inputClipboardToServer = new QCheckBox(_("Send clipboard to server"));
   vbox3->addWidget(inputClipboardToServer);
 #if !defined(WIN32) && !defined(__APPLE__)
-  inputSendPrimary = new QCheckBox(tr("Send primary selection as keyboard"));
+  inputSendPrimary = new QCheckBox(_("Send primary selection as keyboard"));
   vbox3->addWidget(inputSendPrimary);
 #endif
   groupBox3->setLayout(vbox3);

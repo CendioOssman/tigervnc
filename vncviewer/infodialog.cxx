@@ -2,6 +2,7 @@
 
 #include "appmanager.h"
 #include "vncconnection.h"
+#include "i18n.h"
 
 #include <QLabel>
 #include <QPushButton>
@@ -11,7 +12,7 @@
 InfoDialog::InfoDialog(QWidget* parent)
   : QDialog{parent}
 {
-  setWindowTitle(tr("VNC connection info"));
+  setWindowTitle(_("VNC connection info"));
 
   QTimer* timer = new QTimer(this);
   timer->setSingleShot(false);
@@ -21,7 +22,7 @@ InfoDialog::InfoDialog(QWidget* parent)
   QLabel* label = new QLabel;
   label->setText(AppManager::instance()->getConnection()->infoText());
   layout->addWidget(label, 1);
-  QPushButton* closeBtn = new QPushButton(tr("Close"));
+  QPushButton* closeBtn = new QPushButton(_("Close"));
   layout->addWidget(closeBtn, 0, Qt::AlignRight);
   setLayout(layout);
 

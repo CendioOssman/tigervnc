@@ -2,6 +2,7 @@
 
 #include "appmanager.h"
 #include "viewerconfig.h"
+#include "i18n.h"
 
 #include <QApplication>
 #include <QComboBox>
@@ -15,12 +16,12 @@
 ServerDialog::ServerDialog(QWidget* parent)
   : QWidget{parent}
 {
-  setWindowTitle(tr("VNC Viewer: Connection Details"));
+  setWindowTitle(_("VNC Viewer: Connection Details"));
 
   QVBoxLayout* layout = new QVBoxLayout;
 
   QHBoxLayout* row1 = new QHBoxLayout;
-  row1->addWidget(new QLabel(tr("VNC server:")));
+  row1->addWidget(new QLabel(_("VNC server:")));
   comboBox = new QComboBox;
   comboBox->setEditable(true);
   comboBox->setFocus();
@@ -28,20 +29,20 @@ ServerDialog::ServerDialog(QWidget* parent)
   layout->addLayout(row1);
 
   QHBoxLayout* row2 = new QHBoxLayout;
-  QPushButton* optionsBtn = new QPushButton(tr("Options..."));
+  QPushButton* optionsBtn = new QPushButton(_("Options..."));
   row2->addWidget(optionsBtn);
-  QPushButton* loadBtn = new QPushButton(tr("Load..."));
+  QPushButton* loadBtn = new QPushButton(_("Load..."));
   row2->addWidget(loadBtn);
-  QPushButton* saveAsBtn = new QPushButton(tr("Save As..."));
+  QPushButton* saveAsBtn = new QPushButton(_("Save As..."));
   row2->addWidget(saveAsBtn);
   layout->addLayout(row2);
 
   QHBoxLayout* row3 = new QHBoxLayout;
-  QPushButton* aboutBtn = new QPushButton(tr("About..."));
+  QPushButton* aboutBtn = new QPushButton(_("About..."));
   row3->addWidget(aboutBtn);
-  QPushButton* cancelBtn = new QPushButton(tr("Cancel"));
+  QPushButton* cancelBtn = new QPushButton(_("Cancel"));
   row3->addWidget(cancelBtn);
-  QPushButton* connectBtn = new QPushButton(tr("Connect"));
+  QPushButton* connectBtn = new QPushButton(_("Connect"));
   row3->addWidget(connectBtn);
   layout->addLayout(row3);
 
@@ -97,9 +98,9 @@ void ServerDialog::openAboutDialog()
 void ServerDialog::openLoadConfigDialog()
 {
   QString filename = QFileDialog::getOpenFileName(this,
-                                                  tr("Load Config"),
+                                                  _("Select a TigerVNC configuration file"),
                                                   {},
-                                                  tr("TigerVNC configuration (*.tigervnc);;All files (*)"));
+                                                  _("TigerVNC configuration (*.tigervnc);;All files (*)"));
   if (!filename.isEmpty()) {
     QString server = ViewerConfig::instance()->loadViewerParameters(filename);
     validateServerText(server);
@@ -109,9 +110,9 @@ void ServerDialog::openLoadConfigDialog()
 void ServerDialog::openSaveConfigDialog()
 {
   QString filename = QFileDialog::getSaveFileName(this,
-                                                  tr("Save Config"),
+                                                  _("Save the TigerVNC configuration file"),
                                                   {},
-                                                  tr("TigerVNC configuration (*.tigervnc);;All files (*)"));
+                                                  _("TigerVNC configuration (*.tigervnc);;All files (*)"));
   if (!filename.isEmpty()) {
     ViewerConfig::instance()->saveViewerParameters(filename, comboBox->currentText());
   }

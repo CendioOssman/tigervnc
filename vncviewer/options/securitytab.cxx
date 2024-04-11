@@ -6,6 +6,7 @@
 #ifdef HAVE_GNUTLS
 #include "rfb/CSecurityTLS.h"
 #endif
+#include "i18n.h"
 
 #include <QCheckBox>
 #include <QGroupBox>
@@ -18,35 +19,35 @@ SecurityTab::SecurityTab(QWidget* parent)
 {
   QVBoxLayout* layout = new QVBoxLayout;
 
-  QGroupBox* groupBox1 = new QGroupBox(tr("Encryption"));
+  QGroupBox* groupBox1 = new QGroupBox(_("Encryption"));
   QVBoxLayout* vbox1 = new QVBoxLayout;
-  securityEncryptionNone = new QCheckBox(tr("None"));
+  securityEncryptionNone = new QCheckBox(_("None"));
   vbox1->addWidget(securityEncryptionNone);
-  securityEncryptionTLSWithAnonymousCerts = new QCheckBox(tr("TLS with anonymous certificates"));
+  securityEncryptionTLSWithAnonymousCerts = new QCheckBox(_("TLS with anonymous certificates"));
 #ifndef HAVE_GNUTLS
   securityEncryptionTLSWithAnonymousCerts->setVisible(false);
 #endif
   vbox1->addWidget(securityEncryptionTLSWithAnonymousCerts);
-  securityEncryptionTLSWithX509Certs = new QCheckBox(tr("TLS with X509 certificates"));
+  securityEncryptionTLSWithX509Certs = new QCheckBox(_("TLS with X509 certificates"));
 #ifndef HAVE_GNUTLS
   securityEncryptionTLSWithX509Certs->setVisible(false);
 #endif
   vbox1->addWidget(securityEncryptionTLSWithX509Certs);
-  QLabel* securityEncryptionTLSWithX509CALabel = new QLabel(tr("Path to X509 CA certificate"));
+  QLabel* securityEncryptionTLSWithX509CALabel = new QLabel(_("Path to X509 CA certificate"));
   vbox1->addWidget(securityEncryptionTLSWithX509CALabel);
   securityEncryptionTLSWithX509CATextEdit = new QLineEdit;
 #ifndef HAVE_GNUTLS
   securityEncryptionTLSWithX509CATextEdit->setVisible(false);
 #endif
   vbox1->addWidget(securityEncryptionTLSWithX509CATextEdit);
-  QLabel* securityEncryptionTLSWithX509CRLLabel = new QLabel(tr("Path to X509 CRL file"));
+  QLabel* securityEncryptionTLSWithX509CRLLabel = new QLabel(_("Path to X509 CRL file"));
   vbox1->addWidget(securityEncryptionTLSWithX509CRLLabel);
   securityEncryptionTLSWithX509CRLTextEdit = new QLineEdit;
 #ifndef HAVE_GNUTLS
   securityEncryptionTLSWithX509CRLTextEdit->setVisible(false);
 #endif
   vbox1->addWidget(securityEncryptionTLSWithX509CRLTextEdit);
-  securityEncryptionAES = new QCheckBox(tr("RSA-AES"));
+  securityEncryptionAES = new QCheckBox(_("RSA-AES"));
 #ifndef HAVE_NETTLE
   securityEncryptionAES->setVisible(false);
 #endif
@@ -54,13 +55,13 @@ SecurityTab::SecurityTab(QWidget* parent)
   groupBox1->setLayout(vbox1);
   layout->addWidget(groupBox1);
 
-  QGroupBox* groupBox2 = new QGroupBox(tr("Authentication"));
+  QGroupBox* groupBox2 = new QGroupBox(_("Authentication"));
   QVBoxLayout* vbox2 = new QVBoxLayout;
-  securityAuthenticationNone = new QCheckBox(tr("None"));
+  securityAuthenticationNone = new QCheckBox(_("None"));
   vbox2->addWidget(securityAuthenticationNone);
-  securityAuthenticationStandard = new QCheckBox(tr("Standard VNC (insecure without encryption)"));
+  securityAuthenticationStandard = new QCheckBox(_("Standard VNC (insecure without encryption)"));
   vbox2->addWidget(securityAuthenticationStandard);
-  securityAuthenticationUsernameAndPassword = new QCheckBox(tr("Username and password (insecure without encryption)"));
+  securityAuthenticationUsernameAndPassword = new QCheckBox(_("Username and password (insecure without encryption)"));
   vbox2->addWidget(securityAuthenticationUsernameAndPassword);
   groupBox2->setLayout(vbox2);
   layout->addWidget(groupBox2);

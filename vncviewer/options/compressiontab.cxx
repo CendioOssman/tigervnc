@@ -3,6 +3,7 @@
 #include "parameters.h"
 #include "viewerconfig.h"
 #include "rfb/encodings.h"
+#include "i18n.h"
 
 #include <QCheckBox>
 #include <QGroupBox>
@@ -16,50 +17,50 @@ CompressionTab::CompressionTab(QWidget* parent)
 {
   QVBoxLayout* layout = new QVBoxLayout;
 
-  compressionAutoSelect = new QCheckBox(tr("Auto select"));
+  compressionAutoSelect = new QCheckBox(_("Auto select"));
   layout->addWidget(compressionAutoSelect);
 
   QHBoxLayout* hLayout = new QHBoxLayout;
 
-  QGroupBox* groupBox1 = new QGroupBox(tr("Preferred encoding"));
+  QGroupBox* groupBox1 = new QGroupBox(_("Preferred encoding"));
   QVBoxLayout* vbox1 = new QVBoxLayout;
-  compressionEncodingTight = new QRadioButton(tr("Tight"));
+  compressionEncodingTight = new QRadioButton(_("Tight"));
   vbox1->addWidget(compressionEncodingTight);
-  compressionEncodingZRLE = new QRadioButton(tr("ZRLE"));
+  compressionEncodingZRLE = new QRadioButton(_("ZRLE"));
   vbox1->addWidget(compressionEncodingZRLE);
-  compressionEncodingHextile = new QRadioButton(tr("Hextile"));
+  compressionEncodingHextile = new QRadioButton(_("Hextile"));
   vbox1->addWidget(compressionEncodingHextile);
-  compressionEncodingH264 = new QRadioButton(tr("H264"));
+  compressionEncodingH264 = new QRadioButton(_("H264"));
 #ifndef HAVE_H264
   compressionEncodingH264->setVisible(false);
 #endif
   vbox1->addWidget(compressionEncodingH264);
-  compressionEncodingRaw = new QRadioButton(tr("Raw"));
+  compressionEncodingRaw = new QRadioButton(_("Raw"));
   vbox1->addWidget(compressionEncodingRaw);
   groupBox1->setLayout(vbox1);
   hLayout->addWidget(groupBox1, 1);
 
-  QGroupBox* groupBox2 = new QGroupBox(tr("Color level"));
+  QGroupBox* groupBox2 = new QGroupBox(_("Color level"));
   QVBoxLayout* vbox2 = new QVBoxLayout;
-  compressionColorLevelFull = new QRadioButton(tr("Full"));
+  compressionColorLevelFull = new QRadioButton(_("Full"));
   vbox2->addWidget(compressionColorLevelFull);
-  compressionColorLevelMedium = new QRadioButton(tr("Medium"));
+  compressionColorLevelMedium = new QRadioButton(_("Medium"));
   vbox2->addWidget(compressionColorLevelMedium);
-  compressionColorLevelLow = new QRadioButton(tr("Low"));
+  compressionColorLevelLow = new QRadioButton(_("Low"));
   vbox2->addWidget(compressionColorLevelLow);
-  compressionColorLevelVeryLow = new QRadioButton(tr("Very Low"));
+  compressionColorLevelVeryLow = new QRadioButton(_("Very Low"));
   vbox2->addWidget(compressionColorLevelVeryLow);
   groupBox2->setLayout(vbox2);
   hLayout->addWidget(groupBox2, 1);
 
   layout->addLayout(hLayout);
 
-  compressionCustomCompressionLevel = new QCheckBox(tr("Custom compression level (0=fast, 9=best)"));
+  compressionCustomCompressionLevel = new QCheckBox(_("Custom compression level (0=fast, 9=best)"));
   layout->addWidget(compressionCustomCompressionLevel);
   compressionCustomCompressionLevelTextEdit = new QSpinBox;
   compressionCustomCompressionLevelTextEdit->setRange(0, 9);
   layout->addWidget(compressionCustomCompressionLevelTextEdit);
-  compressionJPEGCompression = new QCheckBox(tr("Allow JPEG compression quality (0=poor, 9=best)"));
+  compressionJPEGCompression = new QCheckBox(_("Allow JPEG compression quality (0=poor, 9=best)"));
   layout->addWidget(compressionJPEGCompression);
   compressionJPEGCompressionTextEdit = new QSpinBox;
   compressionJPEGCompressionTextEdit->setRange(0, 9);

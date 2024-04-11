@@ -6,6 +6,7 @@
 #include "options/inputtab.h"
 #include "options/misctab.h"
 #include "options/securitytab.h"
+#include "i18n.h"
 
 #include <QLabel>
 #include <QListWidget>
@@ -33,7 +34,7 @@ public:
 OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   : QDialog{parent}
 {
-  setWindowTitle(tr("TigerVNC Options"));
+  setWindowTitle(_("VNC Viewer: Connection Options"));
   setWindowFlag(Qt::WindowStaysOnTopHint, staysOnTop);
   setModal(true);
   setWindowModality(Qt::ApplicationModal);
@@ -47,13 +48,13 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   QListWidget* listWidget = new QListWidget;
   listWidget->setFrameShape(QFrame::NoFrame);
   listWidget->setItemDelegate(new OptionsDelegate(this));
-  QStringList tabs = {"   " + tr("Compression"),
+  QStringList tabs = {"   " + QString(_("Compression")),
 #if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
-                      "   " + tr("Security"),
+                      "   " + QString(_("Security")),
 #endif
-                      "   " + tr("Input"),
-                      "   " + tr("Display"),
-                      "   " + tr("Misc")};
+                      "   " + QString(_("Input")),
+                      "   " + QString(_("Display")),
+                      "   " + QString(_("Misc"))};
   listWidget->addItems(tabs);
   listWidget->setCurrentRow(0);
   listWidget->setFixedWidth(listWidget->sizeHintForColumn(0));
@@ -88,9 +89,9 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   QHBoxLayout* btnsLayout = new QHBoxLayout;
   btnsLayout->setContentsMargins(10,10,10,10);
   btnsLayout->addStretch(1);
-  QPushButton* applyBtn = new QPushButton(tr("Apply"));
+  QPushButton* applyBtn = new QPushButton(_("Apply"));
   btnsLayout->addWidget(applyBtn, 0, Qt::AlignRight);
-  QPushButton* closeBtn = new QPushButton(tr("Close"));
+  QPushButton* closeBtn = new QPushButton(_("Close"));
   btnsLayout->addWidget(closeBtn, 0, Qt::AlignRight);
   layout->addLayout(btnsLayout);
 

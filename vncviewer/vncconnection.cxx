@@ -171,7 +171,7 @@ void QVNCConnection::connectToServer(QString addressport)
       delete socket;
       socket = new network::UnixSocket(addressport.toStdString().c_str());
       setHost(socket->getPeerAddress());
-      vlog.info("Connected to socket %s", host().toStdString().c_str());
+      vlog.info(_("Connected to socket %s"), host().toStdString().c_str());
       bind(socket->getFd());
 #endif
     } else {
@@ -182,11 +182,17 @@ void QVNCConnection::connectToServer(QString addressport)
       setPort(port);
       delete socket;
       socket = new network::TcpSocket(shost.c_str(), port);
+      vlog.info(_("Connected to host %s port %d"),
+                shost.c_str(), port);
+
       bind(socket->getFd());
     }
   } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
     resetConnection();
-    AppManager::instance()->publishError(e.str());
+    QString message = QString::asprintf(_("Failed to connect to \"%s\":\n\n%s"),
+                                        addressport.toStdString().c_str(), e.str());
+    AppManager::instance()->publishError(message);
   } catch (int& e) {
     resetConnection();
     AppManager::instance()->publishError(strerror(e));
@@ -356,6 +362,13 @@ void QVNCConnection::startProcessing()
     }
 
     rfbcon->getOutStream()->cork(false);
+  } catch (rdr::EndOfStream& e) {
+    vlog.info("%s", e.str());
+    vlog.error(_("The connection was dropped by the server before "
+                 "the session could be established."));
+    QString message = _("The connection was dropped by the server "
+                      "before the session could be established.");
+    AppManager::instance()->publishError(message);
   } catch (rdr::Exception& e) {
     resetConnection();
     AppManager::instance()->publishError(e.str());

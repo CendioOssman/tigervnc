@@ -18,6 +18,7 @@
  * USA.
  */
 
+#include "rfb/screenTypes.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -198,6 +199,28 @@ void CConn::initDone()
     setPreferredEncoding(encNum);
 }
 
+// setDesktopSize() is called when the desktop size changes (including when
+// it is set initially).
+void CConn::setDesktopSize(int w, int h)
+{
+  CConnection::setDesktopSize(w,h);
+  resizeFramebuffer();
+}
+
+// setExtendedDesktopSize() is a more advanced version of setDesktopSize()
+void CConn::setExtendedDesktopSize(unsigned reason, unsigned result,
+                                   int w, int h, const rfb::ScreenSet& layout)
+{
+  CConnection::setExtendedDesktopSize(reason, result, w, h, layout);
+
+  if ((reason == reasonClient) && (result != resultSuccess)) {
+    vlog.error(_("SetDesktopSize failed: %d"), result);
+    return;
+  }
+
+  resizeFramebuffer();
+}
+
 // setName() is called when the desktop name changes
 void CConn::setName(const char* name)
 {
@@ -267,7 +290,7 @@ void CConn::setColourMapEntries(int firstColour, int nColours, uint16_t *rgbs)
   Q_UNUSED(firstColour)
   Q_UNUSED(nColours)
   Q_UNUSED(rgbs)
-  vlog.error("Invalid SetColourMapEntries from server!");
+  vlog.error(_("Invalid SetColourMapEntries from server!"));
 }
 
 void CConn::bell()

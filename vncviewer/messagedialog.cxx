@@ -1,5 +1,7 @@
 #include "messagedialog.h"
 
+#include "i18n.h"
+
 #include <QLabel>
 #include <QPushButton>
 #include <QTimer>
@@ -18,10 +20,10 @@ MessageDialog::MessageDialog(bool staysOnTop, int flags, QString title, QString 
   layout->addWidget(label, 1);
   QHBoxLayout* btnsLayout = new QHBoxLayout;
   btnsLayout->addStretch(1);
-  QPushButton* cancelBtn = new QPushButton(tr("Cancel"));
+  QPushButton* cancelBtn = new QPushButton(_("Cancel"));
   btnsLayout->addWidget(cancelBtn, 0, Qt::AlignRight);
   layout->addLayout(btnsLayout);
-  QPushButton* okBtn = new QPushButton(tr("Ok"));
+  QPushButton* okBtn = new QPushButton(_("Ok"));
   btnsLayout->addWidget(okBtn, 0, Qt::AlignRight);
   layout->addLayout(btnsLayout);
   setLayout(layout);

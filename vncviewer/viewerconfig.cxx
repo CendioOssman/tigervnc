@@ -164,7 +164,7 @@ void ViewerConfig::loadServerHistory()
 
   const char* homeDir = os::getvnchomedir();
   if (homeDir == nullptr)
-    throw rdr::Exception("%s", tr("Could not obtain the home directory path").toStdString().c_str());
+    throw rdr::Exception("%s", _("Could not obtain the home directory path"));
 
   char filepath[PATH_MAX];
   snprintf(filepath, sizeof(filepath), "%s/%s", homeDir, SERVER_HISTORY);
