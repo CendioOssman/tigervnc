@@ -370,7 +370,7 @@ void QVNCWindow::exitFullscreen()
   e2.xany.window = winId();
   e2.xclient.message_type = XInternAtom(display, "_NET_WM_STATE", 0);
   e2.xclient.format = 32;
-  e2.xclient.data.l[0] = 2; // toggle
+  e2.xclient.data.l[0] = 0; // remove
   e2.xclient.data.l[1] = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", 0);
   XSendEvent(display, RootWindow(display, screen),
              0, SubstructureNotifyMask | SubstructureRedirectMask,
@@ -624,11 +624,27 @@ void QVNCWindow::resizeEvent(QResizeEvent* e)
 void QVNCWindow::changeEvent(QEvent* e)
 {
   if (e->type() == QEvent::WindowStateChange) {
-    vlog.debug("QVNCWindow::changeEvent size=(%d, %d) state=%s oldState=%s",
+    int oldState = (static_cast<QWindowStateChangeEvent*>(e))->oldState();
+    vlog.debug("QVNCWindow::changeEvent size=(%d, %d) state=%d oldState=%d",
                width(),
                height(),
-               QVariant::fromValue(windowState()).toString().toStdString().c_str(),
-               QVariant::fromValue((static_cast<QWindowStateChangeEvent*>(e))->oldState()).toString().toStdString().c_str());
+               int(windowState()),
+               oldState);
+    if (!(oldState & Qt::WindowFullScreen) && windowState() & Qt::WindowFullScreen) {
+      vlog.debug("QVNCWindow::changeEvent window has gone fullscreen, checking if it our doing");
+      vlog.debug("QVNCWindow::changeEvent fullscreenEnabled=%d pendingFullscreen=%d",
+                 fullscreenEnabled, pendingFullscreen);
+      if (!fullscreenEnabled && !pendingFullscreen) {
+        fullscreen(true);
+      }
+    } else if (oldState & Qt::WindowFullScreen && !(windowState() & Qt::WindowFullScreen)) {
+      vlog.debug("QVNCWindow::changeEvent window has left fullscreen, checking if it our doing");
+      vlog.debug("QVNCWindow::changeEvent fullscreenEnabled=%d pendingFullscreen=%d",
+                   fullscreenEnabled, pendingFullscreen);
+      if (fullscreenEnabled || pendingFullscreen) {
+        fullscreen(false);
+      }
+    }
   }
   QWidget::changeEvent(e);
 }
