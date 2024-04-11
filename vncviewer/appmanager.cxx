@@ -145,7 +145,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   if (!view) {
     throw rdr::Exception(_("Platform not supported."));
   }
-  connect(view, &QAbstractVNCView::bufferResized, window, &QVNCWindow::updateScrollbars, Qt::QueuedConnection);
+  connect(view, &QAbstractVNCView::bufferResized, window, &QVNCWindow::fromBufferResize, Qt::QueuedConnection);
   connect(view,
           &QAbstractVNCView::remoteResizeRequest,
           window,
@@ -186,6 +186,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   if (::fullScreen) {
     window->fullscreen(true);
   } else {
+    vlog.debug(_("SHOW"));
     window->show();
   }
 

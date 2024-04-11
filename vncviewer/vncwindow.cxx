@@ -567,10 +567,31 @@ void QVNCWindow::remoteResize(int w, int h)
   emit AppManager::instance()->getConnection()->writeSetDesktopSize(w, h, layout);
 }
 
-void QVNCWindow::resize(int width, int height)
+void QVNCWindow::fromBufferResize(int oldW, int oldH, int width, int height)
 {
   vlog.debug("QVNCWindow::resize size=(%d, %d) widgetResizable=%d", width, height, widgetResizable());
-  QScrollArea::resize(width, height);
+
+  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
+    updateScrollbars();
+  });
+
+  if (this->width() == width && this->height() == height) {
+    vlog.debug("QVNCWindow::resize ignored");
+    return;
+  }
+
+  QAbstractVNCView* view = AppManager::instance()->getView();
+
+  if (!view) {
+    vlog.debug("QVNCWindow::resize !view");
+    QScrollArea::resize(width, height);
+  } else {
+    vlog.debug("QVNCWindow::resize view");
+    if (QSize(oldW, oldH) == size()) {
+      vlog.debug("QVNCWindow::resize because session and client were in sync");
+      QScrollArea::resize(width, height);
+    }
+  }
 }
 
 void QVNCWindow::showToast()

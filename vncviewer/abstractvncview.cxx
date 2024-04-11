@@ -129,6 +129,18 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
           this,
           &QAbstractVNCView::updateWindow,
           Qt::QueuedConnection);
+  connect(AppManager::instance()->getConnection(),
+          &QVNCConnection::framebufferResized,
+          this,
+          [=](int w, int h) {
+            pixmap = QPixmap(w, h);
+            damage = QRegion(0, 0, pixmap.width(), pixmap.height());
+            vlog.debug("QAbstractVNCView::bufferResized pixmapSize=(%d, %d) size=(%d, %d)",
+                       pixmap.size().width(), pixmap.size().height(), width(), height());
+            emit bufferResized(width(), height(), w, h);
+            resize(w, h);
+          },
+          Qt::QueuedConnection);
 
 #ifdef QT_DEBUG
   gettimeofday(&fpsLast, NULL);
@@ -268,6 +280,10 @@ bool QAbstractVNCView::eventFilter(QObject* obj, QEvent* event)
 void QAbstractVNCView::resize(int width, int height)
 {
   vlog.debug("QAbstractVNCView::resize size=(%d, %d)", width, height);
+  if (this->width() == width && this->height() == height) {
+    vlog.debug("QAbstractVNCView::resize ignored");
+    return;
+  }
   QWidget::resize(width, height);
 }
 
@@ -555,12 +571,8 @@ void QAbstractVNCView::paintEvent(QPaintEvent* event)
   PlatformPixelBuffer* framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
 
   if ((framebuffer->width() != pixmap.width()) || (framebuffer->height() != pixmap.height())) {
-    pixmap = QPixmap(framebuffer->width(), framebuffer->height());
-    damage = QRegion(0, 0, pixmap.width(), pixmap.height());
-    resize(pixmap.width(), pixmap.height());
-    vlog.debug("QAbstractVNCView::bufferResized pixmapSize=(%d, %d) size=(%d, %d)",
-               pixmap.size().width(), pixmap.size().height(), width(), height());
-    emit bufferResized();
+    update();
+    return;
   }
 
   if (!damage.isEmpty()) {

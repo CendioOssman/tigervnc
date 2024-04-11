@@ -70,7 +70,7 @@ public slots:
 
 signals:
   void delayedInitialized();
-  void bufferResized();
+  void bufferResized(int oldW, int oldH, int w, int h);
   void remoteResizeRequest();
 
 protected:

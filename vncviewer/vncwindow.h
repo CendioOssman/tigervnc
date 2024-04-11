@@ -37,7 +37,7 @@ public:
   void handleDesktopSize();
   void postRemoteResizeRequest();
   void remoteResize(int width, int height);
-  void resize(int width, int height);
+  void fromBufferResize(int oldW, int oldH, int width, int height);
 
   void showToast();
 
