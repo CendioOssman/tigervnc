@@ -7,6 +7,7 @@ class QAbstractVNCView;
 class QVNCWindow;
 class QTimer;
 class QVNCConnection;
+class ServerDialog;
 
 class AppManager : public QObject
 {
@@ -59,13 +60,17 @@ public slots:
   void openAboutDialog();
   void openMessageDialog(int flags, QString title, QString text);
   void handleOptions();
+  void openServerDialog();
 
 private:
+  QWidget* topWindow() const;
+
   int errorCount;
   QVNCConnection* connection;
   QAbstractVNCView* view = nullptr;
   QVNCWindow* window = nullptr;
   QTimer* rfbTimerProxy;
+  ServerDialog* serverDialog = nullptr;
   AppManager();
 };
 

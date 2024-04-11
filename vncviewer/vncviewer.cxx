@@ -3,13 +3,11 @@
 #endif
 #include <QApplication>
 #include <QIcon>
-#include "parameters.h"
 #include "appmanager.h"
 #include "loggerconfig.h"
 #include "viewerconfig.h"
 #include "vncapplication.h"
 #include "vnctranslator.h"
-#include "serverdialog.h"
 
 int main(int argc, char *argv[])
 {
@@ -43,9 +41,7 @@ int main(int argc, char *argv[])
     app.setQuitOnLastWindowClosed(false);
     return app.exec();
   } else {
-    ServerDialog serverDialog;
-    serverDialog.setVisible(!::listenMode);
-    QObject::connect(AppManager::instance(), &AppManager::vncWindowOpened, &serverDialog, &QWidget::hide);
+    AppManager::instance()->openServerDialog();
     return app.exec();
   }
 }

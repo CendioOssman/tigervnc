@@ -26,6 +26,7 @@
 #include "infodialog.h"
 #include "messagedialog.h"
 #include "optionsdialog.h"
+#include "serverdialog.h"
 #include "parameters.h"
 #include "vncconnection.h"
 #include "vncwindow.h"
@@ -63,7 +64,7 @@ AppManager::AppManager()
   rfbTimerProxy->setSingleShot(true);
 
   connect(this, &AppManager::credentialRequested, this, [=](bool secured, bool userNeeded, bool passwordNeeded) {
-    AuthDialog d(secured, userNeeded, passwordNeeded);
+    AuthDialog d(secured, userNeeded, passwordNeeded, topWindow());
     d.exec();
   });
 }
@@ -119,7 +120,7 @@ void AppManager::publishError(const QString message, bool quit)
   errorCount++;
 
   qApp->setQuitOnLastWindowClosed(true);
-  AlertDialog d(isFullScreen(), message, quit);
+  AlertDialog d(isFullScreen(), message, quit, topWindow());
   d.exec();
   qApp->setQuitOnLastWindowClosed(false);
 }
@@ -222,25 +223,25 @@ void AppManager::openContextMenu()
 
 void AppManager::openInfoDialog()
 {
-  InfoDialog d;
+  InfoDialog d(topWindow());
   d.exec();
 }
 
 void AppManager::openOptionDialog()
 {
-  OptionsDialog d(isFullScreen());
+  OptionsDialog d(isFullScreen(), topWindow());
   d.exec();
 }
 
 void AppManager::openAboutDialog()
 {
-  AboutDialog d(isFullScreen());
+  AboutDialog d(isFullScreen(), topWindow());
   d.exec();
 }
 
 void AppManager::openMessageDialog(int flags, QString title, QString text)
 {
-  MessageDialog d(isFullScreen(), flags, title, text);
+  MessageDialog d(isFullScreen(), flags, title, text, topWindow());
   int response = d.exec() == QDialog::Accepted ? 1 : 0;
   emit messageResponded(response);
 }
@@ -293,4 +294,16 @@ void AppManager::handleOptions()
         window->fullscreen(false);
     }
   }
+}
+
+void AppManager::openServerDialog()
+{
+  serverDialog = new ServerDialog;
+  serverDialog->setVisible(!::listenMode);
+  QObject::connect(AppManager::instance(), &AppManager::vncWindowOpened, serverDialog, &QWidget::hide);
+}
+
+QWidget *AppManager::topWindow() const
+{
+  return view ? qobject_cast<QWidget*>(view) : qobject_cast<QWidget*>(serverDialog);
 }
