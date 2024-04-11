@@ -207,6 +207,10 @@ void QVNCWindow::fullscreen(bool enabled)
 #endif
       }
     } else { // Fullscreen on the current single display.
+      fullscreenX = selectedPrimaryScreen->geometry().x();
+      fullscreenY = selectedPrimaryScreen->geometry().y();
+      fullscreenWidth = selectedPrimaryScreen->geometry().width();
+      fullscreenHeight = selectedPrimaryScreen->geometry().height();
 #ifdef Q_OS_LINUX
       fullscreenOnSelectedDisplays(top, top, top, top);
 #else
@@ -465,6 +469,7 @@ void QVNCWindow::remoteResize(int w, int h)
     // In full screen we report all screens that are fully covered.
     rfb::Rect viewport_rect;
     viewport_rect.setXYWH(fullscreenX, fullscreenY, fullscreenWidth, fullscreenHeight);
+    vlog.debug("viewport_rect(%d, %d, %dx%d)", fullscreenX, fullscreenY, fullscreenWidth, fullscreenHeight);
 
     // If we can find a matching screen in the existing set, we use
     // that, otherwise we create a brand new screen.
