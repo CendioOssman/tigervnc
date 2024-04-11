@@ -72,7 +72,6 @@ AppManager::AppManager()
 AppManager::~AppManager()
 {
   connection->deleteLater();
-  window->takeWidget();
   window->deleteLater();
   if (view) {
     view->deleteLater();
