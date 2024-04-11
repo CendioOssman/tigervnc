@@ -494,6 +494,7 @@ void QVNCWindow::resizeEvent(QResizeEvent* e)
 
   QVNCConnection* cc = AppManager::instance()->getConnection();
 
+  vlog.debug("QVNCWindow::resizeEvent supportsSetDesktopSize=%d", cc->server()->supportsSetDesktopSize);
   if (::remoteResize && cc->server()->supportsSetDesktopSize) {
     postRemoteResizeRequest();
   }
