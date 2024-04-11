@@ -7,8 +7,9 @@
 class QMoveEvent;
 class QResizeEvent;
 class Toast;
+class ScrollArea;
 
-class QVNCWindow : public QScrollArea
+class QVNCWindow : public QWidget
 {
   Q_OBJECT
 
@@ -40,6 +41,8 @@ public:
   void fromBufferResize(int oldW, int oldH, int width, int height);
 
   void showToast();
+  void setWidget(QWidget* w);
+  QWidget* takeWidget();
 
 signals:
   void fullscreenChanged(bool enabled);
@@ -65,6 +68,7 @@ private:
   QByteArray previousGeometry;
 
   Toast* toast;
+  ScrollArea* scrollArea = nullptr;
 };
 
 #endif // VNCWINDOW_H

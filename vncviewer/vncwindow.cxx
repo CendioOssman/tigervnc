@@ -42,71 +42,54 @@
 
 static rfb::LogWriter vlog("VNCWindow");
 
+class ScrollArea : public QScrollArea
+{
+public:
+  ScrollArea(QWidget* parent = nullptr)
+    : QScrollArea(parent)
+  {
+    setViewportMargins(0, 0, 0, 0);
+    setFrameStyle(QFrame::NoFrame);
+    setLineWidth(0);
+    setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  }
+};
+
 QVNCWindow::QVNCWindow(QWidget* parent)
-  : QScrollArea(parent)
+  : QWidget(parent)
   , resizeTimer(new QTimer(this))
   , devicePixelRatio(devicePixelRatioF())
 {
   setFocusPolicy(Qt::StrongFocus);
 
   setContentsMargins(0, 0, 0, 0);
-  setViewportMargins(0, 0, 0, 0);
-  setFrameStyle(QFrame::NoFrame);
-  setLineWidth(0);
+
+  scrollArea = new ScrollArea;
 
   QPalette p(palette());
   p.setColor(QPalette::Window, QColor::fromRgb(40, 40, 40));
   setPalette(p);
   setBackgroundRole(QPalette::Window);
-  horizontalScrollBar()->setStyle(QStyleFactory::create("Fusion"));
-  verticalScrollBar()->setStyle(QStyleFactory::create("Fusion"));
-
-  setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-
-  setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-
-  QScrollBar* hScrollBar = horizontalScrollBar();
-  hScrollBar->setParent(this);
-  hScrollBar->setFixedHeight(14);
-  QScrollBar* vScrollBar = verticalScrollBar();
-  vScrollBar->setParent(this);
-  vScrollBar->setFixedWidth(14);
-
-  QGridLayout* scrollAreaLayout = new QGridLayout(this);
-  scrollAreaLayout->setContentsMargins(0, 0, 0, 0);
-  scrollAreaLayout->setSpacing(0);
-  scrollAreaLayout->setRowStretch(0, 1);
-  scrollAreaLayout->setColumnStretch(0, 1);
-  scrollAreaLayout->addWidget(vScrollBar, 0, 1);
-  scrollAreaLayout->addWidget(hScrollBar, 1, 0);
 
   resizeTimer->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
   resizeTimer->setSingleShot(true);
   connect(resizeTimer, &QTimer::timeout, this, &QVNCWindow::handleDesktopSize);
 
   toast = new Toast(this);
+
+  QVBoxLayout* l = new QVBoxLayout;
+  l->setSpacing(0);
+  l->setContentsMargins(0,0,0,0);
+  l->addWidget(scrollArea);
+  setLayout(l);
 }
 
 QVNCWindow::~QVNCWindow() {}
 
 void QVNCWindow::updateScrollbars()
 {
-  QAbstractVNCView* view = AppManager::instance()->getView();
-  vlog.debug("QVNCWindow::updateScrollbars pixmapSize=(%d, %d) size=(%d, %d)",
-             view->pixmapSize().width(), view->pixmapSize().height(), width(), height());
-
-  if (view->pixmapSize().width() > width()) {
-    horizontalScrollBar()->show();
-  } else {
-    horizontalScrollBar()->hide();
-  }
-
-  if (view->pixmapSize().height() > height()) {
-    verticalScrollBar()->show();
-  } else {
-    verticalScrollBar()->hide();
-  }
 }
 
 QList<int> QVNCWindow::fullscreenScreens() const
@@ -569,7 +552,7 @@ void QVNCWindow::remoteResize(int w, int h)
 
 void QVNCWindow::fromBufferResize(int oldW, int oldH, int width, int height)
 {
-  vlog.debug("QVNCWindow::resize size=(%d, %d) widgetResizable=%d", width, height, widgetResizable());
+  vlog.debug("QVNCWindow::resize size=(%d, %d)", width, height);
 
   QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
     updateScrollbars();
@@ -584,12 +567,12 @@ void QVNCWindow::fromBufferResize(int oldW, int oldH, int width, int height)
 
   if (!view) {
     vlog.debug("QVNCWindow::resize !view");
-    QScrollArea::resize(width, height);
+    resize(width, height);
   } else {
     vlog.debug("QVNCWindow::resize view");
     if (QSize(oldW, oldH) == size()) {
       vlog.debug("QVNCWindow::resize because session and client were in sync");
-      QScrollArea::resize(width, height);
+      resize(width, height);
     }
   }
 }
@@ -599,15 +582,25 @@ void QVNCWindow::showToast()
   toast->showToast();
 }
 
+void QVNCWindow::setWidget(QWidget *w)
+{
+  scrollArea->setWidget(w);
+}
+
+QWidget *QVNCWindow::takeWidget()
+{
+  return scrollArea->takeWidget();
+}
+
 void QVNCWindow::moveEvent(QMoveEvent* e)
 {
   vlog.debug("QVNCWindow::moveEvent pos=(%d, %d) oldPos=(%d, %d)", e->pos().x(), e->pos().y(), e->oldPos().x(), e->oldPos().y());
-  QScrollArea::moveEvent(e);
+  QWidget::moveEvent(e);
 }
 
 void QVNCWindow::resizeEvent(QResizeEvent* e)
 {
-  vlog.debug("QVNCWindow::resizeEvent size=(%d, %d) widgetResizable=%d", e->size().width(), e->size().height(), widgetResizable());
+  vlog.debug("QVNCWindow::resizeEvent size=(%d, %d)", e->size().width(), e->size().height());
 
   QVNCConnection* cc = AppManager::instance()->getConnection();
 
@@ -620,7 +613,7 @@ void QVNCWindow::resizeEvent(QResizeEvent* e)
 
   toast->setGeometry(rect());
 
-  QScrollArea::resizeEvent(e);
+  QWidget::resizeEvent(e);
 }
 
 void QVNCWindow::changeEvent(QEvent* e)
@@ -632,7 +625,7 @@ void QVNCWindow::changeEvent(QEvent* e)
                QVariant::fromValue(windowState()).toString().toStdString().c_str(),
                QVariant::fromValue((static_cast<QWindowStateChangeEvent*>(e))->oldState()).toString().toStdString().c_str());
   }
-  QScrollArea::changeEvent(e);
+  QWidget::changeEvent(e);
 }
 
 void QVNCWindow::focusInEvent(QFocusEvent*)
