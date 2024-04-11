@@ -288,42 +288,42 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int top, int bottom, int left, int
 
   show();
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  auto display = QX11Info::display();
-#else
-  auto display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
-#endif
-  int screen = DefaultScreen(display);
-
-  XEvent e1;
-  e1.xany.type = ClientMessage;
-  e1.xany.window = winId();
-  e1.xclient.message_type = XInternAtom(display, "_NET_WM_FULLSCREEN_MONITORS", 0);
-  e1.xclient.format = 32;
-  e1.xclient.data.l[0] = top;
-  e1.xclient.data.l[1] = bottom;
-  e1.xclient.data.l[2] = left;
-  e1.xclient.data.l[3] = right;
-  e1.xclient.data.l[4] = 0;
-  XSendEvent(display, RootWindow(display, screen),
-             0, SubstructureNotifyMask | SubstructureRedirectMask,
-             &e1);
-  XEvent e2;
-  e2.xany.type = ClientMessage;
-  e2.xany.window = winId();
-  e2.xclient.message_type = XInternAtom(display, "_NET_WM_STATE", 0);
-  e2.xclient.format = 32;
-  e2.xclient.data.l[0] = 1; // add
-  e2.xclient.data.l[1] = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", 0);
-  XSendEvent(display, RootWindow(display, screen),
-             0, SubstructureNotifyMask | SubstructureRedirectMask,
-             &e2);
-  QApplication::sync();
-
-  QAbstractVNCView* view = AppManager::instance()->getView();
-  view->maybeGrabKeyboard();
-
   QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    auto display = QX11Info::display();
+#else
+    auto display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+    int screen = DefaultScreen(display);
+
+    XEvent e1;
+    e1.xany.type = ClientMessage;
+    e1.xany.window = winId();
+    e1.xclient.message_type = XInternAtom(display, "_NET_WM_FULLSCREEN_MONITORS", 0);
+    e1.xclient.format = 32;
+    e1.xclient.data.l[0] = top;
+    e1.xclient.data.l[1] = bottom;
+    e1.xclient.data.l[2] = left;
+    e1.xclient.data.l[3] = right;
+    e1.xclient.data.l[4] = 0;
+    XSendEvent(display, RootWindow(display, screen),
+               0, SubstructureNotifyMask | SubstructureRedirectMask,
+               &e1);
+    XEvent e2;
+    e2.xany.type = ClientMessage;
+    e2.xany.window = winId();
+    e2.xclient.message_type = XInternAtom(display, "_NET_WM_STATE", 0);
+    e2.xclient.format = 32;
+    e2.xclient.data.l[0] = 1; // add
+    e2.xclient.data.l[1] = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", 0);
+    XSendEvent(display, RootWindow(display, screen),
+               0, SubstructureNotifyMask | SubstructureRedirectMask,
+               &e2);
+    QApplication::sync();
+
+    QAbstractVNCView* view = AppManager::instance()->getView();
+    view->maybeGrabKeyboard();
+
     activateWindow();
   });
 }
