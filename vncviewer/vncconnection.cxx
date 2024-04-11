@@ -105,7 +105,7 @@ QVNCConnection::QVNCConnection()
     tunnelFactory = new TunnelFactory;
     tunnelFactory->start();
 #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-    tunnelFactory_->wait(20000);
+    tunnelFactory->wait(20000);
 #else
     tunnelFactory->wait(QDeadlineTimer(20000));
 #endif
