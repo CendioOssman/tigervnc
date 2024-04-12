@@ -25,6 +25,7 @@
 #include <QStyleFactory>
 #include <QTimer>
 #include <QWindow>
+#include <QProxyStyle>
 #undef asprintf
 #if defined(WIN32)
 #include <windows.h>
@@ -42,6 +43,45 @@
 
 static rfb::LogWriter vlog("VNCWindow");
 
+#ifdef __APPLE__
+class ScrollBarStyle : public QProxyStyle
+{
+public:
+  int styleHint(StyleHint sh, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *hret) const
+  {
+    int ret = 0;
+
+    switch (sh) {
+    case SH_ScrollBar_Transient:
+      ret = false;
+      break;
+    default:
+      return QProxyStyle::styleHint(sh, opt, widget, hret);
+    }
+
+    return ret;
+  }
+
+  int pixelMetric(PixelMetric metric, const QStyleOption *opt, const QWidget *widget) const
+  {
+    int ret = 0;
+
+    switch (metric) {
+    case PM_ScrollBarExtent:
+      ret = cocoa_scrollbar_size();
+      break;
+    case PM_ScrollView_ScrollBarOverlap:
+      ret = false;
+      break;
+    default:
+      return QProxyStyle::pixelMetric(metric, opt, widget);
+    }
+
+    return ret;
+  }
+};
+#endif
+
 class ScrollArea : public QScrollArea
 {
 public:
@@ -54,11 +94,20 @@ public:
     setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX)
     setStyleSheet("QScrollArea { background: transparent; }"
                   "QScrollArea > QWidget { background: transparent; }");
+#elif defined(__APPLE__)
+    horizontalScrollBar()->setStyle(&style);
+    verticalScrollBar()->setStyle(&style);
+    setStyle(&style);
 #endif
   }
+
+private:
+#ifdef __APPLE__
+  ScrollBarStyle style;
+#endif
 };
 
 QVNCWindow::QVNCWindow(QWidget* parent)
