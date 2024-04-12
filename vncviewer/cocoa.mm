@@ -774,10 +774,15 @@ void cocoa_set_overlay_property(WId winid)
   [window setCollectionBehavior:NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorFullScreenAuxiliary];
 }
 
-
 void cocoa_dim(NSView *view, bool enabled)
 {
   CGFloat alpha = enabled ? 0.4 : 1.0;
   [view setAlphaValue:(alpha)];
 }
 
+int cocoa_scrollbar_size()
+{
+  return static_cast<int>([NSScroller
+    scrollerWidthForControlSize:static_cast<NSControlSize>(0)
+    scrollerStyle:NSScrollerStyleLegacy]);
+}

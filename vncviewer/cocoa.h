@@ -63,4 +63,6 @@ bool cocoa_displays_have_separate_spaces();
 void cocoa_set_overlay_property(WId winid);
 void cocoa_dim(NSView *view, bool enabled);
 
+int cocoa_scrollbar_size();
+
 #endif
