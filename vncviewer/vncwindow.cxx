@@ -54,6 +54,10 @@ public:
     setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+#ifdef Q_OS_LINUX
+    setStyleSheet("QScrollArea { background: transparent; }"
+                  "QScrollArea > QWidget { background: transparent; }");
+#endif
   }
 };
 
@@ -69,6 +73,14 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   scrollArea = new ScrollArea;
 
   QPalette p(palette());
+#ifdef Q_OS_LINUX
+  scrollArea->horizontalScrollBar()->setPalette(p);
+  scrollArea->horizontalScrollBar()->setAutoFillBackground(true);
+  scrollArea->horizontalScrollBar()->setBackgroundRole(QPalette::Window);
+  scrollArea->verticalScrollBar()->setPalette(p);
+  scrollArea->verticalScrollBar()->setAutoFillBackground(true);
+  scrollArea->verticalScrollBar()->setBackgroundRole(QPalette::Window);
+#endif
   p.setColor(QPalette::Window, QColor::fromRgb(40, 40, 40));
   setPalette(p);
   setBackgroundRole(QPalette::Window);
