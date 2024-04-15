@@ -33,7 +33,7 @@ public:
 private:
     typedef struct {
         int x, y, w, h;
-        int fltkIndex;
+        int screenIndex;
     } Monitor;
 
     bool parseIndices(const char* value, std::set<int> *indices,

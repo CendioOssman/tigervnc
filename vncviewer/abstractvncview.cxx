@@ -233,10 +233,9 @@ void QAbstractVNCView::sendContextMenuKey()
   if (::viewOnly) {
     return;
   }
-  int dummy;
   int keyCode;
   quint32 keySym;
-  ::getMenuKey(&dummy, &keyCode, &keySym);
+  ::getMenuKey(&keyCode, &keySym);
   keyboardHandler->handleKeyPress(keyCode, keySym, true);
   keyboardHandler->handleKeyRelease(keyCode);
   contextMenu->hide();
