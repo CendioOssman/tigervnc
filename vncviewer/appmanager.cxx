@@ -118,10 +118,15 @@ void AppManager::publishError(const QString message, bool quit)
   }
   errorCount++;
 
-  qApp->setQuitOnLastWindowClosed(true);
   AlertDialog d(isFullScreen(), message, quit, topWindow());
   d.exec();
-  qApp->setQuitOnLastWindowClosed(false);
+  if (d.result() == QDialog::Rejected) {
+    if (view != nullptr) {
+      qApp->quit();
+    } else if (commandLine) {
+      qApp->quit();
+    }
+  }
 }
 
 void AppManager::openVNCWindow(int width, int height, QString name)

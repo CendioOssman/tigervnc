@@ -1,6 +1,7 @@
 #include "alertdialog.h"
 
 #include "appmanager.h"
+#include "viewerconfig.h"
 #include "parameters.h"
 #include "i18n.h"
 
@@ -26,8 +27,8 @@ AlertDialog::AlertDialog(bool staysOnTop, QString message, bool quit, QWidget* p
     QPushButton* reconnectBtn = new QPushButton(_("Reconnect"));
     btnsLayout->addWidget(reconnectBtn, 0, Qt::AlignRight);
     connect(reconnectBtn, &QPushButton::clicked, this, [=]() {
-      AppManager::instance()->connectToServer("");
-      close();
+      accept();
+      AppManager::instance()->connectToServer(ViewerConfig::instance()->getServerName());
     });
   }
   QPushButton* closeBtn = new QPushButton(_("Close"));
@@ -36,7 +37,7 @@ AlertDialog::AlertDialog(bool staysOnTop, QString message, bool quit, QWidget* p
     if (quit) {
       qApp->quit();
     }
-    close();
+    reject();
   });
   layout->addLayout(btnsLayout);
 

@@ -28,6 +28,10 @@ public:
 
   bool isFullScreen() const;
 
+  void setCommandLine(bool b) { commandLine = b; }
+
+  bool isCommandLine() const { return commandLine; }
+
 signals:
   void credentialRequested(bool secured, bool userNeeded, bool passwordNeeded);
   void messageDialogRequested(int flags, QString title, QString text);
@@ -65,6 +69,7 @@ public slots:
 private:
   QWidget* topWindow() const;
 
+  bool commandLine = false;
   int errorCount;
   QVNCConnection* connection;
   QAbstractVNCView* view = nullptr;
