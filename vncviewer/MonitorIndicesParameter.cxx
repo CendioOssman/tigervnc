@@ -66,7 +66,7 @@ std::set<int> MonitorIndicesParameter::getParam()
     // Go through the monitors and see what indices are present in the config.
     for (int i = 0; i < ((int) monitors.size()); i++) {
         if (std::find(configIndices.begin(), configIndices.end(), i) != configIndices.end())
-            indices.insert(monitors[i].fltkIndex);
+            indices.insert(monitors[i].screenIndex);
     }
 
     return indices;
@@ -108,7 +108,7 @@ bool MonitorIndicesParameter::setParam(std::set<int> indices)
     }
 
     for (int i = 0; i < ((int) monitors.size()); i++) {
-        if (std::find(indices.begin(), indices.end(), monitors[i].fltkIndex) != indices.end())
+        if (std::find(indices.begin(), indices.end(), monitors[i].screenIndex) != indices.end())
             configIndices.insert(i);
     }
 
