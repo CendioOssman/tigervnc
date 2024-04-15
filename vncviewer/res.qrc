@@ -1,5 +1,11 @@
 <RCC>
     <qresource prefix="/">
-        <file alias="tigervnc.png">../media/icons/tigervnc.png</file>
+    <file alias="tigervnc_16.png">../media/icons/tigervnc_16.png</file>
+    <file alias="tigervnc_22.png">../media/icons/tigervnc_22.png</file>
+    <file alias="tigervnc_24.png">../media/icons/tigervnc_24.png</file>
+    <file alias="tigervnc_32.png">../media/icons/tigervnc_32.png</file>
+    <file alias="tigervnc_48.png">../media/icons/tigervnc_48.png</file>
+    <file alias="tigervnc_64.png">../media/icons/tigervnc_64.png</file>
+    <file alias="tigervnc_128.png">../media/icons/tigervnc_128.png</file>
     </qresource>
 </RCC>

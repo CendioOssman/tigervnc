@@ -29,7 +29,15 @@ int main(int argc, char *argv[])
   app.setOrganizationDomain("tigervnc.org");
   app.setApplicationName("vncviewer");
   app.setApplicationDisplayName("TigerVNC Viewer");
-  app.setWindowIcon(QIcon(":/tigervnc.png"));
+  QIcon icon;
+  icon.addFile(":/tigervnc_16.png", QSize(16, 16));
+  icon.addFile(":/tigervnc_22.png", QSize(22, 22));
+  icon.addFile(":/tigervnc_24.png", QSize(24, 24));
+  icon.addFile(":/tigervnc_32.png", QSize(32, 32));
+  icon.addFile(":/tigervnc_48.png", QSize(48, 48));
+  icon.addFile(":/tigervnc_64.png", QSize(64, 64));
+  icon.addFile(":/tigervnc_128.png", QSize(128, 128));
+  app.setWindowIcon(icon);
 
   LoggerConfig logger;
 
