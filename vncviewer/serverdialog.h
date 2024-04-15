@@ -21,8 +21,12 @@ public:
   void openLoadConfigDialog();
   void openSaveConfigDialog();
 
+signals:
+  void closed();
+
 protected:
   void keyPressEvent(QKeyEvent* e) override;
+  void closeEvent(QCloseEvent* e) override;
 
 private:
   QComboBox* comboBox;

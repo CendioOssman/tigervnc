@@ -218,7 +218,7 @@ void QAbstractVNCView::createContextMenu()
       contextMenu->addAction(action);
     }
     contextMenu->installEventFilter(this);
-    connect(contextMenu, &QMenu::aboutToHide, this, &QAbstractVNCView::installKeyboardHandler, Qt::QueuedConnection);
+    connect(contextMenu, &QMenu::aboutToHide, this, &QAbstractVNCView::installKeyboardHandler);
   }
 }
 

@@ -46,6 +46,7 @@ public:
 
 signals:
   void fullscreenChanged(bool enabled);
+  void closed();
 
 protected:
   void moveEvent(QMoveEvent* e) override;
@@ -53,6 +54,7 @@ protected:
   void changeEvent(QEvent* e) override;
   void focusInEvent(QFocusEvent*) override;
   void focusOutEvent(QFocusEvent*) override;
+  void closeEvent(QCloseEvent* e) override;
 
 private:
   QTimer* resizeTimer;
