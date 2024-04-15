@@ -268,7 +268,7 @@ bool QAbstractVNCView::eventFilter(QObject* obj, QEvent* event)
     QKeyEvent* e = static_cast<QKeyEvent*>(event);
     if (isVisibleContextMenu()) {
       if (QKeySequence(e->key()).toString() == ::menuKey.getValueStr().c_str()) {
-        toggleContextMenu();
+        sendContextMenuKey();
         return true;
       }
     }
