@@ -93,6 +93,7 @@ bool AppManager::isFullScreen() const
 
 void AppManager::connectToServer(const QString addressport)
 {
+  serverDialog->hide();
   emit connectToServerRequested(addressport);
 }
 
@@ -119,6 +120,12 @@ void AppManager::publishError(const QString message, bool quit)
   }
   errorCount++;
 
+  if (!commandLine) {
+    if (!connectedOnce) {
+      serverDialog->show();
+    }
+  }
+
   AlertDialog d(isFullScreen(), message, quit, topWindow());
   d.exec();
   if (d.result() == QDialog::Rejected) {
@@ -130,6 +137,8 @@ void AppManager::publishError(const QString message, bool quit)
 
 void AppManager::openVNCWindow(int width, int height, QString name)
 {
+  connectedOnce = true;
+
   window->takeWidget();
   delete view;
 #if defined(WIN32)
