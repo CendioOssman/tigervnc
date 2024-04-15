@@ -110,7 +110,6 @@ protected:
   void removeKeyboardHandler();
 
   // Context menu
-  quint32 menuKeySym;
   QMenu* contextMenu = nullptr;
   QList<QAction*> contextMenuActions;
   void createContextMenu();

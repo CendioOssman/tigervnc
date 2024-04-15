@@ -46,7 +46,6 @@ protected:
 
   DownMap downKeySym;
 
-  quint32 menuKeySym = XK_F8;
   bool menuCtrlKey = false;
   bool menuAltKey = false;
 };
