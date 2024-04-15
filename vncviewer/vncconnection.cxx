@@ -156,6 +156,10 @@ void QVNCConnection::bind(int fd)
 
 void QVNCConnection::connectToServer(QString addressport)
 {
+  if (::listenMode) {
+    return;
+  }
+
   try {
     if (addressport.isEmpty()) {
       resetConnection();
@@ -201,6 +205,7 @@ void QVNCConnection::connectToServer(QString addressport)
 
 void QVNCConnection::listen()
 {
+  rfbcon = new CConn(this);
   std::list<network::SocketListener*> listeners;
   try {
     bool ok;

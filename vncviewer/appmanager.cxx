@@ -93,7 +93,9 @@ bool AppManager::isFullScreen() const
 
 void AppManager::connectToServer(const QString addressport)
 {
-  serverDialog->hide();
+  if (serverDialog) {
+    serverDialog->hide();
+  }
   emit connectToServerRequested(addressport);
 }
 
