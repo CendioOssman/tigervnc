@@ -40,6 +40,9 @@
 #include <xcb/xcb.h>
 #endif
 #endif
+#ifdef __APPLE__
+#include "cocoa.h"
+#endif
 
 static rfb::LogWriter vlog("VNCWindow");
 
