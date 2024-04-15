@@ -8,6 +8,7 @@ class QVNCWindow;
 class QTimer;
 class QVNCConnection;
 class ServerDialog;
+class QDialog;
 
 class AppManager : public QObject
 {
@@ -71,6 +72,7 @@ public slots:
 
 private:
   QWidget* topWindow() const;
+  void openDialog(QDialog &d);
 
   bool commandLine = false;
   bool connectedOnce = false;
