@@ -120,6 +120,7 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   , resizeTimer(new QTimer(this))
   , devicePixelRatio(devicePixelRatioF())
 {
+  setAttribute(Qt::WA_NativeWindow, true);
   setFocusPolicy(Qt::StrongFocus);
 
   setContentsMargins(0, 0, 0, 0);
@@ -310,7 +311,14 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
              screen->geometry().y(),
              screen->geometry().width(),
              screen->geometry().height());
+#ifdef __APPLE__
+  fullscreenOnSelectedDisplays(screen->geometry().x(),
+                               screen->geometry().y(),
+                               screen->geometry().width(),
+                               screen->geometry().height());
+#else
   show();
+  QApplication::sync();
   QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
     windowHandle()->setScreen(screen);
     move(screen->geometry().x(), screen->geometry().y());
@@ -319,6 +327,7 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
     QAbstractVNCView* view = AppManager::instance()->getView();
     view->maybeGrabKeyboard();
   });
+#endif
 }
 
 #ifdef Q_OS_LINUX
@@ -361,14 +370,23 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vh
   setWindowFlag(Qt::WindowStaysOnTopHint, true);
   setWindowFlag(Qt::FramelessWindowHint, true);
 
+#ifdef __APPLE__
+  showNormal();
+#else
   show();
-  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
+#endif
+  QTimer::singleShot(std::chrono::milliseconds(500), [=]() {
     move(vx, vy);
     resize(vwidth, vheight);
     raise();
     activateWindow();
     QAbstractVNCView* view = AppManager::instance()->getView();
     view->maybeGrabKeyboard();
+#ifdef __APPLE__
+    QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
+    cocoa_fullscreen(cocoa_get_view(this), true, ::fullscreenSystemKeys && allowKeyboardGrab() && view->hasFocus());
+    });
+#endif
   });
 }
 #endif
@@ -389,6 +407,10 @@ void QVNCWindow::exitFullscreen()
 #else
   setWindowFlag(Qt::WindowStaysOnTopHint, false);
   setWindowFlag(Qt::FramelessWindowHint, false);
+#ifdef __APPLE__
+  cocoa_fullscreen(cocoa_get_view(this), false);
+  cocoa_release_displays();
+#endif
 
   showNormal();
   move(0, 0);
@@ -640,19 +662,27 @@ void QVNCWindow::changeEvent(QEvent* e)
                height(),
                int(windowState()),
                oldState);
-    if (!(oldState & Qt::WindowFullScreen) && windowState() & Qt::WindowFullScreen) {
-      vlog.debug("QVNCWindow::changeEvent window has gone fullscreen, checking if it our doing");
-      vlog.debug("QVNCWindow::changeEvent fullscreenEnabled=%d pendingFullscreen=%d",
-                 fullscreenEnabled, pendingFullscreen);
-      if (!fullscreenEnabled && !pendingFullscreen) {
+    vlog.debug("QVNCWindow::changeEvent fullscreenEnabled=%d pendingFullscreen=%d",
+               fullscreenEnabled, pendingFullscreen);
+    if (!fullscreenEnabled && !pendingFullscreen) {
+      if (!(oldState & Qt::WindowFullScreen) && windowState() & Qt::WindowFullScreen) {
+#ifdef __APPLE__
+        vlog.debug("QVNCWindow::changeEvent window has gone fullscreen, we do not like it on Mac");
+        QTimer::singleShot(std::chrono::milliseconds(1000), [=]() {
+          fullscreen(false);
+          fullscreen(true);
+        });
+#else
+        vlog.debug("QVNCWindow::changeEvent window has gone fullscreen, checking if it our doing");
         fullscreen(true);
+#endif
       }
-    } else if (oldState & Qt::WindowFullScreen && !(windowState() & Qt::WindowFullScreen)) {
-      vlog.debug("QVNCWindow::changeEvent window has left fullscreen, checking if it our doing");
-      vlog.debug("QVNCWindow::changeEvent fullscreenEnabled=%d pendingFullscreen=%d",
-                   fullscreenEnabled, pendingFullscreen);
-      if (fullscreenEnabled || pendingFullscreen) {
+    } else if (fullscreenEnabled && !pendingFullscreen) {
+      if (oldState & Qt::WindowFullScreen && !(windowState() & Qt::WindowFullScreen)) {
+#ifndef __APPLE__
+        vlog.debug("QVNCWindow::changeEvent window has left fullscreen, checking if it our doing");
         fullscreen(false);
+#endif
       }
     }
   }

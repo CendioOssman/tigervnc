@@ -308,18 +308,12 @@ CGImageRef cocoa_create_bitmap(int width, int height, unsigned char *data)
   return iref;
 }
 
-int cocoa_capture_displays(NSView *view, QList<int> screens)
+int cocoa_capture_displays(QList<int> screens)
 {
-  NSWindow *window = [view window];
   CGDirectDisplayID displays[16];
-
-  NSRect r = [window frame];
-  rfb::Rect windows_rect;
-  windows_rect.setXYWH(r.origin.x, r.origin.y, r.size.width, r.size.height);
-
   CGDisplayCount count;
   if (CGGetActiveDisplayList(16, displays, &count) != kCGErrorSuccess) {
-    return 1;
+    return 0;
   }
 
   if (screens.size() == (int)count) {
@@ -328,49 +322,45 @@ int cocoa_capture_displays(NSView *view, QList<int> screens)
   else {
     for (int dix = 0; dix < (int)count; dix++) {
       if (screens.contains(dix)) {
-	if (CGDisplayCapture(displays[dix]) != kCGErrorSuccess) {
-	  return 1;
-	}
-      }
-      else {
-	// A display might have been captured with the previous
-	// monitor selection. In that case we don't want to keep
-	// it when its no longer inside the window_rect.
-	CGDisplayRelease(displays[dix]);
+        if (CGDisplayCapture(displays[dix]) != kCGErrorSuccess) {
+          return 0;
+        }
+      } else {
+        // A display might have been captured with the previous
+        // monitor selection. In that case we don't want to keep
+        // it when its no longer inside the window_rect.
+        CGDisplayRelease(displays[dix]);
       }
     }
   }
 
   captured = true;
-
-  if ([window level] == CGShieldingWindowLevel()) {
-    return 0;
-  }
-
-  [window setLevel:CGShieldingWindowLevel()];
-
-  // We're not getting put in front of the shielding window in many
-  // cases on macOS 13, despite setLevel: being documented as also
-  // pushing the window to the front. So let's explicitly move it.
-  [window orderFront:window];
   
   return 0;
 }
 
-void cocoa_release_displays(NSView *view, bool fullscreen)
+void cocoa_release_displays()
 {
-  Q_UNUSED(fullscreen)
-  NSWindow *window = [view window];
-
   CGReleaseAllDisplays();
   captured = false;
+}
 
-  // Someone else has already changed the level of this window
-  if ([window level] != CGShieldingWindowLevel()) {
-    return;
+void cocoa_fullscreen(NSView *view, bool enabled, bool shielding)
+{
+  NSWindow *window = [view window];
+  if (enabled) {
+    if (shielding) {
+      [window setLevel:CGShieldingWindowLevel()];
+    } else {
+      [window setLevel:NSStatusWindowLevel];
+    }
+    // We're not getting put in front of the shielding window in many
+    // cases on macOS 13, despite setLevel: being documented as also
+    // pushing the window to the front. So let's explicitly move it.
+    [window orderFront:window];
+  } else {
+    [window setLevel:NSNormalWindowLevel];
   }
-
-  [window setLevel:NSNormalWindowLevel];
 }
 
 int cocoa_is_keyboard_sync(const void *event)
@@ -770,7 +760,7 @@ void cocoa_set_overlay_property(WId winid)
 {
   NSView *view = reinterpret_cast<NSView*>(winid);
   NSWindow *window = [view window];
-  [window setLevel:CGShieldingWindowLevel()];
+  [window setLevel:CGShieldingWindowLevel()+1];
   [window setCollectionBehavior:NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorFullScreenAuxiliary];
 }
 

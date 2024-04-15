@@ -68,6 +68,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
 #endif
 {
   setAttribute(Qt::WA_OpaquePaintEvent, true);
+  setAttribute(Qt::WA_NativeWindow, true);
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
   setContentsMargins(0, 0, 0, 0);
@@ -180,7 +181,7 @@ void QAbstractVNCView::toggleContextMenu()
 void QAbstractVNCView::createContextMenu()
 {
   if (!contextMenu) {
-    contextMenu = new QMenu;
+    contextMenu = new QMenu(this);
     contextMenuActions << new QDisconnectAction(p_("ContextMenu|", "Dis&connect"));
     contextMenuActions << new QMenuSeparator();
     auto fullScreenAction = new QFullScreenAction(p_("ContextMenu|", "&Full screen"));
@@ -209,10 +210,6 @@ void QAbstractVNCView::createContextMenu()
     contextMenuActions << new QOptionDialogAction(p_("ContextMenu|", "&Options..."));
     contextMenuActions << new QInfoDialogAction(p_("ContextMenu|", "Connection &info..."));
     contextMenuActions << new QAboutDialogAction(p_("ContextMenu|", "About &TigerVNC viewer..."));
-#if defined(__APPLE__)
-    contextMenu->setAttribute(Qt::WA_NativeWindow);
-    cocoa_set_overlay_property(contextMenu->winId());
-#endif
     for (QAction*& action : contextMenuActions) {
       contextMenu->addAction(action);
     }
