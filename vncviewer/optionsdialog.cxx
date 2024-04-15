@@ -14,6 +14,29 @@
 #include <QStackedWidget>
 #include <QVBoxLayout>
 #include <QStyledItemDelegate>
+#include <QProxyStyle>
+
+#ifdef Q_OS_LINUX
+class ListViewStyle : public QProxyStyle
+{
+public:
+  void drawPrimitive(PrimitiveElement element, const QStyleOption * option, QPainter * painter, const QWidget * widget = 0) const
+  {
+    if (PE_FrameFocusRect == element) {
+      return;
+    }
+
+    if (PE_PanelItemViewItem == element) {
+      auto newOption = *qstyleoption_cast<const QStyleOptionViewItem *>(option);
+      newOption.showDecorationSelected = true;
+      QProxyStyle::drawPrimitive(element, &newOption, painter, widget);
+      return;
+    }
+
+    QProxyStyle::drawPrimitive(element, option, painter, widget);
+  }
+};
+#endif
 
 class OptionsDelegate : public QStyledItemDelegate
 {
@@ -39,6 +62,7 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   setModal(true);
   setWindowModality(Qt::ApplicationModal);
 
+
   QVBoxLayout* layout = new QVBoxLayout;
   layout->setContentsMargins(0,0,0,0);
   layout->setSpacing(0);
@@ -46,6 +70,9 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   QHBoxLayout* hLayout = new QHBoxLayout;
 
   QListWidget* listWidget = new QListWidget;
+#ifdef Q_OS_LINUX
+  listWidget->setStyle(new ListViewStyle);
+#endif
   listWidget->setFrameShape(QFrame::NoFrame);
   listWidget->setItemDelegate(new OptionsDelegate(this));
   QStringList tabs = {"   " + QString(_("Compression")),
