@@ -2,6 +2,7 @@
 
 #include "appmanager.h"
 #include "i18n.h"
+#include "menukey.h"
 #include "parameters.h"
 #include "rdr/Exception.h"
 #include "rfb/LogWriter.h"
@@ -33,6 +34,11 @@ void BaseKeyboardHandler::ungrabKeyboard()
 bool BaseKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
 {
   vlog.debug("BaseKeyboardHandler::handleKeyPress");
+
+  int menuKeyCode;
+  quint32 menuKeySym;
+  ::getMenuKey(&menuKeyCode, &menuKeySym);
+
   if (menuKeySym && keySym == menuKeySym) {
     if (!menuShortCutMode) {
       emit contextMenuKeyPressed(menuShortCutMode);

@@ -62,7 +62,6 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
   : QWidget(parent, f)
   , mbemu(new EmulateMB)
   , mousePointerTimer(new QTimer(this))
-  , menuKeySym(XK_F8)
   , delayedInitializeTimer(new QTimer(this))
 #ifdef QT_DEBUG
   , fpsTimer(this)
