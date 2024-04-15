@@ -89,6 +89,7 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   QHBoxLayout* btnsLayout = new QHBoxLayout;
   btnsLayout->setContentsMargins(10,10,10,10);
   btnsLayout->addStretch(1);
+  btnsLayout->setSpacing(5);
   QPushButton* applyBtn = new QPushButton(_("Apply"));
   btnsLayout->addWidget(applyBtn, 0, Qt::AlignRight);
   QPushButton* closeBtn = new QPushButton(_("Close"));
