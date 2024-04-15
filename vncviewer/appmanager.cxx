@@ -72,7 +72,7 @@ void AppManager::initialize()
 
   connect(this, &AppManager::credentialRequested, this, [=](bool secured, bool userNeeded, bool passwordNeeded) {
     AuthDialog d(secured, userNeeded, passwordNeeded, topWindow());
-    d.exec();
+    openDialog(d);
   });
   connect(window, &QVNCWindow::closed, qApp, &QApplication::quit);
 
@@ -157,7 +157,7 @@ void AppManager::publishError(const QString message, bool quit)
   }
 
   AlertDialog d(isFullScreen(), text, quit, topWindow());
-  d.exec();
+  openDialog(d);
   if (d.result() == QDialog::Rejected) {
     if (!serverDialog || !serverDialog->isVisible()) {
       qApp->quit();
@@ -270,28 +270,41 @@ void AppManager::openContextMenu()
   emit contextMenuRequested();
 }
 
+void AppManager::openDialog(QDialog & d)
+{
+#ifdef __APPLE__
+  d.open();
+  QEventLoop loop;
+  connect(&d, &QDialog::destroyed, this, [&](){ loop.exit(); });
+  loop.exec();
+#else
+  d.exec();
+#endif
+}
+
 void AppManager::openInfoDialog()
 {
   InfoDialog d(topWindow());
-  d.exec();
+  openDialog(d);
 }
 
 void AppManager::openOptionDialog()
 {
   OptionsDialog d(isFullScreen(), topWindow());
-  d.exec();
+  openDialog(d);
 }
 
 void AppManager::openAboutDialog()
 {
   AboutDialog d(isFullScreen(), topWindow());
-  d.exec();
+  openDialog(d);
 }
 
 void AppManager::openMessageDialog(int flags, QString title, QString text)
 {
   MessageDialog d(isFullScreen(), flags, title, text, topWindow());
-  int response = d.exec() == QDialog::Accepted ? 1 : 0;
+  openDialog(d);
+  int response = d.result() == QDialog::Accepted ? 1 : 0;
   emit messageResponded(response);
 }
 
