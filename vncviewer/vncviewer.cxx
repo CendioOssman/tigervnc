@@ -37,9 +37,10 @@ int main(int argc, char *argv[])
   app.installTranslator(&translator);
 
   if (!ViewerConfig::instance()->getServerName().isEmpty()) {
+    AppManager::instance()->setCommandLine(true);
     AppManager::instance()->connectToServer(ViewerConfig::instance()->getServerName());
     app.setQuitOnLastWindowClosed(false);
-    return app.exec();
+    return AppManager::instance()->getView() ? app.exec() : 0;
   } else {
     AppManager::instance()->openServerDialog();
     return app.exec();
