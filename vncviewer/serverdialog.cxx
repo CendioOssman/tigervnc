@@ -131,3 +131,9 @@ void ServerDialog::keyPressEvent(QKeyEvent* e)
 
   QWidget::keyPressEvent(e);
 }
+
+void ServerDialog::closeEvent(QCloseEvent* e)
+{
+  emit closed();
+  QWidget::closeEvent(e);
+}

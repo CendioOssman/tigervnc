@@ -67,6 +67,7 @@ AppManager::AppManager()
     AuthDialog d(secured, userNeeded, passwordNeeded, topWindow());
     d.exec();
   });
+  QObject::connect(window, &QVNCWindow::closed, qApp, &QApplication::quit);
 }
 
 AppManager::~AppManager()
@@ -121,9 +122,7 @@ void AppManager::publishError(const QString message, bool quit)
   AlertDialog d(isFullScreen(), message, quit, topWindow());
   d.exec();
   if (d.result() == QDialog::Rejected) {
-    if (view != nullptr) {
-      qApp->quit();
-    } else if (commandLine) {
+    if (!serverDialog || !serverDialog->isVisible()) {
       qApp->quit();
     }
   }
@@ -195,12 +194,10 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   }
 
   emit vncWindowOpened();
-  qApp->setQuitOnLastWindowClosed(true);
 }
 
 void AppManager::closeVNCWindow()
 {
-  qApp->setQuitOnLastWindowClosed(false);
   QWidget* w = window->takeWidget();
   if (w) {
     window->setVisible(false);
@@ -306,6 +303,7 @@ void AppManager::openServerDialog()
   serverDialog = new ServerDialog;
   serverDialog->setVisible(!::listenMode);
   QObject::connect(AppManager::instance(), &AppManager::vncWindowOpened, serverDialog, &QWidget::hide);
+  QObject::connect(serverDialog, &ServerDialog::closed, qApp, &QApplication::quit);
 }
 
 QWidget *AppManager::topWindow() const

@@ -8,6 +8,7 @@
 #include "viewerconfig.h"
 #include "vncapplication.h"
 #include "vnctranslator.h"
+#include "vncconnection.h"
 
 int main(int argc, char *argv[])
 {
@@ -44,11 +45,12 @@ int main(int argc, char *argv[])
   VNCTranslator translator;
   app.installTranslator(&translator);
 
+  app.setQuitOnLastWindowClosed(false);
+
   if (!ViewerConfig::instance()->getServerName().isEmpty()) {
     AppManager::instance()->setCommandLine(true);
     AppManager::instance()->connectToServer(ViewerConfig::instance()->getServerName());
-    app.setQuitOnLastWindowClosed(false);
-    return AppManager::instance()->getView() ? app.exec() : 0;
+    return AppManager::instance()->getConnection()->hasConnection() ? app.exec() : 0;
   } else {
     AppManager::instance()->openServerDialog();
     return app.exec();

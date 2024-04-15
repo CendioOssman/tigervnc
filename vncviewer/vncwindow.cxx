@@ -727,3 +727,9 @@ void QVNCWindow::focusOutEvent(QFocusEvent*)
       view->ungrabKeyboard();
   }
 }
+
+void QVNCWindow::closeEvent(QCloseEvent* e)
+{
+  emit closed();
+  QWidget::closeEvent(e);
+}
