@@ -12,6 +12,7 @@
 #include <QPushButton>
 #include <QStringListModel>
 #include <QVBoxLayout>
+#include <QKeyEvent>
 
 ServerDialog::ServerDialog(QWidget* parent)
   : QWidget{parent}
@@ -116,4 +117,17 @@ void ServerDialog::openSaveConfigDialog()
   if (!filename.isEmpty()) {
     ViewerConfig::instance()->saveViewerParameters(filename, comboBox->currentText());
   }
+}
+
+
+void ServerDialog::keyPressEvent(QKeyEvent* e)
+{
+  if(e->key() == Qt::Key_Escape)
+  {
+    e->accept();
+    close();
+    return;
+  }
+
+  QWidget::keyPressEvent(e);
 }

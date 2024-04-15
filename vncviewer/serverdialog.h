@@ -21,6 +21,9 @@ public:
   void openLoadConfigDialog();
   void openSaveConfigDialog();
 
+protected:
+  void keyPressEvent(QKeyEvent* e) override;
+
 private:
   QComboBox* comboBox;
 };
