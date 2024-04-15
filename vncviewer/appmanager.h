@@ -70,6 +70,7 @@ private:
   QWidget* topWindow() const;
 
   bool commandLine = false;
+  bool connectedOnce = false;
   int errorCount;
   QVNCConnection* connection;
   QAbstractVNCView* view = nullptr;
