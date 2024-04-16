@@ -125,10 +125,10 @@ void CompressionTab::reset()
   compressionEncodingHextile->setChecked(rfb::encodingNum(::preferredEncoding) == 5);
   compressionEncodingH264->setChecked(rfb::encodingNum(::preferredEncoding) == 50);
   compressionEncodingRaw->setChecked(rfb::encodingNum(::preferredEncoding) == 0);
-  compressionColorLevelFull->setChecked(::fullColour);
   compressionColorLevelMedium->setChecked(::lowColourLevel == 2);
   compressionColorLevelLow->setChecked(::lowColourLevel == 1);
   compressionColorLevelVeryLow->setChecked(::lowColourLevel == 0);
+  compressionColorLevelFull->setChecked(::fullColour);
   compressionCustomCompressionLevel->setChecked(::customCompressLevel);
   compressionCustomCompressionLevelTextEdit->setValue(::compressLevel);
   compressionJPEGCompression->setChecked(!::noJpeg);
