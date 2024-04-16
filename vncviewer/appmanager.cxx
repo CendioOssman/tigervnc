@@ -122,7 +122,7 @@ void AppManager::resetConnection()
 void AppManager::publishError(const QString message, bool quit)
 {
   QString text(message);
-  if (!quit) {
+  if (::reconnectOnError && !quit) {
     text = QString::asprintf(_("%s\n\nAttempt to reconnect?"), message.toStdString().c_str());
   }
   errorCount++;
@@ -135,7 +135,7 @@ void AppManager::publishError(const QString message, bool quit)
     }
   }
 
-  AlertDialog d(isFullScreen(), message, quit, topWindow());
+  AlertDialog d(isFullScreen(), text, quit, topWindow());
   d.exec();
   if (d.result() == QDialog::Rejected) {
     if (!serverDialog || !serverDialog->isVisible()) {
