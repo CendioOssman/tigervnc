@@ -47,6 +47,11 @@ int main(int argc, char *argv[])
 
   app.setQuitOnLastWindowClosed(false);
 
+  QObject::connect(ViewerConfig::instance(), &ViewerConfig::errorOccurred,
+                   AppManager::instance(), [&](QString str){ AppManager::instance()->publishError(str, true); });
+  AppManager::instance()->initialize();
+  ViewerConfig::instance()->initialize();
+
   if (!ViewerConfig::instance()->getServerName().isEmpty()) {
     AppManager::instance()->setCommandLine(true);
     AppManager::instance()->connectToServer(ViewerConfig::instance()->getServerName());

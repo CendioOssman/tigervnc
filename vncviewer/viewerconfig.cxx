@@ -46,6 +46,11 @@ extern const char* getvnchomedir();
 ViewerConfig::ViewerConfig()
   : QObject(nullptr)
 {
+
+}
+
+void ViewerConfig::initialize()
+{
   const char* homeDir = os::getvnchomedir();
   if (homeDir == nullptr) {
     QDir dir;
@@ -271,7 +276,9 @@ bool ViewerConfig::potentiallyLoadConfigurationFile(QString vncServerName)
     try {
       serverName = loadViewerParameters(vncServerName);
     } catch (rfb::Exception& e) {
-      vlog.error("%s", e.str());
+      QString str = QString::asprintf(_("Unable to load the specified configuration file:\n\n%s"), e.str());
+      vlog.error("%s", str.toStdString().c_str());
+      emit errorOccurred(str);
       return false;
     }
   }
