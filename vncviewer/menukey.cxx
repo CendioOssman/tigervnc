@@ -21,9 +21,6 @@
 #include <config.h>
 #endif
 
-#include <string.h>
-#include <QDebug>
-
 // FLTK can pull in the X11 headers on some systems
 #ifndef XK_VoidSymbol
 #define XK_MISCELLANY
@@ -34,26 +31,26 @@
 #include "parameters.h"
 
 static const MenuKeySymbol menuSymbols[] = {
-  {"F1",          0x3b, XK_F1},
-  {"F2",          0x3c, XK_F2},
-  {"F3",          0x3d, XK_F3},
-  {"F4",          0x3e, XK_F4},
-  {"F5",          0x3f, XK_F5},
-  {"F6",          0x40, XK_F6},
-  {"F7",          0x41, XK_F7},
-  {"F8",          0x42, XK_F8},
-  {"F9",          0x43, XK_F9},
-  {"F10",         0x44, XK_F10},
-  {"F11",         0x57, XK_F11},
-  {"F12",         0x58, XK_F12},
-  {"Pause",       0xc6, XK_Pause},
-  {"Scroll_Lock", 0x46, XK_Scroll_Lock},
-  {"Escape",      0x01, XK_Escape},
-  {"Insert",      0xd2, XK_Insert},
-  {"Delete",      0xd3, XK_Delete},
-  {"Home",        0xc7, XK_Home},
-  {"Page_Up",     0xc9, XK_Page_Up},
-  {"Page_Down",   0xd1, XK_Page_Down},
+  {"F1",          "F1",         0x3b, XK_F1},
+  {"F2",          "F2",         0x3c, XK_F2},
+  {"F3",          "F3",         0x3d, XK_F3},
+  {"F4",          "F4",         0x3e, XK_F4},
+  {"F5",          "F5",         0x3f, XK_F5},
+  {"F6",          "F6",         0x40, XK_F6},
+  {"F7",          "F7",         0x41, XK_F7},
+  {"F8",          "F8",         0x42, XK_F8},
+  {"F9",          "F9",         0x43, XK_F9},
+  {"F10",         "F10",        0x44, XK_F10},
+  {"F11",         "F11",        0x57, XK_F11},
+  {"F12",         "F12",        0x58, XK_F12},
+  {"Pause",       "Pause",      0xc6, XK_Pause},
+  {"Scroll_Lock", "ScrollLock", 0x46, XK_Scroll_Lock},
+  {"Escape",      "Esc",        0x01, XK_Escape},
+  {"Insert",      "Ins",        0xd2, XK_Insert},
+  {"Delete",      "Del",        0xd3, XK_Delete},
+  {"Home",        "Home",       0xc7, XK_Home},
+  {"Page_Up",     "PgUp",       0xc9, XK_Page_Up},
+  {"Page_Down",   "PgDown",     0xd1, XK_Page_Down},
 };
 
 int getMenuKeySymbolCount()
@@ -81,4 +78,18 @@ void getMenuKey(int *keycode, uint32_t *keysym)
 
   *keycode = 0;
   *keysym = 0;
+}
+
+QString getMenuKeyQString()
+{
+  QString menuKeyStr;
+
+  menuKeyStr = ::menuKey;
+  for(int i = 0; i < getMenuKeySymbolCount(); i++) {
+    if (menuKeyStr == menuSymbols[i].name) {
+      return menuSymbols[i].qtString;
+    }
+  }
+
+  return {};
 }

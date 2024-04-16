@@ -19,14 +19,17 @@
 #define __KEYSYM_H__
 
 #include <stdint.h>
+#include <QString>
 
 typedef struct {
   const char* name;
+  QString qtString;
   int keycode;
   uint32_t keysym;
 } MenuKeySymbol;
 
 void getMenuKey(int *keycode, uint32_t *keysym);
+QString getMenuKeyQString();
 int getMenuKeySymbolCount();
 const MenuKeySymbol* getMenuKeySymbols();
 
