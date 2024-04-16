@@ -55,16 +55,28 @@ CompressionTab::CompressionTab(QWidget* parent)
 
   layout->addLayout(hLayout);
 
-  compressionCustomCompressionLevel = new QCheckBox(_("Custom compression level (0=fast, 9=best)"));
+  compressionCustomCompressionLevel = new QCheckBox(_("Custom compression level:"));
   layout->addWidget(compressionCustomCompressionLevel);
+  QHBoxLayout* h1 = new QHBoxLayout;
+  h1->addSpacing(20);
   compressionCustomCompressionLevelTextEdit = new QSpinBox;
   compressionCustomCompressionLevelTextEdit->setRange(0, 9);
-  layout->addWidget(compressionCustomCompressionLevelTextEdit);
-  compressionJPEGCompression = new QCheckBox(_("Allow JPEG compression quality (0=poor, 9=best)"));
+  compressionCustomCompressionLevelTextEdit->setFixedWidth(50);
+  h1->addWidget(compressionCustomCompressionLevelTextEdit);
+  h1->addWidget(new QLabel(_("level (0=fast, 9=best)")));
+  h1->addStretch(1);
+  layout->addLayout(h1);
+  compressionJPEGCompression = new QCheckBox(_("Allow JPEG compression quality:"));
   layout->addWidget(compressionJPEGCompression);
+  QHBoxLayout* h2 = new QHBoxLayout;
+  h2->addSpacing(20);
   compressionJPEGCompressionTextEdit = new QSpinBox;
   compressionJPEGCompressionTextEdit->setRange(0, 9);
-  layout->addWidget(compressionJPEGCompressionTextEdit);
+  compressionJPEGCompressionTextEdit->setFixedWidth(50);
+  h2->addWidget(compressionJPEGCompressionTextEdit);
+  h2->addWidget(new QLabel(_("quality (0=poor, 9=best)")));
+  h2->addStretch(1);
+  layout->addLayout(h2);
 
   layout->addStretch(1);
 
