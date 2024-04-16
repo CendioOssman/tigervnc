@@ -25,9 +25,12 @@ DisplayTab::DisplayTab(QWidget* parent)
   vbox1->addWidget(displayFullScreenOnAllMonitors);
   displayFullScreenOnSelectedMonitors = new QRadioButton(_("Full screen on selected monitor(s)"));
   vbox1->addWidget(displayFullScreenOnSelectedMonitors);
+  QHBoxLayout* h1 = new QHBoxLayout;
+  h1->addSpacing(20);
   selectedScreens = new ScreensSelectionWidget;
   selectedScreens->setEnabled(false);
-  vbox1->addWidget(selectedScreens, 1);
+  h1->addWidget(selectedScreens, 1);
+  vbox1->addLayout(h1, 1);
   groupBox1->setLayout(vbox1);
   layout->addWidget(groupBox1, 1);
 
