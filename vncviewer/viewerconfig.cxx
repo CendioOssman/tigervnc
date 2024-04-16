@@ -19,6 +19,16 @@
 
 #include <Carbon/Carbon.h>
 #endif
+#ifdef Q_OS_LINUX
+#include "x11utils.h"
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QX11Info>
+#else
+#include <QGuiApplication>
+#include <xcb/xcb.h>
+#endif
+#endif
 
 #include "parameters.h"
 #include "rfb/Configuration.h"
@@ -139,6 +149,16 @@ bool ViewerConfig::canFullScreenOnMultiDisplays()
 {
 #if defined(__APPLE__)
   return !cocoa_displays_have_separate_spaces();
+#elif defined(Q_OS_LINUX)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  auto display = QX11Info::display();
+#else
+  auto display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+  int screen = DefaultScreen(display);
+  bool supported = X11Utils::isEWMHsupported(display, screen);
+  vlog.debug("isEWMHsupported %d", supported);
+  return supported;
 #else
   return true;
 #endif

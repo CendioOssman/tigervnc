@@ -32,6 +32,8 @@
 #endif
 #ifdef Q_OS_LINUX
 #include <X11/Xlib.h>
+#include "x11utils.h"
+#include "viewerconfig.h"
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QX11Info>
@@ -254,20 +256,32 @@ void QVNCWindow::fullscreen(bool enabled)
 
       if (selectedScreens.length() == 1) { // Fullscreen on the selected single display.
 #ifdef Q_OS_LINUX
-        fullscreenOnSelectedDisplays(top, top, top, top);
+        if (ViewerConfig::canFullScreenOnMultiDisplays()) {
+          fullscreenOnSelectedDisplays(top, top, top, top);
+        } else {
+          fullscreenOnSelectedDisplay(selectedPrimaryScreen);
+        }
 #else
         fullscreenOnSelectedDisplay(selectedPrimaryScreen);
 #endif
       } else { // Fullscreen on multiple displays.
 #ifdef Q_OS_LINUX
-        fullscreenOnSelectedDisplays(top, bottom, left, right);
+        if (ViewerConfig::canFullScreenOnMultiDisplays()) {
+          fullscreenOnSelectedDisplays(top, bottom, left, right);
+        } else {
+          fullscreenOnSelectedDisplay(selectedPrimaryScreen);
+        }
 #else
         fullscreenOnSelectedDisplays(xmin, ymin, w, h);
 #endif
       }
     } else { // Fullscreen on the current single display.
 #ifdef Q_OS_LINUX
-      fullscreenOnSelectedDisplays(top, top, top, top);
+      if (ViewerConfig::canFullScreenOnMultiDisplays()) {
+        fullscreenOnSelectedDisplays(top, top, top, top);
+      } else {
+        fullscreenOnSelectedDisplay(selectedPrimaryScreen);
+      }
 #else
       fullscreenOnSelectedDisplay(selectedPrimaryScreen);
 #endif
@@ -326,29 +340,8 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int top, int bottom, int left, int
 #endif
     int screen = DefaultScreen(display);
 
-    XEvent e1;
-    e1.xany.type = ClientMessage;
-    e1.xany.window = winId();
-    e1.xclient.message_type = XInternAtom(display, "_NET_WM_FULLSCREEN_MONITORS", 0);
-    e1.xclient.format = 32;
-    e1.xclient.data.l[0] = top;
-    e1.xclient.data.l[1] = bottom;
-    e1.xclient.data.l[2] = left;
-    e1.xclient.data.l[3] = right;
-    e1.xclient.data.l[4] = 0;
-    XSendEvent(display, RootWindow(display, screen),
-               0, SubstructureNotifyMask | SubstructureRedirectMask,
-               &e1);
-    XEvent e2;
-    e2.xany.type = ClientMessage;
-    e2.xany.window = winId();
-    e2.xclient.message_type = XInternAtom(display, "_NET_WM_STATE", 0);
-    e2.xclient.format = 32;
-    e2.xclient.data.l[0] = 1; // add
-    e2.xclient.data.l[1] = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", 0);
-    XSendEvent(display, RootWindow(display, screen),
-               0, SubstructureNotifyMask | SubstructureRedirectMask,
-               &e2);
+    X11Utils::fullscreen_screens(display, screen, winId(), top, bottom, left, right);
+    X11Utils::fullscreen(display, screen, winId(), true);
     QApplication::sync();
 
     QAbstractVNCView* view = AppManager::instance()->getView();
@@ -391,16 +384,7 @@ void QVNCWindow::exitFullscreen()
 #endif
   int screen = DefaultScreen(display);
 
-  XEvent e2;
-  e2.xany.type = ClientMessage;
-  e2.xany.window = winId();
-  e2.xclient.message_type = XInternAtom(display, "_NET_WM_STATE", 0);
-  e2.xclient.format = 32;
-  e2.xclient.data.l[0] = 0; // remove
-  e2.xclient.data.l[1] = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", 0);
-  XSendEvent(display, RootWindow(display, screen),
-             0, SubstructureNotifyMask | SubstructureRedirectMask,
-             &e2);
+  X11Utils::fullscreen(display, screen, winId(), false);
   QApplication::sync();
 #else
   setWindowFlag(Qt::WindowStaysOnTopHint, false);
