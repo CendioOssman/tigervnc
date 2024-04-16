@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
                    AppManager::instance(), [&](QString str){ AppManager::instance()->publishError(str, true); });
   AppManager::instance()->initialize();
   ViewerConfig::instance()->initialize();
+  AppManager::instance()->getConnection()->initialize();
 
   if (!ViewerConfig::instance()->getServerName().isEmpty()) {
     AppManager::instance()->setCommandLine(true);

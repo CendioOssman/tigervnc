@@ -51,10 +51,10 @@ public:
 
   void sendClipboardContent(const char *data);
 
-  void setDesktopSize(int w, int h);
+  void setDesktopSize(int w, int h) override;
   void setExtendedDesktopSize(unsigned reason, unsigned result,
                                       int w, int h,
-                                      const rfb::ScreenSet& layout);
+                                      const rfb::ScreenSet& layout) override;
 
   void setName(const char* name) override;
 

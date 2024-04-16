@@ -4,6 +4,7 @@
 //#include "rdr/types.h"
 #include "rfb/Rect.h"
 #include "CConn.h"
+#include <QObject>
 
 class QTimer;
 class QCursor;
@@ -90,7 +91,8 @@ signals:
   void writeSetDesktopSize(int width, int height, const rfb::ScreenSet& layout);
   void writeKeyEvent(uint32_t keysym, uint32_t keycode, bool down);
 
-public slots:
+public:
+  void initialize();
   void listen();
   void connectToServer(QString addressport = "");
   void resetConnection();
