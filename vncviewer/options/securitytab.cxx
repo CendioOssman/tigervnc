@@ -33,22 +33,34 @@ SecurityTab::SecurityTab(QWidget* parent)
   securityEncryptionTLSWithX509Certs->setVisible(false);
 #endif
   vbox1->addWidget(securityEncryptionTLSWithX509Certs);
+  QHBoxLayout* h2 = new QHBoxLayout;
+  h2->addSpacing(20);
   QLabel* securityEncryptionTLSWithX509CALabel = new QLabel(_("Path to X509 CA certificate"));
-  vbox1->addWidget(securityEncryptionTLSWithX509CALabel);
+  h2->addWidget(securityEncryptionTLSWithX509CALabel);
+  vbox1->addLayout(h2);
+  QHBoxLayout* h3 = new QHBoxLayout;
+  h3->addSpacing(20);
   securityEncryptionTLSWithX509CATextEdit = new QLineEdit;
 #ifndef HAVE_GNUTLS
   securityEncryptionTLSWithX509CALabel->setVisible(false);
   securityEncryptionTLSWithX509CATextEdit->setVisible(false);
 #endif
-  vbox1->addWidget(securityEncryptionTLSWithX509CATextEdit);
+  h3->addWidget(securityEncryptionTLSWithX509CATextEdit);
+  vbox1->addLayout(h3);
+  QHBoxLayout* h4 = new QHBoxLayout;
+  h4->addSpacing(20);
   QLabel* securityEncryptionTLSWithX509CRLLabel = new QLabel(_("Path to X509 CRL file"));
-  vbox1->addWidget(securityEncryptionTLSWithX509CRLLabel);
+  h4->addWidget(securityEncryptionTLSWithX509CRLLabel);
+  vbox1->addLayout(h4);
+  QHBoxLayout* h5 = new QHBoxLayout;
+  h5->addSpacing(20);
   securityEncryptionTLSWithX509CRLTextEdit = new QLineEdit;
 #ifndef HAVE_GNUTLS
   securityEncryptionTLSWithX509CRLLabel->setVisible(false);
   securityEncryptionTLSWithX509CRLTextEdit->setVisible(false);
 #endif
-  vbox1->addWidget(securityEncryptionTLSWithX509CRLTextEdit);
+  h5->addWidget(securityEncryptionTLSWithX509CRLTextEdit);
+  vbox1->addLayout(h5);
   securityEncryptionAES = new QCheckBox(_("RSA-AES"));
 #ifndef HAVE_NETTLE
   securityEncryptionAES->setVisible(false);
