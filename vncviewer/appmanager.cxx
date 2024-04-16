@@ -1,5 +1,7 @@
+#include "appmanager.h"
+
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
 #include <QDebug>
@@ -21,7 +23,6 @@
 #include "aboutdialog.h"
 #include "abstractvncview.h"
 #include "alertdialog.h"
-#include "appmanager.h"
 #include "authdialog.h"
 #include "infodialog.h"
 #include "messagedialog.h"

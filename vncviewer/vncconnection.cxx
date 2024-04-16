@@ -1,5 +1,7 @@
+#include "vncconnection.h"
+
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
 #include "appmanager.h"
@@ -23,7 +25,6 @@
 #include "CConn.h"
 #include "abstractvncview.h"
 #include "tunnelfactory.h"
-#include "vncconnection.h"
 #undef asprintf
 
 #if !defined(Q_OS_WIN)

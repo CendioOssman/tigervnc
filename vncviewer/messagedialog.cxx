@@ -1,5 +1,9 @@
 #include "messagedialog.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "i18n.h"
 
 #include <QLabel>

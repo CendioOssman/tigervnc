@@ -1,5 +1,9 @@
 #include "displaytab.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "parameters.h"
 #include "screensselectionwidget.h"
 #include "viewerconfig.h"

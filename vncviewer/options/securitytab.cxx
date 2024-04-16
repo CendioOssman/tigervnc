@@ -1,5 +1,9 @@
 #include "securitytab.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "viewerconfig.h"
 #include "rfb/Security.h"
 #include "rfb/SecurityClient.h"
