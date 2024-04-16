@@ -60,6 +60,8 @@ else()
       vncgesture.cxx
       vncgesturerecognizer.h
       vncgesturerecognizer.cxx
+      x11utils.h
+      x11utils.cxx
       xkb_to_qnum.c
   )
 endif()
