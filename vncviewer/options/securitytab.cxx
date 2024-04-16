@@ -37,6 +37,7 @@ SecurityTab::SecurityTab(QWidget* parent)
   vbox1->addWidget(securityEncryptionTLSWithX509CALabel);
   securityEncryptionTLSWithX509CATextEdit = new QLineEdit;
 #ifndef HAVE_GNUTLS
+  securityEncryptionTLSWithX509CALabel->setVisible(false);
   securityEncryptionTLSWithX509CATextEdit->setVisible(false);
 #endif
   vbox1->addWidget(securityEncryptionTLSWithX509CATextEdit);
@@ -44,6 +45,7 @@ SecurityTab::SecurityTab(QWidget* parent)
   vbox1->addWidget(securityEncryptionTLSWithX509CRLLabel);
   securityEncryptionTLSWithX509CRLTextEdit = new QLineEdit;
 #ifndef HAVE_GNUTLS
+  securityEncryptionTLSWithX509CRLLabel->setVisible(false);
   securityEncryptionTLSWithX509CRLTextEdit->setVisible(false);
 #endif
   vbox1->addWidget(securityEncryptionTLSWithX509CRLTextEdit);
