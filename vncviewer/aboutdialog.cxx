@@ -1,5 +1,9 @@
 #include "aboutdialog.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "viewerconfig.h"
 #include "i18n.h"
 

@@ -1,5 +1,9 @@
 #include "compressiontab.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "parameters.h"
 #include "viewerconfig.h"
 #include "rfb/encodings.h"

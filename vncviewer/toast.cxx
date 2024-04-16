@@ -1,5 +1,9 @@
 #include "toast.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "parameters.h"
 #include "vncconnection.h"
 #include "i18n.h"

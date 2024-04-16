@@ -1,5 +1,9 @@
 #include "optionsdialog.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "appmanager.h"
 #include "options/compressiontab.h"
 #include "options/displaytab.h"

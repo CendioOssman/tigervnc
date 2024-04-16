@@ -18,6 +18,8 @@
  * USA.
  */
 
+#include "parameters.h"
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -39,7 +41,6 @@
 #endif
 
 #include "menukey.h"
-#include "parameters.h"
 #include "rfb/Configuration.h"
 #include "rfb/LogWriter.h"
 #include "rfb/Logger_stdio.h"

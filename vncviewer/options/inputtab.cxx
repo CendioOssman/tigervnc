@@ -1,5 +1,9 @@
 #include "inputtab.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "parameters.h"
 #include "menukey.h"
 #include "i18n.h"
