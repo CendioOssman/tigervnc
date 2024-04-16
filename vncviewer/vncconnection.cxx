@@ -82,7 +82,10 @@ QVNCConnection::QVNCConnection()
       AppManager::instance()->publishError(strerror(e));
     }
   });
+}
 
+void QVNCConnection::initialize()
+{
   if (::listenMode) {
     listen();
   }
