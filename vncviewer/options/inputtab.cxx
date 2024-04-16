@@ -61,7 +61,7 @@ InputTab::InputTab(QWidget* parent)
   inputClipboardToServer = new QCheckBox(_("Send clipboard to server"));
   vbox3->addWidget(inputClipboardToServer);
 #if !defined(WIN32) && !defined(__APPLE__)
-  inputSendPrimary = new QCheckBox(_("Send primary selection as keyboard"));
+  inputSendPrimary = new QCheckBox(_("Send primary selection as clipboard"));
   vbox3->addWidget(inputSendPrimary);
 #endif
   groupBox3->setLayout(vbox3);
