@@ -251,11 +251,6 @@ void QVNCWindow::fullscreen(bool enabled)
       int w = xmax - xmin;
       int h = ymax - ymin;
       vlog.debug("QVNCWindow::fullscreen geometry=(%d, %d, %d, %d)", xmin, ymin, w, h);
-      //  Capture the fullscreen geometry.
-      fullscreenX = xmin;
-      fullscreenY = ymin;
-      fullscreenWidth = w;
-      fullscreenHeight = h;
 
       if (selectedScreens.length() == 1) { // Fullscreen on the selected single display.
 #ifdef Q_OS_LINUX
@@ -271,10 +266,6 @@ void QVNCWindow::fullscreen(bool enabled)
 #endif
       }
     } else { // Fullscreen on the current single display.
-      fullscreenX = selectedPrimaryScreen->geometry().x();
-      fullscreenY = selectedPrimaryScreen->geometry().y();
-      fullscreenWidth = selectedPrimaryScreen->geometry().width();
-      fullscreenHeight = selectedPrimaryScreen->geometry().height();
 #ifdef Q_OS_LINUX
       fullscreenOnSelectedDisplays(top, top, top, top);
 #else
@@ -296,35 +287,6 @@ void QVNCWindow::fullscreen(bool enabled)
   if (fullscreenEnabled != fullscreenEnabled0) {
     emit fullscreenChanged(fullscreenEnabled);
   }
-}
-
-void QVNCWindow::fullscreenOnCurrentDisplay()
-{
-#ifdef Q_OS_LINUX
-
-#else
-  QScreen* screen = getCurrentScreen();
-  vlog.debug("QVNCWindow::fullscreenOnCurrentDisplay geometry=(%d, %d, %d, %d)",
-             screen->geometry().x(),
-             screen->geometry().y(),
-             screen->geometry().width(),
-             screen->geometry().height());
-  show();
-  QApplication::sync();
-  windowHandle()->setScreen(screen);
-  showFullScreen();
-
-  // Capture the fullscreen geometry.
-  double dpr = effectiveDevicePixelRatio(screen);
-  QRect vg = screen->geometry();
-  fullscreenX = vg.x();
-  fullscreenY = vg.y();
-  fullscreenWidth = vg.width() * dpr;
-  fullscreenHeight = vg.height() * dpr;
-
-  QAbstractVNCView* view = AppManager::instance()->getView();
-  view->maybeGrabKeyboard();
-#endif
 }
 
 void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
@@ -532,8 +494,8 @@ void QVNCWindow::remoteResize(int w, int h)
 
     // In full screen we report all screens that are fully covered.
     rfb::Rect viewport_rect;
-    viewport_rect.setXYWH(fullscreenX, fullscreenY, fullscreenWidth, fullscreenHeight);
-    vlog.debug("viewport_rect(%d, %d, %dx%d)", fullscreenX, fullscreenY, fullscreenWidth, fullscreenHeight);
+    viewport_rect.setXYWH(x(), y(), width(), height());
+    vlog.debug("viewport_rect(%d, %d, %dx%d)", x(), y(), width(), height());
 
     // If we can find a matching screen in the existing set, we use
     // that, otherwise we create a brand new screen.

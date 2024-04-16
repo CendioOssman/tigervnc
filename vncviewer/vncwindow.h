@@ -23,7 +23,6 @@ public:
   QScreen* getCurrentScreen() const;
   double effectiveDevicePixelRatio(QScreen* screen = nullptr) const;
   void fullscreen(bool enabled);
-  void fullscreenOnCurrentDisplay();
   void fullscreenOnSelectedDisplay(QScreen* screen);
 #ifdef Q_OS_LINUX
   void fullscreenOnSelectedDisplays(int top, int bottom, int left, int right); // screens indices
@@ -62,10 +61,6 @@ private:
   bool pendingFullscreen = false;
   double devicePixelRatio;
 
-  int fullscreenWidth;
-  int fullscreenHeight;
-  int fullscreenX;
-  int fullscreenY;
   QScreen* previousScreen;
   QByteArray previousGeometry;
 
