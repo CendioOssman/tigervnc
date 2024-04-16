@@ -266,7 +266,8 @@ bool QAbstractVNCView::eventFilter(QObject* obj, QEvent* event)
   if (event->type() == QEvent::KeyPress) {
     QKeyEvent* e = static_cast<QKeyEvent*>(event);
     if (isVisibleContextMenu()) {
-      if (QKeySequence(e->key()).toString() == ::menuKey.getValueStr().c_str()) {
+      QString str = ::getMenuKeyQString();
+      if (!str.isEmpty() && QKeySequence(e->key()).toString() == str) {
         sendContextMenuKey();
         return true;
       }
