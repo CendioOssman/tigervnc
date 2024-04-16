@@ -38,6 +38,8 @@ public:
   static bool canFullScreenOnMultiDisplays();
   static void usage();
 
+  void initialize();
+
   QStringList getServerHistory() const { return serverHistory; }
 
   QString getServerName() const { return serverName; }
@@ -56,6 +58,9 @@ public:
   QString loadViewerParameters(QString path);
   void loadServerHistory();
   void saveServerHistory();
+
+signals:
+  void errorOccurred(QString str);
 
 private:
   ViewerConfig();

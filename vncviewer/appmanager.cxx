@@ -45,11 +45,16 @@ static rfb::LogWriter vlog("AppManager");
 AppManager::AppManager()
   : QObject(nullptr)
   , errorCount(0)
-  , connection(new QVNCConnection)
   , view(nullptr)
-  , window(new QVNCWindow)
-  , rfbTimerProxy(new QTimer)
 {
+
+}
+
+void AppManager::initialize()
+{
+  window = new QVNCWindow;
+  rfbTimerProxy = new QTimer;
+  connection = new QVNCConnection;
   connect(this, &AppManager::connectToServerRequested, connection, &QVNCConnection::connectToServer);
   connect(connection, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
   connect(this, &AppManager::resetConnectionRequested, connection, &QVNCConnection::resetConnection);
@@ -67,7 +72,7 @@ AppManager::AppManager()
     AuthDialog d(secured, userNeeded, passwordNeeded, topWindow());
     d.exec();
   });
-  QObject::connect(window, &QVNCWindow::closed, qApp, &QApplication::quit);
+  connect(window, &QVNCWindow::closed, qApp, &QApplication::quit);
 }
 
 AppManager::~AppManager()
@@ -124,7 +129,9 @@ void AppManager::publishError(const QString message, bool quit)
 
   if (!commandLine) {
     if (!connectedOnce) {
-      serverDialog->show();
+      if(serverDialog) {
+        serverDialog->show();
+      }
     }
   }
 
@@ -313,8 +320,8 @@ void AppManager::openServerDialog()
 {
   serverDialog = new ServerDialog;
   serverDialog->setVisible(!::listenMode);
-  QObject::connect(AppManager::instance(), &AppManager::vncWindowOpened, serverDialog, &QWidget::hide);
-  QObject::connect(serverDialog, &ServerDialog::closed, qApp, &QApplication::quit);
+  connect(AppManager::instance(), &AppManager::vncWindowOpened, serverDialog, &QWidget::hide);
+  connect(serverDialog, &ServerDialog::closed, qApp, &QApplication::quit);
 }
 
 QWidget *AppManager::topWindow() const

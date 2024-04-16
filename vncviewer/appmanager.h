@@ -18,6 +18,8 @@ public:
 
   static AppManager* instance();
 
+  void initialize();
+
   QVNCConnection* getConnection() const { return connection; }
 
   int error() const { return errorCount; }
