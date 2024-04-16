@@ -55,14 +55,20 @@ InputTab::InputTab(QWidget* parent)
   inputClipboardFromServer = new QCheckBox(_("Accept clipboard from server"));
   vbox3->addWidget(inputClipboardFromServer);
 #if !defined(WIN32) && !defined(__APPLE__)
+  QHBoxLayout* h1 = new QHBoxLayout;
+  h1->addSpacing(20);
   inputSetPrimary = new QCheckBox(_("Also set primary selection"));
-  vbox3->addWidget(inputSetPrimary);
+  h1->addWidget(inputSetPrimary);
+  vbox3->addLayout(h1);
 #endif
   inputClipboardToServer = new QCheckBox(_("Send clipboard to server"));
   vbox3->addWidget(inputClipboardToServer);
 #if !defined(WIN32) && !defined(__APPLE__)
+  QHBoxLayout* h2 = new QHBoxLayout;
+  h2->addSpacing(20);
   inputSendPrimary = new QCheckBox(_("Send primary selection as clipboard"));
-  vbox3->addWidget(inputSendPrimary);
+  h2->addWidget(inputSendPrimary);
+  vbox3->addLayout(h2);
 #endif
   groupBox3->setLayout(vbox3);
   layout->addWidget(groupBox3);
