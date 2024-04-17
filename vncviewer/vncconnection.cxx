@@ -289,7 +289,9 @@ void QVNCConnection::announceClipboard(bool available)
     return;
   }
   try {
-    rfbcon->announceClipboard(available);
+    if (rfbcon) {
+      rfbcon->announceClipboard(available);
+    }
   } catch (rdr::Exception& e) {
     AppManager::instance()->publishError(e.str());
   } catch (int& e) {
@@ -301,7 +303,9 @@ void QVNCConnection::refreshFramebuffer()
 {
   try {
     emit refreshFramebufferStarted();
-    rfbcon->refreshFramebuffer();
+    if (rfbcon) {
+      rfbcon->refreshFramebuffer();
+    }
   } catch (rdr::Exception& e) {
     resetConnection();
     AppManager::instance()->publishError(e.str());
@@ -314,7 +318,9 @@ void QVNCConnection::refreshFramebuffer()
 void QVNCConnection::sendClipboardData(QString data)
 {
   try {
-    rfbcon->sendClipboardContent(data.toStdString().c_str());
+    if (rfbcon) {
+      rfbcon->sendClipboardContent(data.toStdString().c_str());
+    }
   } catch (rdr::Exception& e) {
     AppManager::instance()->publishError(e.str());
   } catch (int& e) {
@@ -325,7 +331,9 @@ void QVNCConnection::sendClipboardData(QString data)
 void QVNCConnection::requestClipboard()
 {
   try {
-    rfbcon->requestClipboard();
+    if (rfbcon) {
+      rfbcon->requestClipboard();
+    }
   } catch (rdr::Exception& e) {
     AppManager::instance()->publishError(e.str());
   } catch (int& e) {
@@ -336,7 +344,9 @@ void QVNCConnection::requestClipboard()
 void QVNCConnection::setState(int state)
 {
   try {
-    rfbcon->setProcessState(state);
+    if (rfbcon) {
+      rfbcon->setProcessState(state);
+    }
   } catch (rdr::Exception& e) {
     resetConnection();
     AppManager::instance()->publishError(e.str());

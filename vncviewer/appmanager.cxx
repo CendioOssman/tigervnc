@@ -217,6 +217,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 
 void AppManager::closeVNCWindow()
 {
+  vlog.debug("AppManager::closeVNCWindow");
   QWidget* w = window->takeWidget();
   if (w) {
     window->setVisible(false);
