@@ -776,3 +776,10 @@ int cocoa_scrollbar_size()
     scrollerWidthForControlSize:static_cast<NSControlSize>(0)
     scrollerStyle:NSScrollerStyleLegacy]);
 }
+
+void cocoa_prevent_native_fullscreen(QWidget* w)
+{
+  NSView* view = cocoa_get_view(w);
+  NSWindow* window = [view window];
+  [window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenNone];
+}

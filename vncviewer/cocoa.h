@@ -67,4 +67,6 @@ void cocoa_dim(NSView *view, bool enabled);
 
 int cocoa_scrollbar_size();
 
+void cocoa_prevent_native_fullscreen(QWidget* w);
+
 #endif
