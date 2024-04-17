@@ -21,6 +21,9 @@
 #define __CCONN_H__
 
 #include <QString>
+#ifdef WIN32
+#include <_timeval.h>
+#endif
 //#include "rdr/types.h"
 #include "rfb/Rect.h"
 #include "rfb/CConnection.h"
