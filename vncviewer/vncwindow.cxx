@@ -151,6 +151,8 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   l->setContentsMargins(0,0,0,0);
   l->addWidget(scrollArea);
   setLayout(l);
+
+  cocoa_prevent_native_fullscreen(this);
 }
 
 QVNCWindow::~QVNCWindow() {}
