@@ -7,6 +7,7 @@
 #include "appmanager.h"
 #include "viewerconfig.h"
 #include "i18n.h"
+#undef asprintf
 #include "rfb/Exception.h"
 #include "rfb/LogWriter.h"
 

@@ -7,6 +7,7 @@
 #include "parameters.h"
 #include "vncconnection.h"
 #include "i18n.h"
+#undef asprintf
 
 #include <QTimer>
 #include <QPainter>
