@@ -383,12 +383,16 @@ void QVNCConnection::startProcessing()
     rfbcon->getOutStream()->cork(false);
   } catch (rdr::EndOfStream& e) {
     vlog.info("%s", e.str());
-    vlog.error(_("The connection was dropped by the server before "
-                 "the session could be established."));
-    QString message = _("The connection was dropped by the server "
-                      "before the session could be established.");
-    resetConnection();
-    AppManager::instance()->publishError(message);
+    if (!AppManager::instance()->getView()) {
+      vlog.error(_("The connection was dropped by the server before "
+                   "the session could be established."));
+      QString message = _("The connection was dropped by the server "
+                        "before the session could be established.");
+      resetConnection();
+      AppManager::instance()->publishError(message);
+    } else {
+      resetConnection();
+    }
   } catch (rdr::Exception& e) {
     resetConnection();
     AppManager::instance()->publishError(e.str());
