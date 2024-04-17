@@ -72,7 +72,7 @@ void AppManager::initialize()
 
   connect(this, &AppManager::credentialRequested, this, [=](bool secured, bool userNeeded, bool passwordNeeded) {
     AuthDialog d(secured, userNeeded, passwordNeeded, topWindow());
-    openDialog(d);
+    d.exec();
   });
   connect(window, &QVNCWindow::closed, qApp, &QApplication::quit);
 
