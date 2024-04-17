@@ -53,6 +53,14 @@ ScreensSelectionWidget::ScreensSelectionWidget(QWidget* parent)
   setMinimumSize(200, 100);
   setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
   exclusiveButtons = new QButtonGroup(this);
+
+  QList<QScreen*> screens = qApp->screens();
+  for(auto& screen : screens) {
+    connect(screen, &QScreen::geometryChanged, this, &ScreensSelectionWidget::moveCheckBoxes);
+    connect(screen, &QScreen::virtualGeometryChanged, this, &ScreensSelectionWidget::moveCheckBoxes);
+  }
+  connect(qApp, &QGuiApplication::screenAdded, this, [=](){ hide(); reset(); show(); });
+  connect(qApp, &QGuiApplication::screenRemoved, this, [=](){ hide(); reset(); show(); });
 }
 
 void ScreensSelectionWidget::getGlobalScreensGeometry(QList<int> screens, int& xmin, int& ymin, qreal& w, qreal& h)
