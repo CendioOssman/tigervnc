@@ -65,7 +65,7 @@ CompressionTab::CompressionTab(QWidget* parent)
   h1->addSpacing(20);
   compressionCustomCompressionLevelTextEdit = new QSpinBox;
   compressionCustomCompressionLevelTextEdit->setRange(0, 9);
-  compressionCustomCompressionLevelTextEdit->setFixedWidth(50);
+  compressionCustomCompressionLevelTextEdit->setFixedWidth(80);
   h1->addWidget(compressionCustomCompressionLevelTextEdit);
   h1->addWidget(new QLabel(_("level (0=fast, 9=best)")));
   h1->addStretch(1);
@@ -76,7 +76,7 @@ CompressionTab::CompressionTab(QWidget* parent)
   h2->addSpacing(20);
   compressionJPEGCompressionTextEdit = new QSpinBox;
   compressionJPEGCompressionTextEdit->setRange(0, 9);
-  compressionJPEGCompressionTextEdit->setFixedWidth(50);
+  compressionJPEGCompressionTextEdit->setFixedWidth(80);
   h2->addWidget(compressionJPEGCompressionTextEdit);
   h2->addWidget(new QLabel(_("quality (0=poor, 9=best)")));
   h2->addStretch(1);
