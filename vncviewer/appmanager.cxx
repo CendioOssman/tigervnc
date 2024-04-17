@@ -11,6 +11,7 @@
 #include <QTimer>
 #if defined(__APPLE__)
 #include "cocoa.h"
+#include <QMenuBar>
 #endif
 #include "i18n.h"
 #include "rdr/Exception.h"
@@ -74,6 +75,22 @@ void AppManager::initialize()
     d.exec();
   });
   connect(window, &QVNCWindow::closed, qApp, &QApplication::quit);
+
+#ifdef __APPLE__
+  QMenuBar* menuBar = new QMenuBar(nullptr); // global menu bar for mac
+  QMenu* appMenu = new QMenu(nullptr);
+  QAction* aboutAction = new QAction(nullptr);
+  connect(aboutAction, &QAction::triggered, this, &AppManager::openAboutDialog);
+  aboutAction->setMenuRole(QAction::AboutRole);
+  appMenu->addAction(aboutAction);
+  menuBar->addMenu(appMenu);
+  QMenu *file = new QMenu(_("&File"));
+  file->addAction(_("&New Connection"), [=](){
+    QProcess process;
+    process.startDetached(qApp->arguments()[0], QStringList());
+  }, QKeySequence("Ctrl+N"));
+  menuBar->addMenu(file);
+#endif
 }
 
 AppManager::~AppManager()
