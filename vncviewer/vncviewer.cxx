@@ -44,6 +44,12 @@ int main(int argc, char *argv[])
 
   VNCTranslator translator;
   app.installTranslator(&translator);
+  QTranslator qtTranslator;
+  QString shortLocale = QLocale().bcp47Name().split('_').first();
+  QString path = ":/i18n/qtbase_" + shortLocale + ".qm";
+  if (qtTranslator.load(path)) {
+    app.installTranslator(&qtTranslator);
+  }
 
   app.setQuitOnLastWindowClosed(false);
 
