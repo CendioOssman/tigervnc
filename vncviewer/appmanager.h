@@ -52,6 +52,7 @@ signals:
 
 public slots:
   void publishError(const QString message, bool quit = false);
+  void publishUnexpectedError(QString message, bool quit = false);
   void connectToServer(const QString addressport);
   void authenticate(QString user, QString password);
   void cancelAuth();

@@ -1,8 +1,12 @@
-#include <QEventLoop>
+#include "vnccredential.h"
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "rfb/Exception.h"
 #include "appmanager.h"
-#include "vncconnection.h"
-#include "vnccredential.h"
+#include "i18n.h"
 
 VNCCredential::VNCCredential()
  : QObject(nullptr)
@@ -43,7 +47,7 @@ void VNCCredential::getUserPasswd(bool secure, std::string *user, std::string *p
   });
   emit manager->credentialRequested(secure, userNeeded, passwordNeeded);
   if (canceled) {
-    throw rfb::AuthCancelledException();
+    throw rfb::Exception(_("Authentication cancelled"));
   }
 }
 

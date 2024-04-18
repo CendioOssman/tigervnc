@@ -36,12 +36,12 @@ AuthDialog::AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidg
   if (userNeeded) {
     userText = new QLineEdit;
     userText->setFocus();
-    formLayout->addRow(_("Username"), userText);
+    formLayout->addRow(_("Username:"), userText);
   } else if (passwordNeeded) {
     passwordText = new QLineEdit;
     passwordText->setEchoMode(QLineEdit::Password);
     passwordText->setFocus();
-    formLayout->addRow(_("Password"), passwordText);
+    formLayout->addRow(_("Password:"), passwordText);
     connect(passwordText, &QLineEdit::returnPressed, this, &AuthDialog::accept);
   }
   layout->addLayout(formLayout);

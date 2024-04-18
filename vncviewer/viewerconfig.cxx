@@ -8,6 +8,7 @@
 #include <QDate>
 #include <QDir>
 #include <QTextStream>
+#include <signal.h>
 
 #if !defined(WIN32)
 #include <sys/stat.h>
@@ -48,6 +49,14 @@ using namespace std;
 
 static LogWriter vlog("ViewerConfig");
 
+static void CleanupSignalHandler(int sig)
+{
+  // CleanupSignalHandler allows C++ object cleanup to happen because it calls
+  // exit() rather than the default which is to abort.
+  vlog.info(_("Termination signal %d has been received. TigerVNC Viewer will now exit."), sig);
+  exit(1);
+}
+
 namespace os
 {
 extern const char* getvnchomedir();
@@ -61,6 +70,12 @@ ViewerConfig::ViewerConfig()
 
 void ViewerConfig::initialize()
 {
+#ifdef SIGHUP
+  signal(SIGHUP, CleanupSignalHandler);
+#endif
+  signal(SIGINT, CleanupSignalHandler);
+  signal(SIGTERM, CleanupSignalHandler);
+
   const char* homeDir = os::getvnchomedir();
   if (homeDir == nullptr) {
     QDir dir;
@@ -124,7 +139,13 @@ void ViewerConfig::initialize()
     QGuiApplication::exit(1);
   }
 
-  loadServerHistory();
+  try {
+    loadServerHistory();
+  } catch (Exception& e) {
+    vlog.error("%s", e.str());
+    emit errorOccurred(QString::asprintf(_("Unable to load the server history:\n\n%s"), e.str()));
+  }
+
   parseServerName();
 }
 
@@ -401,6 +422,12 @@ void ViewerConfig::addServer(QString serverName)
   serverHistory.removeOne(serverName);
   serverHistory.push_front(serverName);
   parseServerName();
-  saveServerHistory();
+  try {
+    saveServerHistory();
+  } catch (rfb::Exception& e) {
+    vlog.error("%s", e.str());
+    emit errorOccurred(QString::asprintf(_("Unable to save the server history:\n\n%s"),
+                                         e.str()));
+  }
 }
 

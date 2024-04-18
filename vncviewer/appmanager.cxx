@@ -81,13 +81,16 @@ void AppManager::initialize()
   QMenu* appMenu = new QMenu(nullptr);
   QAction* aboutAction = new QAction(nullptr);
   connect(aboutAction, &QAction::triggered, this, &AppManager::openAboutDialog);
+  aboutAction->setText(_("About"));
   aboutAction->setMenuRole(QAction::AboutRole);
   appMenu->addAction(aboutAction);
   menuBar->addMenu(appMenu);
   QMenu *file = new QMenu(_("&File"));
   file->addAction(_("&New Connection"), [=](){
     QProcess process;
-    process.startDetached(qApp->arguments()[0], QStringList());
+    if (process.startDetached(qApp->arguments()[0], QStringList())) {
+      vlog.error(_("Error starting new TigerVNC Viewer: %s"), QVariant::fromValue(process.error()).toString().toStdString().c_str());
+    }
   }, QKeySequence("Ctrl+N"));
   menuBar->addMenu(file);
 #endif
@@ -162,6 +165,13 @@ void AppManager::publishError(const QString message, bool quit)
   }
 }
 
+void AppManager::publishUnexpectedError(QString message, bool quit)
+{
+  message = QString::asprintf(_("An unexpected error occurred when communicating "
+                                "with the server:\n\n%s"), message.toStdString().c_str());
+  publishError(message, quit);
+}
+
 void AppManager::openVNCWindow(int width, int height, QString name)
 {
   connectedOnce = true;
@@ -225,7 +235,7 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   if (::fullScreen) {
     window->fullscreen(true);
   } else {
-    vlog.debug(_("SHOW"));
+    vlog.debug("SHOW");
     window->show();
   }
 
@@ -247,7 +257,7 @@ void AppManager::closeVNCWindow()
 
 void AppManager::setWindowName(QString name)
 {
-  window->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
+  window->setWindowTitle(QString::asprintf("%s - TigerVNC", name.toStdString().c_str()));
 }
 
 void AppManager::refresh()
