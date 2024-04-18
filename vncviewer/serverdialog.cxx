@@ -7,6 +7,8 @@
 #include "appmanager.h"
 #include "viewerconfig.h"
 #include "i18n.h"
+#include "rfb/Exception.h"
+#include "rfb/LogWriter.h"
 
 #include <QApplication>
 #include <QComboBox>
@@ -17,6 +19,9 @@
 #include <QStringListModel>
 #include <QVBoxLayout>
 #include <QKeyEvent>
+#include <QMessageBox>
+
+static rfb::LogWriter vlog("ServerDialog");
 
 ServerDialog::ServerDialog(QWidget* parent)
   : QWidget{parent}
@@ -115,11 +120,36 @@ void ServerDialog::openLoadConfigDialog()
 void ServerDialog::openSaveConfigDialog()
 {
   QString filename = QFileDialog::getSaveFileName(this,
-                                                  _("Save the TigerVNC configuration file"),
+                                                  _("Save the TigerVNC configuration to file"),
                                                   {},
-                                                  _("TigerVNC configuration (*.tigervnc);;All files (*)"));
+                                                  _("TigerVNC configuration (*.tigervnc);;All files (*)"),
+                                                  nullptr,
+                                                  QFileDialog::DontConfirmOverwrite);
   if (!filename.isEmpty()) {
-    ViewerConfig::instance()->saveViewerParameters(filename, comboBox->currentText());
+    QFile f(filename);
+
+    if (f.open(QIODevice::ReadOnly)) {
+      // The file already exists.
+      f.close();
+
+      QMessageBox* question = new QMessageBox(this);
+      question->setWindowTitle("");
+      question->addButton(_("Overwrite"), QMessageBox::AcceptRole);
+      question->addButton(_("No"), QMessageBox::RejectRole);
+      question->setText(QString::asprintf(_("%s already exists. Do you want to overwrite?"), filename.toStdString().c_str()));
+      if (question->exec() == QMessageBox::RejectRole) {
+        // If the user doesn't want to overwrite:
+        openSaveConfigDialog();
+        return;
+      }
+    }
+
+    try {
+      ViewerConfig::instance()->saveViewerParameters(filename, comboBox->currentText());
+    } catch (rfb::Exception& e) {
+      vlog.error("%s", e.str());
+      AppManager::instance()->publishError(QString::asprintf(_("Unable to save the specified configuration file:\n\n%s"), e.str()));
+    }
   }
 }
 

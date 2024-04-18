@@ -114,7 +114,6 @@ protected:
   QList<QAction*> contextMenuActions;
   void createContextMenu();
   void filterPointerEvent(const rfb::Point& pos, int buttonMask);
-  void sendPointerEvent(const rfb::Point& pos, int buttonMask);
   // As QMenu eventFilter
   bool eventFilter(QObject* watched, QEvent* event) override;
 

@@ -57,9 +57,9 @@ QVNCConnection::QVNCConnection()
     try {
       rfbcon->writer()->writePointerEvent(pos, buttonMask);
     } catch (rdr::Exception& e) {
-      AppManager::instance()->publishError(e.str());
+      AppManager::instance()->publishUnexpectedError(e.str());
     } catch (int& e) {
-      AppManager::instance()->publishError(strerror(e));
+      AppManager::instance()->publishUnexpectedError(strerror(e));
     }
   });
   connect(this,
@@ -78,9 +78,9 @@ QVNCConnection::QVNCConnection()
     try {
       rfbcon->writer()->writeKeyEvent(keysym, keycode, down);
     } catch (rdr::Exception& e) {
-      AppManager::instance()->publishError(e.str());
+      AppManager::instance()->publishUnexpectedError(e.str());
     } catch (int& e) {
-      AppManager::instance()->publishError(strerror(e));
+      AppManager::instance()->publishUnexpectedError(strerror(e));
     }
   });
 }
@@ -173,7 +173,13 @@ void QVNCConnection::connectToServer(QString addressport)
     }
     delete rfbcon;
     rfbcon = new CConn(this);
-    ViewerConfig::instance()->saveViewerParameters("", addressport);
+    try {
+      ViewerConfig::instance()->saveViewerParameters("", addressport);
+    } catch (rfb::Exception& e) {
+      vlog.error("%s", e.str());
+      AppManager::instance()->publishError(QString::asprintf(_("Unable to save the default configuration:\n\n%s"),
+                                                             e.str()));
+    }
     if (addressport.contains("/")) {
 #ifndef Q_OS_WIN
       delete socket;
@@ -198,9 +204,8 @@ void QVNCConnection::connectToServer(QString addressport)
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
     resetConnection();
-    QString message = QString::asprintf(_("Failed to connect to \"%s\":\n\n%s"),
-                                        addressport.toStdString().c_str(), e.str());
-    AppManager::instance()->publishError(message);
+    AppManager::instance()->publishError(QString::asprintf(_("Failed to connect to \"%s\":\n\n%s"),
+                                                           addressport.toStdString().c_str(), e.str()));
   } catch (int& e) {
     resetConnection();
     AppManager::instance()->publishError(strerror(e));
@@ -252,6 +257,7 @@ void QVNCConnection::listen()
     }
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
+    AppManager::instance()->publishError(QString::asprintf(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str()));
     QCoreApplication::exit(1);
   }
 
@@ -293,9 +299,9 @@ void QVNCConnection::announceClipboard(bool available)
       rfbcon->announceClipboard(available);
     }
   } catch (rdr::Exception& e) {
-    AppManager::instance()->publishError(e.str());
+    AppManager::instance()->publishUnexpectedError(e.str());
   } catch (int& e) {
-    AppManager::instance()->publishError(strerror(e));
+    AppManager::instance()->publishUnexpectedError(strerror(e));
   }
 }
 
@@ -322,9 +328,9 @@ void QVNCConnection::sendClipboardData(QString data)
       rfbcon->sendClipboardContent(data.toStdString().c_str());
     }
   } catch (rdr::Exception& e) {
-    AppManager::instance()->publishError(e.str());
+    AppManager::instance()->publishUnexpectedError(e.str());
   } catch (int& e) {
-    AppManager::instance()->publishError(strerror(e));
+    AppManager::instance()->publishUnexpectedError(strerror(e));
   }
 }
 
@@ -335,9 +341,9 @@ void QVNCConnection::requestClipboard()
       rfbcon->requestClipboard();
     }
   } catch (rdr::Exception& e) {
-    AppManager::instance()->publishError(e.str());
+    AppManager::instance()->publishUnexpectedError(e.str());
   } catch (int& e) {
-    AppManager::instance()->publishError(strerror(e));
+    AppManager::instance()->publishUnexpectedError(strerror(e));
   }
 }
 
@@ -395,10 +401,10 @@ void QVNCConnection::startProcessing()
     }
   } catch (rdr::Exception& e) {
     resetConnection();
-    AppManager::instance()->publishError(e.str());
+    AppManager::instance()->publishUnexpectedError(e.str());
   } catch (int& e) {
     resetConnection();
-    AppManager::instance()->publishError(strerror(e));
+    AppManager::instance()->publishUnexpectedError(strerror(e));
   }
 
   if (socket) {
