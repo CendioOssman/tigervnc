@@ -111,10 +111,8 @@ private:
   network::Socket* socket;
   QSocketNotifier* socketReadNotifier;
   QSocketNotifier* socketWriteNotifier;
-  QSocketNotifier* socketErrorNotifier;
   QTimer* updateTimer;
   TunnelFactory* tunnelFactory;
-  bool closing;
   QString addressport;
 
   void bind(int fd);

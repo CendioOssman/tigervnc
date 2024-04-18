@@ -45,10 +45,8 @@ QVNCConnection::QVNCConnection()
   , socket(nullptr)
   , socketReadNotifier(nullptr)
   , socketWriteNotifier(nullptr)
-  , socketErrorNotifier(nullptr)
   , updateTimer(nullptr)
   , tunnelFactory(nullptr)
-  , closing(false)
 {
   connect(this, &QVNCConnection::socketReadNotified, this, &QVNCConnection::startProcessing);
   connect(this, &QVNCConnection::socketWriteNotified, this, &QVNCConnection::flushSocket);
@@ -118,7 +116,6 @@ void QVNCConnection::initialize()
 
 QVNCConnection::~QVNCConnection()
 {
-  closing = true;
   if (tunnelFactory) {
     tunnelFactory->close();
   }
@@ -145,16 +142,6 @@ void QVNCConnection::bind(int fd)
   QObject::connect(socketWriteNotifier, &QSocketNotifier::activated, this, [this](int fd) {
     Q_UNUSED(fd)
     emit socketWriteNotified();
-  });
-
-  delete socketErrorNotifier;
-  socketErrorNotifier = new QSocketNotifier(fd, QSocketNotifier::Exception);
-  QObject::connect(socketErrorNotifier, &QSocketNotifier::activated, this, [this](int fd) {
-    Q_UNUSED(fd)
-    if (!closing) {
-      resetConnection();
-      throw rdr::Exception("CConnection::bind: socket error.");
-    }
   });
 }
 
@@ -274,8 +261,6 @@ void QVNCConnection::resetConnection()
   socketReadNotifier = nullptr;
   delete socketWriteNotifier;
   socketWriteNotifier = nullptr;
-  delete socketErrorNotifier;
-  socketErrorNotifier = nullptr;
   if (socket) {
     socket->shutdown();
   }
@@ -398,6 +383,7 @@ void QVNCConnection::startProcessing()
       AppManager::instance()->publishError(message);
     } else {
       resetConnection();
+      qApp->quit();
     }
   } catch (rdr::Exception& e) {
     resetConnection();
