@@ -172,7 +172,6 @@ void QAbstractVNCView::toggleContextMenu()
     contextMenu->hide();
   } else {
     createContextMenu();
-    removeKeyboardHandler();
     contextMenu->exec(QCursor::pos());
     contextMenu->setFocus();
   }
@@ -214,7 +213,6 @@ void QAbstractVNCView::createContextMenu()
       contextMenu->addAction(action);
     }
     contextMenu->installEventFilter(this);
-    connect(contextMenu, &QMenu::aboutToHide, this, &QAbstractVNCView::installKeyboardHandler);
   }
 }
 
@@ -756,6 +754,7 @@ void QAbstractVNCView::focusInEvent(QFocusEvent* event)
 {
   vlog.debug("QAbstractVNCView::focusInEvent");
   if (keyboardHandler) {
+    installKeyboardHandler();
     maybeGrabKeyboard();
 
     flushPendingClipboard();
@@ -784,6 +783,7 @@ void QAbstractVNCView::focusOutEvent(QFocusEvent* event)
   }
   // We won't get more key events, so reset our knowledge about keys
   resetKeyboard();
+  removeKeyboardHandler();
   QWidget::focusOutEvent(event);
 }
 
