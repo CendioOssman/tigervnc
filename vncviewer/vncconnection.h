@@ -117,7 +117,11 @@ private:
 
   void bind(int fd);
 
-  void setHost(QString host) { rfbcon->setHost(host); }
+  void setHost(QString host)
+  {
+    rfbcon->setServerName(host.toStdString().c_str());
+    rfbcon->setHost(host);
+  }
 
   void setPort(int port) { rfbcon->setPort(port); }
 };
