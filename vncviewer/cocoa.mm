@@ -345,8 +345,9 @@ void cocoa_release_displays()
   captured = false;
 }
 
-void cocoa_fullscreen(NSView *view, bool enabled, bool shielding)
+void cocoa_update_window_level(QWidget *widget, bool enabled, bool shielding)
 {
+  NSView* view = cocoa_get_view(widget);
   NSWindow *window = [view window];
   if (enabled) {
     if (shielding) {
