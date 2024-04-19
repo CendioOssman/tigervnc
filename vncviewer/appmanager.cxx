@@ -270,13 +270,22 @@ void AppManager::openContextMenu()
   emit contextMenuRequested();
 }
 
-void AppManager::openDialog(QDialog & d)
+void AppManager::openDialog(QDialog& d)
 {
 #ifdef __APPLE__
-  d.open();
+  d.setWindowFlag(Qt::CustomizeWindowHint, true);
+  d.setWindowFlag(Qt::WindowMaximizeButtonHint, false);
+  d.setWindowFlag(Qt::WindowFullscreenButtonHint, false);
+  d.setParent(d.parentWidget(), Qt::Dialog);
+  d.setWindowFlag(Qt::CustomizeWindowHint, true);
+  d.setWindowFlag(Qt::WindowMaximizeButtonHint, false);
+  d.setWindowFlag(Qt::WindowFullscreenButtonHint, false);
+  d.show();
+  d.setFocus();
   QEventLoop loop;
   connect(&d, &QDialog::destroyed, this, [&](){ loop.exit(); });
   loop.exec();
+  disconnect(&d, &QDialog::destroyed, this, nullptr);
 #else
   d.exec();
 #endif
