@@ -101,7 +101,8 @@ CConn::CConn(QVNCConnection *cfacade)
 
 CConn::~CConn()
 {
-  resetConnection();
+  close();
+
   delete serverPF;
   delete fullColourPF;
 }

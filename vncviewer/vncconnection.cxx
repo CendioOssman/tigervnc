@@ -256,6 +256,11 @@ void QVNCConnection::listen()
 
 void QVNCConnection::resetConnection()
 {
+  if (rfbcon) {
+    delete rfbcon;
+  }
+  rfbcon = nullptr;
+
   AppManager::instance()->closeVNCWindow();
   delete socketReadNotifier;
   socketReadNotifier = nullptr;
@@ -266,12 +271,6 @@ void QVNCConnection::resetConnection()
   }
   delete socket;
   socket = nullptr;
-
-  if (rfbcon) {
-    rfbcon->resetConnection();
-  }
-  delete rfbcon;
-  rfbcon = nullptr;
 }
 
 void QVNCConnection::announceClipboard(bool available)
@@ -363,15 +362,17 @@ void QVNCConnection::startProcessing()
   socketWriteNotifier->setEnabled(false);
 
   try {
-    rfbcon->getOutStream()->cork(true);
+    if (rfbcon) {
+      rfbcon->getOutStream()->cork(true);
 
-    while (rfbcon->processMsg()) {
-      QApplication::processEvents();
-      if (!socket)
-        break;
+      while (rfbcon->processMsg()) {
+        QApplication::processEvents();
+        if (!socket)
+          break;
+      }
+
+      rfbcon->getOutStream()->cork(false);
     }
-
-    rfbcon->getOutStream()->cork(false);
   } catch (rdr::EndOfStream& e) {
     vlog.info("%s", e.str());
     if (!AppManager::instance()->getView()) {
