@@ -43,7 +43,7 @@ QVNCX11View::QVNCX11View(QWidget* parent, Qt::WindowFlags f)
 #endif
 {
   if (!vncGestureRecognizer_) {
-    vncGestureRecognizer_ = new QVNCGestureRecognizer;
+    //vncGestureRecognizer_ = new QVNCGestureRecognizer;
   }
 
   grabGesture(Qt::TapGesture);
@@ -52,7 +52,7 @@ QVNCX11View::QVNCX11View(QWidget* parent, Qt::WindowFlags f)
   grabGesture(Qt::PinchGesture);
   grabGesture(Qt::SwipeGesture);
   grabGesture(Qt::CustomGesture);
-  QGestureRecognizer::registerRecognizer(vncGestureRecognizer_);
+  //QGestureRecognizer::registerRecognizer(vncGestureRecognizer_);
 
   keyboardHandler = new X11KeyboardHandler(this);
   initKeyboardHandler();
