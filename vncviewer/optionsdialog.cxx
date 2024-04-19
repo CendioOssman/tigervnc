@@ -63,9 +63,6 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
 {
   setWindowTitle(_("VNC Viewer: Connection Options"));
   setWindowFlag(Qt::WindowStaysOnTopHint, staysOnTop);
-  setModal(true);
-  setWindowModality(Qt::ApplicationModal);
-
 
   QVBoxLayout* layout = new QVBoxLayout;
   layout->setContentsMargins(0,0,0,0);
