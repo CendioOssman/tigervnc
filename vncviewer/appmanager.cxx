@@ -273,6 +273,8 @@ void AppManager::openContextMenu()
 void AppManager::openDialog(QDialog& d)
 {
 #ifdef __APPLE__
+  d.setModal(true);
+  d.setWindowModality(Qt::ApplicationModal);
   d.setWindowFlag(Qt::CustomizeWindowHint, true);
   d.setWindowFlag(Qt::WindowMaximizeButtonHint, false);
   d.setWindowFlag(Qt::WindowFullscreenButtonHint, false);
