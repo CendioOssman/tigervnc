@@ -11,22 +11,24 @@
 #include "vnctranslator.h"
 #include "vncconnection.h"
 
-#ifdef Q_OS_LINUX
-static bool loadCatalog(const QString &catalog)
+static bool loadCatalog(const QString &catalog, const QString &location)
 {
   QTranslator* qtTranslator = new QTranslator(QCoreApplication::instance());
-  if (!qtTranslator->load(QLocale::system(), catalog, QString(), QLibraryInfo::location(QLibraryInfo::TranslationsPath))) {
+  if (!qtTranslator->load(QLocale::system(), catalog, QString(), location)) {
     return false;
   }
   QCoreApplication::instance()->installTranslator(qtTranslator);
   return true;
 }
-#endif
 
 static void installQtTranslators()
 {
 #ifdef Q_OS_LINUX
-  if (loadCatalog(QStringLiteral("qt_"))) {
+  QString location = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+#else
+  QString location = ":/i18n";
+#endif
+  if (loadCatalog(QStringLiteral("qt_"), location)) {
     return;
   }
   const auto catalogs = {
@@ -36,16 +38,8 @@ static void installQtTranslators()
       QStringLiteral("qtxmlpatterns_"),
   };
   for (const auto &catalog : catalogs) {
-    loadCatalog(catalog);
+    loadCatalog(catalog, location);
   }
-#else
-  QTranslator* qtTranslator = new QTranslator(QCoreApplication::instance());
-  QString shortLocale = QLocale().bcp47Name().split('_').first();
-  QString path = ":/i18n/qtbase_" + shortLocale + ".qm";
-  if (qtTranslator->load(path)) {
-    QCoreApplication::instance()->installTranslator(qtTranslator);
-  }
-#endif
 }
 
 int main(int argc, char *argv[])
