@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/">
+    <file alias="secure.svg">../media/secure.svg</file>
+    <file alias="insecure.svg">../media/insecure.svg</file>
     <file alias="tigervnc_16.png">../media/icons/tigervnc_16.png</file>
     <file alias="tigervnc_22.png">../media/icons/tigervnc_22.png</file>
     <file alias="tigervnc_24.png">../media/icons/tigervnc_24.png</file>
