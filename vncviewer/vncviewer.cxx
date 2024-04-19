@@ -3,12 +3,50 @@
 #endif
 #include <QApplication>
 #include <QIcon>
+#include <QLibraryInfo>
 #include "appmanager.h"
 #include "loggerconfig.h"
 #include "viewerconfig.h"
 #include "vncapplication.h"
 #include "vnctranslator.h"
 #include "vncconnection.h"
+
+#ifdef Q_OS_LINUX
+static bool loadCatalog(const QString &catalog)
+{
+  QTranslator* qtTranslator = new QTranslator(QCoreApplication::instance());
+  if (!qtTranslator->load(QLocale::system(), catalog, QString(), QLibraryInfo::location(QLibraryInfo::TranslationsPath))) {
+    return false;
+  }
+  QCoreApplication::instance()->installTranslator(qtTranslator);
+  return true;
+}
+#endif
+
+static void installQtTranslators()
+{
+#ifdef Q_OS_LINUX
+  if (loadCatalog(QStringLiteral("qt_"))) {
+    return;
+  }
+  const auto catalogs = {
+      QStringLiteral("qtbase_"),
+      QStringLiteral("qtscript_"),
+      QStringLiteral("qtmultimedia_"),
+      QStringLiteral("qtxmlpatterns_"),
+  };
+  for (const auto &catalog : catalogs) {
+    loadCatalog(catalog);
+  }
+#else
+  QTranslator* qtTranslator = new QTranslator(QCoreApplication::instance());
+  QString shortLocale = QLocale().bcp47Name().split('_').first();
+  QString path = ":/i18n/qtbase_" + shortLocale + ".qm";
+  if (qtTranslator->load(path)) {
+    QCoreApplication::instance()->installTranslator(qtTranslator);
+  }
+#endif
+}
 
 int main(int argc, char *argv[])
 {
@@ -44,12 +82,7 @@ int main(int argc, char *argv[])
 
   VNCTranslator translator;
   app.installTranslator(&translator);
-  QTranslator qtTranslator;
-  QString shortLocale = QLocale().bcp47Name().split('_').first();
-  QString path = ":/i18n/qtbase_" + shortLocale + ".qm";
-  if (qtTranslator.load(path)) {
-    app.installTranslator(&qtTranslator);
-  }
+  installQtTranslators();
 
   app.setQuitOnLastWindowClosed(false);
 
