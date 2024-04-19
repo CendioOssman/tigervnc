@@ -17,6 +17,7 @@ AuthDialog::AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidg
   : QDialog{parent}
 {
   setWindowTitle(_("VNC authentication"));
+  setFixedSize(250, 100);
 
   QVBoxLayout* layout = new QVBoxLayout;
   layout->setMargin(0);
@@ -24,15 +25,16 @@ AuthDialog::AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidg
   QLabel* securedLabel = new QLabel;
   securedLabel->setAlignment(Qt::AlignCenter);
   if (secured) {
-    securedLabel->setText(_("This connection is secure"));
-    securedLabel->setStyleSheet("QLabel { background-color: '#ff00ff00'; color: 'black'; }");
+    securedLabel->setText(QString("<img src=':/secure.svg' style='vertical-align: middle;' />") + _("This connection is secure"));
+    securedLabel->setStyleSheet("QLabel { background-color: '#ff00ff00'; color: 'black'; font-size: 14px; }");
   } else {
-    securedLabel->setText(_("This connection is not secure"));
-    securedLabel->setStyleSheet("QLabel { background-color: '#ffff0000'; color: 'black'; }");
+    securedLabel->setText(QString("<img src=':/insecure.svg' style='vertical-align: middle;' />") + _("This connection is not secure"));
+    securedLabel->setStyleSheet("QLabel { background-color: '#ffff0000'; color: 'black'; font-size: 14px; }");
   }
   layout->addWidget(securedLabel, 1);
 
   QFormLayout* formLayout = new QFormLayout;
+  formLayout->setMargin(5);
   if (userNeeded) {
     userText = new QLineEdit;
     userText->setFocus();
@@ -47,6 +49,7 @@ AuthDialog::AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidg
   layout->addLayout(formLayout);
 
   QHBoxLayout* btnsLayout = new QHBoxLayout;
+  btnsLayout->setMargin(5);
   btnsLayout->addStretch(1);
   QPushButton* cancelBtn = new QPushButton(_("Cancel"));
   btnsLayout->addWidget(cancelBtn, 0, Qt::AlignRight);
