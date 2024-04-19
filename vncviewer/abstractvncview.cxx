@@ -773,6 +773,16 @@ void QAbstractVNCView::focusInEvent(QFocusEvent* event)
     }
   }
   QWidget::focusInEvent(event);
+#ifdef __APPLE__
+  QTimer::singleShot(std::chrono::milliseconds(10), [=]() {
+    vlog.debug("cocoa_update_window_level hasFocus=%d", hasFocus());
+    if (hasFocus()) {
+      auto window = AppManager::instance()->getWindow();
+      bool shielding = ::fullscreenSystemKeys && window->allowKeyboardGrab();
+      cocoa_update_window_level(this, window->isFullscreenEnabled(), shielding);
+    }
+  });
+#endif
 }
 
 void QAbstractVNCView::focusOutEvent(QFocusEvent* event)

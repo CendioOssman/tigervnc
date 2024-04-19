@@ -176,5 +176,6 @@ void MacKeyboardHandler::grabKeyboard()
 
 void MacKeyboardHandler::ungrabKeyboard()
 {
+  cocoa_release_displays();
   BaseKeyboardHandler::ungrabKeyboard();
 }

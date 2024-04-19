@@ -327,7 +327,7 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
     resize(screen->geometry().width(), screen->geometry().height());
     showFullScreen();
     QAbstractVNCView* view = AppManager::instance()->getView();
-    view->maybeGrabKeyboard();
+    view->setFocus();
   });
 #endif
 }
@@ -356,7 +356,7 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int top, int bottom, int left, int
     QApplication::sync();
 
     QAbstractVNCView* view = AppManager::instance()->getView();
-    view->maybeGrabKeyboard();
+    view->setFocus();
 
     activateWindow();
   });
@@ -377,18 +377,13 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vh
 #else
   show();
 #endif
-  QTimer::singleShot(std::chrono::milliseconds(500), [=]() {
+  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
     move(vx, vy);
     resize(vwidth, vheight);
     raise();
     activateWindow();
     QAbstractVNCView* view = AppManager::instance()->getView();
-    view->maybeGrabKeyboard();
-#ifdef __APPLE__
-    QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
-    cocoa_fullscreen(cocoa_get_view(this), true, ::fullscreenSystemKeys && allowKeyboardGrab() && view->hasFocus());
-    });
-#endif
+    view->setFocus();
   });
 }
 #endif
@@ -409,9 +404,12 @@ void QVNCWindow::exitFullscreen()
 #else
   setWindowFlag(Qt::WindowStaysOnTopHint, false);
   setWindowFlag(Qt::FramelessWindowHint, false);
+  QAbstractVNCView* view = AppManager::instance()->getView();
+  if (view) {
+    view->ungrabKeyboard();
+  }
 #ifdef __APPLE__
-  cocoa_fullscreen(cocoa_get_view(this), false);
-  cocoa_release_displays();
+  cocoa_update_window_level(this, false);
 #endif
 
   showNormal();
@@ -419,8 +417,6 @@ void QVNCWindow::exitFullscreen()
   windowHandle()->setScreen(previousScreen);
   restoreGeometry(previousGeometry);
   showNormal();
-  QAbstractVNCView* view = AppManager::instance()->getView();
-  view->ungrabKeyboard();
 #endif
 }
 
@@ -696,17 +692,16 @@ void QVNCWindow::focusInEvent(QFocusEvent*)
   vlog.debug("QVNCWindow::focusInEvent");
   QAbstractVNCView* view = AppManager::instance()->getView();
   if (view)
-    view->maybeGrabKeyboard();
+    view->setFocus();
 }
 
 void QVNCWindow::focusOutEvent(QFocusEvent*)
 {
   vlog.debug("QVNCWindow::focusOutEvent");
-  if (::fullscreenSystemKeys) {
-    QAbstractVNCView* view = AppManager::instance()->getView();
-    if (view)
-      view->ungrabKeyboard();
-  }
+// #ifdef __APPLE__
+//     cocoa_fullscreen(cocoa_get_view(this), false);
+//     cocoa_release_displays();
+// #endif
 }
 
 void QVNCWindow::closeEvent(QCloseEvent* e)

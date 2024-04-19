@@ -41,7 +41,7 @@ void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h);
 int cocoa_capture_displays(QList<int> screens);
 void cocoa_release_displays();
 
-void cocoa_fullscreen(NSView *view, bool enabled, bool shielding = false);
+void cocoa_update_window_level(QWidget *widget, bool enabled, bool shielding = false);
 
 int cocoa_is_keyboard_sync(const void *event);
 int cocoa_is_keyboard_event(const void *event);
