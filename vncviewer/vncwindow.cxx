@@ -372,14 +372,15 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vh
   setWindowFlag(Qt::WindowStaysOnTopHint, true);
   setWindowFlag(Qt::FramelessWindowHint, true);
 
-#ifdef __APPLE__
-  showNormal();
-#else
+#ifndef __APPLE__
   show();
 #endif
   QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
     move(vx, vy);
     resize(vwidth, vheight);
+#ifdef __APPLE__
+    show();
+#endif
     raise();
     activateWindow();
     QAbstractVNCView* view = AppManager::instance()->getView();

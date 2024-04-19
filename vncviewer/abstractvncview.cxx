@@ -774,14 +774,12 @@ void QAbstractVNCView::focusInEvent(QFocusEvent* event)
   }
   QWidget::focusInEvent(event);
 #ifdef __APPLE__
-  QTimer::singleShot(std::chrono::milliseconds(10), [=]() {
-    vlog.debug("cocoa_update_window_level hasFocus=%d", hasFocus());
-    if (hasFocus()) {
-      auto window = AppManager::instance()->getWindow();
-      bool shielding = ::fullscreenSystemKeys && window->allowKeyboardGrab();
-      cocoa_update_window_level(this, window->isFullscreenEnabled(), shielding);
-    }
-  });
+  vlog.debug("cocoa_update_window_level hasFocus=%d", hasFocus());
+  if (hasFocus()) {
+    auto window = AppManager::instance()->getWindow();
+    bool shielding = ::fullscreenSystemKeys && window->allowKeyboardGrab();
+    cocoa_update_window_level(window, window->isFullscreenEnabled(), shielding);
+  }
 #endif
 }
 
@@ -795,6 +793,13 @@ void QAbstractVNCView::focusOutEvent(QFocusEvent* event)
   resetKeyboard();
   removeKeyboardHandler();
   QWidget::focusOutEvent(event);
+#ifdef __APPLE__
+  vlog.debug("cocoa_update_window_level hasFocus=%d", hasFocus());
+  if (!hasFocus()) {
+    auto window = AppManager::instance()->getWindow();
+    cocoa_update_window_level(window, false);
+  }
+#endif
 }
 
 void QAbstractVNCView::resizeEvent(QResizeEvent* event)
