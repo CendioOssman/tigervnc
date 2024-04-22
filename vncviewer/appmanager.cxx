@@ -85,8 +85,8 @@ void AppManager::initialize()
   aboutAction->setMenuRole(QAction::AboutRole);
   appMenu->addAction(aboutAction);
   menuBar->addMenu(appMenu);
-  QMenu *file = new QMenu(_("&File"));
-  file->addAction(_("&New Connection"), [=](){
+  QMenu *file = new QMenu(p_("SysMenu|", "&File"));
+  file->addAction(p_("SysMenu|File|", "&New Connection"), [=](){
     QProcess process;
     if (process.startDetached(qApp->arguments()[0], QStringList())) {
       vlog.error(_("Error starting new TigerVNC Viewer: %s"), QVariant::fromValue(process.error()).toString().toStdString().c_str());
