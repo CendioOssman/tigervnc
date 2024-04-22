@@ -24,14 +24,6 @@
 LoggerConfig::LoggerConfig()
 {
   setlocale(LC_ALL, "");
-#if defined(WIN32) && ENABLE_NLS
-  // Quick workaround for the defect of gettext on Windows. Read the discussion at
-  // https://github.com/msys2/MINGW-packages/issues/4059 for details.
-  QString elang = QString(qgetenv("LANGUAGE")).trimmed();
-  if (elang.length() == 0) {
-    qputenv("LANGUAGE", "en:C");
-  }
-#endif
 
   QString localedir = getlocaledir();
   if (localedir.isEmpty())
