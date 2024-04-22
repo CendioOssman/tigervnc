@@ -23,6 +23,8 @@ static bool loadCatalog(const QString &catalog, const QString &location)
 
 static void installQtTranslators()
 {
+  // FIXME: KDE first loads English translation for some reason. See:
+  // https://invent.kde.org/frameworks/ki18n/-/blob/master/src/i18n/main.cpp
 #ifdef Q_OS_LINUX
   QString location = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
 #else
