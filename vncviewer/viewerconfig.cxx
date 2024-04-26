@@ -377,7 +377,7 @@ void ViewerConfig::usage()
   exit(1);
 }
 
-QString ViewerConfig::gatewayHost() const
+QString ViewerConfig::getGatewayHost() const
 {
   return QString(::via);
 }
@@ -428,6 +428,21 @@ void ViewerConfig::addServer(QString serverName)
     vlog.error("%s", e.str());
     emit errorOccurred(QString::asprintf(_("Unable to save the server history:\n\n%s"),
                                          e.str()));
+  }
+}
+
+void ViewerConfig::setServer(QString serverName)
+{
+  this->serverName = serverName;
+  addServer(serverName);
+}
+
+QString ViewerConfig::getFinalAddress() const
+{
+  if(!getGatewayHost().isEmpty()) {
+    return QString("localhost::%2").arg(getGatewayLocalPort());
+  } else {
+    return QString("%1::%2").arg(serverHost).arg(serverPort);
   }
 }
 

@@ -94,7 +94,7 @@ signals:
 public:
   void initialize();
   void listen();
-  void connectToServer(QString addressport = "");
+  void connectToServer();
   void resetConnection();
   void startProcessing();
   void flushSocket();
@@ -113,7 +113,6 @@ private:
   QSocketNotifier* socketWriteNotifier;
   QTimer* updateTimer;
   TunnelFactory* tunnelFactory;
-  QString addressport;
 
   void bind(int fd);
 

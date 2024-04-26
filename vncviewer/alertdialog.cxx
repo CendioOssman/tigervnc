@@ -32,7 +32,7 @@ AlertDialog::AlertDialog(bool staysOnTop, QString message, bool quit, QWidget* p
     btnsLayout->addWidget(reconnectBtn, 0, Qt::AlignRight);
     connect(reconnectBtn, &QPushButton::clicked, this, [=]() {
       accept();
-      AppManager::instance()->connectToServer(ViewerConfig::instance()->getServerName());
+      AppManager::instance()->connectToServer();
     });
   }
   QPushButton* closeBtn = new QPushButton(_("Close"));

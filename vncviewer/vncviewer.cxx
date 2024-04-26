@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
 
   if (!ViewerConfig::instance()->getServerName().isEmpty()) {
     AppManager::instance()->setCommandLine(true);
-    AppManager::instance()->connectToServer(ViewerConfig::instance()->getServerName());
+    AppManager::instance()->connectToServer();
     return AppManager::instance()->getConnection()->hasConnection() ? app.exec() : 0;
   } else {
     AppManager::instance()->openServerDialog();

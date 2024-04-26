@@ -39,7 +39,7 @@ signals:
   void credentialRequested(bool secured, bool userNeeded, bool passwordNeeded);
   void messageDialogRequested(int flags, QString title, QString text);
   void dataReady(QByteArray bytes);
-  void connectToServerRequested(const QString addressport);
+  void connectToServerRequested();
   void authenticateRequested(QString user, QString password);
   void cancelAuthRequested();
   void messageResponded(int response);
@@ -54,7 +54,7 @@ signals:
 public slots:
   void publishError(const QString message, bool quit = false);
   void publishUnexpectedError(QString message, bool quit = false);
-  void connectToServer(const QString addressport);
+  void connectToServer();
   void authenticate(QString user, QString password);
   void cancelAuth();
   void resetConnection();
