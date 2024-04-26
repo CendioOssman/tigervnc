@@ -14,12 +14,10 @@
 #include "vncconnection.h"
 
 #include <QApplication>
-#include <QDebug>
-#include <QGestureEvent>
-#include <QGridLayout>
 #include <QMoveEvent>
 #include <QPainter>
 #include <QResizeEvent>
+#include <QVBoxLayout>
 #include <QScreen>
 #include <QScrollBar>
 #include <QStyleFactory>

@@ -6,7 +6,6 @@
 #include <QApplication>
 #include <QButtonGroup>
 #include <QCheckBox>
-#include <QDebug>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QScreen>

@@ -4,7 +4,6 @@
 #include "config.h"
 #endif
 
-#include <QDebug>
 #include <QProcess>
 #include <QScreen>
 #include <QTcpSocket>

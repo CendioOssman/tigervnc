@@ -16,8 +16,6 @@
 #include <X11/XKBlib.h>
 #endif
 
-#include <QDebug>
-
 static rfb::LogWriter vlog("BaseKeyboardHandler");
 
 BaseKeyboardHandler::BaseKeyboardHandler(QObject* parent)

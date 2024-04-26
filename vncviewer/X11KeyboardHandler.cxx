@@ -23,7 +23,6 @@
 #include "rfb/ledStates.h"
 #include "vncconnection.h"
 
-#include <QDebug>
 #include <X11/XKBlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xcursor/Xcursor.h>
