@@ -26,7 +26,6 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QClipboard>
-#include <QDebug>
 #include <QMenu>
 #include <QMoveEvent>
 #include <QPainter>

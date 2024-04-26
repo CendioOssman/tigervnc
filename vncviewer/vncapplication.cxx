@@ -1,7 +1,7 @@
-#include <QDebug>
+#include "vncapplication.h"
+
 #include "rdr/Exception.h"
 #include "rfb/LogWriter.h"
-#include "vncapplication.h"
 
 static rfb::LogWriter vlog("QVNCApplication");
 

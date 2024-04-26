@@ -26,8 +26,6 @@
 #include <rdr/Exception.h>
 #include "PlatformPixelBuffer.h"
 
-#include <QDebug>
-
 static rfb::LogWriter vlog("PlatformPixelBuffer");
 
 PlatformPixelBuffer::PlatformPixelBuffer(int width, int height) :

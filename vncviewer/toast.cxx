@@ -9,7 +9,6 @@
 #include "i18n.h"
 
 #include <QTimer>
-#include <QDebug>
 #include <QPainter>
 
 Toast::Toast(QWidget* parent)

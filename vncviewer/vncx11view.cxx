@@ -1,10 +1,11 @@
+#include "vncx11view.h"
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include <QApplication>
 #include <QBitmap>
-#include <QDebug>
 #include <QGestureEvent>
 #include <QGestureRecognizer>
 #include <QImage>
@@ -24,7 +25,6 @@
 #include "appmanager.h"
 #include "rfb/LogWriter.h"
 #include "vncgesturerecognizer.h"
-#include "vncx11view.h"
 
 #include <X11/XKBlib.h>
 #include <X11/Xatom.h>
