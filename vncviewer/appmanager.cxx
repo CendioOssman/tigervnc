@@ -284,6 +284,8 @@ void AppManager::openDialog(QDialog& d)
   d.show();
   d.setFocus();
   QEventLoop loop;
+  connect(&d, &QDialog::accepted, this, [&](){ loop.exit(); });
+  connect(&d, &QDialog::rejected, this, [&](){ loop.exit(); });
   connect(&d, &QDialog::destroyed, this, [&](){ loop.exit(); });
   loop.exec();
   disconnect(&d, &QDialog::destroyed, this, nullptr);
