@@ -404,6 +404,11 @@ void QVNCWindow::exitFullscreen()
 
   X11Utils::fullscreen(display, screen, winId(), false);
   QApplication::sync();
+  if (QString(getenv("DESKTOP_SESSION")).isEmpty()) {
+    move(0, 0);
+    windowHandle()->setScreen(previousScreen);
+    restoreGeometry(previousGeometry);
+  }
 #else
   setWindowFlag(Qt::WindowStaysOnTopHint, false);
   setWindowFlag(Qt::FramelessWindowHint, false);
