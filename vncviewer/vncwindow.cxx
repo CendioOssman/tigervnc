@@ -152,7 +152,9 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   l->addWidget(scrollArea);
   setLayout(l);
 
+#ifdef __APPLE__
   cocoa_prevent_native_fullscreen(this);
+#endif
 }
 
 QVNCWindow::~QVNCWindow() {}
@@ -672,14 +674,14 @@ void QVNCWindow::changeEvent(QEvent* e)
           fullscreen(true);
         });
 #else
-        vlog.debug("QVNCWindow::changeEvent window has gone fullscreen, checking if it our doing");
+        vlog.debug("QVNCWindow::changeEvent window has gone fullscreen, checking if it is our doing");
         fullscreen(true);
 #endif
       }
     } else if (fullscreenEnabled && !pendingFullscreen) {
       if (oldState & Qt::WindowFullScreen && !(windowState() & Qt::WindowFullScreen)) {
 #ifndef __APPLE__
-        vlog.debug("QVNCWindow::changeEvent window has left fullscreen, checking if it our doing");
+        vlog.debug("QVNCWindow::changeEvent window has left fullscreen, checking if it is our doing");
         fullscreen(false);
 #endif
       }
@@ -699,10 +701,6 @@ void QVNCWindow::focusInEvent(QFocusEvent*)
 void QVNCWindow::focusOutEvent(QFocusEvent*)
 {
   vlog.debug("QVNCWindow::focusOutEvent");
-// #ifdef __APPLE__
-//     cocoa_fullscreen(cocoa_get_view(this), false);
-//     cocoa_release_displays();
-// #endif
 }
 
 void QVNCWindow::closeEvent(QCloseEvent* e)
