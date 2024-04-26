@@ -116,12 +116,12 @@ bool AppManager::isFullScreen() const
   return window && window->isFullscreenEnabled();
 }
 
-void AppManager::connectToServer(const QString addressport)
+void AppManager::connectToServer()
 {
   if (serverDialog) {
     serverDialog->hide();
   }
-  emit connectToServerRequested(addressport);
+  emit connectToServerRequested();
 }
 
 void AppManager::authenticate(QString user, QString password)

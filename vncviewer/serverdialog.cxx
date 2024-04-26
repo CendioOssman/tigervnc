@@ -97,7 +97,8 @@ void ServerDialog::connectTo()
 {
   QString text = comboBox->currentText();
   validateServerText(text);
-  AppManager::instance()->connectToServer(text);
+  ViewerConfig::instance()->setServer(text);
+  AppManager::instance()->connectToServer();
 }
 
 void ServerDialog::openOptionDialog()

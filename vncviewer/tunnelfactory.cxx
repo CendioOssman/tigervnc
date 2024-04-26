@@ -25,7 +25,7 @@ TunnelFactory::TunnelFactory()
 
 void TunnelFactory::run()
 {
-  QString gatewayHost = ViewerConfig::instance()->gatewayHost();
+  QString gatewayHost = ViewerConfig::instance()->getGatewayHost();
   if (gatewayHost.isEmpty()) {
     return;
   }
@@ -67,17 +67,10 @@ void TunnelFactory::run()
   process = new QProcess;
 
 #if !defined(WIN32)
-  if (!process->execute(command, args)) {
-    QString serverName = "localhost::" + QString::number(ViewerConfig::instance()->getGatewayLocalPort());
-    ViewerConfig::instance()->addServer(serverName);
-  } else {
+  if (process->execute(command, args)) {
     errorOccurred = true;
   }
 #else
-  connect(process, &QProcess::started, this, []() {
-    QString serverName = "localhost::" + QString::number(ViewerConfig::instance()->getGatewayLocalPort());
-    ViewerConfig::instance()->addServer(serverName);
-  });
   connect(process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError e) {
     errorOccurred = true;
     error = e;
@@ -102,7 +95,7 @@ void TunnelFactory::close()
 {
 #if !defined(WIN32)
   if (process) {
-    QString gatewayHost = ViewerConfig::instance()->gatewayHost();
+    QString gatewayHost = ViewerConfig::instance()->getGatewayHost();
     QStringList args({
         "-S",
         operationSocketName,

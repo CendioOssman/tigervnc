@@ -48,11 +48,14 @@ public:
 
   int getServerPort() const { return serverPort; }
 
-  QString gatewayHost() const;
+  QString getGatewayHost() const;
 
   int getGatewayLocalPort() const { return gatewayLocalPort; }
 
   void addServer(QString serverName);
+  void setServer(QString serverName);
+
+  QString getFinalAddress() const;
 
   void saveViewerParameters(QString path, QString serverName);
   QString loadViewerParameters(QString path);

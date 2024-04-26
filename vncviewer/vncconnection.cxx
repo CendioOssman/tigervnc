@@ -101,7 +101,7 @@ void QVNCConnection::initialize()
     }
   });
 
-  QString gatewayHost = ViewerConfig::instance()->gatewayHost();
+  QString gatewayHost = ViewerConfig::instance()->getGatewayHost();
   QString remoteHost = ViewerConfig::instance()->getServerHost();
   if (!gatewayHost.isEmpty() && !remoteHost.isEmpty()) {
     tunnelFactory = new TunnelFactory;
@@ -145,32 +145,29 @@ void QVNCConnection::bind(int fd)
   });
 }
 
-void QVNCConnection::connectToServer(QString addressport)
+void QVNCConnection::connectToServer()
 {
   if (::listenMode) {
     return;
   }
 
+  QString address;
   try {
-    if (addressport.isEmpty()) {
-      resetConnection();
-      this->addressport = addressport;
-    } else {
-      this->addressport = addressport;
-    }
+    resetConnection();
+    address = ViewerConfig::instance()->getFinalAddress();
     delete rfbcon;
     rfbcon = new CConn(this);
     try {
-      ViewerConfig::instance()->saveViewerParameters("", addressport);
+      ViewerConfig::instance()->saveViewerParameters("", address);
     } catch (rfb::Exception& e) {
       vlog.error("%s", e.str());
       AppManager::instance()->publishError(QString::asprintf(_("Unable to save the default configuration:\n\n%s"),
                                                              e.str()));
     }
-    if (addressport.contains("/")) {
+    if (address.contains("/")) {
 #ifndef Q_OS_WIN
       delete socket;
-      socket = new network::UnixSocket(addressport.toStdString().c_str());
+      socket = new network::UnixSocket(address.toStdString().c_str());
       setHost(socket->getPeerAddress());
       vlog.info(_("Connected to socket %s"), host().toStdString().c_str());
       bind(socket->getFd());
@@ -178,7 +175,7 @@ void QVNCConnection::connectToServer(QString addressport)
     } else {
       std::string shost;
       int port;
-      rfb::getHostAndPort(addressport.toStdString().c_str(), &shost, &port);
+      rfb::getHostAndPort(address.toStdString().c_str(), &shost, &port);
       setHost(shost.c_str());
       setPort(port);
       delete socket;
@@ -192,7 +189,7 @@ void QVNCConnection::connectToServer(QString addressport)
     vlog.error("%s", e.str());
     resetConnection();
     AppManager::instance()->publishError(QString::asprintf(_("Failed to connect to \"%s\":\n\n%s"),
-                                                           addressport.toStdString().c_str(), e.str()));
+                                                           address.toStdString().c_str(), e.str()));
   } catch (int& e) {
     resetConnection();
     AppManager::instance()->publishError(strerror(e));
