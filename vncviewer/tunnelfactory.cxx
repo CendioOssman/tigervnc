@@ -66,23 +66,9 @@ void TunnelFactory::run()
   delete process;
   process = new QProcess;
 
-#if !defined(WIN32)
   if (process->execute(command, args)) {
     errorOccurred = true;
   }
-#else
-  connect(process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError e) {
-    errorOccurred = true;
-    error = e;
-  });
-  process->start(command, args);
-  while (true) {
-    if (process->state() == QProcess::Running || errorOccurred) {
-      break;
-    }
-    QThread::usleep(10);
-  }
-#endif
 }
 
 TunnelFactory::~TunnelFactory()
