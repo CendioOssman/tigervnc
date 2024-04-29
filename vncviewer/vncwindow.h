@@ -16,7 +16,7 @@ class QVNCWindow : public QWidget
 public:
   QVNCWindow(QWidget* parent = nullptr);
   virtual ~QVNCWindow();
-  void updateScrollbars();
+  void updateAllMonitorsFullscreen();
 
   // Fullscreen
   QList<int> fullscreenScreens() const;
