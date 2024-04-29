@@ -153,12 +153,19 @@ QVNCWindow::QVNCWindow(QWidget* parent)
 #ifdef __APPLE__
   cocoa_prevent_native_fullscreen(this);
 #endif
+
+  connect(qApp, &QGuiApplication::screenAdded, this, &QVNCWindow::updateAllMonitorsFullscreen);
+  connect(qApp, &QGuiApplication::screenRemoved, this, &QVNCWindow::updateAllMonitorsFullscreen);
 }
 
 QVNCWindow::~QVNCWindow() {}
 
-void QVNCWindow::updateScrollbars()
+void QVNCWindow::updateAllMonitorsFullscreen()
 {
+  if ((fullscreenEnabled || pendingFullscreen)
+      && !strcasecmp(::fullScreenMode.getValueStr().c_str(), "all")) {
+    fullscreen(true);
+  }
 }
 
 QList<int> QVNCWindow::fullscreenScreens() const
@@ -595,10 +602,6 @@ void QVNCWindow::fromBufferResize(int oldW, int oldH, int width, int height)
 {
   vlog.debug("QVNCWindow::resize size=(%d, %d)", width, height);
 
-  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
-    updateScrollbars();
-  });
-
   if (this->width() == width && this->height() == height) {
     vlog.debug("QVNCWindow::resize ignored");
     return;
@@ -649,8 +652,6 @@ void QVNCWindow::resizeEvent(QResizeEvent* e)
   if (::remoteResize && cc->server()->supportsSetDesktopSize) {
     postRemoteResizeRequest();
   }
-
-  updateScrollbars();
 
   toast->setGeometry(rect());
 
