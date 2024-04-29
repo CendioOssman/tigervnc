@@ -30,11 +30,20 @@ class ViewerConfig : public QObject
   Q_OBJECT
 
 public:
+  enum FullscreenType
+  {
+    Current,
+    All,
+    Selected
+  };
+
   const char* SERVER_HISTORY = "tigervnc.history";
   static const int SERVER_PORT_OFFSET = 5900; // ??? 5500;
 
   static ViewerConfig* instance();
   static QString aboutText();
+
+  static FullscreenType fullscreenType();
   static bool canFullScreenOnMultiDisplays();
   static void usage();
 
