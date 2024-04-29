@@ -154,16 +154,17 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   cocoa_prevent_native_fullscreen(this);
 #endif
 
-  connect(qApp, &QGuiApplication::screenAdded, this, &QVNCWindow::updateAllMonitorsFullscreen);
-  connect(qApp, &QGuiApplication::screenRemoved, this, &QVNCWindow::updateAllMonitorsFullscreen);
+  connect(qApp, &QGuiApplication::screenAdded, this, &QVNCWindow::updateMonitorsFullscreen);
+  connect(qApp, &QGuiApplication::screenRemoved, this, &QVNCWindow::updateMonitorsFullscreen);
 }
 
 QVNCWindow::~QVNCWindow() {}
 
-void QVNCWindow::updateAllMonitorsFullscreen()
+void QVNCWindow::updateMonitorsFullscreen()
 {
   if ((fullscreenEnabled || pendingFullscreen)
-      && !strcasecmp(::fullScreenMode.getValueStr().c_str(), "all")) {
+      && strcasecmp(::fullScreenMode.getValueStr().c_str(), "current")) {
+    fullscreen(false);
     fullscreen(true);
   }
 }
@@ -193,7 +194,9 @@ QList<int> QVNCWindow::fullscreenScreens() const
       }
     }
   }
-
+  if (applicableScreens.isEmpty()) {
+    applicableScreens << 0;
+  }
   return applicableScreens;
 }
 
