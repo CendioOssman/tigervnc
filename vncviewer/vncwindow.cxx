@@ -12,6 +12,7 @@
 #include "rfb/ScreenSet.h"
 #include "toast.h"
 #include "vncconnection.h"
+#include "viewerconfig.h"
 
 #include <QApplication>
 #include <QMoveEvent>
@@ -163,7 +164,7 @@ QVNCWindow::~QVNCWindow() {}
 void QVNCWindow::updateMonitorsFullscreen()
 {
   if ((fullscreenEnabled || pendingFullscreen)
-      && strcasecmp(::fullScreenMode.getValueStr().c_str(), "current")) {
+      && ViewerConfig::fullscreenType() != ViewerConfig::Current) {
     fullscreen(false);
     fullscreen(true);
   }
@@ -174,15 +175,19 @@ QList<int> QVNCWindow::fullscreenScreens() const
   QApplication* app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
   QList<int> applicableScreens;
-  if (!strcasecmp(::fullScreenMode.getValueStr().c_str(), "all")) {
+  if (ViewerConfig::fullscreenType() == ViewerConfig::All) {
     for (int i = 0; i < screens.length(); i++) {
       applicableScreens << i;
     }
-  } else if (!strcasecmp(::fullScreenMode.getValueStr().c_str(), "selected")) {
+  } else if (ViewerConfig::fullscreenType() == ViewerConfig::Selected) {
     for (int const& id : ::fullScreenSelectedMonitors.getParam()) {
       int i = id - 1; // Screen ID in config is 1-origin.
       if (i < screens.length()) {
         applicableScreens << i;
+        if (!ViewerConfig::canFullScreenOnMultiDisplays()) {
+          // To have the same behavior as in screenselectionwidget and taking the last of the list
+          applicableScreens = {i};
+        }
       }
     }
   } else {
@@ -237,7 +242,7 @@ void QVNCWindow::fullscreen(bool enabled)
     int top, bottom, left, right;
     QScreen* selectedPrimaryScreen = screens[selectedScreens[0]];
     top = bottom = left = right = selectedScreens[0];
-    if (strcasecmp(::fullScreenMode.getValueStr().c_str(), "current") && selectedScreens.length() > 0) {
+    if (ViewerConfig::fullscreenType() != ViewerConfig::Current && selectedScreens.length() > 0) {
       int xmin = INT_MAX;
       int ymin = INT_MAX;
       int xmax = INT_MIN;
