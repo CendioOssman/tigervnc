@@ -313,9 +313,7 @@ void QVNCWindow::fullscreen(bool enabled)
   activateWindow();
   raise();
 
-  if (!enabled) {
-    ::fullScreen.setParam(false);
-  }
+  ::fullScreen.setParam(enabled);
   if (fullscreenEnabled != fullscreenEnabled0) {
     emit fullscreenChanged(fullscreenEnabled);
   }
