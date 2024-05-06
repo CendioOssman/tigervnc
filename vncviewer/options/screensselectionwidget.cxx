@@ -43,6 +43,30 @@ protected:
     pen.setWidth(w);
     p.setPen(pen);
     p.drawRect(rect().adjusted(w, w, -w, -w));
+
+    if (property("included").toBool()) {
+      p.setPen(Qt::NoPen);
+
+      QColor color1 = "#ffafafe7";
+      QColor color2 = "#ff5454ff";
+
+      if (!isEnabled()) {
+        color1 = color1.lighter(120);
+        color2 = "#ffafafe7";
+      }
+
+      int sz = 5;
+      for(int i = 0; i < width(); i += sz) {
+        for(int j = 0; j < height(); j += sz){
+          p.setBrush(QColor((((i+j) / sz) % 2) ? color1 : color2));
+          p.drawRect(QRect(i+w, j+w, sz, sz));
+        }
+      }
+
+      p.setPen(pen);
+      p.setBrush(Qt::NoBrush);
+      p.drawRect(rect().adjusted(w, w, -w, -w));
+    }
   }
 };
 
@@ -138,6 +162,9 @@ void ScreensSelectionWidget::reset()
     if (::fullScreenSelectedMonitors.getParam().count(screenIndex + 1))
       newCheckBox->setChecked(true);
     connect(newCheckBox, &QCheckBox::clicked, this, [=](bool checked) {
+      newCheckBox->setProperty("included", false);
+      newCheckBox->repaint();
+
       if (!checked) {
         bool noChecked = true;
         for (auto const& c : qAsConst(checkBoxes)) {
@@ -149,8 +176,11 @@ void ScreensSelectionWidget::reset()
         if (noChecked) {
           // we cannot have no screen selected
           newCheckBox->setChecked(true);
+          newCheckBox->repaint();
         }
       }
+
+      moveCheckBoxes();
     });
 
     checkBoxes.append(newCheckBox);
@@ -187,6 +217,8 @@ void ScreensSelectionWidget::moveCheckBoxes()
   getGlobalScreensGeometry(availableScreens, xmin, ymin, w, h);
   qreal ratio = qMin((width() / w), (height() / h));
 
+  selectedRect = QRect();
+
   for (int& screenIndex : availableScreens) {
     QScreen* screen = screens[screenIndex];
     qreal rx = (screen->geometry().x() - xmin);
@@ -204,6 +236,32 @@ void ScreensSelectionWidget::moveCheckBoxes()
     if (it != checkBoxes.end()) {
       (*it)->resize(lw, lh);
       (*it)->move(lx, ly);
+      if ((*it)->isChecked()) {
+        selectedRect = selectedRect.united((*it)->geometry());
+      }
+    }
+  }
+
+  updatePartiallyChecked();
+}
+
+void ScreensSelectionWidget::updatePartiallyChecked()
+{
+  if (!ViewerConfig::canFullScreenOnMultiDisplays()) {
+    return;
+  }
+
+  for (auto& checkBox : checkBoxes) {
+    if (checkBox->property("included").toBool()) {
+      checkBox->setProperty("included", false);
+      checkBox->repaint();
+    }
+
+    if (!checkBox->isChecked()) {
+      if (selectedRect.contains(checkBox->geometry())) {
+        checkBox->setProperty("included", true);
+        checkBox->repaint();
+      }
     }
   }
 }

@@ -22,9 +22,11 @@ protected:
 
 private:
   void moveCheckBoxes();
+  void updatePartiallyChecked();
 
   QList<QCheckBox*> checkBoxes;
   QButtonGroup* exclusiveButtons;
+  QRect selectedRect;
 };
 
 #endif // DISPLAYTAB_H
