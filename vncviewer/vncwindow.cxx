@@ -644,16 +644,12 @@ QWidget *QVNCWindow::takeWidget()
 
 void QVNCWindow::postDialogClosing()
 {
-#ifdef __APPLE__
-  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
-    raise();
-    activateWindow();
-    QAbstractVNCView* view = AppManager::instance()->getView();
-    if (view) {
-      view->setFocus();
-    }
-  });
-#endif
+  raise();
+  activateWindow();
+  QAbstractVNCView* view = AppManager::instance()->getView();
+  if (view) {
+    view->setFocus();
+  }
 }
 
 void QVNCWindow::moveEvent(QMoveEvent* e)

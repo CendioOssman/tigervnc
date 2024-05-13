@@ -72,7 +72,7 @@ public slots:
 
 private:
   QWidget* topWindow() const;
-  void openDialog(QDialog &d);
+  void openDialog(QDialog* d);
 
   bool commandLine = false;
   bool connectedOnce = false;

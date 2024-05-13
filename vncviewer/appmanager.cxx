@@ -8,6 +8,7 @@
 #include <QScreen>
 #include <QTcpSocket>
 #include <QTimer>
+#include <QDebug>
 #if defined(__APPLE__)
 #include "cocoa.h"
 #include <QMenuBar>
@@ -155,9 +156,9 @@ void AppManager::publishError(const QString message, bool quit)
     }
   }
 
-  AlertDialog d(isFullScreen(), text, quit, topWindow());
+  AlertDialog* d = new AlertDialog(isFullScreen(), text, quit, topWindow());
   openDialog(d);
-  if (d.result() == QDialog::Rejected) {
+  if (d->result() == QDialog::Rejected) {
     if (!serverDialog || !serverDialog->isVisible()) {
       qApp->quit();
     }
@@ -269,59 +270,96 @@ void AppManager::openContextMenu()
   emit contextMenuRequested();
 }
 
-void AppManager::openDialog(QDialog& d)
+void AppManager::openDialog(QDialog* d)
 {
+  bool reopen = false;
 #ifdef __APPLE__
-  d.setModal(true);
-  d.setWindowModality(Qt::ApplicationModal);
-  d.setWindowFlag(Qt::CustomizeWindowHint, true);
-  d.setWindowFlag(Qt::WindowMaximizeButtonHint, false);
-  d.setWindowFlag(Qt::WindowFullscreenButtonHint, false);
-  d.setParent(d.parentWidget(), Qt::Dialog);
-  d.setWindowFlag(Qt::CustomizeWindowHint, true);
-  d.setWindowFlag(Qt::WindowMaximizeButtonHint, false);
-  d.setWindowFlag(Qt::WindowFullscreenButtonHint, false);
-  d.show();
-  d.setFocus();
+  d->setModal(true);
+  d->setWindowModality(Qt::ApplicationModal);
+  d->setWindowFlag(Qt::CustomizeWindowHint, true);
+  d->setWindowFlag(Qt::WindowMaximizeButtonHint, false);
+  d->setWindowFlag(Qt::WindowFullscreenButtonHint, false);
+  d->setParent(d->parentWidget(), Qt::Dialog);
+  d->setWindowFlag(Qt::CustomizeWindowHint, true);
+  d->setWindowFlag(Qt::WindowMaximizeButtonHint, false);
+  d->setWindowFlag(Qt::WindowFullscreenButtonHint, false);
+  d->show();
+  d->setFocus();
   QEventLoop loop;
-  connect(&d, &QDialog::accepted, this, [&](){ loop.exit(); });
-  connect(&d, &QDialog::rejected, this, [&](){ loop.exit(); });
-  connect(&d, &QDialog::destroyed, this, [&](){ loop.exit(); });
+  connect(qApp, &QGuiApplication::screenAdded, d, [&](){
+    d->hide();
+    reopen = true;
+    loop.exit();
+  });
+  connect(qApp, &QGuiApplication::screenRemoved, d, [&](){
+    d->hide();
+    reopen = true;
+    loop.exit();
+  });
+  connect(d, &QDialog::accepted, this, [&](){ loop.exit(); });
+  connect(d, &QDialog::rejected, this, [&](){ loop.exit(); });
+  connect(d, &QDialog::destroyed, this, [&](){ loop.exit(); });
   loop.exec();
-  disconnect(&d, &QDialog::destroyed, this, nullptr);
+  disconnect(qApp, &QGuiApplication::screenAdded, d, nullptr);
+  disconnect(qApp, &QGuiApplication::screenRemoved, d, nullptr);
+  disconnect(d, nullptr, this, nullptr);
 
   auto window = AppManager::instance()->getWindow();
   if (window) {
     window->postDialogClosing();
   }
+  if (reopen) {
+    QTimer::singleShot(100, [this, d](){
+      openDialog(d);
+    });
+  } else {
+    d->deleteLater();
+  }
 #else
-  d.exec();
+  connect(qApp, &QGuiApplication::screenAdded, d, [&](){
+    reopen = true;
+    d->close();
+  });
+  connect(qApp, &QGuiApplication::screenRemoved, d, [&](){
+    reopen = true;
+    d->close();
+  });
+  d->exec();
+  disconnect(qApp, &QGuiApplication::screenAdded, d, nullptr);
+  disconnect(qApp, &QGuiApplication::screenRemoved, d, nullptr);
+  if (reopen) {
+    QTimer::singleShot(100, [this, d](){
+      openDialog(d);
+    });
+  } else {
+    d->deleteLater();
+  }
 #endif
 }
 
 void AppManager::openInfoDialog()
 {
-  InfoDialog d(topWindow());
+  InfoDialog* d = new InfoDialog(topWindow());
   openDialog(d);
 }
 
 void AppManager::openOptionDialog()
 {
-  OptionsDialog d(isFullScreen(), topWindow());
+  OptionsDialog* d = new OptionsDialog(isFullScreen(), topWindow());
   openDialog(d);
 }
 
 void AppManager::openAboutDialog()
 {
-  AboutDialog d(isFullScreen(), topWindow());
+  AboutDialog* d = new AboutDialog(isFullScreen(), topWindow());
   openDialog(d);
 }
 
 void AppManager::openMessageDialog(int flags, QString title, QString text)
 {
-  MessageDialog d(isFullScreen(), flags, title, text, topWindow());
+  MessageDialog* d = new MessageDialog(isFullScreen(), flags, title, text, topWindow());
   openDialog(d);
-  int response = d.result() == QDialog::Accepted ? 1 : 0;
+  int response = d->result() == QDialog::Accepted ? 1 : 0;
   emit messageResponded(response);
 }
 

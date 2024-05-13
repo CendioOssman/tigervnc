@@ -752,7 +752,7 @@ void QAbstractVNCView::wheelEvent(QWheelEvent* event)
 void QAbstractVNCView::focusInEvent(QFocusEvent* event)
 {
   vlog.debug("QAbstractVNCView::focusInEvent");
-  if (keyboardHandler) {
+  if (keyboardHandler && !qApp->activeModalWidget()) {
     installKeyboardHandler();
     maybeGrabKeyboard();
 
@@ -817,7 +817,7 @@ bool QAbstractVNCView::event(QEvent *event)
   switch (event->type()) {
   case QEvent::WindowActivate:
     vlog.debug("QAbstractVNCView::WindowActivate");
-    if(!mouseGrabbed) {
+    if(!mouseGrabbed && !qApp->activeModalWidget()) {
       grabPointer();
     }
     break;
