@@ -642,6 +642,20 @@ QWidget *QVNCWindow::takeWidget()
   return scrollArea->takeWidget();
 }
 
+void QVNCWindow::postDialogClosing()
+{
+#ifdef __APPLE__
+  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
+    raise();
+    activateWindow();
+    QAbstractVNCView* view = AppManager::instance()->getView();
+    if (view) {
+      view->setFocus();
+    }
+  });
+#endif
+}
+
 void QVNCWindow::moveEvent(QMoveEvent* e)
 {
   vlog.debug("QVNCWindow::moveEvent pos=(%d, %d) oldPos=(%d, %d)", e->pos().x(), e->pos().y(), e->oldPos().x(), e->oldPos().y());
