@@ -43,6 +43,8 @@ public:
   void setWidget(QWidget* w);
   QWidget* takeWidget();
 
+  void postDialogClosing();
+
 signals:
   void fullscreenChanged(bool enabled);
   void closed();

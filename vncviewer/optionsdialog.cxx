@@ -19,6 +19,7 @@
 #include <QVBoxLayout>
 #include <QStyledItemDelegate>
 #include <QProxyStyle>
+#include <QTimer>
 
 #ifdef Q_OS_LINUX
 class ListViewStyle : public QProxyStyle

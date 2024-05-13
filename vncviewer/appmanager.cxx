@@ -289,6 +289,11 @@ void AppManager::openDialog(QDialog& d)
   connect(&d, &QDialog::destroyed, this, [&](){ loop.exit(); });
   loop.exec();
   disconnect(&d, &QDialog::destroyed, this, nullptr);
+
+  auto window = AppManager::instance()->getWindow();
+  if (window) {
+    window->postDialogClosing();
+  }
 #else
   d.exec();
 #endif
