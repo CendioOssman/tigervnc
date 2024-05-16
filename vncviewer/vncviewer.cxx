@@ -56,6 +56,10 @@ int main(int argc, char *argv[])
 #endif
   }
 
+#ifdef Q_OS_LINUX
+  qputenv("QT_QPA_PLATFORM", "xcb");
+#endif
+
   QVNCApplication app(argc, argv);
 
   app.setOrganizationName("TigerVNC Team");
