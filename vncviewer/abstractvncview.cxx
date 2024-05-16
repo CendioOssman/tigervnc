@@ -133,7 +133,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
             panZoomGesture = true;
             QTimer::singleShot(100, this, [=](){
               panZoomGesture = false;
-              filterPointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
+              mbemu->filterPointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
               mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
             });
           }
@@ -154,7 +154,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
             panZoomGesture = true;
             QTimer::singleShot(100, this, [=](){
               panZoomGesture = false;
-              filterPointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
+              mbemu->filterPointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
               mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
             });
           }
@@ -186,9 +186,9 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
           if (!dragGesture) {
             dragGesture = true;
             QPoint startPos = gesture->getStartPosition().toPoint();
-            filterPointerEvent(rfb::Point(startPos.x(), startPos.y()), 1 /* LeftButton */);
+            mbemu->filterPointerEvent(rfb::Point(startPos.x(), startPos.y()), 1 /* LeftButton */);
           }
-          filterPointerEvent(rfb::Point(pos.x(), pos.y()), 1 /* LeftButton */);
+          mbemu->filterPointerEvent(rfb::Point(pos.x(), pos.y()), 1 /* LeftButton */);
           event->accept();
           return true;
         } else if (gesture->state() == Qt::GestureFinished) {
