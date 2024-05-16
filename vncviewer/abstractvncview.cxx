@@ -764,6 +764,7 @@ void QAbstractVNCView::paintEvent(QPaintEvent* event)
   }
 
   QPainter painter(this);
+  painter.setRenderHint(QPainter::SmoothPixmapTransform);
   QRect r = event->rect();
 
   painter.drawPixmap(r, pixmap, remoteRectAdjust(r));

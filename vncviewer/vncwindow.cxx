@@ -117,7 +117,6 @@ private:
 QVNCWindow::QVNCWindow(QWidget* parent)
   : QWidget(parent)
   , resizeTimer(new QTimer(this))
-  , devicePixelRatio(devicePixelRatioF())
 {
   setAttribute(Qt::WA_NativeWindow, true);
   setFocusPolicy(Qt::StrongFocus);
@@ -220,7 +219,7 @@ double QVNCWindow::effectiveDevicePixelRatio(QScreen* screen) const
   if (screen) {
     return screen->devicePixelRatio();
   }
-  return devicePixelRatio;
+  return this->screen()->devicePixelRatio();
 }
 
 void QVNCWindow::fullscreen(bool enabled)
@@ -401,6 +400,12 @@ void QVNCWindow::fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, 
              vy,
              vwidth,
              vheight);
+  double f = effectiveDevicePixelRatio();
+  vlog.debug("QVNCWindow::fullscreenOnSelectedDisplays geometry=(%f, %f, %f, %f)",
+             vx / f,
+             vy / f,
+             vwidth / f,
+             vheight / f);
   setWindowFlag(Qt::WindowStaysOnTopHint, true);
   setWindowFlag(Qt::FramelessWindowHint, true);
 
@@ -408,8 +413,8 @@ void QVNCWindow::fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, 
   show();
 #endif
   QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
-    move(vx, vy);
-    resize(vwidth, vheight);
+    move(vx / f, vy / f);
+    resize(vwidth / f, vheight / f);
 #ifdef __APPLE__
     show();
 #endif
@@ -471,19 +476,18 @@ bool QVNCWindow::isFullscreenEnabled() const
 void QVNCWindow::handleDesktopSize()
 {
   vlog.debug("QVNCWindow::handleDesktopSize");
-  double f = effectiveDevicePixelRatio();
   if (!QString(::desktopSize).isEmpty()) {
     int w, h;
     // An explicit size has been requested
     if (sscanf(::desktopSize, "%dx%d", &w, &h) != 2) {
       return;
     }
-    remoteResize(w * f, h * f);
+    remoteResize(w, h);
     vlog.debug("QVNCWindow::handleDesktopSize(explicit) size=(%d, %d)", w, h);
   } else if (::remoteResize) {
     // No explicit size, but remote resizing is on so make sure it
     // matches whatever size the window ended up being
-    remoteResize(width() * f, height() * f);
+    remoteResize(width(), height());
     vlog.debug("QVNCWindow::handleDesktopSize(implicit) size=(%d, %d)", width(), height());
   }
 }
@@ -500,7 +504,10 @@ void QVNCWindow::remoteResize(int w, int h)
   rfb::ScreenSet layout;
   rfb::ScreenSet::const_iterator iter;
   double f = effectiveDevicePixelRatio();
-  if ((!fullscreenEnabled && !pendingFullscreen) || (w > width() * f) || (h > height() * f)) {
+  vlog.debug("f %f", f);
+  vlog.debug("w %d", w);
+  vlog.debug("h %d", h);
+  if ((!fullscreenEnabled && !pendingFullscreen) || (w > width()) || (h > height())) {
     // In windowed mode (or the framebuffer is so large that we need
     // to scroll) we just report a single virtual screen that covers
     // the entire framebuffer.
@@ -536,8 +543,8 @@ void QVNCWindow::remoteResize(int w, int h)
 
     // In full screen we report all screens that are fully covered.
     rfb::Rect viewport_rect;
-    viewport_rect.setXYWH(x(), y(), width(), height());
-    vlog.debug("viewport_rect(%d, %d, %dx%d)", x(), y(), width(), height());
+    viewport_rect.setXYWH(x(), y(), w, h);
+    vlog.debug("viewport_rect(%d, %d, %dx%d)", viewport_rect.tl.x, viewport_rect.tl.y, viewport_rect.width(), viewport_rect.height());
 
     // If we can find a matching screen in the existing set, we use
     // that, otherwise we create a brand new screen.
@@ -547,17 +554,15 @@ void QVNCWindow::remoteResize(int w, int h)
     //
     QApplication* app = static_cast<QApplication*>(QApplication::instance());
     QList<QScreen*> screens = app->screens();
-    //    std::sort(screens.begin(), screens.end(), [](QScreen *a, QScreen *b) {
-    //                return a->geometry().x() == b->geometry().x() ? (a->geometry().y() < b->geometry().y()) :
-    //                (a->geometry().x() < b->geometry().x());
-    //              });
+
     for (QScreen*& screen : screens) {
       double dpr = effectiveDevicePixelRatio(screen);
       QRect vg = screen->geometry();
-      int sx = vg.x();
-      int sy = vg.y();
-      int sw = vg.width() * dpr;
-      int sh = vg.height() * dpr;
+      int sx = vg.x() / dpr;
+      int sy = vg.y() / dpr;
+      int sw = vg.width();
+      int sh = vg.height();
+      vlog.debug("Screen (%d, %d, %dx%d)", sx, sy, sw, sh);
 
       // Check that the screen is fully inside the framebuffer
       rfb::Rect screen_rect;
@@ -625,22 +630,22 @@ void QVNCWindow::remoteResize(int w, int h)
 
 void QVNCWindow::fromBufferResize(int oldW, int oldH, int width, int height)
 {
-  vlog.debug("QVNCWindow::resize size=(%d, %d)", width, height);
+  vlog.debug("QVNCWindow::fromBufferResize size=(%d, %d)", width, height);
 
   if (this->width() == width && this->height() == height) {
-    vlog.debug("QVNCWindow::resize ignored");
+    vlog.debug("QVNCWindow::fromBufferResize ignored");
     return;
   }
 
   QAbstractVNCView* view = AppManager::instance()->getView();
 
   if (!view) {
-    vlog.debug("QVNCWindow::resize !view");
+    vlog.debug("QVNCWindow::fromBufferResize !view");
     resize(width, height);
   } else {
-    vlog.debug("QVNCWindow::resize view");
+    vlog.debug("QVNCWindow::fromBufferResize view");
     if (QSize(oldW, oldH) == size()) {
-      vlog.debug("QVNCWindow::resize because session and client were in sync");
+      vlog.debug("QVNCWindow::fromBufferResize because session and client were in sync");
       resize(width, height);
     }
   }

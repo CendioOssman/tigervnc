@@ -60,7 +60,6 @@ private:
   QTimer* resizeTimer;
   bool fullscreenEnabled = false;
   bool pendingFullscreen = false;
-  double devicePixelRatio;
 
   QScreen* previousScreen;
   QByteArray previousGeometry;
