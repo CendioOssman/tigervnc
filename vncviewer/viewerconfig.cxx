@@ -34,6 +34,7 @@
 #include "parameters.h"
 #include "rfb/Configuration.h"
 #include "rfb/LogWriter.h"
+#include "rfb/Hostname.h"
 #ifdef HAVE_GNUTLS
 #include "rfb/CSecurityTLS.h"
 #endif
@@ -202,7 +203,6 @@ bool ViewerConfig::canFullScreenOnMultiDisplays()
 
 void ViewerConfig::saveViewerParameters(QString path, QString serverName)
 {
-  addServer(serverName);
   ::saveViewerParameters(path.isEmpty() ? nullptr : path.toStdString().c_str(), serverName.toStdString().c_str());
 }
 
@@ -403,30 +403,9 @@ void ViewerConfig::parseServerName()
     network::initSockets();
     gatewayLocalPort = network::findFreeTcpPort();
   }
-  bool ok;
-  int ix = serverName.indexOf(':');
-  if (ix >= 0) {
-    int ix2 = serverName.indexOf("::");
-    if (ix2 < 0) {
-      int port = SERVER_PORT_OFFSET + serverName.mid(ix + 1).toInt(&ok, 10);
-      if (ok) {
-        serverPort = port;
-      }
-    } else {
-      int port = serverName.mid(ix + 2).toInt(&ok, 10);
-      if (ok) {
-        serverPort = port;
-      }
-    }
-    serverHost = serverName.left(ix);
-  } else {
-    int port = serverName.toInt(&ok, 10);
-    if (ok) {
-      serverPort = port;
-    } else {
-      serverHost = serverName;
-    }
-  }
+  std::string shost;
+  rfb::getHostAndPort(serverName.toStdString().c_str(), &shost, &serverPort);
+  serverHost = shost.c_str();
 }
 
 void ViewerConfig::addServer(QString serverName)
