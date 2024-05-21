@@ -3,7 +3,6 @@
 #include "tapdraggesture.h"
 
 #include <QWidget>
-#include <QDebug>
 
 static int kHoldTimeout = 700; // ms
 static int kTapRadius = 40;
