@@ -8,7 +8,6 @@
 #include <QScreen>
 #include <QTcpSocket>
 #include <QTimer>
-#include <QDebug>
 #if defined(__APPLE__)
 #include "cocoa.h"
 #include <QMenuBar>
