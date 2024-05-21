@@ -30,7 +30,7 @@ void BaseKeyboardHandler::grabKeyboard()
 
 void BaseKeyboardHandler::ungrabKeyboard()
 {
-  keyboardGrabbed = true;
+  keyboardGrabbed = false;
 }
 
 bool BaseKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)

@@ -20,6 +20,7 @@ public:
   virtual ~QVNCMacView();
 
 public slots:
+  void setCursorPos(int x, int y) override;
   void bell() override;
 
 protected:

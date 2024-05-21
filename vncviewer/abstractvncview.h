@@ -57,7 +57,7 @@ public:
   QSize pixmapSize() const { return pixmap.size(); };
 
 public slots:
-  void setCursorPos(int x, int y);
+  virtual void setCursorPos(int x, int y);
   void flushPendingClipboard();
   void handleClipboardRequest();
   void handleClipboardChange(QClipboard::Mode mode);

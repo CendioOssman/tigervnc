@@ -25,6 +25,20 @@ QVNCMacView::QVNCMacView(QWidget* parent, Qt::WindowFlags f)
 
 QVNCMacView::~QVNCMacView() {}
 
+void QVNCMacView::setCursorPos(int x, int y)
+{
+  vlog.debug("QVNCMacView::setCursorPos mouseGrabbed=%d", mouseGrabbed);
+  vlog.debug("QVNCMacView::setCursorPos keyboardGrabbed=%d", keyboardHandler->isKeyboardGrabbed());
+  if (!mouseGrabbed || !keyboardHandler->isKeyboardGrabbed()) {
+    // Do nothing if we do not have the mouse captured.
+    return;
+  }
+  QPoint gp = mapToGlobal(localPointAdjust(QPoint(x, y)));
+  vlog.debug("QVNCMacView::setCursorPos local x=%d y=%d", x, y);
+  vlog.debug("QVNCMacView::setCursorPos screen x=%d y=%d", gp.x(), gp.y());
+  cocoa_set_cursor_pos(gp.x(), gp.y());
+}
+
 bool QVNCMacView::event(QEvent* e)
 {
   return QAbstractVNCView::event(e);
