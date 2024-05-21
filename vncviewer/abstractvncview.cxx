@@ -111,7 +111,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
     if (PanZoomGesture *gesture = static_cast<PanZoomGesture *>(event->gesture(type))) {
       if (gesture->state() == Qt::GestureUpdated) {
         if (gesture->getType() == PanZoomGesture::Pan) {
-          QPoint pos = gesture->hotSpot().toPoint();
+          QPoint pos = gesture->getPosition().toPoint();
           int wheelMask = 0;
           if (gesture->getOffsetDelta().y() > 0) {
             wheelMask |= 8;
@@ -140,7 +140,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
         }
 
         if (gesture->getType() == PanZoomGesture::Pinch) {
-          QPoint pos = gesture->hotSpot().toPoint();
+          QPoint pos = gesture->getPosition().toPoint();
           int wheelMask = 0;
           if (gesture->getScaleFactor() > 1.00) {
             wheelMask |= 8;
