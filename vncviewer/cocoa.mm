@@ -793,3 +793,11 @@ void cocoa_fix_warping()
     CGEventSourceSetLocalEventsSuppressionInterval(event, 0);
     CFRelease(event);
 }
+
+void cocoa_set_cursor_pos(int x, int y)
+{
+    CGPoint new_pos;
+    new_pos.x = x;
+    new_pos.y = y;
+    CGWarpMouseCursorPosition(new_pos);
+}
