@@ -38,6 +38,8 @@ public:
 
   void setContextMenuVisible(bool newContextMenuVisible);
 
+  bool isKeyboardGrabbed() const;
+
 signals:
   void contextMenuKeyPressed(bool menuShortCutMode);
 

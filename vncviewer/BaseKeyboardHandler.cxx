@@ -150,6 +150,11 @@ void BaseKeyboardHandler::setContextMenuVisible(bool newContextMenuVisible)
 
 }
 
+bool BaseKeyboardHandler::isKeyboardGrabbed() const
+{
+  return keyboardGrabbed;
+}
+
 void BaseKeyboardHandler::resetKeyboard()
 {
   while (!downKeySym.empty()) {
