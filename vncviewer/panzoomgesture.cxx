@@ -19,3 +19,8 @@ QPointF PanZoomGesture::getOffsetDelta() const
 {
   return offset - lastOffset;
 }
+
+QPointF PanZoomGesture::getPosition() const
+{
+  return position;
+}

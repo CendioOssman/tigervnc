@@ -22,8 +22,12 @@ public:
 
   QPointF getOffsetDelta() const;
 
+  QPointF getPosition() const;
+
 private:
   Type type = Undefined;
+
+  QPointF position;
 
   // Pinch
   QPointF startCenterPoint;

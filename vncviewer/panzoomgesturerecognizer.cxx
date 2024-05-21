@@ -58,6 +58,7 @@ QGestureRecognizer::Result PanZoomGestureRecognizer::recognize(QGesture *state, 
         if (q->offset.x() > 3*kSingleStepOffset  || q->offset.y() > 3*kSingleStepOffset ||
             q->offset.x() < -3*kSingleStepOffset || q->offset.y() < -3*kSingleStepOffset) {
           q->setHotSpot(ev->touchPoints().first().startScreenPos());
+          q->position = ev->touchPoints().first().startPos();
           q->type = PanZoomGesture::Pan;
           result = QGestureRecognizer::MayBeGesture;
 
@@ -97,6 +98,7 @@ QGestureRecognizer::Result PanZoomGestureRecognizer::recognize(QGesture *state, 
         if (q->offset.x() > kSingleStepOffset  || q->offset.y() > kSingleStepOffset ||
             q->offset.x() < -kSingleStepOffset || q->offset.y() < -kSingleStepOffset) {
           q->setHotSpot(ev->touchPoints().first().startScreenPos());
+          q->position = ev->touchPoints().first().startPos();
           result = QGestureRecognizer::TriggerGesture;
         } else {
           result = QGestureRecognizer::MayBeGesture;
@@ -106,6 +108,7 @@ QGestureRecognizer::Result PanZoomGestureRecognizer::recognize(QGesture *state, 
         QTouchEvent::TouchPoint p2 = ev->touchPoints().at(1);
 
         q->setHotSpot(p1.screenPos());
+        q->position = p1.pos();
 
         QPointF centerPoint = (p1.screenPos() + p2.screenPos()) / 2.0;
         q->lastCenterPoint = q->centerPoint;
@@ -151,6 +154,7 @@ void PanZoomGestureRecognizer::reset(QGesture *state)
   q->startPosition[0] = q->startPosition[1] = QPointF();
 
   q->lastOffset = q->offset = q->delta = QPointF();
+  q->position = QPointF();
 
   QGestureRecognizer::reset(state);
 }
