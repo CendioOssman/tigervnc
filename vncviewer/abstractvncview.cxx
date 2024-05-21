@@ -338,7 +338,8 @@ void QAbstractVNCView::resetKeyboard()
 void QAbstractVNCView::setCursorPos(int x, int y)
 {
   vlog.debug("QAbstractVNCView::setCursorPos mouseGrabbed=%d", mouseGrabbed);
-  if (!mouseGrabbed) {
+  vlog.debug("QAbstractVNCView::setCursorPos keyboardGrabbed=%d", keyboardHandler->isKeyboardGrabbed());
+  if (!mouseGrabbed || !keyboardHandler->isKeyboardGrabbed()) {
     // Do nothing if we do not have the mouse captured.
     return;
   }
