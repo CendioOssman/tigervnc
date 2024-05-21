@@ -69,4 +69,6 @@ int cocoa_scrollbar_size();
 
 void cocoa_prevent_native_fullscreen(QWidget* w);
 
+void cocoa_fix_warping();
+
 #endif

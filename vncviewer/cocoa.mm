@@ -784,3 +784,12 @@ void cocoa_prevent_native_fullscreen(QWidget* w)
   NSWindow* window = [view window];
   [window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenNone];
 }
+
+void cocoa_fix_warping()
+{
+    // By default we get a slight delay when we warp the pointer, something
+    // we don't want or we'll get jerky movement
+    CGEventSourceRef event = CGEventSourceCreate(kCGEventSourceStateCombinedSessionState);
+    CGEventSourceSetLocalEventsSuppressionInterval(event, 0);
+    CFRelease(event);
+}

@@ -153,6 +153,7 @@ QVNCWindow::QVNCWindow(QWidget* parent)
 
 #ifdef __APPLE__
   cocoa_prevent_native_fullscreen(this);
+  cocoa_fix_warping();
 #endif
 
   connect(qApp, &QGuiApplication::screenAdded, this, &QVNCWindow::updateMonitorsFullscreen);
