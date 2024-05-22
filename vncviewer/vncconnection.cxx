@@ -371,6 +371,7 @@ void QVNCConnection::startProcessing()
       rfbcon->getOutStream()->cork(false);
     }
   } catch (rdr::EndOfStream& e) {
+    recursing = false;
     vlog.info("%s", e.str());
     if (!AppManager::instance()->getView()) {
       vlog.error(_("The connection was dropped by the server before "
@@ -384,9 +385,11 @@ void QVNCConnection::startProcessing()
       qApp->quit();
     }
   } catch (rdr::Exception& e) {
+    recursing = false;
     resetConnection();
     AppManager::instance()->publishUnexpectedError(e.str());
   } catch (int& e) {
+    recursing = false;
     resetConnection();
     AppManager::instance()->publishUnexpectedError(strerror(e));
   }
