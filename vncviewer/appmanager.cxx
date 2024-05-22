@@ -354,12 +354,11 @@ void AppManager::openAboutDialog()
   openDialog(d);
 }
 
-void AppManager::openMessageDialog(int flags, QString title, QString text)
+int AppManager::openMessageDialog(int flags, QString title, QString text)
 {
   MessageDialog* d = new MessageDialog(isFullScreen(), flags, title, text, topWindow());
   openDialog(d);
-  int response = d->result() == QDialog::Accepted ? 1 : 0;
-  emit messageResponded(response);
+  return d->result() == QDialog::Accepted ? 1 : 0;
 }
 
 void AppManager::handleOptions()

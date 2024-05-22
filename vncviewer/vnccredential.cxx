@@ -10,6 +10,8 @@
 #include "i18n.h"
 #include "parameters.h"
 
+#include <QEventLoop>
+
 VNCCredential::VNCCredential()
  : QObject(nullptr)
 {
@@ -70,11 +72,5 @@ void VNCCredential::getUserPasswd(bool secure, std::string *user, std::string *p
 
 bool VNCCredential::showMsgBox(int flags, const char* title, const char* text)
 {
-  int result = 0;
-  AppManager *manager = AppManager::instance();
-  emit manager->openMessageDialog(flags, title, text);
-  connect(AppManager::instance(), &AppManager::messageResponded, this, [&](int response) {
-    result = response;
-  });
-  return result;
+  return AppManager::instance()->openMessageDialog(flags, title, text);
 }
