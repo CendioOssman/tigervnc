@@ -42,7 +42,6 @@ signals:
   void connectToServerRequested();
   void authenticateRequested(QString user, QString password);
   void cancelAuthRequested();
-  void messageResponded(int response);
   void newVncWindowRequested(int width, int height, QString name);
   void resetConnectionRequested();
   void invalidateRequested(int x0, int y0, int x1, int y1);
@@ -66,7 +65,7 @@ public slots:
   void openInfoDialog();
   void openOptionDialog();
   void openAboutDialog();
-  void openMessageDialog(int flags, QString title, QString text);
+  int openMessageDialog(int flags, QString title, QString text);
   void handleOptions();
   void openServerDialog();
 
