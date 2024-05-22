@@ -650,6 +650,7 @@ void QAbstractVNCView::ungrabKeyboard()
 {
   if (keyboardHandler)
     keyboardHandler->ungrabKeyboard();
+  ungrabPointer();
 }
 
 void QAbstractVNCView::grabPointer()
@@ -987,14 +988,25 @@ void QAbstractVNCView::resizeEvent(QResizeEvent* event)
   maybeGrabKeyboard();
 }
 
+void QAbstractVNCView::enterEvent(QEvent *event)
+{
+  vlog.debug("QAbstractVNCView::enterEvent");
+  grabPointer();
+  QWidget::enterEvent(event);
+}
+
+void QAbstractVNCView::leaveEvent(QEvent *event)
+{
+  vlog.debug("QAbstractVNCView::leaveEvent");
+  ungrabPointer();
+  QWidget::leaveEvent(event);
+}
+
 bool QAbstractVNCView::event(QEvent *event)
 {
   switch (event->type()) {
   case QEvent::WindowActivate:
     vlog.debug("QAbstractVNCView::WindowActivate");
-    if(!mouseGrabbed && !qApp->activeModalWidget()) {
-      grabPointer();
-    }
     break;
   case QEvent::WindowDeactivate:
     vlog.debug("QAbstractVNCView::WindowDeactivate");
