@@ -778,6 +778,13 @@ int cocoa_scrollbar_size()
     scrollerStyle:NSScrollerStyleLegacy]);
 }
 
+void cocoa_prevent_native_fullscreen(QWidget* w)
+{
+  NSView* view = cocoa_get_view(w);
+  NSWindow* window = [view window];
+  [window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenNone];
+}
+
 void cocoa_fix_warping()
 {
     // By default we get a slight delay when we warp the pointer, something

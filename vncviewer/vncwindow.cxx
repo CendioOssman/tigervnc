@@ -152,9 +152,6 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   setLayout(l);
 
 #ifdef __APPLE__
-  setWindowFlag(Qt::CustomizeWindowHint, true);
-  setWindowFlag(Qt::WindowMaximizeButtonHint, true);
-  setWindowFlag(Qt::WindowFullscreenButtonHint, false);
   cocoa_fix_warping();
 #endif
 
