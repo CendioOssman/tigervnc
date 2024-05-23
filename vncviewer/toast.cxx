@@ -30,6 +30,7 @@ void Toast::showToast()
 {
   toastTimer->start();
   show();
+  raise();
 }
 
 void Toast::hideToast()
