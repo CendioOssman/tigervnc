@@ -41,6 +41,10 @@
 #include "vncx11view.h"
 #endif
 
+#ifdef __APPLE__
+#include "cocoa.h"
+#endif
+
 static rfb::LogWriter vlog("AppManager");
 
 AppManager::AppManager()
@@ -230,6 +234,10 @@ void AppManager::openVNCWindow(int width, int height, QString name)
       window->move(geom_x, geom_y);
     }
   }
+
+#ifdef __APPLE__
+  cocoa_prevent_native_fullscreen(window);
+#endif
 
   if (::fullScreen) {
     window->fullscreen(true);
