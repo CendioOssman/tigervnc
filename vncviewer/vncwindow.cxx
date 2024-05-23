@@ -344,6 +344,7 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
     showFullScreen();
     QAbstractVNCView* view = AppManager::instance()->getView();
     view->setFocus();
+    view->giveKeyboardFocus();
   });
 #endif
 }
@@ -373,6 +374,7 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int top, int bottom, int left, int
 
     QAbstractVNCView* view = AppManager::instance()->getView();
     view->setFocus();
+    view->giveKeyboardFocus();
 
     activateWindow();
   });
@@ -401,6 +403,7 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vh
     activateWindow();
     QAbstractVNCView* view = AppManager::instance()->getView();
     view->setFocus();
+    view->giveKeyboardFocus();
   });
 }
 #endif
@@ -652,6 +655,7 @@ void QVNCWindow::postDialogClosing()
   QAbstractVNCView* view = AppManager::instance()->getView();
   if (view) {
     view->setFocus();
+    view->giveKeyboardFocus();
   }
 }
 
@@ -717,8 +721,10 @@ void QVNCWindow::focusInEvent(QFocusEvent*)
 {
   vlog.debug("QVNCWindow::focusInEvent");
   QAbstractVNCView* view = AppManager::instance()->getView();
-  if (view)
+  if (view) {
     view->setFocus();
+    view->giveKeyboardFocus();
+  }
 }
 
 void QVNCWindow::focusOutEvent(QFocusEvent*)

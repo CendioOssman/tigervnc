@@ -69,6 +69,7 @@ public slots:
   virtual void grabPointer();
   virtual void ungrabPointer();
   virtual void bell() = 0;
+  void giveKeyboardFocus();
 
 signals:
   void delayedInitialized();

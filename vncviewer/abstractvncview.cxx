@@ -925,21 +925,24 @@ void QAbstractVNCView::wheelEvent(QWheelEvent* event)
   event->accept();
 }
 
-void QAbstractVNCView::focusInEvent(QFocusEvent* event)
+void QAbstractVNCView::giveKeyboardFocus()
 {
-  vlog.debug("QAbstractVNCView::focusInEvent");
+  vlog.debug("QAbstractVNCView::giveKeyboardFocus");
+  if (qApp->activeModalWidget()) {
+    vlog.debug("QAbstractVNCView::giveKeyboardFocus activeModalWidget=%s", qApp->activeModalWidget()->metaObject()->className());
+  }
   if (keyboardHandler && !qApp->activeModalWidget()) {
     installKeyboardHandler();
     maybeGrabKeyboard();
 
     flushPendingClipboard();
 
-    // We may have gotten our lock keys out of sync with the server
-    // whilst we didn't have focus. Try to sort this out.
+           // We may have gotten our lock keys out of sync with the server
+           // whilst we didn't have focus. Try to sort this out.
     vlog.debug("KeyboardHandler::pushLEDState");
     keyboardHandler->pushLEDState();
 
-    // Resend Ctrl/Alt if needed
+           // Resend Ctrl/Alt if needed
     if (keyboardHandler->getMenuCtrlKey()) {
       keyboardHandler->handleKeyPress(0x1d, XK_Control_L);
     }
@@ -947,6 +950,12 @@ void QAbstractVNCView::focusInEvent(QFocusEvent* event)
       keyboardHandler->handleKeyPress(0x38, XK_Alt_L);
     }
   }
+}
+
+void QAbstractVNCView::focusInEvent(QFocusEvent* event)
+{
+  vlog.debug("QAbstractVNCView::focusInEvent");
+  giveKeyboardFocus();
   QWidget::focusInEvent(event);
 #ifdef __APPLE__
   vlog.debug("cocoa_update_window_level hasFocus=%d", hasFocus());
