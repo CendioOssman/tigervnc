@@ -240,7 +240,13 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 #endif
 
   if (::fullScreen) {
-    window->fullscreen(true);
+#ifdef __APPLE__
+    QTimer::singleShot(100, [=](){
+#endif
+      window->fullscreen(true);
+#ifdef __APPLE__
+    });
+#endif
   } else {
     vlog.debug("SHOW");
     window->show();
