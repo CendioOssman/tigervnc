@@ -14,7 +14,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-AlertDialog::AlertDialog(bool staysOnTop, QString message, bool quit, QWidget* parent)
+AlertDialog::AlertDialog(bool staysOnTop, QString message, bool quit, bool reconnect, QWidget* parent)
   : QDialog{parent}
 {
   setWindowTitle(_("TigerVNC Viewer"));
@@ -27,7 +27,7 @@ AlertDialog::AlertDialog(bool staysOnTop, QString message, bool quit, QWidget* p
 
   QHBoxLayout* btnsLayout = new QHBoxLayout;
   btnsLayout->addStretch(1);
-  if (::reconnectOnError && !quit) {
+  if (reconnect && !quit) {
     QPushButton* reconnectBtn = new QPushButton(_("Reconnect"));
     btnsLayout->addWidget(reconnectBtn, 0, Qt::AlignRight);
     connect(reconnectBtn, &QPushButton::clicked, this, [=]() {

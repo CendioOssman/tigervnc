@@ -118,8 +118,13 @@ void ServerDialog::openLoadConfigDialog()
                                                   {},
                                                   _("TigerVNC configuration (*.tigervnc);;All files (*)"));
   if (!filename.isEmpty()) {
-    QString server = ViewerConfig::instance()->loadViewerParameters(filename);
-    validateServerText(server);
+    try {
+      QString server = ViewerConfig::instance()->loadViewerParameters(filename);
+      validateServerText(server);
+    } catch (rfb::Exception& e) {
+      vlog.error("%s", e.str());
+      AppManager::instance()->openErrorDialog(QString::asprintf(_("Unable to load the specified configuration file:\n\n%s"), e.str()));
+    }
   }
 }
 
@@ -154,7 +159,7 @@ void ServerDialog::openSaveConfigDialog()
       ViewerConfig::instance()->saveViewerParameters(filename, comboBox->currentText());
     } catch (rfb::Exception& e) {
       vlog.error("%s", e.str());
-      AppManager::instance()->publishError(QString::asprintf(_("Unable to save the specified configuration file:\n\n%s"), e.str()));
+      AppManager::instance()->openErrorDialog(QString::asprintf(_("Unable to save the specified configuration file:\n\n%s"), e.str()));
     }
   }
 }

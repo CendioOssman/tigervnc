@@ -62,6 +62,7 @@ public slots:
   void setWindowName(QString name);
   void refresh();
   void openContextMenu();
+  void openErrorDialog(QString message);
   void openInfoDialog();
   void openOptionDialog();
   void openAboutDialog();

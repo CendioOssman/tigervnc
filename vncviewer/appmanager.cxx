@@ -159,7 +159,7 @@ void AppManager::publishError(const QString message, bool quit)
     }
   }
 
-  AlertDialog* d = new AlertDialog(isFullScreen(), text, quit, topWindow());
+  AlertDialog* d = new AlertDialog(isFullScreen(), text, quit, ::reconnectOnError, topWindow());
   openDialog(d);
   if (d->result() == QDialog::Rejected) {
     if (!serverDialog || !serverDialog->isVisible()) {
@@ -350,6 +350,12 @@ void AppManager::openDialog(QDialog* d)
 #endif
 }
 
+void AppManager::openErrorDialog(QString message)
+{
+  AlertDialog* d = new AlertDialog(isFullScreen(), message, false, false, topWindow());
+  openDialog(d);
+}
+
 void AppManager::openInfoDialog()
 {
   InfoDialog* d = new InfoDialog(topWindow());
@@ -374,6 +380,7 @@ int AppManager::openMessageDialog(int flags, QString title, QString text)
   openDialog(d);
   return d->result() == QDialog::Accepted ? 1 : 0;
 }
+
 
 void AppManager::handleOptions()
 {
