@@ -53,7 +53,9 @@ QVNCConnection::QVNCConnection()
 
   connect(this, &QVNCConnection::writePointerEvent, this, [this](const rfb::Point& pos, int buttonMask) {
     try {
-      rfbcon->writer()->writePointerEvent(pos, buttonMask);
+      if (rfbcon) {
+        rfbcon->writer()->writePointerEvent(pos, buttonMask);
+      }
     } catch (rdr::Exception& e) {
       AppManager::instance()->publishUnexpectedError(e.str());
     } catch (int& e) {
@@ -65,7 +67,9 @@ QVNCConnection::QVNCConnection()
           this,
           [this](int width, int height, const rfb::ScreenSet& layout) {
             try {
-              rfbcon->writer()->writeSetDesktopSize(width, height, layout);
+              if (rfbcon) {
+                rfbcon->writer()->writeSetDesktopSize(width, height, layout);
+              }
             } catch (rdr::Exception& e) {
               AppManager::instance()->publishError(e.str());
             } catch (int& e) {
@@ -74,7 +78,9 @@ QVNCConnection::QVNCConnection()
           });
   connect(this, &QVNCConnection::writeKeyEvent, this, [this](uint32_t keysym, uint32_t keycode, bool down) {
     try {
-      rfbcon->writer()->writeKeyEvent(keysym, keycode, down);
+      if (rfbcon) {
+        rfbcon->writer()->writeKeyEvent(keysym, keycode, down);
+      }
     } catch (rdr::Exception& e) {
       AppManager::instance()->publishUnexpectedError(e.str());
     } catch (int& e) {

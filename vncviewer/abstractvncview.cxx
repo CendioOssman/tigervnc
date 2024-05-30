@@ -320,7 +320,6 @@ QAbstractVNCView::~QAbstractVNCView()
   delete contextMenu;
   for (auto gr : gestureRecognizers.keys()) {
     QGestureRecognizer::unregisterRecognizer(gr);
-    delete gestureRecognizers.value(gr).first;
   }
 }
 
