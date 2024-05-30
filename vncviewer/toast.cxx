@@ -20,6 +20,8 @@ Toast::Toast(QWidget* parent)
   setAttribute(Qt::WA_TransparentForMouseEvents);
   setAttribute(Qt::WA_NoSystemBackground);
   setAttribute(Qt::WA_TranslucentBackground);
+  setWindowFlag(Qt::WindowTransparentForInput, true);
+  setWindowFlag(Qt::WindowDoesNotAcceptFocus, true);
 
   toastTimer->setInterval(5000);
   toastTimer->setSingleShot(true);
