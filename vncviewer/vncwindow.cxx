@@ -361,6 +361,7 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
 #endif
 }
 
+#ifdef Q_OS_LINUX
 void QVNCWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int left, int right) // screens indices
 {
   vlog.debug("QVNCWindow::fullscreenOnSelectedDisplaysIndices top=%d bottom=%d left=%d right=%d",
@@ -390,6 +391,7 @@ void QVNCWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int le
     activateWindow();
   });
 }
+#endif
 
 void QVNCWindow::fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, int vheight) // pixels
 {
