@@ -275,7 +275,11 @@ void QVNCWindow::fullscreen(bool enabled)
       if (selectedScreens.length() == 1) { // Fullscreen on the selected single display.
 #ifdef Q_OS_LINUX
         if (ViewerConfig::canFullScreenOnMultiDisplays()) {
-          fullscreenOnSelectedDisplays(top, top, top, top);
+          if (ViewerConfig::hasWM()) {
+            fullscreenOnSelectedDisplaysIndices(top, top, top, top);
+          } else {
+            fullscreenOnSelectedDisplaysPixels(xmin, ymin, w, h);
+          }
         } else {
           fullscreenOnSelectedDisplay(selectedPrimaryScreen);
         }
@@ -285,18 +289,29 @@ void QVNCWindow::fullscreen(bool enabled)
       } else { // Fullscreen on multiple displays.
 #ifdef Q_OS_LINUX
         if (ViewerConfig::canFullScreenOnMultiDisplays()) {
-          fullscreenOnSelectedDisplays(top, bottom, left, right);
+          if (ViewerConfig::hasWM()) {
+            fullscreenOnSelectedDisplaysIndices(top, bottom, left, right);
+          } else {
+            fullscreenOnSelectedDisplaysPixels(xmin, ymin, w, h);
+          }
         } else {
           fullscreenOnSelectedDisplay(selectedPrimaryScreen);
         }
 #else
-        fullscreenOnSelectedDisplays(xmin, ymin, w, h);
+        fullscreenOnSelectedDisplaysPixels(xmin, ymin, w, h);
 #endif
       }
     } else { // Fullscreen on the current single display.
 #ifdef Q_OS_LINUX
       if (ViewerConfig::canFullScreenOnMultiDisplays()) {
-        fullscreenOnSelectedDisplays(top, top, top, top);
+        if (ViewerConfig::hasWM()) {
+          fullscreenOnSelectedDisplaysIndices(top, top, top, top);
+        } else {
+          fullscreenOnSelectedDisplaysPixels(selectedPrimaryScreen->geometry().x(),
+                                             selectedPrimaryScreen->geometry().y(),
+                                             selectedPrimaryScreen->geometry().width(),
+                                             selectedPrimaryScreen->geometry().height());
+        }
       } else {
         fullscreenOnSelectedDisplay(selectedPrimaryScreen);
       }
@@ -327,10 +342,10 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
              screen->geometry().width(),
              screen->geometry().height());
 #ifdef __APPLE__
-  fullscreenOnSelectedDisplays(screen->geometry().x(),
-                               screen->geometry().y(),
-                               screen->geometry().width(),
-                               screen->geometry().height());
+  fullscreenOnSelectedDisplaysPixels(screen->geometry().x(),
+                                     screen->geometry().y(),
+                                     screen->geometry().width(),
+                                     screen->geometry().height());
 #else
   show();
   QApplication::sync();
@@ -346,10 +361,9 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
 #endif
 }
 
-#ifdef Q_OS_LINUX
-void QVNCWindow::fullscreenOnSelectedDisplays(int top, int bottom, int left, int right) // screens indices
+void QVNCWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int left, int right) // screens indices
 {
-  vlog.debug("QVNCWindow::fullscreenOnSelectedDisplays top=%d bottom=%d left=%d right=%d",
+  vlog.debug("QVNCWindow::fullscreenOnSelectedDisplaysIndices top=%d bottom=%d left=%d right=%d",
              top,
              bottom,
              left,
@@ -376,10 +390,10 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int top, int bottom, int left, int
     activateWindow();
   });
 }
-#else
-void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vheight) // pixels
+
+void QVNCWindow::fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, int vheight) // pixels
 {
-  vlog.debug("QVNCWindow::fullscreenOnSelectedDisplays geometry=(%d, %d, %d, %d)",
+  vlog.debug("QVNCWindow::fullscreenOnSelectedDisplaysPixels geometry=(%d, %d, %d, %d)",
              vx,
              vy,
              vwidth,
@@ -403,7 +417,6 @@ void QVNCWindow::fullscreenOnSelectedDisplays(int vx, int vy, int vwidth, int vh
     view->giveKeyboardFocus();
   });
 }
-#endif
 
 void QVNCWindow::exitFullscreen()
 {
