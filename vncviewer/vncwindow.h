@@ -24,7 +24,9 @@ public:
   double effectiveDevicePixelRatio(QScreen* screen = nullptr) const;
   void fullscreen(bool enabled);
   void fullscreenOnSelectedDisplay(QScreen* screen);
+#ifdef Q_OS_LINUX
   void fullscreenOnSelectedDisplaysIndices(int top, int bottom, int left, int right); // screens indices
+#endif
   void fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, int vheight); // pixels
   void exitFullscreen();
   bool allowKeyboardGrab() const;
