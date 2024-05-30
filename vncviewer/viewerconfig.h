@@ -45,6 +45,7 @@ public:
 
   static FullscreenType fullscreenType();
   static bool canFullScreenOnMultiDisplays();
+  static bool hasWM();
   static void usage();
 
   void initialize();

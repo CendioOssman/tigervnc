@@ -195,10 +195,17 @@ bool ViewerConfig::canFullScreenOnMultiDisplays()
   int screen = DefaultScreen(display);
   bool supported = X11Utils::isEWMHsupported(display, screen);
   vlog.debug("isEWMHsupported %d", supported);
-  return supported;
+  return supported || !hasWM();
 #else
   return true;
 #endif
+}
+
+bool ViewerConfig::hasWM()
+{
+  QByteArray wm = qgetenv("XDG_CURRENT_DESKTOP");
+  vlog.debug("platform %s", wm.data());
+  return !wm.isEmpty();
 }
 
 void ViewerConfig::saveViewerParameters(QString path, QString serverName)
