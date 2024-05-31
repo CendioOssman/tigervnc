@@ -648,6 +648,7 @@ void QVNCWindow::fromBufferResize(int oldW, int oldH, int width, int height)
 void QVNCWindow::showToast()
 {
   toast->showToast();
+  toast->setGeometry(rect());
 }
 
 void QVNCWindow::setWidget(QWidget *w)
