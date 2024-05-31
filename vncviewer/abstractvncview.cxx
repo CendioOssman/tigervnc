@@ -996,20 +996,6 @@ void QAbstractVNCView::resizeEvent(QResizeEvent* event)
   maybeGrabKeyboard();
 }
 
-void QAbstractVNCView::enterEvent(QEvent *event)
-{
-  vlog.debug("QAbstractVNCView::enterEvent");
-  grabPointer();
-  QWidget::enterEvent(event);
-}
-
-void QAbstractVNCView::leaveEvent(QEvent *event)
-{
-  vlog.debug("QAbstractVNCView::leaveEvent");
-  ungrabPointer();
-  QWidget::leaveEvent(event);
-}
-
 bool QAbstractVNCView::event(QEvent *event)
 {
   switch (event->type()) {
