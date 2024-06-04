@@ -28,8 +28,32 @@ unsigned long getWindowPropertyX11(Display* display, Window window, Atom propert
   return nitems_return;
 }
 
-bool isEWMHsupported(Display* display, int screen)
+bool hasWM(Display* display)
 {
+  int screen = DefaultScreen(display);
+
+  Window rootWindow = RootWindow(display, screen);
+
+  Atom supportingWMCheck = XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", false);
+
+  Window* windowFromRoot = NULL;
+  auto supportingWMCheckOk = getWindowPropertyX11(display,
+                                                  rootWindow,
+                                                  supportingWMCheck,
+                                                  XA_WINDOW,
+                                                  (unsigned char**) &windowFromRoot);
+
+  if (!supportingWMCheckOk) {
+    return false;
+  }
+
+  return true;
+}
+
+bool isEWMHsupported(Display* display)
+{
+  int screen = DefaultScreen(display);
+
   Window rootWindow = RootWindow(display, screen);
 
   Atom supportingWMCheck = XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", false);

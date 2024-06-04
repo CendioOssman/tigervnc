@@ -13,7 +13,8 @@ unsigned long getWindowPropertyX11(Display* display,
                                    Atom type,
                                    unsigned char** prop_return);
 
-bool isEWMHsupported(Display* display, int screen);
+bool hasWM(Display* display);
+bool isEWMHsupported(Display* display);
 
 void fullscreen_screens(Display* display, int screen, Window window, int top, int bottom, int left, int right);
 void fullscreen(Display* display, int screen, Window window, bool enabled);

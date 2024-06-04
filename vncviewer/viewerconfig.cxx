@@ -192,10 +192,10 @@ bool ViewerConfig::canFullScreenOnMultiDisplays()
 #else
   auto display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
 #endif
-  int screen = DefaultScreen(display);
-  bool supported = X11Utils::isEWMHsupported(display, screen);
+  bool supported = X11Utils::isEWMHsupported(display);
   vlog.debug("isEWMHsupported %d", supported);
-  return supported || !hasWM();
+  bool wm = hasWM();
+  return supported || !wm;
 #else
   return true;
 #endif
@@ -203,9 +203,18 @@ bool ViewerConfig::canFullScreenOnMultiDisplays()
 
 bool ViewerConfig::hasWM()
 {
-  QByteArray wm = qgetenv("XDG_CURRENT_DESKTOP");
-  vlog.debug("platform %s", wm.data());
-  return !wm.isEmpty();
+#if defined(Q_OS_LINUX)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    auto display = QX11Info::display();
+#else
+    auto display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+  bool hasWM = X11Utils::hasWM(display);
+  vlog.debug("hasWM %d", hasWM);
+  return hasWM;
+#else
+  return true;
+#endif
 }
 
 void ViewerConfig::saveViewerParameters(QString path, QString serverName)
