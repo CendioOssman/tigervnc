@@ -627,6 +627,7 @@ void QAbstractVNCView::handleClipboardData(const char* data)
 
 void QAbstractVNCView::maybeGrabKeyboard()
 {
+  vlog.debug("QAbstractVNCView::maybeGrabKeyboard");
   QVNCWindow* window = AppManager::instance()->getWindow();
   if (::fullscreenSystemKeys && window->allowKeyboardGrab() && hasFocus()) {
     grabKeyboard();
@@ -635,6 +636,7 @@ void QAbstractVNCView::maybeGrabKeyboard()
 
 void QAbstractVNCView::grabKeyboard()
 {
+  vlog.debug("QAbstractVNCView::grabKeyboard");
   keyboardHandler->grabKeyboard();
 
   QPoint gpos = QCursor::pos();
@@ -652,8 +654,18 @@ void QAbstractVNCView::ungrabKeyboard()
   ungrabPointer();
 }
 
+void QAbstractVNCView::maybeGrabPointer()
+{
+  vlog.debug("QAbstractVNCView::maybeGrabPointer");
+  QVNCWindow* window = AppManager::instance()->getWindow();
+  if (::fullscreenSystemKeys && window->allowKeyboardGrab() && hasFocus()) {
+    grabPointer();
+  }
+}
+
 void QAbstractVNCView::grabPointer()
 {
+  vlog.debug("QAbstractVNCView::grabPointer");
   activateWindow();
   setMouseTracking(true);
   mouseGrabbed = true;
@@ -856,7 +868,6 @@ void QAbstractVNCView::mouseMoveEvent(QMouseEvent* event)
     return;
   }
 
-  grabPointer();
   maybeGrabKeyboard();
   int x, y, buttonMask;
   getMouseProperties(event, x, y, buttonMask);
@@ -883,7 +894,6 @@ void QAbstractVNCView::mousePressEvent(QMouseEvent* event)
   getMouseProperties(event, x, y, buttonMask);
   filterPointerEvent(rfb::Point(x, y), buttonMask);
 
-  grabPointer();
   maybeGrabKeyboard();
 }
 
@@ -907,7 +917,6 @@ void QAbstractVNCView::mouseReleaseEvent(QMouseEvent* event)
   getMouseProperties(event, x, y, buttonMask);
   filterPointerEvent(rfb::Point(x, y), buttonMask);
 
-  grabPointer();
   maybeGrabKeyboard();
 }
 
@@ -992,8 +1001,21 @@ void QAbstractVNCView::resizeEvent(QResizeEvent* event)
              event->size().height());
   // Some systems require a grab after the window size has been changed.
   // Otherwise they might hold on to displays, resulting in them being unusable.
-  grabPointer();
   maybeGrabKeyboard();
+}
+
+void QAbstractVNCView::enterEvent(QEvent *event)
+{
+  vlog.debug("QAbstractVNCView::enterEvent");
+  maybeGrabPointer();
+  QWidget::enterEvent(event);
+}
+
+void QAbstractVNCView::leaveEvent(QEvent *event)
+{
+  vlog.debug("QAbstractVNCView::leaveEvent");
+  ungrabPointer();
+  QWidget::enterEvent(event);
 }
 
 bool QAbstractVNCView::event(QEvent *event)
