@@ -66,6 +66,7 @@ public slots:
   virtual void maybeGrabKeyboard();
   virtual void grabKeyboard();
   virtual void ungrabKeyboard();
+  virtual void maybeGrabPointer();
   virtual void grabPointer();
   virtual void ungrabPointer();
   virtual void bell() = 0;
@@ -95,6 +96,8 @@ protected:
   void focusInEvent(QFocusEvent* event) override;
   void focusOutEvent(QFocusEvent* event) override;
   void resizeEvent(QResizeEvent* event) override;
+  void enterEvent(QEvent* event) override;
+  void leaveEvent(QEvent* event) override;
   bool event(QEvent* event) override;
 
 protected:
