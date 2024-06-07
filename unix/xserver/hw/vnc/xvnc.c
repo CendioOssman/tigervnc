@@ -42,6 +42,7 @@ from the X Consortium.
 #include <X11/X.h>
 #include <X11/Xproto.h>
 #include <X11/Xos.h>
+#include <GL/glxtokens.h>
 #include "scrnintstr.h"
 #include "servermd.h"
 #include "fb.h"
@@ -58,6 +59,7 @@ from the X Consortium.
 #include "os.h"
 #include "miline.h"
 #include "glx_extinit.h"
+#include "glxserver.h"
 #include "inputstr.h"
 #include "randrstr.h"
 #ifdef DPMSExtension
@@ -1112,6 +1114,223 @@ static ExtensionModule glxExt = {
 #endif
 #endif
 
+static void
+vncGLXDestroy(__GLXscreen *screen)
+{
+    ErrorF("%s\n", __func__);
+
+    __glXScreenDestroy(screen);
+
+    free(screen);
+}
+
+static __GLXcontext *
+vncGLXCreateContext(__GLXscreen *screen,
+                    __GLXconfig *glxConfig,
+                    __GLXcontext *baseShareContext,
+                    unsigned num_attribs,
+                    const uint32_t *attribs,
+                    int *error)
+{
+    ErrorF("%s\n", __func__);
+
+    return NULL;
+}
+
+static __GLXdrawable *
+vncGLXCreateDrawable(ClientPtr client,
+                     __GLXscreen * screen,
+                     DrawablePtr pDraw,
+                     XID drawId,
+                     int type, XID glxDrawId, __GLXconfig * glxConfig)
+{
+    ErrorF("%s\n", __func__);
+
+    return NULL;
+}
+
+static int
+count_bits(unsigned long mask)
+{
+    int count = 0;
+    for (int i = 0; i < sizeof(mask)*8; i++) {
+        if (mask & (1UL<<i))
+            count++;
+    }
+    return count;
+}
+
+static __GLXconfig *
+vncGLXConvertVisual(VisualPtr visual)
+{
+    __GLXconfig *config;
+
+    if (visual->class != TrueColor)
+        return NULL;
+
+    config = calloc(1, sizeof(*config));
+    if (config == NULL)
+        return NULL;
+
+    config->redBits = count_bits(visual->redMask);
+    config->greenBits = count_bits(visual->greenMask);
+    config->blueBits = count_bits(visual->blueMask);
+
+    config->redMask = visual->redMask;
+    config->greenMask = visual->greenMask;
+    config->blueMask = visual->blueMask;
+
+    config->rgbBits = config->redBits + config->greenBits + config->blueBits;
+
+    config->visualType = GLX_TRUE_COLOR;
+
+    config->visualRating = GLX_NONE;
+
+    config->renderType = GLX_RGBA_BIT;
+
+    config->transparentPixel = GLX_NONE;
+    config->transparentRed = GLX_NONE;
+    config->transparentGreen = GLX_NONE;
+    config->transparentBlue = GLX_NONE;
+    config->transparentAlpha = GLX_NONE;
+    config->transparentIndex = GLX_NONE;
+
+    config->swapMethod = GLX_SWAP_UNDEFINED_OML;
+
+    config->bindToTextureRgb = GLX_DONT_CARE;
+    config->bindToTextureRgba = GLX_DONT_CARE;
+    config->bindToMipmapTexture = GLX_DONT_CARE;
+    config->bindToTextureTargets = GLX_DONT_CARE;
+
+    return config;
+}
+
+static __GLXconfig *
+vncGLXAddConfig(__GLXconfig *head, __GLXconfig *config)
+{
+    __GLXconfig *prev;
+
+    if (head == NULL)
+        return config;
+
+    prev = head;
+    while (prev->next != NULL)
+        prev = prev->next;
+
+    prev->next = config;
+
+    return head;
+}
+
+static __GLXconfig *
+vncGLXGenerateFBConfigs(ScreenPtr pScreen)
+{
+    __GLXconfig *head, *prev;
+    int i;
+
+    head = NULL;
+    for (i = 0; i < pScreen->numVisuals; i++) {
+        __GLXconfig *config;
+
+        config = vncGLXConvertVisual(&pScreen->visuals[i]);
+        if (config == NULL)
+            continue;
+
+        head = vncGLXAddConfig(head, config);
+    }
+
+    prev = head;
+    while (prev != NULL) {
+        __GLXconfig *config;
+
+        config = calloc(1, sizeof(*config));
+        if (config == NULL)
+            break;
+
+        memcpy(config, prev, sizeof(*config));
+
+        config->alphaMask = 0xffffffff & ~(config->redMask | config->blueMask | config->greenMask);
+        config->alphaBits = count_bits(config->alphaMask);
+        config->rgbBits = 32;
+
+        config->next = prev->next;
+        prev->next = config;
+
+        prev = config->next;
+    }
+
+
+    prev = head;
+    while (prev != NULL) {
+        __GLXconfig *config;
+
+        config = calloc(1, sizeof(*config));
+        if (config == NULL)
+            break;
+
+        memcpy(config, prev, sizeof(*config));
+
+        config->depthBits = 24;
+
+        config->next = prev->next;
+        prev->next = config;
+
+        prev = config->next;
+    }
+
+    prev = head;
+    while (prev != NULL) {
+        __GLXconfig *config;
+
+        config = calloc(1, sizeof(*config));
+        if (config == NULL)
+            break;
+
+        memcpy(config, prev, sizeof(*config));
+
+        config->doubleBufferMode = GL_TRUE;
+
+        config->next = prev->next;
+        prev->next = config;
+
+        prev = config->next;
+    }
+
+    return head;
+}
+
+static __GLXscreen *
+vncGLXScreenProbe(ScreenPtr pScreen)
+{
+    __GLXscreen *screen;
+
+    ErrorF("%s\n", __func__);
+
+    screen = calloc(1, sizeof(*screen));
+    if (screen == NULL)
+        return NULL;
+
+    screen->destroy = vncGLXDestroy;
+    screen->createContext = vncGLXCreateContext;
+    screen->createDrawable = vncGLXCreateDrawable;
+
+    screen->fbconfigs = vncGLXGenerateFBConfigs(pScreen);
+
+    screen->pScreen = pScreen;
+
+    screen->glvnd = strdup("mesa");
+
+    __glXScreenInit(screen, pScreen);
+
+    return screen;
+}
+
+static __GLXprovider glxDummyProvider = {
+    vncGLXScreenProbe,
+    "DUMMY",
+    NULL
+};
+
 void
 InitOutput(ScreenInfo * scrInfo, int argc, char **argv)
 {
@@ -1122,6 +1341,7 @@ InitOutput(ScreenInfo * scrInfo, int argc, char **argv)
 
 #if XORG_AT_LEAST(1, 20, 0)
     xorgGlxCreateVendor();
+    GlxPushProvider(&glxDummyProvider);
 #else
 
 #ifdef GLXEXT

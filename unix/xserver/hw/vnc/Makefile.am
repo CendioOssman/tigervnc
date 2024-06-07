@@ -42,7 +42,7 @@ Xvnc_CPPFLAGS = $(XVNC_CPPFLAGS) -DTIGERVNC -DNO_MODULE_EXTS \
 	-UHAVE_CONFIG_H \
 	-DXFree86Server -DVENDOR_RELEASE="$(VENDOR_RELEASE)" \
 	-DVENDOR_STRING="\"$(VENDOR_STRING)\"" -I$(TIGERVNC_SRCDIR)/common -I$(TIGERVNC_SRCDIR)/unix/common \
-	-I$(top_srcdir)/include ${XSERVERLIBS_CFLAGS}
+	-I$(top_srcdir)/include -I$(top_srcdir)/glx ${XSERVERLIBS_CFLAGS}
 
 LOCAL_LIBS = \
 	$(XVNC_LIBS) \
