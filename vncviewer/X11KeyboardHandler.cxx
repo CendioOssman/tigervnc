@@ -212,7 +212,7 @@ void X11KeyboardHandler::pushLEDState()
   QVNCConnection* cc = AppManager::instance()->getConnection();
   // Server support?
   rfb::ServerParams* server = AppManager::instance()->getConnection()->server();
-  if (server->ledState() == rfb::ledUnknown) {
+  if (!server || server->ledState() == rfb::ledUnknown) {
     return;
   }
   XkbStateRec xkbState;
