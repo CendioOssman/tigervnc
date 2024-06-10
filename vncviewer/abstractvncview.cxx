@@ -310,6 +310,8 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
         repaint();
       },
       Qt::QueuedConnection);
+
+  setMouseTracking(true);
 }
 
 QAbstractVNCView::~QAbstractVNCView()
@@ -667,13 +669,11 @@ void QAbstractVNCView::grabPointer()
 {
   vlog.debug("QAbstractVNCView::grabPointer");
   activateWindow();
-  setMouseTracking(true);
   mouseGrabbed = true;
 }
 
 void QAbstractVNCView::ungrabPointer()
 {
-  setMouseTracking(false);
   mouseGrabbed = false;
 }
 
