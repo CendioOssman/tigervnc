@@ -1015,7 +1015,7 @@ void QAbstractVNCView::leaveEvent(QEvent *event)
 {
   vlog.debug("QAbstractVNCView::leaveEvent");
   ungrabPointer();
-  QWidget::enterEvent(event);
+  QWidget::leaveEvent(event);
 }
 
 bool QAbstractVNCView::event(QEvent *event)
