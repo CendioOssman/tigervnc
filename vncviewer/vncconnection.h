@@ -44,7 +44,7 @@ public:
   QVNCConnection();
   virtual ~QVNCConnection();
 
-  rfb::ServerParams* server() { return &rfbcon->server; }
+  rfb::ServerParams* server() { return rfbcon ? &rfbcon->server : nullptr; }
 
   void setState(int state);
 
