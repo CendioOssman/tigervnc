@@ -223,6 +223,34 @@ TYPED_TEST(SignalsArgs, connectSignalArg)
   EXPECT_EQ(callCount, 1);
 }
 
+static void connectLambdaWithCaptures(Sender* s, Receiver* r, int x)
+{
+  s->connectSignal("mcsignal", r,
+                  [s, r, x]() { (void)s; (void)r; (void)x; callCount++; });
+}
+
+TEST(Signals, connectSignalLambda)
+{
+  Sender s;
+  Receiver r;
+
+  /* Lambda with captures */
+  callCount = 0;
+  s.registerSignal("csignal");
+  s.connectSignal("csignal", &r,
+                  [&s, &r]() { (void)s; (void)r; callCount++; });
+  s.emitSignal("csignal");
+  EXPECT_EQ(callCount, 1);
+
+  /* Multiple lambdas with captures */
+  callCount = 0;
+  s.registerSignal("mcsignal");
+  connectLambdaWithCaptures(&s, &r, 1);
+  connectLambdaWithCaptures(&s, &r, 2);
+  s.emitSignal("mcsignal");
+  EXPECT_EQ(callCount, 2);
+}
+
 TEST(Signals, connectUnknown)
 {
   Sender s;
@@ -392,6 +420,15 @@ TYPED_TEST(SignalsArgs, disconnectSignalArg)
                       &Receiver::specificTypeHandler<TypeParam>);
   s.disconnectSignal(c);
   s.emitSignal("ssignal", TestFixture::value);
+  EXPECT_EQ(callCount, 0);
+
+  /* Lambda with captures */
+  callCount = 0;
+  s.registerSignal("lcsignal");
+  c = s.connectSignal("lcsignal", &r,
+                      [&s, &r]() { (void)s; (void)r; callCount++; });
+  s.disconnectSignal(c);
+  s.emitSignal("lcsignal");
   EXPECT_EQ(callCount, 0);
 }
 
@@ -568,6 +605,7 @@ TEST(Signals, disconnectAll)
   s.registerSignal<const char*>("signal3");
   s.connectSignal("signal1", &r, &Receiver::simpleHandler);
   s.connectSignal("signal1", &r, &Receiver::genericHandler);
+  s.connectSignal("signal1", &r, [] { callCount++; });
   s.connectSignal("signal2", &r, &Receiver::genericHandler);
   s.connectSignal("signal3", &r,
                   &Receiver::simpleTypeHandler<const char*>);
