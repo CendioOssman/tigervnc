@@ -134,6 +134,17 @@ void Object::emitSignal(const char* name, const any& info)
 }
 
 Connection Object::connectSignal(const char* name, Object* obj,
+                                 const std::function<void()>& callback)
+{
+  emitter_t emitter = [callback](const any& info) {
+    assert(!info.has_value());
+    callback();
+  };
+  return connectSignal(name, obj, &callback, emitter,
+                       typeid(void).hash_code());
+}
+
+Connection Object::connectSignal(const char* name, Object* obj,
                                  const comp_any& callback,
                                  const emitter_t& emitter,
                                  size_t argType)
