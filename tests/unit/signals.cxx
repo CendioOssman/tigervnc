@@ -321,6 +321,24 @@ static void testConnectArg()
   printf("OK\n");
 }
 
+static void testConnectLambda()
+{
+  Sender s;
+  Receiver r;
+
+  printf("%s: ", __func__);
+
+  /* Lambda with captures */
+  count = 0;
+  s.registerSignal("csignal");
+  s.connectSignal("csignal", &r,
+                  [&s, &r]() { (void)s; (void)r; count++; });
+  s.emitSignal("csignal");
+  ASSERT_EQ(count, 1);
+
+  printf("OK\n");
+}
+
 static void testDisconnect()
 {
   Sender s;
@@ -377,6 +395,15 @@ static void testDisconnect()
   c = s.connectSignal("sasignal", &r, &Receiver::specificStringHandler);
   s.disconnectSignal(c);
   s.emitSignal("sasignal", "data");
+  ASSERT_EQ(count, 0);
+
+  /* Lambda with captures */
+  count = 0;
+  s.registerSignal("lcsignal");
+  c = s.connectSignal("lcsignal", &r,
+                      [&s, &r]() { (void)s; (void)r; count++; });
+  s.disconnectSignal(c);
+  s.emitSignal("lcsignal");
   ASSERT_EQ(count, 0);
 
   /* Double remove */
@@ -538,6 +565,7 @@ static void testDisconnectAll()
   s.registerSignal<const char*>("signal3");
   s.connectSignal("signal1", &r, &Receiver::simpleHandler);
   s.connectSignal("signal1", &r, &Receiver::genericHandler);
+  s.connectSignal("signal1", &r, [] { count++; });
   s.connectSignal("signal2", &r, &Receiver::genericHandler);
   s.connectSignal("signal3", &r, &Receiver::simpleStringHandler);
   s.connectSignal("signal3", &r, &Receiver::genericStringHandler);
@@ -632,6 +660,7 @@ int main(int /*argc*/, char** /*argv*/)
   testEmitArg();
   testConnect();
   testConnectArg();
+  testConnectLambda();
   testDisconnect();
   testDisconnectHelper();
   testDisconnectHelperArg();
