@@ -67,6 +67,12 @@ namespace core {
     Connection connectSignal(const char* name, T* obj,
                              void (T::*callback)(S*, const char*, I));
 
+    // Lambda friendly version to register a signal callback. An object
+    // must also be specified to control the lifetime of captured
+    // variables.
+    Connection connectSignal(const char* name, Object* obj,
+                             const std::function<void()>& callback);
+
     // disconnectSignal() unregisters a method that was previously
     // registered using connectSignal().
     void disconnectSignal(const Connection connection);
@@ -116,6 +122,9 @@ namespace core {
 
     void emitSignal(const char* name, const any& info);
 
+    Connection connectSignal(const char* name, Object* obj,
+                             const emitter_t& emitter,
+                             size_t argType);
     Connection connectSignal(const char* name, Object* obj,
                              const comp_any& callback,
                              const emitter_t& emitter,

@@ -134,6 +134,28 @@ void Object::emitSignal(const char* name, const any& info)
 }
 
 Connection Object::connectSignal(const char* name, Object* obj,
+                                 const std::function<void()>& callback)
+{
+  emitter_t emitter = [callback](const any& info) {
+    assert(!info.has_value());
+    callback();
+  };
+  // Lambdas cannot be compared, so we cannot tell if it's an identical
+  // lambda, or just the same body but with different captures.
+  return connectSignal(name, obj, emitter, typeid(void).hash_code());
+}
+
+Connection Object::connectSignal(const char* name, Object* obj,
+                                 const emitter_t& emitter,
+                                 size_t argType)
+{
+  static uint64_t index = 0;
+  // This callback is not possible to check for uniqueness, so instead
+  // we assume every call is unique and track them using an index.
+  return connectSignal(name, obj, index++, emitter, argType);
+}
+
+Connection Object::connectSignal(const char* name, Object* obj,
                                  const comp_any& callback,
                                  const emitter_t& emitter,
                                  size_t argType)
