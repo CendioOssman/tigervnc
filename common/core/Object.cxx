@@ -124,6 +124,13 @@ void Object::emitSignal(const char *name, SignalInfo &info)
 }
 
 void Object::connectSignal(const char *name, Object *obj,
+                           std::function<void()> callback)
+{
+  connectSignal(name, obj,
+                new SignalReceiverFunctor(obj, callback), nullptr);
+}
+
+void Object::connectSignal(const char *name, Object *obj,
                            const SignalReceiver *receiver,
                            const std::type_info *info)
 {
@@ -203,6 +210,51 @@ void Object::disconnectSignal(const char *name, Object *obj,
     obj->connectedObjects.erase(this);
 }
 
+void Object::disconnectSignal(const char *name, Object *obj)
+{
+  std::map<std::string, ReceiverList>::iterator sigiter;
+  ReceiverList::iterator iter;
+
+  bool hasOthers;
+
+  assert(name);
+  assert(obj);
+
+  if (signalReceivers.count(name) == 0)
+    throw Exception("Cannot disconnect unknown signal %s", name);
+
+  // Remove every reference to this object for the specific signal
+  iter = signalReceivers[name].begin();
+  while (iter != signalReceivers[name].end()) {
+    if ((*iter)->getObject() == obj) {
+      delete *iter;
+      signalReceivers[name].erase(iter++);
+    } else {
+      ++iter;
+    }
+  }
+
+  hasOthers = false;
+
+  // Then check if the object is attached in more ways to this or
+  // to some other signal
+  for (sigiter = signalReceivers.begin();
+       sigiter != signalReceivers.end(); ++sigiter) {
+    for (iter = sigiter->second.begin();
+         iter != sigiter->second.end(); ++iter) {
+      if ((*iter)->getObject() == obj) {
+        hasOthers = true;
+        break;
+      }
+    }
+    if (hasOthers)
+      break;
+  }
+
+  if (!hasOthers)
+    obj->connectedObjects.erase(this);
+}
+
 void Object::disconnectSignals(Object *obj)
 {
   std::map<std::string, ReceiverList>::iterator sigiter;
@@ -210,21 +262,36 @@ void Object::disconnectSignals(Object *obj)
   assert(obj);
 
   for (sigiter = signalReceivers.begin();
-       sigiter != signalReceivers.end(); ++sigiter) {
-    ReceiverList *siglist;
-    ReceiverList::iterator iter;
+       sigiter != signalReceivers.end(); ++sigiter)
+    disconnectSignal(sigiter->first.c_str(), obj);
+}
 
-    siglist = &sigiter->second;
-    iter = siglist->begin();
-    while (iter != siglist->end()) {
-      if ((*iter)->getObject() == obj) {
-        delete *iter;
-        siglist->erase(iter++);
-      } else {
-        ++iter;
-      }
-    }
-  }
+Object::SignalReceiverFunctor::SignalReceiverFunctor(Object *obj_, std::function<void()> callback_)
+  : obj(obj_), callback(callback_)
+{
+  assert(obj_);
+}
 
-  obj->connectedObjects.erase(this);
+void Object::SignalReceiverFunctor::emit(Object * /*sender*/,
+                                         const char * /*name*/) const
+{
+  callback();
+}
+
+void Object::SignalReceiverFunctor::emit(Object * /*sender*/,
+                                         const char * /*name*/,
+                                         SignalInfo & /*info*/) const
+{
+  assert(false);
+}
+
+Object* Object::SignalReceiverFunctor::getObject() const
+{
+  return obj;
+}
+
+bool Object::SignalReceiverFunctor::operator==(const Object::SignalReceiver & /*other*/) const
+{
+  /* std::function cannot be checked for equality */
+  return false;
 }
