@@ -32,6 +32,7 @@
 #include <stdexcept>
 #include <map>
 #include <typeinfo>
+#include <functional>
 
 #include <core/string.h>
 
@@ -57,6 +58,13 @@ namespace core {
     void connectSignal(const char *name, T *obj,
                        void (T::*callback)(S*, const char*, I));
 
+    // Lambda friendly versions to register a signal callback. If the
+    // lambda has a capture list, then an object must also be specified
+    // to control the lifetime.
+
+    void connectSignal(const char *name, Object *obj,
+                       std::function<void()> callback);
+
     // disconnectSignal() unregisters a method that was previously
     // registered using connectSignal(). Only the specified object and
     // the specific name will be unregistered.
@@ -66,6 +74,13 @@ namespace core {
     template<class T, class S, typename I>
     void disconnectSignal(const char *name, T *obj,
                           void (T::*callback)(S*, const char*, I));
+
+    // disconnectSignal() unregisters all methods and callbacks that
+    // were previously registered using connectSignal() for this
+    // specific object and signal. This is useful to unregister
+    // lambda based callbacks as they cannot reliably be identified
+    // individually.
+    void disconnectSignal(const char *name, Object *obj);
 
     // disconnectSignals() unregisters all methods for all names for the
     // specified object. This is automatically called when the specified
@@ -94,6 +109,7 @@ namespace core {
     class SignalReceiver;
     template<class T, class S> class SignalReceiverTS;
     template<class T, class S, typename I> class SignalReceiverTSI;
+    class SignalReceiverFunctor;
 
     // Helper classes to check the signal information type early
     class InfoChecker;
@@ -192,6 +208,22 @@ namespace core {
   private:
     T *obj;
     void (T::*callback)(S*, const char*, I);
+  };
+
+  class Object::SignalReceiverFunctor : public Object::SignalReceiver {
+  public:
+    SignalReceiverFunctor(Object *obj, std::function<void()> callback);
+    virtual ~SignalReceiverFunctor() {}
+
+    void emit(Object*, const char*) const override;
+    void emit(Object*, const char*, Object::SignalInfo&) const override;
+
+    Object* getObject() const override;
+    bool operator==(const Object::SignalReceiver&) const override;
+
+  private:
+    Object *obj;
+    std::function<void()> callback;
   };
 
   //
