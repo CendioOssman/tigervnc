@@ -197,6 +197,20 @@ TEST(Signals, connectSignalArg)
   EXPECT_EQ(callCount, 1);
 }
 
+TEST(Signals, connectSignalLambda)
+{
+  Sender s;
+  Receiver r;
+
+  /* Lambda with captures */
+  callCount = 0;
+  s.registerSignal("csignal");
+  s.connectSignal("csignal", &r,
+                  [&s, &r]() { (void)s; (void)r; callCount++; });
+  s.emitSignal("csignal");
+  EXPECT_EQ(callCount, 1);
+}
+
 TEST(Signals, connectUnknown)
 {
   Sender s;
@@ -314,6 +328,15 @@ TEST(Signals, disconnectSignal)
   c = s.connectSignal("sasignal", &r, &Receiver::specificStringHandler);
   s.disconnectSignal(c);
   s.emitSignal("sasignal", "data");
+  EXPECT_EQ(callCount, 0);
+
+  /* Lambda with captures */
+  callCount = 0;
+  s.registerSignal("lcsignal");
+  c = s.connectSignal("lcsignal", &r,
+                      [&s, &r]() { (void)s; (void)r; callCount++; });
+  s.disconnectSignal(c);
+  s.emitSignal("lcsignal");
   EXPECT_EQ(callCount, 0);
 }
 
@@ -474,6 +497,7 @@ TEST(Signals, disconnectAll)
   s.registerSignal<const char*>("signal3");
   s.connectSignal("signal1", &r, &Receiver::simpleHandler);
   s.connectSignal("signal1", &r, &Receiver::genericHandler);
+  s.connectSignal("signal1", &r, [] { callCount++; });
   s.connectSignal("signal2", &r, &Receiver::genericHandler);
   s.connectSignal("signal3", &r, &Receiver::simpleStringHandler);
   s.connectSignal("signal3", &r, &Receiver::genericStringHandler);
