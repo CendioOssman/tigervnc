@@ -63,9 +63,14 @@ namespace core {
     // to control the lifetime.
 
     void connectSignal(const char *name, void (*callback)());
+    template<typename I>
+    void connectSignal(const char *name, void (*callback)(I));
 
     void connectSignal(const char *name, Object *obj,
                        std::function<void()> callback);
+    template<typename I>
+    void connectSignal(const char *name, Object *obj,
+                       std::function<void(I)> callback);
 
     // disconnectSignal() unregisters a method that was previously
     // registered using connectSignal(). Only the specified object and
@@ -112,6 +117,7 @@ namespace core {
     template<class T, class S> class SignalReceiverTS;
     template<class T, class S, typename I> class SignalReceiverTSI;
     class SignalReceiverFunctor;
+    template<typename I> class SignalReceiverFunctorI;
 
     // Helper classes to check the signal information type early
     class InfoChecker;
@@ -228,6 +234,23 @@ namespace core {
     std::function<void()> callback;
   };
 
+  template<typename I>
+  class Object::SignalReceiverFunctorI : public Object::SignalReceiver {
+  public:
+    SignalReceiverFunctorI(Object *obj, std::function<void(I)> callback);
+    virtual ~SignalReceiverFunctorI() {}
+
+    void emit(Object*, const char*) const override;
+    void emit(Object*, const char*, Object::SignalInfo&) const override;
+
+    Object* getObject() const override;
+    bool operator==(const Object::SignalReceiver&) const override;
+
+  private:
+    Object *obj;
+    std::function<void(I)> callback;
+  };
+
   //
   // Object::InfoChecker - Helper objects that can verify that the
   //                       correct type is used for signal information
@@ -284,6 +307,24 @@ namespace core {
     assert(obj);
     connectSignal(name, obj,
                   new SignalReceiverTSI<T,S,I>(obj, callback),
+                  &typeid(I));
+  }
+
+  template<typename I>
+  void Object::connectSignal(const char *name, void (*callback)(I))
+  {
+    connectSignal(name, nullptr,
+                  new SignalReceiverFunctorI<I>(nullptr, callback),
+                  &typeid(I));
+  }
+
+  template<typename I>
+  void Object::connectSignal(const char *name, Object *obj,
+                             std::function<void(I)> callback)
+  {
+    assert(obj);
+    connectSignal(name, obj,
+                  new SignalReceiverFunctorI<I>(obj, callback),
                   &typeid(I));
   }
 
@@ -427,6 +468,45 @@ namespace core {
       return false;
 
     return true;
+  }
+
+  template<typename I>
+  Object::SignalReceiverFunctorI<I>::SignalReceiverFunctorI(Object *obj_, std::function<void(I)> callback_)
+    : obj(obj_), callback(callback_)
+  {
+  }
+
+  template<typename I>
+  void Object::SignalReceiverFunctorI<I>::emit(Object * /*sender*/,
+                                               const char * /*name*/) const
+  {
+    assert(false);
+  }
+
+  template<typename I>
+  void Object::SignalReceiverFunctorI<I>::emit(Object * /*sender*/,
+                                               const char * /*name*/,
+                                               SignalInfo &_info) const
+  {
+    TypedInfo<I> *info;
+
+    info = dynamic_cast<TypedInfo<I>*>(&_info);
+    assert(info != nullptr);
+
+    callback(info->getData());
+  }
+
+  template<typename I>
+  Object* Object::SignalReceiverFunctorI<I>::getObject() const
+  {
+    return obj;
+  }
+
+  template<typename I>
+  bool Object::SignalReceiverFunctorI<I>::operator==(const Object::SignalReceiver & /*other*/) const
+  {
+    /* std::function cannot be checked for equality */
+    return false;
   }
 
   // Object::InfoChecker - Inline methods definitions
