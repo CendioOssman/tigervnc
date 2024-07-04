@@ -346,6 +346,34 @@ static void testConnectLambda()
   printf("OK\n");
 }
 
+static void testConnectLambdaArgs()
+{
+  Sender s;
+  Receiver r;
+
+  printf("%s: ", __func__);
+
+  /* Simple lambda */
+  count = 0;
+  s.registerSignal<const char*>("signal");
+  s.connectSignal<const char*>("signal", [](const char*) { count++; });
+  s.emitSignal("signal", "data");
+  ASSERT_EQ(count, 1);
+
+  /* Lambda with captures */
+  count = 0;
+  s.registerSignal<const char*>("csignal");
+  s.connectSignal<const char*>("csignal", &r, [&s, &r](const char*) {
+    (void)s;
+    (void)r;
+    count++;
+  });
+  s.emitSignal("csignal", "data");
+  ASSERT_EQ(count, 1);
+
+  printf("OK\n");
+}
+
 static void testDisconnect()
 {
   Sender s;
@@ -412,6 +440,15 @@ static void testDisconnect()
   s.emitSignal("lsignal");
   ASSERT_EQ(count, 0);
 
+  /* Simple lambda with args */
+  count = 0;
+  s.registerSignal<const char*>("lasignal");
+  c = s.connectSignal<const char*>("lasignal",
+                                   [](const char*) { count++; });
+  s.disconnectSignal(c);
+  s.emitSignal("lasignal", "data");
+  ASSERT_EQ(count, 0);
+
   /* Lambda with captures */
   count = 0;
   s.registerSignal("lcsignal");
@@ -419,6 +456,18 @@ static void testDisconnect()
                       [&s, &r]() { (void)s; (void)r; count++; });
   s.disconnectSignal(c);
   s.emitSignal("lcsignal");
+  ASSERT_EQ(count, 0);
+
+  /* Lambda with captures and args */
+  count = 0;
+  s.registerSignal<const char*>("lcasignal");
+  c = s.connectSignal<const char*>("lcasignal", &r,
+                                   [&s, &r](const char*) {
+                                     (void)s; (void)r;
+                                     count++;
+                                   });
+  s.disconnectSignal(c);
+  s.emitSignal("lcasignal", "data");
   ASSERT_EQ(count, 0);
 
   /* Double remove */
@@ -584,6 +633,8 @@ static void testDisconnectAll()
   s.connectSignal("signal2", &r, &Receiver::genericHandler);
   s.connectSignal("signal3", &r, &Receiver::simpleStringHandler);
   s.connectSignal("signal3", &r, &Receiver::genericStringHandler);
+  s.connectSignal<const char*>("signal3", &r,
+                               [](const char*) { count++; });
   s.connectSignal("signal1", &r2, &Receiver::genericHandler);
   s.disconnectSignals(&r);
   s.emitSignal("signal1");
@@ -643,16 +694,23 @@ static void testEmitConversion()
   s.registerSignal<int>("refhandler");
   s.connectSignal("refhandler", &r, &Receiver::simpleConstRefHandler);
   s.connectSignal("refhandler", &r, &Receiver::genericConstRefHandler);
+  s.connectSignal<const int&>("refhandler",
+                              [](const int&) { count++; });
+  s.connectSignal<const int&>("refhandler", &r,
+                              [&r](const int&) { (void)r; count++; });
   s.emitSignal("refhandler", 123);
-  ASSERT_EQ(count, 2);
+  ASSERT_EQ(count, 4);
 
   /* Sender adds reference */
   count = 0;
   s.registerSignal<const int&>("refemitter");
   s.connectSignal("refemitter", &r, &Receiver::simpleConstRefHandler);
   s.connectSignal("refemitter", &r, &Receiver::genericConstRefHandler);
+  s.connectSignal<int>("refemitter", [](int) { count++; });
+  s.connectSignal<int>("refemitter", &r,
+                       [&r](int) { (void)r; count++; });
   s.emitSignal("refemitter", 123);
-  ASSERT_EQ(count, 2);
+  ASSERT_EQ(count, 4);
 
   /* Receiver adds pointer const qualifier */
 #if 0 /* FIXME: Currently broken*/
@@ -660,8 +718,12 @@ static void testEmitConversion()
   s.registerSignal<int*>("constemitter");
   s.connectSignal("constemitter", &r, &Receiver::simpleConstPtrHandler);
   s.connectSignal("constemitter", &r, &Receiver::genericConstPtrHandler);
+  s.connectSignal<const int*>("constemitter",
+                              [](const int*) { count++; });
+  s.connectSignal<const int*>("constemitter", &r,
+                              [&r](const int*) { (void)r; count++; });
   s.emitSignal("constemitter", &count);
-  ASSERT_EQ(count, 2);
+  ASSERT_EQ(count, 4);
 #endif
 
   printf("OK\n");
@@ -676,6 +738,7 @@ int main(int /*argc*/, char** /*argv*/)
   testConnect();
   testConnectArg();
   testConnectLambda();
+  testConnectLambdaArgs();
   testDisconnect();
   testDisconnectHelper();
   testDisconnectHelperArg();
