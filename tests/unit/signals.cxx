@@ -245,6 +245,58 @@ TEST(Signals, connectSignalLambda)
   EXPECT_EQ(callCount, 2);
 }
 
+static void connectSimpleLambdaArgs(Sender* s)
+{
+  s->connectSignal<const char*>("msignal", [](const char*) { callCount++; });
+}
+
+static void connectLambdaArgsWithCaptures(Sender* s, Receiver* r, int x)
+{
+  s->connectSignal<const char*>("mcsignal", r, [s, r, x](const char*) {
+    (void)s; (void)r; (void)x;
+    callCount++;
+  });
+}
+
+TEST(Signals, connectSignalLambdaArgs)
+{
+  Sender s;
+  Receiver r;
+
+  /* Simple lambda */
+  callCount = 0;
+  s.registerSignal<const char*>("signal");
+  s.connectSignal<const char*>("signal", [](const char*) { callCount++; });
+  s.emitSignal("signal", "data");
+  EXPECT_EQ(callCount, 1);
+
+  /* Multiple simple lambdas */
+  callCount = 0;
+  s.registerSignal<const char*>("msignal");
+  connectSimpleLambdaArgs(&s);
+  connectSimpleLambdaArgs(&s);
+  s.emitSignal("msignal", "data");
+  EXPECT_EQ(callCount, 2);
+
+  /* Lambda with captures */
+  callCount = 0;
+  s.registerSignal<const char*>("csignal");
+  s.connectSignal<const char*>("csignal", &r, [&s, &r](const char*) {
+    (void)s; (void)r;
+    callCount++;
+  });
+  s.emitSignal("csignal", "data");
+  EXPECT_EQ(callCount, 1);
+
+  /* Multiple lambdas with captures */
+  callCount = 0;
+  s.registerSignal<const char*>("mcsignal");
+  connectLambdaArgsWithCaptures(&s, &r, 1);
+  connectLambdaArgsWithCaptures(&s, &r, 2);
+  s.emitSignal("mcsignal", "data");
+  EXPECT_EQ(callCount, 2);
+}
+
 TEST(Signals, connectUnknown)
 {
   Sender s;
@@ -372,6 +424,15 @@ TEST(Signals, disconnectSignal)
   s.emitSignal("lsignal");
   EXPECT_EQ(callCount, 0);
 
+  /* Simple lambda with args */
+  callCount = 0;
+  s.registerSignal<const char*>("lasignal");
+  c = s.connectSignal<const char*>("lasignal",
+                                   [](const char*) { callCount++; });
+  s.disconnectSignal(c);
+  s.emitSignal("lasignal", "data");
+  EXPECT_EQ(callCount, 0);
+
   /* Lambda with captures */
   callCount = 0;
   s.registerSignal("lcsignal");
@@ -379,6 +440,18 @@ TEST(Signals, disconnectSignal)
                       [&s, &r]() { (void)s; (void)r; callCount++; });
   s.disconnectSignal(c);
   s.emitSignal("lcsignal");
+  EXPECT_EQ(callCount, 0);
+
+  /* Lambda with captures and args */
+  callCount = 0;
+  s.registerSignal<const char*>("lcasignal");
+  c = s.connectSignal<const char*>("lcasignal", &r,
+                                   [&s, &r](const char*) {
+                                     (void)s; (void)r;
+                                     callCount++;
+                                   });
+  s.disconnectSignal(c);
+  s.emitSignal("lcasignal", "data");
   EXPECT_EQ(callCount, 0);
 }
 
@@ -543,6 +616,8 @@ TEST(Signals, disconnectAll)
   s.connectSignal("signal2", &r, &Receiver::genericHandler);
   s.connectSignal("signal3", &r, &Receiver::simpleStringHandler);
   s.connectSignal("signal3", &r, &Receiver::genericStringHandler);
+  s.connectSignal<const char*>("signal3", &r,
+                               [](const char*) { callCount++; });
   s.connectSignal("signal1", &r2, &Receiver::genericHandler);
   s.disconnectSignals(&r);
   s.emitSignal("signal1");
@@ -602,16 +677,23 @@ TEST(Signals, emitConversion)
   s.registerSignal<int>("refhandler");
   s.connectSignal("refhandler", &r, &Receiver::simpleConstRefHandler);
   s.connectSignal("refhandler", &r, &Receiver::genericConstRefHandler);
+  s.connectSignal<const int&>("refhandler",
+                              [](const int&) { callCount++; });
+  s.connectSignal<const int&>("refhandler", &r,
+                              [&r](const int&) { (void)r; callCount++; });
   s.emitSignal("refhandler", 123);
-  EXPECT_EQ(callCount, 2);
+  EXPECT_EQ(callCount, 4);
 
   /* Sender adds reference */
   callCount = 0;
   s.registerSignal<const int&>("refemitter");
   s.connectSignal("refemitter", &r, &Receiver::simpleConstRefHandler);
   s.connectSignal("refemitter", &r, &Receiver::genericConstRefHandler);
+  s.connectSignal<int>("refemitter", [](int) { callCount++; });
+  s.connectSignal<int>("refemitter", &r,
+                       [&r](int) { (void)r; callCount++; });
   s.emitSignal("refemitter", 123);
-  EXPECT_EQ(callCount, 2);
+  EXPECT_EQ(callCount, 4);
 
   /* Receiver adds pointer const qualifier */
 #if 0 /* FIXME: Currently broken */
@@ -619,8 +701,12 @@ TEST(Signals, emitConversion)
   s.registerSignal<int*>("constemitter");
   s.connectSignal("constemitter", &r, &Receiver::simpleConstPtrHandler);
   s.connectSignal("constemitter", &r, &Receiver::genericConstPtrHandler);
+  s.connectSignal<const int*>("constemitter",
+                              [](const int*) { callCount++; });
+  s.connectSignal<const int*>("constemitter", &r,
+                              [&r](const int*) { (void)r; callCount++; });
   s.emitSignal("constemitter", &count);
-  EXPECT_EQ(callCount, 2);
+  EXPECT_EQ(callCount, 4);
 #endif
 }
 

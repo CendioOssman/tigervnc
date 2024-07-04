@@ -71,9 +71,14 @@ namespace core {
     // lambda has a capture list, then an object must also be specified
     // to control the lifetime.
     Connection connectSignal(const char* name, void (*callback)());
+    template<typename I>
+    Connection connectSignal(const char* name, void (*callback)(I));
 
     Connection connectSignal(const char* name, Object* obj,
                              const std::function<void()>& callback);
+    template<typename I>
+    Connection connectSignal(const char* name, Object* obj,
+                             const std::function<void(I)>& callback);
 
     // disconnectSignal() unregisters a method that was previously
     // registered using connectSignal().
@@ -227,6 +232,36 @@ namespace core {
     assert(obj);
     return connectSignal(name, obj, callback, emitter,
                          typeid(I).hash_code());
+  }
+
+  template<typename I>
+  Connection Object::connectSignal(const char* name,
+                                   void (*callback)(I))
+  {
+    emitter_t emitter = [callback](const any& info) {
+      assert(info.has_value());
+      using I_d = typename std::decay<I>::type;
+      callback(any_cast<I_d>(info));
+    };
+    // It's not guaranteed if we get unique or identical addresses for
+    // otherwise identical lambdas. Treat each as unique for consistent
+    // behaviour by omitting any tracking information.
+    return connectSignal(name, nullptr, emitter, typeid(I).hash_code());
+  }
+
+  template<typename I>
+  Connection Object::connectSignal(const char* name, Object* obj,
+                                   const std::function<void(I)>& callback)
+  {
+    emitter_t emitter = [callback](const any& info) {
+      assert(info.has_value());
+      using I_d = typename std::decay<I>::type;
+      callback(any_cast<I_d>(info));
+    };
+    assert(obj);
+    // Lambdas cannot be compared, so we cannot tell if it's an identical
+    // lambda, or just the same body but with different captures.
+    return connectSignal(name, obj, emitter, typeid(I).hash_code());
   }
 
   template<class T>
