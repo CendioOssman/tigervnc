@@ -61,6 +61,8 @@ namespace core {
     // lambda has a capture list, then an object must also be specified
     // to control the lifetime.
 
+    void connectSignal(const char *name, void (*callback)());
+
     void connectSignal(const char *name, Object *obj,
                        std::function<void()> callback);
 
@@ -261,6 +263,7 @@ namespace core {
         (dynamic_cast<S*>(this) == nullptr))
       throw Exception("Incorrect callback object type for signal %s",
                       name);
+    assert(obj);
     connectSignal(name, obj, new SignalReceiverTS<T,S>(obj, callback),
                   nullptr);
   }
@@ -273,6 +276,7 @@ namespace core {
         (dynamic_cast<S*>(this) == nullptr))
       throw Exception("Incorrect callback object type for signal %s",
                       name);
+    assert(obj);
     connectSignal(name, obj,
                   new SignalReceiverTSI<T,S,I>(obj, callback),
                   &typeid(I));
