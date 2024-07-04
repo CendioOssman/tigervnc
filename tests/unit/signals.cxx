@@ -197,6 +197,11 @@ TEST(Signals, connectSignalArg)
   EXPECT_EQ(callCount, 1);
 }
 
+static void connectSimpleLambda(Sender* s)
+{
+  s->connectSignal("msignal", []() { callCount++; });
+}
+
 static void connectLambdaWithCaptures(Sender* s, Receiver* r, int x)
 {
   s->connectSignal("mcsignal", r,
@@ -207,6 +212,21 @@ TEST(Signals, connectSignalLambda)
 {
   Sender s;
   Receiver r;
+
+  /* Simple lambda */
+  callCount = 0;
+  s.registerSignal("signal");
+  s.connectSignal("signal", []() { callCount++; });
+  s.emitSignal("signal");
+  EXPECT_EQ(callCount, 1);
+
+  /* Multiple simple lambdas */
+  callCount = 0;
+  s.registerSignal("msignal");
+  connectSimpleLambda(&s);
+  connectSimpleLambda(&s);
+  s.emitSignal("msignal");
+  EXPECT_EQ(callCount, 2);
 
   /* Lambda with captures */
   callCount = 0;
@@ -342,6 +362,14 @@ TEST(Signals, disconnectSignal)
   c = s.connectSignal("sasignal", &r, &Receiver::specificStringHandler);
   s.disconnectSignal(c);
   s.emitSignal("sasignal", "data");
+  EXPECT_EQ(callCount, 0);
+
+  /* Simple lambda */
+  callCount = 0;
+  s.registerSignal("lsignal");
+  c = s.connectSignal("lsignal", []() { callCount++; });
+  s.disconnectSignal(c);
+  s.emitSignal("lsignal");
   EXPECT_EQ(callCount, 0);
 
   /* Lambda with captures */

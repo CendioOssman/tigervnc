@@ -67,9 +67,11 @@ namespace core {
     Connection connectSignal(const char* name, T* obj,
                              void (T::*callback)(S*, const char*, I));
 
-    // Lambda friendly version to register a signal callback. An object
-    // must also be specified to control the lifetime of captured
-    // variables.
+    // Lambda friendly versions to register a signal callback. If the
+    // lambda has a capture list, then an object must also be specified
+    // to control the lifetime.
+    Connection connectSignal(const char* name, void (*callback)());
+
     Connection connectSignal(const char* name, Object* obj,
                              const std::function<void()>& callback);
 
@@ -191,6 +193,7 @@ namespace core {
       assert(!info.has_value());
       (obj->*callback)(sender, name);
     };
+    assert(obj);
     return connectSignal(name, obj, callback, emitter,
                          typeid(void).hash_code());
   }
@@ -221,6 +224,7 @@ namespace core {
       using I_d = typename std::decay<I>::type;
       (obj->*callback)(sender, name, any_cast<I_d>(info));
     };
+    assert(obj);
     return connectSignal(name, obj, callback, emitter,
                          typeid(I).hash_code());
   }

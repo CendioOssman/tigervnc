@@ -133,6 +133,18 @@ void Object::emitSignal(const char* name, const any& info)
   }
 }
 
+Connection Object::connectSignal(const char* name, void (*callback)())
+{
+  emitter_t emitter = [callback](const any& info) {
+    assert(!info.has_value());
+    callback();
+  };
+  // It's not guaranteed if we get unique or identical addresses for
+  // otherwise identical lambdas. Treat each as unique for consistent
+  // behaviour by omitting any tracking information.
+  return connectSignal(name, nullptr, emitter, typeid(void).hash_code());
+}
+
 Connection Object::connectSignal(const char* name, Object* obj,
                                  const std::function<void()>& callback)
 {
@@ -140,6 +152,7 @@ Connection Object::connectSignal(const char* name, Object* obj,
     assert(!info.has_value());
     callback();
   };
+  assert(obj);
   // Lambdas cannot be compared, so we cannot tell if it's an identical
   // lambda, or just the same body but with different captures.
   return connectSignal(name, obj, emitter, typeid(void).hash_code());
@@ -164,7 +177,6 @@ Connection Object::connectSignal(const char* name, Object* obj,
   Connection connection;
 
   assert(name);
-  assert(obj);
 
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot connect to unknown signal %s", name));
@@ -192,18 +204,15 @@ Connection Object::connectSignal(const char* name, Object* obj,
 
   signalReceivers[name].push_back({connection, emitter});
 
-  obj->connectedObjects.insert(this);
+  if (obj)
+    obj->connectedObjects.insert(this);
 
   return connection;
 }
 
 void Object::disconnectSignal(const Connection connection)
 {
-  std::map<std::string, ReceiverList>::iterator sigiter;
   ReceiverList::iterator iter;
-  bool hasOthers;
-
-  assert(connection.dst);
 
   if (connection.src != this)
     throw std::logic_error("Disconnecting signal from wrong object");
@@ -219,25 +228,30 @@ void Object::disconnectSignal(const Connection connection)
     }
   }
 
-  hasOthers = false;
+  if (connection.dst) {
+    std::map<std::string, ReceiverList>::iterator sigiter;
+    bool hasOthers;
 
-  // Then check if the object is attached in more ways to this or
-  // to some other signal
-  for (sigiter = signalReceivers.begin();
-       sigiter != signalReceivers.end(); ++sigiter) {
-    for (iter = sigiter->second.begin();
-         iter != sigiter->second.end(); ++iter) {
-      if (iter->connection.dst == connection.dst) {
-        hasOthers = true;
-        break;
+    hasOthers = false;
+
+    // Then check if the object is attached in more ways to this or
+    // to some other signal
+    for (sigiter = signalReceivers.begin();
+         sigiter != signalReceivers.end(); ++sigiter) {
+      for (iter = sigiter->second.begin();
+           iter != sigiter->second.end(); ++iter) {
+        if (iter->connection.dst == connection.dst) {
+          hasOthers = true;
+          break;
+        }
       }
+      if (hasOthers)
+        break;
     }
-    if (hasOthers)
-      break;
-  }
 
-  if (!hasOthers)
-    connection.dst->connectedObjects.erase(this);
+    if (!hasOthers)
+      connection.dst->connectedObjects.erase(this);
+  }
 }
 
 void Object::disconnectSignals(Object* obj)
