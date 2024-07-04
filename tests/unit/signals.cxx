@@ -328,6 +328,13 @@ static void testConnectLambda()
 
   printf("%s: ", __func__);
 
+  /* Simple lambda */
+  count = 0;
+  s.registerSignal("signal");
+  s.connectSignal("signal", []() { count++; });
+  s.emitSignal("signal");
+  ASSERT_EQ(count, 1);
+
   /* Lambda with captures */
   count = 0;
   s.registerSignal("csignal");
@@ -395,6 +402,14 @@ static void testDisconnect()
   c = s.connectSignal("sasignal", &r, &Receiver::specificStringHandler);
   s.disconnectSignal(c);
   s.emitSignal("sasignal", "data");
+  ASSERT_EQ(count, 0);
+
+  /* Simple lambda */
+  count = 0;
+  s.registerSignal("lsignal");
+  c = s.connectSignal("lsignal", []() { count++; });
+  s.disconnectSignal(c);
+  s.emitSignal("lsignal");
   ASSERT_EQ(count, 0);
 
   /* Lambda with captures */
