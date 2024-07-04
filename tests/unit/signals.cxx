@@ -336,6 +336,32 @@ static void testConnectLambda()
     printf("OK\n");
 }
 
+static void testConnectLambdaArgs()
+{
+    Sender s;
+    Receiver r;
+
+    printf("%s: ", __func__);
+
+    /* Simple lambda */
+    count = 0;
+    s.registerSignal<const char*>("signal");
+    s.connectSignal<const char*>("signal",
+                                 [] (const char*) { count++; });
+    s.emitSignal("signal", "data");
+    ASSERT_EQ(count, 1);
+
+    /* Lambda with captures */
+    count = 0;
+    s.registerSignal<const char*>("csignal");
+    s.connectSignal<const char*>("csignal", &r,
+                                 [&s, &r] (const char*) { (void)s; (void)r; count++; });
+    s.emitSignal("csignal", "data");
+    ASSERT_EQ(count, 1);
+
+    printf("OK\n");
+}
+
 static void testDisconnect()
 {
     Sender s;
@@ -467,6 +493,7 @@ int main(int /*argc*/, char** /*argv*/)
     testConnect();
     testConnectArg();
     testConnectLambda();
+    testConnectLambdaArgs();
     testDisconnect();
     testDisconnectArg();
     testDisconnectAll();
