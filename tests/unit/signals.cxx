@@ -318,6 +318,13 @@ static void testConnectLambda()
 
     printf("%s: ", __func__);
 
+    /* Simple lambda */
+    count = 0;
+    s.registerSignal("signal");
+    s.connectSignal("signal", [] () { count++; });
+    s.emitSignal("signal");
+    ASSERT_EQ(count, 1);
+
     /* Lambda with captures */
     count = 0;
     s.registerSignal("csignal");
