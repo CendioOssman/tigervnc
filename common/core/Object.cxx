@@ -47,8 +47,14 @@ Object::~Object()
     ReceiverList *siglist;
 
     siglist = &sigiter->second;
-    while (!siglist->empty())
-      disconnectSignals(siglist->front()->getObject());
+    while (!siglist->empty()) {
+      if (siglist->front()->getObject() != nullptr)
+        disconnectSignals(siglist->front()->getObject());
+      else {
+        delete *(siglist->begin());
+        siglist->erase(siglist->begin());
+      }
+    }
   }
 
   while (!signalCheckers.empty()) {
@@ -124,9 +130,16 @@ void Object::emitSignal(const char *name, SignalInfo &info)
   }
 }
 
+void Object::connectSignal(const char *name, void (*callback)())
+{
+  connectSignal(name, nullptr,
+                new SignalReceiverFunctor(nullptr, callback), nullptr);
+}
+
 void Object::connectSignal(const char *name, Object *obj,
                            std::function<void()> callback)
 {
+  assert(obj);
   connectSignal(name, obj,
                 new SignalReceiverFunctor(obj, callback), nullptr);
 }
@@ -138,7 +151,6 @@ void Object::connectSignal(const char *name, Object *obj,
   ReceiverList::iterator iter;
 
   assert(name);
-  assert(obj);
 
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot connect to unknown signal %s", name));
@@ -164,7 +176,8 @@ void Object::connectSignal(const char *name, Object *obj,
 
   signalReceivers[name].push_back(receiver);
 
-  obj->connectedObjects.insert(this);
+  if (obj)
+    obj->connectedObjects.insert(this);
 }
 
 void Object::disconnectSignal(const char *name, Object *obj,
@@ -270,7 +283,6 @@ void Object::disconnectSignals(Object *obj)
 Object::SignalReceiverFunctor::SignalReceiverFunctor(Object *obj_, std::function<void()> callback_)
   : obj(obj_), callback(callback_)
 {
-  assert(obj_);
 }
 
 void Object::SignalReceiverFunctor::emit(Object * /*sender*/,
