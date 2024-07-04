@@ -202,6 +202,13 @@ TEST(Signals, connectSignalLambda)
   Sender s;
   Receiver r;
 
+  /* Simple lambda */
+  callCount = 0;
+  s.registerSignal("signal");
+  s.connectSignal("signal", []() { callCount++; });
+  s.emitSignal("signal");
+  EXPECT_EQ(callCount, 1);
+
   /* Lambda with captures */
   callCount = 0;
   s.registerSignal("csignal");
@@ -328,6 +335,14 @@ TEST(Signals, disconnectSignal)
   c = s.connectSignal("sasignal", &r, &Receiver::specificStringHandler);
   s.disconnectSignal(c);
   s.emitSignal("sasignal", "data");
+  EXPECT_EQ(callCount, 0);
+
+  /* Simple lambda */
+  callCount = 0;
+  s.registerSignal("lsignal");
+  c = s.connectSignal("lsignal", []() { callCount++; });
+  s.disconnectSignal(c);
+  s.emitSignal("lsignal");
   EXPECT_EQ(callCount, 0);
 
   /* Lambda with captures */
