@@ -71,9 +71,14 @@ namespace core {
     // lambda has a capture list, then an object must also be specified
     // to control the lifetime.
     Connection connectSignal(const char* name, void (*callback)());
+    template<typename I>
+    Connection connectSignal(const char* name, void (*callback)(I));
 
     Connection connectSignal(const char* name, Object* obj,
                              const std::function<void()>& callback);
+    template<typename I>
+    Connection connectSignal(const char* name, Object* obj,
+                             const std::function<void(I)>& callback);
 
     // disconnectSignal() unregisters a method that was previously
     // registered using connectSignal().
@@ -223,6 +228,33 @@ namespace core {
     };
     assert(obj);
     return connectSignal(name, obj, callback, emitter,
+                         typeid(I).hash_code());
+  }
+
+  template<typename I>
+  Connection Object::connectSignal(const char* name,
+                                   void (*callback)(I))
+  {
+    emitter_t emitter = [callback](const any& info) {
+      assert(info.has_value());
+      using I_d = typename std::decay<I>::type;
+      callback(any_cast<I_d>(info));
+    };
+    return connectSignal(name, nullptr, callback, emitter,
+                         typeid(I).hash_code());
+  }
+
+  template<typename I>
+  Connection Object::connectSignal(const char* name, Object* obj,
+                                   const std::function<void(I)>& callback)
+  {
+    emitter_t emitter = [callback](const any& info) {
+      assert(info.has_value());
+      using I_d = typename std::decay<I>::type;
+      callback(any_cast<I_d>(info));
+    };
+    assert(obj);
+    return connectSignal(name, obj, &callback, emitter,
                          typeid(I).hash_code());
   }
 
