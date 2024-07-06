@@ -38,8 +38,6 @@
 #ifndef __RFB_SDESKTOP_H__
 #define __RFB_SDESKTOP_H__
 
-#include <stdint.h>
-
 #include <core/Object.h>
 
 #include <rfb/screenTypes.h>
@@ -78,10 +76,6 @@ namespace rfb {
                                          const ScreenSet& /*layout*/) {
       return resultProhibited;
     }
-
-    // frameTick() is called whenever a frame update has been processed,
-    // signalling that a good time to render new data
-    virtual void frameTick(uint64_t msc) { (void)msc; }
 
   protected:
     virtual ~SDesktop() {}
