@@ -78,8 +78,6 @@ SDisplay::SDisplay()
 {
   updateEvent.h = CreateEvent(nullptr, TRUE, FALSE, nullptr);
   terminateEvent.h = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-
-  registerSignal("ledstate");
 }
 
 SDisplay::~SDisplay()
@@ -184,12 +182,6 @@ void SDisplay::queryConnection(network::Socket* sock,
 }
 
 
-unsigned int SDisplay::getLEDState()
-{
-  return ledState;
-}
-
-
 void SDisplay::startCore() {
 
   // Currently, we just check whether we're in the console session, and
@@ -250,7 +242,8 @@ void SDisplay::startCore() {
   areEffectsDisabled = disableEffects;
 
   checkLedState();
-  emitSignal("ledstate");
+  if (server)
+    server->setLEDState(ledState);
 }
 
 void SDisplay::stopCore() {
@@ -457,7 +450,7 @@ SDisplay::processEvent(HANDLE event) {
 
       // Forward current LED state to the server
       if (checkLedState())
-        emitSignal("ledstate");
+        server->setLEDState(ledState);
     }
     return;
   }
