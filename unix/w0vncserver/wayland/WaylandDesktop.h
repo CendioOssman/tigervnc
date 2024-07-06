@@ -49,7 +49,6 @@ public:
   void queryConnection(network::Socket* sock,
                         const char* userName) override;
   void terminate() override;
-  unsigned int getLEDState() override;
 
   // Check if necessary wayland protocols are available
   static bool available();

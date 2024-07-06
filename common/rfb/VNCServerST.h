@@ -102,6 +102,7 @@ namespace rfb {
                    const uint8_t* data) override;
     void setCursorPos(const core::Point& p, bool warped) override;
     void setName(const char* name_) override;
+    void setLEDState(unsigned state) override;
 
     void bell() override;
 
@@ -144,8 +145,6 @@ namespace rfb {
   protected:
 
     // Signal handlers
-    void handleLEDState();
-
     void clientReady(VNCSConnectionST* client, bool shared);
 
     void keyEvent(VNCSConnectionST* client,

@@ -80,14 +80,6 @@ namespace rfb {
                                          const ScreenSet& /*layout*/) {
       return resultProhibited;
     }
-
-    // getLEDState() returns the current lock keys LED state
-    virtual unsigned int getLEDState() = 0;
-
-    // Signals
-
-    // ledstate is emitted when the current lock keys LED state changes.
-    core::signal<> ledstate;
   };
 
 };
