@@ -43,8 +43,6 @@ public:
 
   // -=- SDesktop interface
   void init(rfb::VNCServer* vs) override;
-  void start() override;
-  void stop() override;
   void queryConnection(network::Socket* sock,
                        const char* userName) override;
   void terminate() override;
@@ -56,6 +54,8 @@ public:
 
 protected:
   // Signal handlers
+  void start();
+  void stop();
   void keyEvent(rfb::VNCServer*, const char* name,
                 rfb::KeyEvent event);
   void pointerEvent(rfb::PointerEvent event);

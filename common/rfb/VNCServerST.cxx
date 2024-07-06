@@ -96,6 +96,10 @@ VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
 {
   slog.debug("Creating single-threaded server %s", name.c_str());
 
+  registerSignal("starting");
+  registerSignal("started");
+  registerSignal("stopped");
+
   registerSignal<KeyEvent>("keydown");
   registerSignal<KeyEvent>("keyup");
   registerSignal<PointerEvent>("pointer");
@@ -483,9 +487,7 @@ void VNCServerST::desktopReady()
     startFrameClock();
   }
 
-  // Now that the desktop is ready, client connections can continue
-  for (VNCSConnectionST* client : clients)
-    client->desktopReadyOrClose();
+  emitSignal("started");
 }
 
 void VNCServerST::bell()
@@ -866,7 +868,7 @@ void VNCServerST::startDesktop()
   if (!desktopStarted && !desktopStarting) {
     slog.debug("Starting desktop");
     desktopStarting = true;
-    desktop->start();
+    emitSignal("starting");
     // We might have already been in a ready state
     checkDesktopReady();
   }
@@ -878,7 +880,7 @@ void VNCServerST::stopDesktop()
     slog.debug("Stopping desktop");
     desktopStarted = false;
     desktopStarting = false;
-    desktop->stop();
+    emitSignal("stopped");
   }
 }
 

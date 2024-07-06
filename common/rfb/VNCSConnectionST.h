@@ -80,7 +80,6 @@ namespace rfb {
     void requestClipboardOrClose();
     void announceClipboardOrClose(bool available);
     void sendClipboardDataOrClose(const char* data);
-    void desktopReadyOrClose();
 
     // The following methods never throw exceptions
 
@@ -144,6 +143,9 @@ namespace rfb {
     void enableContinuousUpdates(bool enable,
                                  int x, int y, int w, int h) override;
     void supportsLocalCursor() override;
+
+    // Signal handlers
+    void desktopStarted();
 
     // Timer callbacks
     void updateTimeout();
