@@ -108,6 +108,20 @@ SDisplay::~SDisplay()
 void SDisplay::init(VNCServer* vs)
 {
   server = vs;
+
+  server->connectSignal(&VNCServer::starting, this, &SDisplay::start);
+  server->connectSignal(&VNCServer::stopped, this, &SDisplay::stop);
+
+  server->connectSignal(&VNCServer::key, this, &SDisplay::keyEvent);
+  server->connectSignal(&VNCServer::pointer, this,
+                        &SDisplay::pointerEvent);
+
+  server->connectSignal(&VNCServer::clipboardRequested, this,
+                        &SDisplay::handleClipboardRequest);
+  server->connectSignal(&rfb::VNCServer::clipboardAnnounced, this,
+                        &SDisplay::handleClipboardAnnounce);
+  server->connectSignal(&rfb::VNCServer::clipboardData, this,
+                        &SDisplay::handleClipboardData);
 }
 
 void SDisplay::start()
@@ -120,17 +134,6 @@ void SDisplay::start()
 
   // Start the SDisplay core
   startCore();
-
-  server->connectSignal(&VNCServer::key, this, &SDisplay::keyEvent);
-  server->connectSignal(&VNCServer::pointer, this,
-                        &SDisplay::pointerEvent);
-
-  server->connectSignal(&VNCServer::clipboardRequested, this,
-                        &SDisplay::handleClipboardRequest);
-  server->connectSignal(&rfb::VNCServer::clipboardAnnounced, this,
-                        &SDisplay::handleClipboardAnnounce);
-  server->connectSignal(&rfb::VNCServer::clipboardData, this,
-                        &SDisplay::handleClipboardData);
 
   vlog.debug("Started");
 
@@ -160,7 +163,6 @@ void SDisplay::stop()
 
   // Stop the SDisplayCore
   server->setPixelBuffer(nullptr);
-  server->disconnectSignals(this);
   stopCore();
 
   vlog.debug("Stopped");

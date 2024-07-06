@@ -38,8 +38,6 @@
 #ifndef __RFB_SDESKTOP_H__
 #define __RFB_SDESKTOP_H__
 
-#include <stdint.h>
-
 #include <core/Object.h>
 
 #include <rfb/screenTypes.h>
@@ -60,18 +58,6 @@ namespace rfb {
     // init() is called immediately when the VNCServer gets a reference
     // to the SDesktop, so that a reverse reference can be set up.
     virtual void init(rfb::VNCServer* vs) = 0;
-
-    // start() is called by the server when the first client authenticates
-    // successfully, and can be used to begin any expensive tasks which are not
-    // needed when there are no clients.  A valid PixelBuffer must have been
-    // set via the VNCServer's setPixelBuffer() method by the time this call
-    // returns.
-    virtual void start() {}
-
-    // stop() is called by the server when there are no longer any
-    // authenticated clients, and therefore the desktop can cease any
-    // expensive tasks.
-    virtual void stop() {}
 
     // queryConnection() is called when a connection has been
     // successfully authenticated.  The sock and userName arguments
@@ -94,10 +80,6 @@ namespace rfb {
                                          const ScreenSet& /*layout*/) {
       return resultProhibited;
     }
-
-    // frameTick() is called whenever a frame update has been processed,
-    // signalling that a good time to render new data
-    virtual void frameTick(uint64_t msc) { (void)msc; }
   };
 
 };
