@@ -96,6 +96,9 @@ VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
 {
   slog.debug("Creating single-threaded server %s", name.c_str());
 
+  registerSignal("start");
+  registerSignal("stop");
+
   registerSignal<KeyEvent>("keydown");
   registerSignal<KeyEvent>("keyup");
   registerSignal<PointerEvent>("pointer");
@@ -816,9 +819,9 @@ void VNCServerST::startDesktop()
 {
   if (!desktopStarted) {
     slog.debug("Starting desktop");
-    desktop->start();
+    emitSignal("start");
     if (!pb)
-      throw std::logic_error("SDesktop::start() did not set a valid PixelBuffer");
+      throw std::logic_error("Missing PixelBuffer after starting the desktop");
     desktopStarted = true;
     // The tracker might have accumulated changes whilst we were
     // stopped, so flush those out
@@ -839,7 +842,7 @@ void VNCServerST::stopDesktop()
   if (desktopStarted) {
     slog.debug("Stopping desktop");
     desktopStarted = false;
-    desktop->stop();
+    emitSignal("stop");
   }
 }
 
