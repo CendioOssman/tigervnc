@@ -47,7 +47,6 @@ PortalDesktop::PortalDesktop()
   : server(nullptr), remoteDesktop(nullptr), pb(nullptr),
     restoreToken("")
 {
-  registerSignal("ledstate");
 }
 
 PortalDesktop::~PortalDesktop()
@@ -113,11 +112,6 @@ void PortalDesktop::queryConnection(network::Socket* sock,
 void PortalDesktop::terminate()
 {
   kill(getpid(), SIGTERM);
-}
-
-unsigned int PortalDesktop::getLEDState()
-{
-  return 0;
 }
 
 unsigned int PortalDesktop::setScreenLayout(int /* fb_width */,

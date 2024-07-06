@@ -80,7 +80,6 @@ namespace rfb {
       void terminate() override;
       void queryConnection(network::Socket* sock,
                            const char* userName) override;
-      unsigned int getLEDState() override;
 
       // -=- Clipboard events
       
