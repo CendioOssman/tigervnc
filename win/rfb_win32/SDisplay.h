@@ -72,8 +72,6 @@ namespace rfb {
       // -=- SDesktop interface
 
       void init(VNCServer* vs) override;
-      void start() override;
-      void stop() override;
       void terminate() override;
       void queryConnection(network::Socket* sock,
                            const char* userName) override;
@@ -120,6 +118,9 @@ namespace rfb {
       void recreatePixelBuffer(bool force=false);
       bool flushChangeTracker();  // true if flushed, false if empty
       bool checkLedState();
+
+      void start(VNCServer*, const char*);
+      void stop(VNCServer*, const char*);
 
       void pointerEvent(VNCServer*, const char*, PointerEvent event);
       void keyEvent(VNCServer*, const char* name, KeyEvent event);

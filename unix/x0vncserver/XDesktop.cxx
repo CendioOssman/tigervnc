@@ -215,7 +215,7 @@ XDesktop::XDesktop(Display* dpy_, Geometry *geometry_)
 
 XDesktop::~XDesktop() {
   if (running)
-    stop();
+    stop(nullptr, "");
 }
 
 
@@ -240,12 +240,15 @@ void XDesktop::init(VNCServer* vs)
 {
   server = vs;
 
+  server->connectSignal("start", this, &XDesktop::start);
+  server->connectSignal("stop", this, &XDesktop::stop);
+
   server->connectSignal("keydown", this, &XDesktop::keyEvent);
   server->connectSignal("keyup", this, &XDesktop::keyEvent);
   server->connectSignal("pointer", this, &XDesktop::pointerEvent);
 }
 
-void XDesktop::start()
+void XDesktop::start(VNCServer*, const char*)
 {
   // Determine actual number of buttons of the X pointer device.
   unsigned char btnMap[8];
@@ -286,7 +289,7 @@ void XDesktop::start()
   running = true;
 }
 
-void XDesktop::stop() {
+void XDesktop::stop(VNCServer*, const char*) {
   running = false;
 
 #ifdef HAVE_XTEST
