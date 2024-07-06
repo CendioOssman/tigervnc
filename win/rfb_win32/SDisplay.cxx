@@ -93,7 +93,7 @@ SDisplay::~SDisplay()
   // methods on it.  Setting server to zero here ensures that stop() doesn't
   // call setPixelBuffer(0) on the server.
   server = nullptr;
-  if (core) stop();
+  if (core) stop(nullptr, "");
 }
 
 
@@ -102,18 +102,9 @@ SDisplay::~SDisplay()
 void SDisplay::init(VNCServer* vs)
 {
   server = vs;
-}
 
-void SDisplay::start()
-{
-  vlog.debug("Starting");
-
-  // Try to make session zero the console session
-  if (!inConsoleSession())
-    setConsoleSession();
-
-  // Start the SDisplay core
-  startCore();
+  server->connectSignal("start", this, &SDisplay::start);
+  server->connectSignal("stop", this, &SDisplay::stop);
 
   server->connectSignal("keydown", this, &SDisplay::keyEvent);
   server->connectSignal("keyup", this, &SDisplay::keyEvent);
@@ -125,13 +116,25 @@ void SDisplay::start()
                         &SDisplay::handleClipboardAnnounce);
   server->connectSignal("clipboarddata", this,
                         &SDisplay::handleClipboardData);
+}
+
+void SDisplay::start(VNCServer*, const char*)
+{
+  vlog.debug("Starting");
+
+  // Try to make session zero the console session
+  if (!inConsoleSession())
+    setConsoleSession();
+
+  // Start the SDisplay core
+  startCore();
 
   vlog.debug("Started");
 
   if (statusLocation) *statusLocation = true;
 }
 
-void SDisplay::stop()
+void SDisplay::stop(VNCServer*, const char*)
 {
   vlog.debug("Stopping");
 
@@ -154,7 +157,6 @@ void SDisplay::stop()
 
   // Stop the SDisplayCore
   server->setPixelBuffer(nullptr);
-  server->disconnectSignals(this);
   stopCore();
 
   vlog.debug("Stopped");

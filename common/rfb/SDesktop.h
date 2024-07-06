@@ -57,18 +57,6 @@ namespace rfb {
     // to the SDesktop, so that a reverse reference can be set up.
     virtual void init(rfb::VNCServer* vs) = 0;
 
-    // start() is called by the server when the first client authenticates
-    // successfully, and can be used to begin any expensive tasks which are not
-    // needed when there are no clients.  A valid PixelBuffer must have been
-    // set via the VNCServer's setPixelBuffer() method by the time this call
-    // returns.
-    virtual void start() {}
-
-    // stop() is called by the server when there are no longer any
-    // authenticated clients, and therefore the desktop can cease any
-    // expensive tasks.
-    virtual void stop() {}
-
     // queryConnection() is called when a connection has been
     // successfully authenticated.  The sock and userName arguments
     // identify the socket and the name of the authenticated user, if
