@@ -51,9 +51,6 @@ public:
   void setCursor(int width, int height, const core::Point& hotspot,
                  const uint8_t* data);
 
-  // Change client LED state
-  void setLEDState(unsigned int state);
-
   void draw(Surface* dst);
 
   // Fl_Widget callback methods
@@ -94,6 +91,7 @@ private:
   void resolveAltGrDetection(bool isAltGrSequence);
 #endif
 
+  void handleLEDState(CConn*, const char*);
   void pushLEDState();
 
   void initContextMenu();

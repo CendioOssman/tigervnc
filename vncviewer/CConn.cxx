@@ -460,13 +460,6 @@ void CConn::setCursorPos(const Point& pos)
   desktop->setCursorPos(pos);
 }
 
-void CConn::setLEDState(unsigned int state)
-{
-  CConnection::setLEDState(state);
-
-  desktop->setLEDState(state);
-}
-
 
 ////////////////////// Internal methods //////////////////////
 

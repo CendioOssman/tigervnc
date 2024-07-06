@@ -69,6 +69,8 @@ CConnection::CConnection()
 {
   registerSignal("ready");
 
+  registerSignal("ledstate");
+
   registerSignal("clipboardrequest");
   registerSignal<bool>("clipboardannounce");
   registerSignal<const char*>("clipboarddata");
@@ -578,6 +580,7 @@ void CConnection::serverCutText(const char* str)
 void CConnection::setLEDState(unsigned int state)
 {
   server.setLEDState(state);
+  emitSignal("ledstate");
 }
 
 void CConnection::handleClipboardCaps(uint32_t flags,

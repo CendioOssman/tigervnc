@@ -94,6 +94,8 @@ XDesktop::XDesktop(Display* dpy_, Geometry *geometry_)
 
   int xkbOpcode, xkbErrorBase;
 
+  registerSignal("ledstate");
+
   major = XkbMajorVersion;
   minor = XkbMinorVersion;
   if (!XkbQueryExtension(dpy, &xkbOpcode, &xkbEventBase,
@@ -284,7 +286,7 @@ void XDesktop::start(VNCServer*, const char*)
 
 #endif
 
-  server->setLEDState(ledState);
+  emitSignal("ledstate");
 
   running = true;
 }
@@ -843,6 +845,10 @@ unsigned int XDesktop::setScreenLayout(int fb_width, int fb_height,
 #endif /* HAVE_XRANDR */
 }
 
+unsigned int XDesktop::getLEDState()
+{
+  return ledState;
+}
 
 bool XDesktop::handleGlobalEvent(XEvent* ev) {
   if (ev->type == xkbEventBase + XkbEventCode) {
@@ -860,7 +866,7 @@ bool XDesktop::handleGlobalEvent(XEvent* ev) {
     }
 
     if (running)
-      server->setLEDState(ledState);
+      emitSignal("ledstate");
 
     return true;
 #ifdef HAVE_XDAMAGE
