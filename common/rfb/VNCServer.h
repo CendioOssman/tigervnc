@@ -188,6 +188,9 @@ namespace rfb {
     // called if the clipboard data was no longer available when the
     // client received the request. A const char* string is included
     // that contains the actual clipboard contents.
+
+    // "frame" is emitted whenever a frame update has been processed,
+    // signalling that a good time to render new data
   };
 }
 #endif

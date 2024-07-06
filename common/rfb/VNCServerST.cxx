@@ -107,6 +107,8 @@ VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
   registerSignal<bool>("clipboardannounce");
   registerSignal<const char*>("clipboarddata");
 
+  registerSignal("frame");
+
   idleTimer.connectSignal("timer", this,
                           &VNCServerST::idleTimeout);
   disconnectTimer.connectSignal("timer", this,
@@ -756,7 +758,7 @@ void VNCServerST::frameTimeout()
     writeUpdate();
 
   msc++;
-  desktop->frameTick(msc);
+  emitSignal("frame");
 }
 
 void VNCServerST::idleTimeout()
