@@ -150,6 +150,16 @@ namespace rfb {
 
     // Signals
 
+    // "start" is emitted when the first client authenticates
+    // successfully, and can be used to begin any expensive tasks which
+    // are not needed when there are no clients. A valid PixelBuffer
+    // must have been set via the setPixelBuffer() method by the time
+    // this signal is finished.
+
+    // "stop" is emitted when there are no longer any authenticated
+    // clients, and therefore the desktop can cease any expensive
+    // tasks.
+
     // "keydown" is emitted whenever the client sends a key press
     // message. A KeyEvent structure is included with the KeySym and key
     // code.
