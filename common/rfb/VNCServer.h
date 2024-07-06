@@ -150,6 +150,22 @@ namespace rfb {
 
     // Signals
 
+    // starting is emitted when the first client authenticates
+    // successfully, and can be used to begin any expensive tasks which
+    // are not needed when there are no clients. A valid PixelBuffer
+    // must be set via the setPixelBuffer() method in order for the
+    // server to proceed to a fully started state.
+    core::signal<> starting;
+
+    // started is emitted after the starting signal once everything is
+    // set up to actually start sending updates to clients and receiving
+    // events from clients.
+    core::signal<> started;
+
+    // stopped is emitted when there are no longer any authenticated
+    // clients, and therefore the desktop can cease any expensive tasks.
+    core::signal<> stopped;
+
     // key is emitted whenever the client sends a key press or release
     // message. The KeySym, key code, and a boolean if it is a press,
     // are included.

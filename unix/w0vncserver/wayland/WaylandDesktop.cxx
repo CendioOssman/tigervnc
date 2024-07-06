@@ -76,6 +76,11 @@ void WaylandDesktop::init(rfb::VNCServer* vs)
 {
   server = vs;
 
+  server->connectSignal(&server->starting, this,
+                        &WaylandDesktop::start);
+  server->connectSignal(&server->stopped, this,
+                        &WaylandDesktop::stop);
+
   server->connectSignal(&server->key, this, &WaylandDesktop::keyEvent);
   server->connectSignal(&server->pointer, this,
                         &WaylandDesktop::pointerEvent);

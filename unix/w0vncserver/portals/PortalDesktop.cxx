@@ -58,6 +58,9 @@ void PortalDesktop::init(rfb::VNCServer* vs)
 {
   server = vs;
 
+  server->connectSignal(&server->starting, this, &PortalDesktop::start);
+  server->connectSignal(&server->stopped, this, &PortalDesktop::stop);
+
   server->connectSignal(&server->key, this, &PortalDesktop::keyEvent);
   server->connectSignal(&server->pointer, this,
                         &PortalDesktop::pointerEvent);

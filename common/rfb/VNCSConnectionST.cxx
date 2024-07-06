@@ -67,6 +67,9 @@ VNCSConnectionST::VNCSConnectionST(VNCServerST* server_, network::Socket *s,
     continuousUpdates(false), encodeManager(this),
     pointerEventTime(0), clientHasCursor(false)
 {
+  server->connectSignal(&server->started, this,
+                        &VNCSConnectionST::desktopStarted);
+
   setStreams(&sock->inStream(), &sock->outStream());
   peerEndpoint = sock->getPeerEndpoint();
 
@@ -352,16 +355,6 @@ void VNCSConnectionST::sendClipboardDataOrClose(const char* data)
   try {
     if (state() != RFBSTATE_NORMAL) return;
     sendClipboardData(data);
-  } catch(std::exception& e) {
-    close(e.what());
-  }
-}
-
-void VNCSConnectionST::desktopReadyOrClose()
-{
-  try {
-    if (state() != RFBSTATE_CLIENT_READY) return;
-    desktopReady();
   } catch(std::exception& e) {
     close(e.what());
   }
@@ -787,6 +780,16 @@ void VNCSConnectionST::supportsLocalCursor()
   if (hasRenderedCursor && !needRenderedCursor())
     removeRenderedCursor = true;
   setCursor();
+}
+
+void VNCSConnectionST::desktopStarted()
+{
+  try {
+    if (state() != RFBSTATE_CLIENT_READY) return;
+    desktopReady();
+  } catch(std::exception& e) {
+    close(e.what());
+  }
 }
 
 void VNCSConnectionST::updateTimeout()

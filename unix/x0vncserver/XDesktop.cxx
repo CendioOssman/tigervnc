@@ -248,6 +248,9 @@ void XDesktop::init(rfb::VNCServer* vs)
 {
   server = vs;
 
+  server->connectSignal(&server->starting, this, &XDesktop::start);
+  server->connectSignal(&server->stopped, this, &XDesktop::stop);
+
   server->connectSignal(&server->key, this, &XDesktop::keyEvent);
   server->connectSignal(&server->pointer, this,
                         &XDesktop::pointerEvent);
@@ -316,7 +319,8 @@ void XDesktop::start()
   running = true;
 }
 
-void XDesktop::stop() {
+void XDesktop::stop()
+{
   running = false;
 
 #ifdef HAVE_XTEST

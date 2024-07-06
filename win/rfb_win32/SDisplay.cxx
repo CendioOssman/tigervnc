@@ -104,6 +104,20 @@ SDisplay::~SDisplay()
 void SDisplay::init(VNCServer* vs)
 {
   server = vs;
+
+  server->connectSignal(&server->starting, this, &SDisplay::start);
+  server->connectSignal(&server->stopped, this, &SDisplay::stop);
+
+  server->connectSignal(&server->key, this, &SDisplay::keyEvent);
+  server->connectSignal(&server->pointer, this,
+                        &SDisplay::pointerEvent);
+
+  server->connectSignal(&server->clipboardrequest, this,
+                        &SDisplay::handleClipboardRequest);
+  server->connectSignal(&server->clipboardannounce, this,
+                        &SDisplay::handleClipboardAnnounce);
+  server->connectSignal(&server->clipboarddata, this,
+                        &SDisplay::handleClipboardData);
 }
 
 void SDisplay::start()
@@ -116,17 +130,6 @@ void SDisplay::start()
 
   // Start the SDisplay core
   startCore();
-
-  server->connectSignal(&server->key, this, &SDisplay::keyEvent);
-  server->connectSignal(&server->pointer, this,
-                        &SDisplay::pointerEvent);
-
-  server->connectSignal(&server->clipboardrequest, this,
-                        &SDisplay::handleClipboardRequest);
-  server->connectSignal(&server->clipboardannounce, this,
-                        &SDisplay::handleClipboardAnnounce);
-  server->connectSignal(&server->clipboarddata, this,
-                        &SDisplay::handleClipboardData);
 
   vlog.debug("Started");
 
@@ -156,7 +159,6 @@ void SDisplay::stop()
 
   // Stop the SDisplayCore
   server->setPixelBuffer(nullptr);
-  server->disconnectSignals(this);
   stopCore();
 
   vlog.debug("Stopped");
