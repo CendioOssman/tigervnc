@@ -134,7 +134,9 @@ begin_daemon(void)
 static void
 finish_daemon(void)
 {
-    write(daemon_pipe_fd, "+", 1);
+    if (write(daemon_pipe_fd, "+", 1) < 0) {
+        /* Can't really do much about this */
+    }
     close(daemon_pipe_fd);
     daemon_pipe_fd = -1;
 }
@@ -520,8 +522,10 @@ run_script(const char *username, const char *display, char **envp)
 
     switch_user(pwent->pw_name, pwent->pw_uid, pwent->pw_gid);
 
-    if (chdir(pwent->pw_dir) == -1)
-        chdir("/");
+    if (chdir(pwent->pw_dir) == -1) {
+        if (chdir("/") == -1)
+            syslog(LOG_CRIT, "chdir: %s", strerror(errno));
+    }
 
     close_fds();
 

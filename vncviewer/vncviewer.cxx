@@ -591,7 +591,8 @@ createTunnel(const char *gatewayHost, const char *remoteHost,
   cmd2 = strdup(cmd);
   while ((percent = strchr(cmd2, '%')) != nullptr)
     *percent = '$';
-  system(cmd2);
+  if (system(cmd2) == -1)
+    vlog.error("Failed to execute tunnel command: %s", strerror(errno));
   free(cmd2);
 }
 
