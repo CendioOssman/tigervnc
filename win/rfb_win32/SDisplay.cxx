@@ -40,6 +40,7 @@
 #include <rfb/SConnection.h>
 #include <rfb/VNCServer.h>
 #include <rfb/ledStates.h>
+#include <rfb/screenTypes.h>
 
 
 using namespace core;
@@ -179,6 +180,14 @@ void SDisplay::queryConnection(network::Socket* sock,
   }
 
   server->approveConnection(sock, true);
+}
+
+
+void SDisplay::setScreenLayout(int /*fb_width*/, int /*fb_height*/,
+                               const ScreenSet& /*layout*/)
+{
+  assert(server != nullptr);
+  server->rejectScreenLayout(rfb::resultProhibited);
 }
 
 
