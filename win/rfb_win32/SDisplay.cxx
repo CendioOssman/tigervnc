@@ -120,6 +120,9 @@ void SDisplay::init(VNCServer* vs)
                         &SDisplay::handleClipboardAnnounce);
   server->connectSignal("clipboarddata", this,
                         &SDisplay::handleClipboardData);
+
+  server->connectSignal("layoutrequest", this,
+                        &SDisplay::layoutRequest);
 }
 
 void SDisplay::start()
@@ -183,8 +186,7 @@ void SDisplay::queryConnection(network::Socket* sock,
 }
 
 
-void SDisplay::setScreenLayout(int /*fb_width*/, int /*fb_height*/,
-                               const ScreenSet& /*layout*/)
+void SDisplay::layoutRequest(LayoutEvent)
 {
   assert(server != nullptr);
   server->rejectScreenLayout(rfb::resultProhibited);
