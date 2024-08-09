@@ -723,6 +723,10 @@ void XDesktop::setScreenLayout(int fb_width, int fb_height,
                                const rfb::ScreenSet& layout)
 {
 #ifdef HAVE_XRANDR
+  unsigned int ret;
+  unsigned int adjustedWidth, adjustedHeight;
+  rfb::ScreenSet adjustedLayout;
+
   XRRScreenResources *res = XRRGetScreenResources(dpy, DefaultRootWindow(dpy));
   if (!res) {
     vlog.error("XRRGetScreenResources failed");
@@ -737,9 +741,10 @@ void XDesktop::setScreenLayout(int fb_width, int fb_height,
      cases, we first call tryScreenLayout. If this fails, we try to
      adjust the request to one screen with a smaller mode. */
   vlog.debug("Testing screen layout");
-  unsigned int tryresult = ::tryScreenLayout(fb_width, fb_height, layout, &outputIdMap);
-  rfb::ScreenSet adjustedLayout;
-  if (tryresult == rfb::resultSuccess) {
+  ret = ::tryScreenLayout(fb_width, fb_height, layout, &outputIdMap);
+  if (ret == rfb::resultSuccess) {
+    adjustedWidth = fb_width;
+    adjustedHeight = fb_height;
     adjustedLayout = layout;
   } else {
     vlog.debug("Impossible layout - trying to adjust");
@@ -829,8 +834,8 @@ void XDesktop::setScreenLayout(int fb_width, int fb_height,
     if (sheight != 0 && swidth != 0) {
       vlog.debug("Adjusted resize request to %dx%d", swidth, sheight);
       iter->dimensions.setXYWH(0, 0, swidth, sheight);
-      fb_width = swidth;
-      fb_height = sheight;
+      adjustedWidth = swidth;
+      adjustedHeight = sheight;
     } else {
       vlog.error("Failed to find smaller or equal screen size");
       XRRFreeScreenResources(res);
@@ -840,7 +845,8 @@ void XDesktop::setScreenLayout(int fb_width, int fb_height,
   }
 
   vlog.debug("Changing screen layout");
-  unsigned int ret = ::setScreenLayout(fb_width, fb_height, adjustedLayout, &outputIdMap);
+  ret = ::setScreenLayout(adjustedWidth, adjustedHeight,
+                          adjustedLayout, &outputIdMap);
   XRRFreeScreenResources(res);
 
   /* Send a dummy event to the root window. When this event is seen,
