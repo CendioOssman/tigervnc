@@ -71,6 +71,8 @@ SConnection::SConnection(AccessRights accessRights_)
   registerSignal<bool>("clipboardannounce");
   registerSignal<const char*>("clipboarddata");
 
+  registerSignal<LayoutEvent>("layoutrequest");
+
   defaultMajorVersion = 3;
   defaultMinorVersion = 8;
   if (rfb::Server::protocol3_3)
@@ -540,6 +542,25 @@ void SConnection::handleClipboardProvide(uint32_t flags,
 
   // FIXME: Should probably verify that this data was actually requested
   emitSignal("clipboarddata", clientClipboard.c_str());
+}
+
+void SConnection::setDesktopSize(int fb_width, int fb_height,
+                                const ScreenSet& layout)
+{
+  char buffer[2048];
+
+  vlog.debug("Got request for framebuffer resize to %dx%d",
+             fb_width, fb_height);
+  layout.print(buffer, sizeof(buffer));
+  vlog.debug("%s", buffer);
+
+  if (!accessCheck(AccessSetDesktopSize)) {
+    vlog.debug("Rejecting unauthorized framebuffer resize request");
+    writer()->writeDesktopSize(reasonClient, resultProhibited);
+  } else {
+    emitSignal("layoutrequest",
+               LayoutEvent({fb_width, fb_height, layout}));
+  }
 }
 
 void SConnection::supportsLocalCursor()
