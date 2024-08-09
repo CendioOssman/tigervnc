@@ -92,6 +92,16 @@ namespace rfb {
     // the pixelbuffer. Clients will be notified of the new layout.
     virtual void setScreenLayout(const ScreenSet& layout) = 0;
 
+    // acceptScreenLayout() accepts a request by a client to change the
+    // screen layout and informs both the requesting client, and any
+    // other connected clients.
+    virtual void acceptScreenLayout(int fb_width, int fb_height,
+                                    const ScreenSet& layout) = 0;
+
+    // rejectScreenLayout() rejects a request by a client to change the
+    // screen layout.
+    virtual void rejectScreenLayout(unsigned int reason) = 0;
+
     // getPixelBuffer() returns a pointer to the PixelBuffer object.
     virtual const PixelBuffer* getPixelBuffer() const = 0;
 
