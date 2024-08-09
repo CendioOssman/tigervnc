@@ -88,6 +88,9 @@ XserverDesktop::XserverDesktop(int screenIndex_,
 
   server = new rfb::VNCServerST(name, this);
 
+  server->connectSignal("terminate", this,
+                        []() { kill(getpid(), SIGTERM); });
+
   server->connectSignal("keydown", this, &XserverDesktop::keyEvent);
   server->connectSignal("keyup", this, &XserverDesktop::keyEvent);
   server->connectSignal("pointer", this, &XserverDesktop::pointerEvent);
@@ -480,11 +483,6 @@ void XserverDesktop::approveConnection(uint32_t opaqueId, bool accept,
 //
 // SDesktop callbacks
 
-
-void XserverDesktop::terminate()
-{
-  kill(getpid(), SIGTERM);
-}
 
 void XserverDesktop::pointerEvent(rfb::PointerEvent event)
 {
