@@ -61,7 +61,6 @@ public:
   void poll();
   // -=- SDesktop interface
   void init(rfb::VNCServer* vs) override;
-  void terminate() override;
   bool isRunning();
   void queryConnection(network::Socket* sock,
                        const char* userName) override;
