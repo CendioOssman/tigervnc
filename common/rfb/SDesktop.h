@@ -63,11 +63,8 @@ namespace rfb {
 
     // setScreenLayout() requests to reconfigure the framebuffer and/or
     // the layout of screens.
-    virtual unsigned int setScreenLayout(int /*fb_width*/,
-                                         int /*fb_height*/,
-                                         const ScreenSet& /*layout*/) {
-      return resultProhibited;
-    }
+    virtual void setScreenLayout(int fb_width, int fb_height,
+                                 const ScreenSet& layout) = 0;
 
   protected:
     virtual ~SDesktop() {}

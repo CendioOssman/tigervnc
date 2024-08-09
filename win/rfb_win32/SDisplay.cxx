@@ -180,6 +180,14 @@ void SDisplay::queryConnection(network::Socket* sock,
 }
 
 
+void SDisplay::setScreenLayout(int /*fb_width*/, int /*fb_height*/,
+                               const ScreenSet& /*layout*/)
+{
+  assert(server != nullptr);
+  server->rejectScreenLayout(rfb::resultProhibited);
+}
+
+
 void SDisplay::startCore() {
 
   // Currently, we just check whether we're in the console session, and
