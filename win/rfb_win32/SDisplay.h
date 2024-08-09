@@ -42,6 +42,7 @@
 namespace rfb {
 
   struct KeyEvent;
+  struct LayoutEvent;
   struct PointerEvent;
 
   namespace win32 {
@@ -79,8 +80,6 @@ namespace rfb {
       void init(VNCServer* vs) override;
       void queryConnection(network::Socket* sock,
                            const char* userName) override;
-      void setScreenLayout(int fb_width, int fb_height,
-                           const ScreenSet& layout) override;
 
       // -=- Clipboard events
       
@@ -136,6 +135,8 @@ namespace rfb {
                                    bool available);
       void handleClipboardData(VNCServer*, const char*,
                                const char* data);
+
+      void layoutRequest(VNCServer*, const char*, LayoutEvent);
 
       VNCServer* server;
 

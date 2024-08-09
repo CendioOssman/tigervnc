@@ -43,6 +43,7 @@
 
 namespace rfb {
   struct KeyEvent;
+  struct LayoutEvent;
   struct PointerEvent;
   class VNCServerST;
 }
@@ -99,8 +100,6 @@ public:
   void init(rfb::VNCServer* vs) override;
   void queryConnection(network::Socket* sock,
                        const char* userName) override;
-  void setScreenLayout(int fb_width, int fb_height,
-                       const rfb::ScreenSet& layout) override;
 
   // rfb::PixelBuffer callbacks
   void grabRegion(const core::Region& r) override;
@@ -116,6 +115,9 @@ protected:
                                bool available);
   void handleClipboardData(rfb::VNCServerST*, const char*,
                            const char* data);
+
+  void layoutRequest(rfb::VNCServerST*, const char*,
+                     rfb::LayoutEvent event) ;
 
   void frameTick(rfb::VNCServerST*, const char*);
 

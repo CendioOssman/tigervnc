@@ -99,6 +99,9 @@ XserverDesktop::XserverDesktop(int screenIndex_,
   server->connectSignal("clipboarddata", this,
                         &XserverDesktop::handleClipboardData);
 
+  server->connectSignal("layoutrequest", this,
+                        &XserverDesktop::layoutRequest);
+
   setFramebuffer(width, height, fbptr, stride_);
 
   queryConnectTimer.connectSignal("timer", this,
@@ -485,20 +488,22 @@ void XserverDesktop::pointerEvent(rfb::VNCServerST*, const char*,
   vncPointerButtonAction(event.buttonMask);
 }
 
-void XserverDesktop::setScreenLayout(int fb_width, int fb_height,
-                                     const rfb::ScreenSet& layout)
+void XserverDesktop::layoutRequest(rfb::VNCServerST*, const char*,
+                                   rfb::LayoutEvent event)
 {
   unsigned int result;
 
   vncSetGlueContext(screenIndex);
-  result = ::setScreenLayout(fb_width, fb_height, layout, &outputIdMap);
+  result = ::setScreenLayout(event.width, event.height,
+                             event.layout, &outputIdMap);
 
   // Explicitly update the server state with the result as there
   // can be corner cases where we don't get feedback from the X core
   refreshScreenLayout();
 
   if (result == rfb::resultSuccess)
-    server->acceptScreenLayout(fb_width, fb_height, layout);
+    server->acceptScreenLayout(event.width, event.height,
+                               event.layout);
   else
     server->rejectScreenLayout(result);
 }
