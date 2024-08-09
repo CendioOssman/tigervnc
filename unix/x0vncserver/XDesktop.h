@@ -64,8 +64,8 @@ public:
   bool isRunning();
   void queryConnection(network::Socket* sock,
                        const char* userName) override;
-  unsigned int setScreenLayout(int fb_width, int fb_height,
-                               const rfb::ScreenSet& layout) override;
+  void setScreenLayout(int fb_width, int fb_height,
+                       const rfb::ScreenSet& layout) override;
 
   // -=- TXGlobalEventHandler interface
   bool handleGlobalEvent(XEvent* ev) override;
