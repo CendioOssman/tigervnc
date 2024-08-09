@@ -61,6 +61,9 @@ void PortalDesktop::init(rfb::VNCServer* vs)
   server->connectSignal("starting", this, &PortalDesktop::start);
   server->connectSignal("stopped", this, &PortalDesktop::stop);
 
+  server->connectSignal("terminate", this,
+                        []() { kill(getpid(), SIGTERM); });
+
   server->connectSignal("keydown", this, &PortalDesktop::keyEvent);
   server->connectSignal("keyup", this, &PortalDesktop::keyEvent);
   server->connectSignal("pointer", this, &PortalDesktop::pointerEvent);
@@ -107,11 +110,6 @@ void PortalDesktop::queryConnection(network::Socket* sock,
   // FIXME: Implement this.
   server->approveConnection(sock, false,
                             "Unable to query the local user to accept the connection.");
-}
-
-void PortalDesktop::terminate()
-{
-  kill(getpid(), SIGTERM);
 }
 
 unsigned int PortalDesktop::setScreenLayout(int /* fb_width */,

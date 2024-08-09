@@ -97,7 +97,6 @@ public:
 
   // rfb::SDesktop callbacks
   void init(rfb::VNCServer* vs) override;
-  void terminate() override;
   void queryConnection(network::Socket* sock,
                        const char* userName) override;
   unsigned int setScreenLayout(int fb_width, int fb_height,

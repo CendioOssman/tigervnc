@@ -50,7 +50,6 @@ public:
   void init(rfb::VNCServer* vs) override;
   void queryConnection(network::Socket* sock,
                         const char* userName) override;
-  void terminate() override;
 
   // Check if necessary wayland protocols are available
   static bool available();
