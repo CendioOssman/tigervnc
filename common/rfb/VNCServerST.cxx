@@ -795,19 +795,19 @@ void VNCServerST::frameTimeout()
 void VNCServerST::idleTimeout()
 {
   slog.info("MaxIdleTime reached, exiting");
-  desktop->terminate();
+  emitSignal(&terminate);
 }
 
 void VNCServerST::disconnectTimeout()
 {
   slog.info("MaxDisconnectionTime reached, exiting");
-  desktop->terminate();
+  emitSignal(&terminate);
 }
 
 void VNCServerST::connectTimeout()
 {
   slog.info("MaxConnectionTime reached, exiting");
-  desktop->terminate();
+  emitSignal(&terminate);
 }
 
 void VNCServerST::queryConnection(VNCSConnectionST* client,

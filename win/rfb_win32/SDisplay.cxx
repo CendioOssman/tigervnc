@@ -108,6 +108,9 @@ void SDisplay::init(VNCServer* vs)
   server->connectSignal(&server->starting, this, &SDisplay::start);
   server->connectSignal(&server->stopped, this, &SDisplay::stop);
 
+  server->connectSignal(&server->terminate, this,
+                        [this]() { SetEvent(terminateEvent); });
+
   server->connectSignal(&server->key, this, &SDisplay::keyEvent);
   server->connectSignal(&server->pointer, this,
                         &SDisplay::pointerEvent);
@@ -164,11 +167,6 @@ void SDisplay::stop()
   vlog.debug("Stopped");
 
   if (statusLocation) *statusLocation = false;
-}
-
-void SDisplay::terminate()
-{
-  SetEvent(terminateEvent);
 }
 
 

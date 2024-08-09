@@ -74,7 +74,6 @@ namespace rfb {
       // -=- SDesktop interface
 
       void init(VNCServer* vs) override;
-      void terminate() override;
       void queryConnection(network::Socket* sock,
                            const char* userName) override;
 

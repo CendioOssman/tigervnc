@@ -166,6 +166,11 @@ namespace rfb {
     // clients, and therefore the desktop can cease any expensive tasks.
     core::signal<> stopped;
 
+    // terminate is emitted by the server when it wishes to terminate
+    // itself, e.g. because it was configured to terminate when no one
+    // is using it.
+    core::signal<> terminate;
+
     // key is emitted whenever the client sends a key press or release
     // message. The KeySym, key code, and a boolean if it is a press,
     // are included.

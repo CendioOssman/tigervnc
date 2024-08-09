@@ -81,6 +81,9 @@ void WaylandDesktop::init(rfb::VNCServer* vs)
   server->connectSignal(&server->stopped, this,
                         &WaylandDesktop::stop);
 
+  server->connectSignal(&server->terminate,
+                        []() { kill(getpid(), SIGTERM); });
+
   server->connectSignal(&server->key, this, &WaylandDesktop::keyEvent);
   server->connectSignal(&server->pointer, this,
                         &WaylandDesktop::pointerEvent);
@@ -151,11 +154,6 @@ void WaylandDesktop::queryConnection(network::Socket* sock,
   // FIXME: Implement this.
   server->approveConnection(sock, false,
                             "Unable to query the local user to accept the connection.");
-}
-
-void WaylandDesktop::terminate()
-{
-  kill(getpid(), SIGTERM);
 }
 
 bool WaylandDesktop::available()
