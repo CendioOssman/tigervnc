@@ -203,6 +203,9 @@ namespace rfb {
     // client received the request. A const char* string is included
     // that contains the actual clipboard contents.
 
+    // "layoutrequest" is emitted whenever the client requests the to
+    // reconfigure the framebuffer and/or the layout of screens.
+
     // "frame" is emitted whenever a frame update has been processed,
     // signalling that a good time to render new data
   };
