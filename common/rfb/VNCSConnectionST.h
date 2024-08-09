@@ -135,8 +135,6 @@ namespace rfb {
                   bool down) override;
     void framebufferUpdateRequest(const core::Rect& r,
                                   bool incremental) override;
-    void setDesktopSize(int fb_width, int fb_height,
-                        const ScreenSet& layout) override;
     void fence(uint32_t flags, unsigned len,
                const uint8_t data[]) override;
     void enableContinuousUpdates(bool enable,

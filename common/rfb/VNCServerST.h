@@ -38,6 +38,7 @@ namespace rfb {
   class VNCSConnectionST;
   class ComparingUpdateTracker;
   struct KeyEvent;
+  struct LayoutEvent;
   class ListConnInfo;
   class PixelBuffer;
   struct PointerEvent;
@@ -121,11 +122,6 @@ namespace rfb {
     const char* getName() const { return name.c_str(); }
     unsigned getLEDState() const { return ledState; }
 
-    // Event handlers
-    void setDesktopSize(VNCSConnectionST* requester,
-                        int fb_width, int fb_height,
-                        const ScreenSet& layout);
-
     // closeClients() closes all RFB sessions, except the specified one (if
     // any), and logs the specified reason for closure.
     void closeClients(const char* reason, network::Socket* sock);
@@ -164,6 +160,10 @@ namespace rfb {
                                  const char*, bool available);
     void handleClipboardData(VNCSConnectionST* client,
                              const char*, const char* data);
+
+    void handleLayoutRequest(VNCSConnectionST* client,
+                             const char* name,
+                             LayoutEvent event);
 
     // Timer callbacks
     void frameTimeout();
