@@ -98,6 +98,8 @@ VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
   registerSignal("start");
   registerSignal("stop");
 
+  registerSignal("terminate");
+
   registerSignal<KeyEvent>("keydown");
   registerSignal<KeyEvent>("keyup");
   registerSignal<PointerEvent>("pointer");
@@ -747,19 +749,19 @@ void VNCServerST::frameTimeout(core::Timer*, const char*)
 void VNCServerST::idleTimeout(core::Timer*, const char*)
 {
   slog.info("MaxIdleTime reached, exiting");
-  desktop->terminate();
+  emitSignal("terminate");
 }
 
 void VNCServerST::disconnectTimeout(core::Timer*, const char*)
 {
   slog.info("MaxDisconnectionTime reached, exiting");
-  desktop->terminate();
+  emitSignal("terminate");
 }
 
 void VNCServerST::connectTimeout(core::Timer*, const char*)
 {
   slog.info("MaxConnectionTime reached, exiting");
-  desktop->terminate();
+  emitSignal("terminate");
 }
 
 void VNCServerST::queryConnection(VNCSConnectionST* client,

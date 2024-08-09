@@ -243,6 +243,9 @@ void XDesktop::init(VNCServer* vs)
   server->connectSignal("start", this, &XDesktop::start);
   server->connectSignal("stop", this, &XDesktop::stop);
 
+  server->connectSignal("terminate", this,
+                        []() { kill(getpid(), SIGTERM); });
+
   server->connectSignal("keydown", this, &XDesktop::keyEvent);
   server->connectSignal("keyup", this, &XDesktop::keyEvent);
   server->connectSignal("pointer", this, &XDesktop::pointerEvent);
@@ -309,10 +312,6 @@ void XDesktop::stop(VNCServer*, const char*) {
 
   delete pb;
   pb = nullptr;
-}
-
-void XDesktop::terminate() {
-  kill(getpid(), SIGTERM);
 }
 
 bool XDesktop::isRunning() {

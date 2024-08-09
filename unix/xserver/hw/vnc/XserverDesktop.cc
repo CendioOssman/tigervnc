@@ -88,6 +88,9 @@ XserverDesktop::XserverDesktop(int screenIndex_,
 
   server = new VNCServerST(name, this);
 
+  server->connectSignal("terminate", this,
+                        []() { kill(getpid(), SIGTERM); });
+
   server->connectSignal("clipboardrequest", this,
                         &XserverDesktop::handleClipboardRequest);
   server->connectSignal("clipboardannounce", this,
@@ -469,11 +472,6 @@ void XserverDesktop::approveConnection(uint32_t opaqueId, bool accept,
 //
 // SDesktop callbacks
 
-
-void XserverDesktop::terminate()
-{
-  kill(getpid(), SIGTERM);
-}
 
 void XserverDesktop::pointerEvent(rfb::VNCServerST*, const char*,
                                   rfb::PointerEvent event)
