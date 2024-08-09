@@ -110,6 +110,8 @@ VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
   registerSignal<bool>("clipboardannounce");
   registerSignal<const char*>("clipboarddata");
 
+  registerSignal<LayoutEvent>("layoutrequest");
+
   registerSignal("frame");
 
   idleTimer.connectSignal("timer", this,
@@ -217,6 +219,9 @@ void VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
                         &VNCServerST::handleClipboardAnnounce);
   client->connectSignal("clipboarddata", this,
                         &VNCServerST::handleClipboardData);
+
+  client->connectSignal("layoutrequest", this,
+                        &VNCServerST::handleLayoutRequest);
 
   client->init();
 }
@@ -639,9 +644,9 @@ void VNCServerST::pointerEvent(VNCSConnectionST* client,
   emitSignal(evname, event);
 }
 
-void VNCServerST::setDesktopSize(VNCSConnectionST* requester,
-                                 int fb_width, int fb_height,
-                                 const ScreenSet& layout)
+void VNCServerST::handleLayoutRequest(VNCSConnectionST* requester,
+                                      const char* evname,
+                                      LayoutEvent event)
 {
   std::list<VNCSConnectionST*>::iterator ci;
 
@@ -653,14 +658,14 @@ void VNCServerST::setDesktopSize(VNCSConnectionST* requester,
 
   // We can't handle a framebuffer larger than this, so don't let a
   // client set one (see PixelBuffer.cxx)
-  if ((fb_width > 16384) || (fb_height > 16384)) {
+  if ((event.width > 16384) || (event.height > 16384)) {
     slog.error("Rejecting too large framebuffer resize request");
     requester->setDesktopSizeFailureOrClose(resultProhibited);
     return;
   }
 
   // Don't bother the desktop with an invalid configuration
-  if (!layout.validate(fb_width, fb_height)) {
+  if (!event.layout.validate(event.width, event.height)) {
     slog.error("Invalid screen layout requested by client");
     requester->setDesktopSizeFailureOrClose(resultInvalid);
     return;
@@ -679,7 +684,7 @@ void VNCServerST::setDesktopSize(VNCSConnectionST* requester,
   // FIXME: the desktop will call back to VNCServerST and an extra set
   // of ExtendedDesktopSize messages will be sent. This is okay
   // protocol-wise, but unnecessary.
-  desktop->setScreenLayout(fb_width, fb_height, layout);
+  emitSignal(evname, event);
 }
 
 // Other public methods

@@ -280,6 +280,9 @@ void XDesktop::init(rfb::VNCServer* vs)
                                        [this](const char* data) {
                                          server->sendClipboardData(data);
                                        });
+
+  server->connectSignal("layoutrequest", this,
+                        &XDesktop::layoutRequest);
 }
 
 void XDesktop::start()
@@ -719,8 +722,7 @@ static void GetSmallerMode(XRRScreenResources *res,
 }
 #endif /* HAVE_XRANDR */
 
-void XDesktop::setScreenLayout(int fb_width, int fb_height,
-                               const rfb::ScreenSet& layout)
+void XDesktop::layoutRequest(rfb::LayoutEvent event)
 {
 #ifdef HAVE_XRANDR
   unsigned int ret;
@@ -741,15 +743,16 @@ void XDesktop::setScreenLayout(int fb_width, int fb_height,
      cases, we first call tryScreenLayout. If this fails, we try to
      adjust the request to one screen with a smaller mode. */
   vlog.debug("Testing screen layout");
-  ret = ::tryScreenLayout(fb_width, fb_height, layout, &outputIdMap);
+  ret = ::tryScreenLayout(event.width, event.height,
+                          event.layout, &outputIdMap);
   if (ret == rfb::resultSuccess) {
-    adjustedWidth = fb_width;
-    adjustedHeight = fb_height;
-    adjustedLayout = layout;
+    adjustedWidth = event.width;
+    adjustedHeight = event.height;
+    adjustedLayout = event.layout;
   } else {
     vlog.debug("Impossible layout - trying to adjust");
 
-    rfb::ScreenSet::const_iterator firstscreen = layout.begin();
+    rfb::ScreenSet::const_iterator firstscreen = event.layout.begin();
     adjustedLayout.add_screen(*firstscreen);
     rfb::ScreenSet::iterator iter = adjustedLayout.begin();
     RROutput outputId = None;
@@ -871,7 +874,7 @@ void XDesktop::setScreenLayout(int fb_width, int fb_height,
      VNCSConnectionST::setDesktopSize. Another ExtendedDesktopSize
      with reason=0 will be sent in response to the changes seen by the
      event handler. */
-  if (adjustedLayout != layout) {
+  if (adjustedLayout != event.layout) {
     server->rejectScreenLayout(rfb::resultInvalid);
     return;
   }
@@ -881,7 +884,7 @@ void XDesktop::setScreenLayout(int fb_width, int fb_height,
   server->setScreenLayout(computeScreenLayout());
 
   if (ret == rfb::resultSuccess)
-    server->acceptScreenLayout(fb_width, fb_height, layout);
+    server->acceptScreenLayout(event.width, event.height, event.layout);
   else
     server->rejectScreenLayout(rfb::resultInvalid);
 
