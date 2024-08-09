@@ -71,6 +71,7 @@
 #include <rfb/VNCServerST.h>
 #include <rfb/VNCSConnectionST.h>
 #include <rfb/ledStates.h>
+#include <rfb/screenTypes.h>
 
 
 using namespace rfb;
@@ -88,7 +89,7 @@ VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
   : blHosts(&blacklist), desktop(desktop_), desktopStarted(false),
     blockCounter(0), pb(nullptr), ledState(ledUnknown),
     name(name_), pointerClient(nullptr), clipboardClient(nullptr),
-    pointerClientTime(0),
+    pointerClientTime(0), layoutClient(nullptr),
     comparer(nullptr), cursor(new Cursor(0, 0, {}, nullptr)),
     renderedCursorInvalid(false),
     keyRemapper(&KeyRemapper::defInstance),
@@ -234,6 +235,8 @@ void VNCServerST::removeSocket(network::Socket* sock) {
       if (clipboardClient == *ci)
         handleClipboardAnnounce(*ci, "", false);
       clipboardRequestors.remove(*ci);
+      if (layoutClient == *ci)
+        layoutClient = nullptr;
 
       std::string peer((*ci)->getPeerEndpoint());
 
@@ -401,6 +404,45 @@ void VNCServerST::setScreenLayout(const ScreenSet& layout)
   std::list<VNCSConnectionST*>::iterator ci;
   for (ci = clients.begin(); ci != clients.end(); ++ci)
     (*ci)->screenLayoutChangeOrClose(reasonServer);
+}
+
+void VNCServerST::acceptScreenLayout(int fb_width, int fb_height,
+                                     const ScreenSet& layout)
+{
+  if (layoutClient == nullptr) {
+    slog.debug("Unexpected or late acception of screen layout");
+    return;
+  }
+
+  // Sanity check
+  if (!pb)
+    throw std::logic_error("acceptScreenLayout: no PixelBuffer");
+  if ((fb_width != pb->width()) || (fb_height != pb->height()))
+    throw std::logic_error("Desktop configured a different screen layout than requested");
+  if (screenLayout != layout)
+    throw std::logic_error("Desktop configured a different screen layout than requested");
+
+  // Notify other clients
+  std::list<VNCSConnectionST*>::iterator ci;
+  for (ci = clients.begin(); ci != clients.end(); ++ci) {
+    if ((*ci) == layoutClient)
+      continue;
+    (*ci)->screenLayoutChangeOrClose(reasonOtherClient);
+  }
+
+  layoutClient->screenLayoutChangeOrClose(reasonClient);
+  layoutClient = nullptr;
+}
+
+void VNCServerST::rejectScreenLayout(unsigned int reason)
+{
+  if (layoutClient == nullptr) {
+    slog.debug("Unexpected or late rejection of screen layout");
+    return;
+  }
+
+  layoutClient->setDesktopSizeFailureOrClose(reason);
+  layoutClient = nullptr;
 }
 
 void VNCServerST::requestClipboard()
@@ -601,7 +643,6 @@ void VNCServerST::setDesktopSize(VNCSConnectionST* requester,
                                  int fb_width, int fb_height,
                                  const ScreenSet& layout)
 {
-  unsigned int result;
   std::list<VNCSConnectionST*>::iterator ci;
 
   if (!rfb::Server::acceptSetDesktopSize) {
@@ -625,27 +666,20 @@ void VNCServerST::setDesktopSize(VNCSConnectionST* requester,
     return;
   }
 
-  // FIXME: the desktop will call back to VNCServerST and an extra set
-  // of ExtendedDesktopSize messages will be sent. This is okay
-  // protocol-wise, but unnecessary.
-  result = desktop->setScreenLayout(fb_width, fb_height, layout);
-  if (result != resultSuccess) {
-    requester->setDesktopSizeFailureOrClose(result);
+  // We don't bother with a queue, so just reject the second client if
+  // we happen to have overlapping requests
+  if (layoutClient != nullptr) {
+    slog.error("Rejecting concurrent screen layout requests");
+    requester->setDesktopSizeFailureOrClose(resultProhibited);
     return;
   }
 
-  // Sanity check
-  if (screenLayout != layout)
-    throw std::runtime_error("Desktop configured a different screen layout than requested");
+  layoutClient = requester;
 
-  // Notify other clients
-  for (ci = clients.begin(); ci != clients.end(); ++ci) {
-    if ((*ci) == requester)
-      continue;
-    (*ci)->screenLayoutChangeOrClose(reasonOtherClient);
-  }
-
-  requester->screenLayoutChangeOrClose(reasonClient);
+  // FIXME: the desktop will call back to VNCServerST and an extra set
+  // of ExtendedDesktopSize messages will be sent. This is okay
+  // protocol-wise, but unnecessary.
+  desktop->setScreenLayout(fb_width, fb_height, layout);
 }
 
 // Other public methods
