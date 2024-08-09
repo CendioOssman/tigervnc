@@ -251,6 +251,9 @@ void XDesktop::init(rfb::VNCServer* vs)
   server->connectSignal("start", this, &XDesktop::start);
   server->connectSignal("stop", this, &XDesktop::stop);
 
+  server->connectSignal("terminate", this,
+                        []() { kill(getpid(), SIGTERM); });
+
   server->connectSignal("keydown", this, &XDesktop::keyEvent);
   server->connectSignal("keyup", this, &XDesktop::keyEvent);
   server->connectSignal("pointer", this, &XDesktop::pointerEvent);
@@ -340,10 +343,6 @@ void XDesktop::stop()
 
   delete pb;
   pb = nullptr;
-}
-
-void XDesktop::terminate() {
-  kill(getpid(), SIGTERM);
 }
 
 bool XDesktop::isRunning() {

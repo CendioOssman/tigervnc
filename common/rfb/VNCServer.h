@@ -160,6 +160,10 @@ namespace rfb {
     // clients, and therefore the desktop can cease any expensive
     // tasks.
 
+    // "terminate" is emitted by the server when it wishes to terminate
+    // itself, e.g. because it was configured to terminate when no one
+    // is using it.
+
     // "keydown" is emitted whenever the client sends a key press
     // message. A KeyEvent structure is included with the KeySym and key
     // code.
