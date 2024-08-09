@@ -61,11 +61,6 @@ namespace rfb {
     virtual void queryConnection(network::Socket* sock,
                                  const char* userName) = 0;
 
-    // setScreenLayout() requests to reconfigure the framebuffer and/or
-    // the layout of screens.
-    virtual void setScreenLayout(int fb_width, int fb_height,
-                                 const ScreenSet& layout) = 0;
-
   protected:
     virtual ~SDesktop() {}
   };
