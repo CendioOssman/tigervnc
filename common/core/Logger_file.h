@@ -21,6 +21,8 @@
 #ifndef __CORE_LOGGER_FILE_H__
 #define __CORE_LOGGER_FILE_H__
 
+#include <mutex>
+
 #include <time.h>
 #include <limits.h>
 

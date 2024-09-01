@@ -28,7 +28,6 @@
 #include <winvnc/STrayIcon.h>
 
 #include <core/LogWriter.h>
-#include <core/Mutex.h>
 
 #include <network/TcpSocket.h>
 
@@ -72,11 +71,6 @@ VNCServerWin32::VNCServerWin32()
     config(&sockMgr), rfbSock(&sockMgr), trayIcon(nullptr),
     queryConnectDialog(nullptr)
 {
-  commandLock = new Mutex;
-  commandSig = new Condition(commandLock);
-
-  runLock = new Mutex;
-
   // Initialise the desktop
   desktop.setStatusLocation(&isDesktopStarted);
   desktop.setQueryConnectionHandler(this);
@@ -102,11 +96,6 @@ VNCServerWin32::~VNCServerWin32() {
     queryConnectDialog->wait();
     delete queryConnectDialog;
   }
-
-  delete runLock;
-
-  delete commandSig;
-  delete commandLock;
 }
 
 
@@ -161,7 +150,7 @@ void VNCServerWin32::regConfigChanged() {
 
 int VNCServerWin32::run() {
   {
-    AutoMutex a(runLock);
+    const std::lock_guard<std::mutex> a(runLock);
     thread_id = GetCurrentThreadId();
     runServer = true;
   }
@@ -207,7 +196,7 @@ int VNCServerWin32::run() {
   }
 
   {
-    AutoMutex a(runLock);
+    const std::lock_guard<std::mutex> a(runLock);
     runServer = false;
     thread_id = (DWORD)-1;
   }
@@ -216,7 +205,7 @@ int VNCServerWin32::run() {
 }
 
 void VNCServerWin32::stop() {
-  AutoMutex a(runLock);
+  const std::lock_guard<std::mutex> a(runLock);
   runServer = false;
   if (thread_id != (DWORD)-1)
     PostThreadMessage(thread_id, WM_QUIT, 0, 0);
@@ -273,17 +262,17 @@ void VNCServerWin32::queryConnectionComplete() {
 
 
 bool VNCServerWin32::queueCommand(Command cmd, const void* data, int len, bool wait) {
-  AutoMutex a(commandLock);
+  std::unique_lock<std::mutex> lock(commandLock);
   while (command != NoCommand)
-    commandSig->wait();
+    commandSig.wait(lock);
   command = cmd;
   commandData = data;
   commandDataLen = len;
   SetEvent(commandEvent);
   if (wait) {
     while (command != NoCommand)
-      commandSig->wait();
-    commandSig->signal();
+      commandSig.wait(lock);
+    commandSig.notify_one();
   }
   return true;
 }
@@ -294,7 +283,7 @@ void VNCServerWin32::processEvent(HANDLE event_) {
   if (event_ == commandEvent.h) {
     // If there is no command queued then return immediately
     {
-      AutoMutex a(commandLock);
+      const std::lock_guard<std::mutex> a(commandLock);
       if (command == NoCommand)
         return;
     }
@@ -335,9 +324,9 @@ void VNCServerWin32::processEvent(HANDLE event_) {
 
     // Clear the command and signal completion
     {
-      AutoMutex a(commandLock);
+      std::unique_lock<std::mutex> lock(commandLock);
       command = NoCommand;
-      commandSig->signal();
+      commandSig.notify_one();
     }
   } else if ((event_ == sessionEvent.h) ||
              (event_ == desktop.getTerminateEvent())) {
