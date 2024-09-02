@@ -47,13 +47,21 @@ static IntParameter timeout("QueryConnectTimeout",
 QueryConnectDialog::QueryConnectDialog(network::Socket* sock_,
                                        const char* userName_,
                                        VNCServerWin32* s)
-: Dialog(GetModuleHandle(nullptr)),
+: Dialog(GetModuleHandle(nullptr)), thread(nullptr),
   sock(sock_), peerIp(sock->getPeerAddress()), userName(userName_),
   approve(false), server(s) {
 }
 
+QueryConnectDialog::~QueryConnectDialog()
+{
+  if (thread != nullptr) {
+    thread->join();
+    delete thread;
+  }
+}
+
 void QueryConnectDialog::startDialog() {
-  start();
+  thread = new std::thread(&QueryConnectDialog::worker, this);
 }
 
 
