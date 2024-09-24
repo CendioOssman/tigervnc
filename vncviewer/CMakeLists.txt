@@ -416,10 +416,10 @@ if(WIN32)
     if(NOT BUILD_STATIC)
     #if(NOT BUILD_STATIC AND (QT_VERSION_MAJOR EQUAL 6 OR (QT_VERSION_MAJOR EQUAL 5 AND QT_VERSION_MINOR GREATER_EQUAL 15)))
         find_program(DEPLOYQT NAMES windeployqt HINTS "${LOCAL_QTBIN_PATH}")
-        add_custom_command(
-            TARGET vncviewer
-            POST_BUILD
-            COMMAND ${DEPLOYQT} ${RELDEB} --dir ${DEPLOY_DIR} --no-translations $<TARGET_FILE:vncviewer>)
+        #add_custom_command(
+        #    TARGET vncviewer
+        #    POST_BUILD
+        #    COMMAND ${DEPLOYQT} ${RELDEB} --dir ${DEPLOY_DIR} --no-translations $<TARGET_FILE:vncviewer>)
     endif()
 
     if(ENABLE_NLS)
