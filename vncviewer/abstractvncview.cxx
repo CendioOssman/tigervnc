@@ -858,8 +858,8 @@ void QAbstractVNCView::getMouseWheelProperties(QWheelEvent* event, int& x, int& 
     wheelMask |= 64;
   }
 
-  x = event->x();
-  y = event->y();
+  x = event->position().x();
+  y = event->position().y();
 }
 
 void QAbstractVNCView::mouseMoveEvent(QMouseEvent* event)
@@ -1004,7 +1004,11 @@ void QAbstractVNCView::resizeEvent(QResizeEvent* event)
   maybeGrabKeyboard();
 }
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 void QAbstractVNCView::enterEvent(QEvent *event)
+#else
+void QAbstractVNCView::enterEvent(QEnterEvent *event)
+#endif
 {
   vlog.debug("QAbstractVNCView::enterEvent");
   maybeGrabPointer();

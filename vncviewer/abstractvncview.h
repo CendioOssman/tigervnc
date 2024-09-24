@@ -96,7 +96,11 @@ protected:
   void focusInEvent(QFocusEvent* event) override;
   void focusOutEvent(QFocusEvent* event) override;
   void resizeEvent(QResizeEvent* event) override;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   void enterEvent(QEvent* event) override;
+#else
+  void enterEvent(QEnterEvent* event) override;
+#endif
   void leaveEvent(QEvent* event) override;
   bool event(QEvent* event) override;
 

@@ -25,7 +25,7 @@ AuthDialog::AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidg
 #endif
 
   QVBoxLayout* layout = new QVBoxLayout;
-  layout->setMargin(0);
+  layout->setContentsMargins(0, 0, 0, 0);
 
   QLabel* securedLabel = new QLabel;
   securedLabel->setAlignment(Qt::AlignCenter);
@@ -39,7 +39,7 @@ AuthDialog::AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidg
   layout->addWidget(securedLabel, 1);
 
   QFormLayout* formLayout = new QFormLayout;
-  formLayout->setMargin(5);
+  formLayout->setContentsMargins(5, 5, 5, 5);
   if (userNeeded) {
     userText = new QLineEdit;
     userText->setFocus();
@@ -54,7 +54,7 @@ AuthDialog::AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidg
   layout->addLayout(formLayout);
 
   QHBoxLayout* btnsLayout = new QHBoxLayout;
-  btnsLayout->setMargin(5);
+  btnsLayout->setContentsMargins(5, 5, 5, 5);
   btnsLayout->addStretch(1);
   QPushButton* cancelBtn = new QPushButton(_("Cancel"));
   btnsLayout->addWidget(cancelBtn, 0, Qt::AlignRight);
