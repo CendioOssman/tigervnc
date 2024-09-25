@@ -68,26 +68,37 @@ namespace rfb {
 
     // Get pixel data for a given part of the buffer
     //   Data is copied into the supplied buffer, with the specified
-add_executable(vncviewer
-  fltk/Fl_Monitor_Arrangement.cxx
-  fltk/Fl_Navigation.cxx
-  fltk/theme.cxx
-  menukey.cxx
-  BaseTouchHandler.cxx
-  CConn.cxx
-  DesktopWindow.cxx
-  EmulateMB.cxx
-  UserDialog.cxx
-  ServerDialog.cxx
-  Surface.cxx
-  OptionsDialog.cxx
-  PlatformPixelBuffer.cxx
-  Viewport.cxx
-  parameters.cxx
-  keysym2ucs.c
-  touch.cxx
-  MonitorIndicesParameter.cxx
-  vncviewer.cxx)
+    //   stride. Try to avoid using this though as getBuffer() will in
+    //   most cases avoid the extra memory copy.
+    void getImage(void* imageBuf, const Rect& r, int stride=0) const;
+    // Get pixel data in a given format
+    //   Works just the same as getImage(), but guaranteed to be in a
+    //   specific format.
+    void getImage(const PixelFormat& pf, void* imageBuf,
+                  const Rect& r, int stride=0) const;
+
+    ///////////////////////////////////////////////
+    // Framebuffer update methods
+    //
+
+    // Ensure that the specified rectangle of buffer is up to date.
+    //   Overridden by derived classes implementing framebuffer access
+    //   to copy the required display data into place.
+    virtual void grabRegion(const Region& /*region*/) {}
+
+  protected:
+    PixelBuffer();
+    virtual void setSize(int width, int height);
+
+  protected:
+    PixelFormat format;
+
+  private:
+    int width_, height_;
+  };
+
+  // ModifiablePixelBuffer
+  class ModifiablePixelBuffer : public PixelBuffer {
   public:
     ModifiablePixelBuffer(const PixelFormat& pf, int width, int height);
     virtual ~ModifiablePixelBuffer();
