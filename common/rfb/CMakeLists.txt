@@ -1,127 +1,64 @@
 add_library(rfb STATIC
   AccessRights.cxx
   Blacklist.cxx
-  Blacklist.h
-  CConnection.cxx
-  CConnection.h
-  CMsgHandler.cxx
-  CMsgHandler.h
-  CMsgReader.cxx
-  CMsgReader.h
-  CMsgWriter.cxx
-  CMsgWriter.h
-  CSecurity.h
-  CSecurityNone.h
-  CSecurityPlain.cxx
-  CSecurityPlain.h
-  CSecurityStack.cxx
-  CSecurityStack.h
-  CSecurityVeNCrypt.cxx
-  CSecurityVeNCrypt.h
-  CSecurityVncAuth.cxx
-  CSecurityVncAuth.h
-  ClientParams.cxx
-  ClientParams.h
-  ComparingUpdateTracker.cxx
-  ComparingUpdateTracker.h
-  Configuration.cxx
-  Configuration.h
   Congestion.cxx
-  Congestion.h
+  CConnection.cxx
+  CMsgHandler.cxx
+  CMsgReader.cxx
+  CMsgWriter.cxx
+  CSecurityPlain.cxx
+  CSecurityStack.cxx
+  CSecurityVeNCrypt.cxx
+  CSecurityVncAuth.cxx
+  ClientParams.cxx
+  ComparingUpdateTracker.cxx
+  Configuration.cxx
   CopyRectDecoder.cxx
-  CopyRectDecoder.h
   Cursor.cxx
-  Cursor.h
   DecodeManager.cxx
-  DecodeManager.h
   Decoder.cxx
-  Decoder.h
+  d3des.c
   EncodeManager.cxx
-  EncodeManager.h
   Encoder.cxx
-  Encoder.h
-  Exception.h
-  H264Decoder.h
-  H264DecoderContext.h
-  H264LibavDecoderContext.h
-  H264WinDecoderContext.h
   HextileDecoder.cxx
-  HextileDecoder.h
   HextileEncoder.cxx
-  HextileEncoder.h
-  Hostname.h
-  InputHandler.h
   JpegCompressor.cxx
-  JpegCompressor.h
   JpegDecompressor.cxx
-  JpegDecompressor.h
   KeyRemapper.cxx
   KeysymStr.c
   LogWriter.cxx
-  LogWriter.h
   Logger.cxx
-  Logger.h
   Logger_file.cxx
-  Logger_file.h
   Logger_stdio.cxx
   PixelBuffer.cxx
-  PixelBuffer.h
   PixelFormat.cxx
-  PixelFormat.h
-  RREDecoder.cxx
-  RREDecoder.h
   RREEncoder.cxx
-  RREEncoder.h
+  RREDecoder.cxx
   RawDecoder.cxx
-  RawDecoder.h
   RawEncoder.cxx
-  RawEncoder.h
-  Rect.h
   Region.cxx
-  Region.h
   SConnection.cxx
-  SConnection.h
-  SDesktop.h
   SMsgHandler.cxx
-  SMsgHandler.h
   SMsgReader.cxx
-  SMsgReader.h
   SMsgWriter.cxx
-  SMsgWriter.h
-  SSecurity.h
-  SSecurityNone.h
+  ServerCore.cxx
+  ServerParams.cxx
+  Security.cxx
+  SecurityServer.cxx
+  SecurityClient.cxx
   SSecurityPlain.cxx
-  SSecurityPlain.h
   SSecurityStack.cxx
-  SSecurityStack.h
+  SSecurityVncAuth.cxx
   SSecurityVeNCrypt.cxx
   Timer.cxx
   TightDecoder.cxx
-  TightDecoder.h
   TightEncoder.cxx
-  TightEncoder.h
   TightJPEGEncoder.cxx
-  TightJPEGEncoder.h
-  Timer.cxx
-  Timer.h
   UpdateTracker.cxx
-  UpdateTracker.h
-  UserMsgBox.h
-  UserPasswdGetter.h
   VNCSConnectionST.cxx
-  VNCSConnectionST.h
-  VNCServer.h
   VNCServerST.cxx
-  VNCServerST.h
-  WinPasswdValidator.h
-  XF86keysym.h
-  ZRLEDecoder.cxx
-  ZRLEDecoder.h
   ZRLEEncoder.cxx
-  ZRLEEncoder.h
-  clipboardTypes.h
-  d3des.c
-  d3des.h
+  ZRLEDecoder.cxx
   encodings.cxx
   obfuscate.cxx
   util.cxx)
@@ -146,7 +83,7 @@ if(ENABLE_H264 AND NOT H264_LIBS STREQUAL "NONE")
 endif()
 
 if(UNIX)
-  target_sources(rfb PRIVATE Logger_syslog.cxx Logger_syslog.h)
+  target_sources(rfb PRIVATE Logger_syslog.cxx)
 endif()
 
 if(WIN32)
@@ -155,7 +92,7 @@ if(WIN32)
 endif(WIN32)
 
 if(UNIX AND NOT APPLE)
-  target_sources(rfb PRIVATE UnixPasswordValidator.cxx UnixPasswordValidator.h pam.c pam.h)
+  target_sources(rfb PRIVATE UnixPasswordValidator.cxx pam.c)
   target_link_libraries(rfb ${PAM_LIBS})
 endif()
 

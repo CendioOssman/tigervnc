@@ -1,41 +1,20 @@
 add_library(rdr STATIC
   AESInStream.cxx
-  AESInStream.h
   AESOutStream.cxx
-  AESOutStream.h
   BufferedInStream.cxx
-  BufferedInStream.h
   BufferedOutStream.cxx
-  BufferedOutStream.h
   Exception.cxx
-  Exception.h
   FdInStream.cxx
-  FdInStream.h
   FdOutStream.cxx
-  FdOutStream.h
   FileInStream.cxx
-  FileInStream.h
   HexInStream.cxx
-  HexInStream.h
   HexOutStream.cxx
-  HexOutStream.h
-  InStream.h
-  MemInStream.h
-  MemOutStream.h
-  OutStream.h
   RandomStream.cxx
-  RandomStream.h
   TLSException.cxx
-  TLSException.h
   TLSInStream.cxx
-  TLSInStream.h
   TLSOutStream.cxx
-  TLSOutStream.h
   ZlibInStream.cxx
-  ZlibInStream.h
-  ZlibOutStream.cxx
-  ZlibOutStream.h
-  )
+  ZlibOutStream.cxx)
 
 target_include_directories(rdr PUBLIC ${CMAKE_SOURCE_DIR}/common)
 target_include_directories(rdr SYSTEM PUBLIC ${ZLIB_INCLUDE_DIRS})
