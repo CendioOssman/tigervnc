@@ -82,14 +82,7 @@ CConn::CConn(QVNCConnection *cfacade)
   supportsLEDState = true;
   
   initialiseProtocol();
-  if (!CSecurity::upg) {
-    CSecurity::upg = new VNCCredential;
-  }
-#if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
-  if (!CSecurity::msg) {
-    CSecurity::msg = new VNCCredential;
-  }
-#endif
+  credential = new VNCCredential;
   if (::customCompressLevel) {
     setCompressLevel(::compressLevel);
   }
@@ -397,6 +390,17 @@ void CConn::handleClipboardData(const char* data)
   emit facade->clipboardDataReceived(data);
 }
 
+void CConn::getUserPasswd(bool secure, std::string* user,
+                          std::string* password)
+{
+  credential->getUserPasswd(secure, user, password);
+}
+
+bool CConn::showMsgBox(rfb::MsgBoxFlags flags, const char *title,
+                       const char *text)
+{
+  return credential->showMsgBox(flags, title, text);
+}
 
 ////////////////////// Internal methods //////////////////////
 

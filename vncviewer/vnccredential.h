@@ -2,10 +2,8 @@
 #define _VNCCREDENTIAL_H
 
 #include <QObject>
-#include "rfb/UserPasswdGetter.h"
-#include "rfb/UserMsgBox.h"
 
-class VNCCredential : public QObject, public rfb::UserPasswdGetter, public rfb::UserMsgBox
+class VNCCredential : public QObject
 {
   Q_OBJECT
 
@@ -15,11 +13,11 @@ public:
 
   // UserPasswdGetter callbacks
 
-  void getUserPasswd(bool secure, std::string *user, std::string *password) override;
+  void getUserPasswd(bool secure, std::string *user, std::string *password);
 
   // UserMsgBox callbacks
 
-  bool showMsgBox(int flags, const char* title, const char* text) override;
+  bool showMsgBox(int flags, const char* title, const char* text);
 };
 
 #endif // _VNCCREDENTIAL_H

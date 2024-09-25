@@ -30,6 +30,7 @@
 
 class QCursor;
 class QVNCConnection;
+class VNCCredential;
 
 namespace rfb
 {
@@ -80,6 +81,11 @@ public:
   void handleClipboardAnnounce(bool available) override;
   void handleClipboardData(const char* data) override;
 
+  void getUserPasswd(bool secure, std::string* user,
+                     std::string* password) override;
+  bool showMsgBox(rfb::MsgBoxFlags flags, const char *title,
+                  const char *text) override;
+
   void resizeFramebuffer() override;
 
   void setPixelFormat(const rfb::PixelFormat&) override {}
@@ -106,6 +112,7 @@ private:
 
   QVNCConnection* facade;
   QCursor* cursor;
+  VNCCredential* credential;
 
   unsigned updateCount;
   unsigned pixelCount;
