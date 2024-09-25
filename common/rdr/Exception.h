@@ -26,7 +26,6 @@ namespace rdr {
   struct Exception {
     enum { len = 256 };
     char str_[len];
-    bool abort{false};
     Exception(const char *format=nullptr, ...)
       __attribute__((__format__ (__printf__, 2, 3)));
     virtual ~Exception() {}

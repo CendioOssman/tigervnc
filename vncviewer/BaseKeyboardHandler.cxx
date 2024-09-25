@@ -79,7 +79,6 @@ bool BaseKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuS
       emit cc->writeKeyEvent(keySym, keyCode, true);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    e.abort = true;
     throw;
   }
 
@@ -117,7 +116,6 @@ bool BaseKeyboardHandler::handleKeyRelease(int keyCode)
       emit cc->writeKeyEvent(iter->second, keyCode, false);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    e.abort = true;
     throw;
   }
 
