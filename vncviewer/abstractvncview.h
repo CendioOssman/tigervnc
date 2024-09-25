@@ -85,7 +85,7 @@ protected:
   void updateWindow();
   void paintEvent(QPaintEvent* event) override;
 #ifdef QT_DEBUG
-  bool handleTimeout(rfb::Timer* t) override;
+  void handleTimeout(rfb::Timer* t) override;
 #endif
   void getMouseProperties(QMouseEvent* event, int& x, int& y, int& buttonMask);
   void getMouseWheelProperties(QWheelEvent* event, int& x, int& y, int& buttonMask, int& wheelMask);

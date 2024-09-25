@@ -354,7 +354,7 @@ void CConn::setCursorPos(const Point &pos)
   emit facade->cursorPositionChanged(pos.x, pos.y);
 }
 
-void CConn::fence(uint32_t flags, unsigned len, const char data[])
+void CConn::fence(uint32_t flags, unsigned len, const uint8_t data[])
 {
   CMsgHandler::fence(flags, len, data);
 

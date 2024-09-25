@@ -74,6 +74,7 @@ std::set<int> MonitorIndicesParameter::getParam()
 
 bool MonitorIndicesParameter::setParam(const char* v)
 {
+    int index;
     std::set<int> indices;
 
     if (!v)

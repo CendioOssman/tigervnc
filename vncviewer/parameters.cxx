@@ -41,12 +41,14 @@
 #endif
 
 #include "menukey.h"
+#include "os/os.h"
 #include "rfb/Configuration.h"
 #include "rfb/LogWriter.h"
 #include "rfb/Logger_stdio.h"
 #include "rfb/Security.h"
 #include "rfb/SecurityClient.h"
 #include "rfb/encodings.h"
+#include "rfb/util.h"
 #include "vncconnection.h"
 #ifdef HAVE_GNUTLS
 #include "rfb/CSecurityTLS.h"
@@ -63,11 +65,6 @@ using namespace rfb;
 using namespace std;
 
 static LogWriter vlog("Parameters");
-
-namespace os
-{
-extern const char* getvnchomedir();
-}
 
 IntParameter pointerEventInterval("PointerEventInterval",
                                   "Time in milliseconds to rate-limit"
@@ -521,13 +518,12 @@ static void saveToReg(const char* servername)
 void loadHistoryFromRegKey(std::vector<std::string>& serverHistory)
 {
   HKEY hKey;
-  list<string> serverHistory;
 
   LONG res = RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\TigerVNC\\vncviewer\\history", 0, KEY_READ, &hKey);
   if (res != ERROR_SUCCESS) {
     if (res == ERROR_FILE_NOT_FOUND) {
       // The key does not exist, defaults will be used.
-      return serverHistory;
+      return;
     }
 
     throw rdr::SystemException(_("Failed to open registry key"), res);
@@ -556,8 +552,6 @@ void loadHistoryFromRegKey(std::vector<std::string>& serverHistory)
   res = RegCloseKey(hKey);
   if (res != ERROR_SUCCESS)
     throw rdr::SystemException(_("Failed to close registry key"), res);
-
-  return serverHistory;
 }
 
 static void getParametersFromReg(VoidParameter* parameters[], size_t parameters_len, HKEY* hKey)

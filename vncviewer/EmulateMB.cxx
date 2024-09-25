@@ -285,17 +285,17 @@ void EmulateMB::sendPointerEvent(const rfb::Point &pos, int buttonMask)
   emit AppManager::instance()->getConnection()->writePointerEvent(pos, buttonMask);
 }
 
-bool EmulateMB::handleTimeout(rfb::Timer *t)
+void EmulateMB::handleTimeout(rfb::Timer *t)
 {
   if (::viewOnly) {
-    return false;
+    return;
   }
 
   int action1, action2;
   int buttonMask;
 
   if (&timer != t)
-    return false;
+    return;
 
   if ((state > 10) || (state < 0))
     throw rfb::Exception(_("Invalid state for 3 button emulation"));
@@ -316,14 +316,14 @@ bool EmulateMB::handleTimeout(rfb::Timer *t)
   // Pointer move events are not sent when waiting for the timeout.
   // However, we can't let the position get out of sync so when
   // the pointer has moved we have to send the latest position here.
-  if (!origPos.equals(lastPos)) {
+  if (origPos != lastPos) {
     buttonMask = createButtonMask(buttonMask);
     sendPointerEvent(lastPos, buttonMask);
   }
 
   state = stateTab[state][4][2];
 
-  return false;
+  return;
 }
 
 void EmulateMB::sendAction(const rfb::Point& pos, int buttonMask, int action)

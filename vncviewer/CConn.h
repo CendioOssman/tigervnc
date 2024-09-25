@@ -73,7 +73,7 @@ public:
   void setCursor(int width, int height, const rfb::Point& hotspot, const uint8_t* data) override;
   void setCursorPos(const rfb::Point& pos) override;
 
-  void fence(uint32_t flags, unsigned len, const char data[]) override;
+  void fence(uint32_t flags, unsigned len, const uint8_t data[]) override;
 
   void setLEDState(unsigned int state) override;
 
@@ -87,8 +87,6 @@ public:
                   const char *text) override;
 
   void resizeFramebuffer() override;
-
-  void setPixelFormat(const rfb::PixelFormat&) override {}
 
   rfb::ModifiablePixelBuffer* framebuffer(); // public facade for the protected method.
   void setProcessState(int state);

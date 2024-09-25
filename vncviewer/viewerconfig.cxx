@@ -32,6 +32,7 @@
 #endif
 
 #include "parameters.h"
+#include "os/os.h"
 #include "rfb/Configuration.h"
 #include "rfb/LogWriter.h"
 #include "rfb/Hostname.h"
@@ -58,11 +59,6 @@ static void CleanupSignalHandler(int sig)
   exit(1);
 }
 
-namespace os
-{
-extern const char* getvnchomedir();
-}
-
 ViewerConfig::ViewerConfig()
   : QObject(nullptr)
 {
@@ -77,7 +73,7 @@ void ViewerConfig::initialize()
   signal(SIGINT, CleanupSignalHandler);
   signal(SIGTERM, CleanupSignalHandler);
 
-  const char* homeDir = os::getvnchomedir();
+  const char* homeDir = os::getvncconfigdir();
   if (homeDir == nullptr) {
     QDir dir;
     if (!dir.mkpath(homeDir)) {
@@ -239,7 +235,7 @@ void ViewerConfig::loadServerHistory()
   return;
 #endif
 
-  const char* homeDir = os::getvnchomedir();
+  const char* homeDir = os::getvncconfigdir();
   if (homeDir == nullptr)
     throw rdr::Exception("%s", _("Could not obtain the home directory path"));
 
@@ -305,7 +301,7 @@ void ViewerConfig::saveServerHistory()
     vector.push_back(s.toStdString());
   ::saveHistoryToRegKey(vector);
 #else
-  const char* homeDir = os::getvnchomedir();
+  const char* homeDir = os::getvncconfigdir();
   if (homeDir == nullptr) {
     throw rdr::Exception("%s", _("Could not obtain the home directory path"));
   }

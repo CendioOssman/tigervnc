@@ -793,7 +793,7 @@ void QAbstractVNCView::paintEvent(QPaintEvent* event)
 }
 
 #ifdef QT_DEBUG
-bool QAbstractVNCView::handleTimeout(rfb::Timer* t)
+void QAbstractVNCView::handleTimeout(rfb::Timer* t)
 {
   struct timeval now;
   int count;
@@ -811,7 +811,7 @@ bool QAbstractVNCView::handleTimeout(rfb::Timer* t)
   damage += fpsRect;
   update(damage);
 
-  return true;
+  t->repeat();
 }
 #endif
 
