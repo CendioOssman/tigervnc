@@ -31,19 +31,17 @@ if(BUILD_STATIC)
     FIND_LIBRARY(ICONV_LIBRARY NAMES iconv libiconv
       HINTS ${PC_GETTEXT_LIBDIR} ${PC_GETTEXT_LIBRARY_DIRS})
 
-    if(NOT APPLE)
-      set(GETTEXT_LIBRARIES "-Wl,-Bstatic")
+    set(GETTEXT_LIBRARIES "-Wl,-Bstatic")
 
-      if(INTL_LIBRARY)
-        set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -lintl")
-      endif()
-    
-      if(ICONV_LIBRARY)
-        set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -liconv")
-      endif()
-
-      set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -Wl,-Bdynamic")
+    if(INTL_LIBRARY)
+      set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -lintl")
     endif()
+    
+    if(ICONV_LIBRARY)
+      set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -liconv")
+    endif()
+
+    set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -Wl,-Bdynamic")
 
     # FIXME: MSYS2 doesn't include a static version of this library, so
     #        we'll have to link it dynamically for now
@@ -51,12 +49,12 @@ if(BUILD_STATIC)
       set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -lunistring")
     endif()
 
-    ##if(APPLE)
-    ##  set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -framework Carbon")
-    ##endif()
+    if(APPLE)
+      set(GETTEXT_LIBRARIES "${GETTEXT_LIBRARIES} -framework Carbon")
+    endif()
   endif()
 
-  if(GNUTLS_FOUND AND NOT APPLE)
+  if(GNUTLS_FOUND)
     # GnuTLS has historically had different crypto backends
     FIND_LIBRARY(NETTLE_LIBRARY NAMES nettle libnettle
       HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
@@ -77,12 +75,23 @@ if(BUILD_STATIC)
       set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lidn2")
     endif()
 
+    set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -Wl,-Bdynamic")
+
     if (WIN32)
+      FIND_LIBRARY(P11KIT_LIBRARY NAMES p11-kit libp11-kit
+        HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
+      FIND_LIBRARY(UNISTRING_LIBRARY NAMES unistring libunistring
+        HINTS ${PC_GNUTLS_LIBDIR} ${PC_GNUTLS_LIBRARY_DIRS})
+
       # GnuTLS uses various crypto-api stuff
       set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lcrypt32 -lncrypt")
       # And sockets
       set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lws2_32")
 
+      # p11-kit only available as dynamic library for MSYS2 on Windows and dynamic linking of unistring is required
+      if(P11KIT_LIBRARY)
+        set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lp11-kit")
+      endif()
       if(UNISTRING_LIBRARY)
         set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lunistring")
       endif()
@@ -100,19 +109,37 @@ if(BUILD_STATIC)
     set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} ${ZLIB_LIBRARIES}")
     set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} ${GETTEXT_LIBRARIES}")
 
-    if(NOT APPLE)
-      set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -Wl,-Bdynamic")
-    endif()
-
     # The last variables might introduce whitespace, which CMake
     # throws a hissy fit about
-    string(STRIP "${GNUTLS_LIBRARIES}" GNUTLS_LIBRARIES)
+    string(STRIP ${GNUTLS_LIBRARIES} GNUTLS_LIBRARIES)
   endif()
 
-  if(NETTLE_FOUND AND NOT APPLE)
+  if(NETTLE_FOUND)
     set(NETTLE_LIBRARIES "-Wl,-Bstatic -lnettle -Wl,-Bdynamic")
     set(HOGWEED_LIBRARIES "-Wl,-Bstatic -lhogweed -Wl,-Bdynamic")
     set(GMP_LIBRARIES "-Wl,-Bstatic -lgmp -Wl,-Bdynamic")
+  endif()
+
+  if(DEFINED FLTK_LIBRARIES)
+    set(FLTK_LIBRARIES "-Wl,-Bstatic -lfltk_images -lpng -ljpeg -lfltk -Wl,-Bdynamic")
+
+    if(WIN32)
+      set(FLTK_LIBRARIES "${FLTK_LIBRARIES} -lcomctl32")
+    elseif(APPLE)
+      set(FLTK_LIBRARIES "${FLTK_LIBRARIES} -framework Cocoa")
+    else()
+      set(FLTK_LIBRARIES "${FLTK_LIBRARIES} -lm -ldl")
+    endif()
+
+    if(X11_FOUND AND NOT APPLE)
+      if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+        set(FLTK_LIBRARIES "${FLTK_LIBRARIES} ${X11_Xcursor_LIB} ${X11_Xfixes_LIB} -Wl,-Bstatic -lXft -Wl,-Bdynamic -lfontconfig -lXrender -lXext -R/usr/sfw/lib -L=/usr/sfw/lib -lfreetype -lsocket -lnsl")
+      else()
+        set(FLTK_LIBRARIES "${FLTK_LIBRARIES} -Wl,-Bstatic -lXcursor -lXfixes -lXft -lfontconfig -lexpat -lfreetype -lpng -lbz2 -luuid -lXrender -lXext -lXinerama -Wl,-Bdynamic")
+      endif()
+
+      set(FLTK_LIBRARIES "${FLTK_LIBRARIES} -lX11")
+    endif()
   endif()
 
   # X11 libraries change constantly on Linux systems so we have to link
@@ -138,7 +165,7 @@ endif()
 if(BUILD_STATIC_GCC)
   set(STATIC_BASE_LIBRARIES "")
   if(ENABLE_ASAN AND NOT WIN32 AND NOT APPLE)
-    set(STATIC_BASE_LIBRARIES "${STATIC_BASE_LIBRARIES} -Wl,-Bstatic -lasan -Wl,-Bdynamic -ldl")
+    set(STATIC_BASE_LIBRARIES "${STATIC_BASE_LIBRARIES} -Wl,-Bstatic -lasan -Wl,-Bdynamic -ldl -lpthread")
   endif()
   if(ENABLE_TSAN AND NOT WIN32 AND NOT APPLE AND CMAKE_SIZEOF_VOID_P MATCHES 8)
     # libtsan redefines some C++ symbols which then conflict with a
@@ -150,7 +177,7 @@ if(BUILD_STATIC_GCC)
   if(WIN32)
     set(STATIC_BASE_LIBRARIES "${STATIC_BASE_LIBRARIES} -lmingw32 -lgcc_eh -lgcc -lmoldname -lmingwex -lmsvcrt")
     find_package(Threads)
-    if(CMAKE_USE_PTHREADS_INIT OR CMAKE_USE_WIN32_THREADS_INIT)
+    if(CMAKE_USE_PTHREADS_INIT)
       # pthread has to be statically linked after libraries above and before kernel32
       set(STATIC_BASE_LIBRARIES "${STATIC_BASE_LIBRARIES} -Wl,-Bstatic -lpthread -Wl,-Bdynamic")
     endif()
