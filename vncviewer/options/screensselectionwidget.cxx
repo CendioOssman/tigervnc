@@ -1,7 +1,7 @@
 #include "screensselectionwidget.h"
 
-#include "parameters.h"
-#include "viewerconfig.h"
+#include "../parameters.h"
+#include "../viewerconfig.h"
 
 #include <QApplication>
 #include <QButtonGroup>

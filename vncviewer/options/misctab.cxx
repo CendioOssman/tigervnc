@@ -4,8 +4,8 @@
 #include "config.h"
 #endif
 
-#include "parameters.h"
-#include "i18n.h"
+#include "../parameters.h"
+#include "../i18n.h"
 
 #include <QCheckBox>
 #include <QVBoxLayout>

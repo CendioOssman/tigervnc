@@ -4,10 +4,10 @@
 #include "config.h"
 #endif
 
-#include "parameters.h"
-#include "viewerconfig.h"
+#include "../parameters.h"
+#include "../viewerconfig.h"
 #include "rfb/encodings.h"
-#include "i18n.h"
+#include "../i18n.h"
 
 #include <QCheckBox>
 #include <QGroupBox>
