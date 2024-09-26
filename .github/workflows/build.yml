@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -50,7 +50,7 @@ jobs:
       - name: Install
         working-directory: build
         run: make tarball
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: Linux (Ubuntu)
           path: build/tigervnc-*.tar.gz
@@ -95,7 +95,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: msys2/setup-msys2@v2
       - name: Install dependencies
         run: |
@@ -116,7 +116,7 @@ jobs:
         env:
           MSYS2_PATH_TYPE: inherit
         run: make installer winvnc_installer
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: Windows
           path: build/release/tigervnc*.exe
@@ -150,7 +150,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           brew install pixman ffmpeg
@@ -166,7 +166,7 @@ jobs:
       - name: Install
         working-directory: build
         run: make dmg
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: macOS
           path: build/TigerVNC-*.dmg
