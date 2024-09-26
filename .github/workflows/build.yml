@@ -72,7 +72,8 @@ jobs:
             mingw-w64-x86_64-libjpeg-turbo \
             mingw-w64-x86_64-gnutls mingw-w64-x86_64-pixman \
             mingw-w64-x86_64-nettle mingw-w64-x86_64-gmp \
-            mingw-w64-x86_64-qt5-base mingw-w64-x86_64-qt5-tools
+            mingw-w64-x86_64-qt5-base mingw-w64-x86_64-qt5-tools \
+            mingw-w64-x86_64-qt5-translations
       - name: Configure
         run: cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
@@ -105,7 +106,7 @@ jobs:
             mingw-w64-x86_64-libjpeg-turbo \
             mingw-w64-x86_64-gnutls mingw-w64-x86_64-pixman \
             mingw-w64-x86_64-nettle mingw-w64-x86_64-gmp \
-            mingw-w64-x86_64-qt6-base
+            mingw-w64-x86_64-qt6-base mingw-w64-x86_64-qt6-translations
       - name: Configure
         run: cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
