@@ -7,9 +7,6 @@ target_link_libraries(conv rfb)
 add_executable(convertlf convertlf.cxx)
 target_link_libraries(convertlf rfb)
 
-###add_executable(gesturehandler gesturehandler.cxx ../../vncviewer/GestureHandler.cxx)
-###target_link_libraries(gesturehandler rfb)
-
 add_executable(hostport hostport.cxx)
 target_link_libraries(hostport rfb)
 
