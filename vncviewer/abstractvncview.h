@@ -11,6 +11,8 @@
 #include "rfb/Rect.h"
 #include "rfb/Timer.h"
 
+#include "EmulateMB.h"
+
 class QMenu;
 class QAction;
 class QCursor;
@@ -20,7 +22,6 @@ class QClipboard;
 class QMoveEvent;
 class QGestureEvent;
 class QVNCToast;
-class EmulateMB;
 class GestureHandler;
 class BaseKeyboardHandler;
 class QGestureRecognizer;
@@ -32,11 +33,7 @@ struct Point;
 
 using DownMap = std::map<int, quint32>;
 
-class QAbstractVNCView : public QWidget
-#ifdef QT_DEBUG
-  ,
-                         public rfb::Timer::Callback
-#endif
+class QAbstractVNCView : public QWidget, public EmulateMB
 {
   Q_OBJECT
 
@@ -107,7 +104,6 @@ protected:
 protected:
   // Mouse
   bool mouseGrabbed = false;
-  EmulateMB* mbemu;
   rfb::Point lastPointerPos;
   int lastButtonMask = 0;
   QTimer* mousePointerTimer;
@@ -123,7 +119,7 @@ protected:
   QMenu* contextMenu = nullptr;
   QList<QAction*> contextMenuActions;
   void createContextMenu();
-  void filterPointerEvent(const rfb::Point& pos, int buttonMask);
+  void sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask) override;
   // As QMenu eventFilter
   bool eventFilter(QObject* watched, QEvent* event) override;
 

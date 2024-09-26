@@ -68,7 +68,6 @@ static rfb::LogWriter vlog("VNCView");
 
 QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
   : QWidget(parent, f)
-  , mbemu(new EmulateMB)
   , mousePointerTimer(new QTimer(this))
   , delayedInitializeTimer(new QTimer(this))
 #ifdef QT_DEBUG
@@ -89,14 +88,14 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
         keyboardHandler->handleKeyRelease(0x1d); // Prevents non handling of PanZoomGesture Finished
         if (gesture->getType() == ClicksAlternativeGesture::TwoPoints) {
           vlog.debug("Cendio Right click alternative gesture");
-          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 4 /* RightButton */);
-          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 4 /* RightButton */);
+          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
           event->accept();
           return true;
         } else if (gesture->getType() == ClicksAlternativeGesture::ThreePoints) {
           vlog.debug("Cendio Middle click gesture");
-          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 2 /* MiddleButton */);
-          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 2 /* MiddleButton */);
+          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
           event->accept();
           return true;
         }
@@ -133,8 +132,8 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
             panZoomGesture = true;
             QTimer::singleShot(100, this, [=](){
               panZoomGesture = false;
-              mbemu->filterPointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
-              mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+              filterPointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
+              filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
             });
           }
         }
@@ -154,8 +153,8 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
             panZoomGesture = true;
             QTimer::singleShot(100, this, [=](){
               panZoomGesture = false;
-              mbemu->filterPointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
-              mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+              filterPointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
+              filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
             });
           }
           event->accept();
@@ -186,9 +185,9 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
           if (!dragGesture) {
             dragGesture = true;
             QPoint startPos = gesture->getStartPosition().toPoint();
-            mbemu->filterPointerEvent(rfb::Point(startPos.x(), startPos.y()), 1 /* LeftButton */);
+            filterPointerEvent(rfb::Point(startPos.x(), startPos.y()), 1 /* LeftButton */);
           }
-          mbemu->filterPointerEvent(rfb::Point(pos.x(), pos.y()), 1 /* LeftButton */);
+          filterPointerEvent(rfb::Point(pos.x(), pos.y()), 1 /* LeftButton */);
           event->accept();
           return true;
         } else if (gesture->state() == Qt::GestureFinished) {
@@ -202,8 +201,8 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
       if (gesture->getType() == TapDragGesture::TapAndHold) {
         if (gesture->state() == Qt::GestureFinished) {
           vlog.debug("Cendio Right click gesture");
-          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 4 /* RightButton */);
-          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 4 /* RightButton */);
+          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
           event->accept();
           return true;
         }
@@ -212,8 +211,8 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
       if (gesture->getType() == TapDragGesture::Tap) {
         if(gesture->state() == Qt::GestureFinished) {
           vlog.debug("Cendio Click gesture");
-          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 1 /* LeftButton */);
-          mbemu->filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 1 /* LeftButton */);
+          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
           event->accept();
           return true;
         }
@@ -240,7 +239,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
   mousePointerTimer->setInterval(::pointerEventInterval);
   mousePointerTimer->setSingleShot(true);
   connect(mousePointerTimer, &QTimer::timeout, this, [this]() {
-    mbemu->filterPointerEvent(lastPointerPos, lastButtonMask);
+    emit AppManager::instance()->getConnection()->writePointerEvent(lastPointerPos, lastButtonMask);
   });
 
   connect(AppManager::instance()->getConnection(),
@@ -798,6 +797,11 @@ void QAbstractVNCView::handleTimeout(rfb::Timer* t)
   struct timeval now;
   int count;
 
+  EmulateMB::handleTimeout(t);
+
+  if (t != &fpsTimer)
+    return;
+
   gettimeofday(&now, NULL);
   count = fpsCounter;
 
@@ -1043,16 +1047,16 @@ bool QAbstractVNCView::event(QEvent *event)
   return QWidget::event(event);
 }
 
-void QAbstractVNCView::filterPointerEvent(const rfb::Point& pos, int mask)
+void QAbstractVNCView::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
 {
   if (::viewOnly) {
     return;
   }
-  bool instantPosting = ::pointerEventInterval == 0 || (mask != lastButtonMask);
+  bool instantPosting = ::pointerEventInterval == 0 || (buttonMask != lastButtonMask);
   lastPointerPos = remotePointAdjust(pos);
-  lastButtonMask = mask;
+  lastButtonMask = buttonMask;
   if (instantPosting) {
-    mbemu->filterPointerEvent(lastPointerPos, mask);
+    emit AppManager::instance()->getConnection()->writePointerEvent(pos, buttonMask);
   } else {
     if (!mousePointerTimer->isActive()) {
       mousePointerTimer->start();
