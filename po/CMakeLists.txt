@@ -19,16 +19,13 @@ if (GETTEXT_XGETTEXT_EXECUTABLE)
   )
 
   add_custom_target(translations_update
-    COMMAND
     ${GETTEXT_XGETTEXT_EXECUTABLE}
       "--directory=${PROJECT_SOURCE_DIR}"
       "--output=${CMAKE_CURRENT_SOURCE_DIR}/tigervnc.pot"
       --default-domain=tigervnc
-      --qt
       --keyword=_
       --keyword=p_:1c,2
       --keyword=N_
-      --keyword=tr
       "--copyright-holder=TigerVNC Team and many others \(see README.rst\)"
       --msgid-bugs-address=tigervnc-devel@googlegroups.com
       --sort-by-file
