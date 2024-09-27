@@ -122,24 +122,6 @@ jobs:
           name: Windows (Qt6)
           path: build/release/tigervnc*.exe
 
-  build-macos:
-    runs-on: macos-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install dependencies
-        run: |
-          brew install pixman ffmpeg
-          brew install gnutls nettle gmp
-          brew install qt@5
-      - name: Configure
-        run: |
-          export PATH="/usr/local/opt/qt@5/bin:$PATH"
-          cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
-      - name: Build
-        working-directory: build
-        run: make
-
   build-macos-qt6:
     runs-on: macos-latest
     timeout-minutes: 20
