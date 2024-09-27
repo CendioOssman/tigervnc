@@ -39,10 +39,10 @@ QRevertSizeAction::QRevertSizeAction(const QString& text, QWidget* parent)
   });
 }
 
-QKeyToggleAction::QKeyToggleAction(const QString& text, int keyCode, quint32 keySym, QWidget* parent)
+QKeyToggleAction::QKeyToggleAction(const QString& text, int keyCode_, quint32 keySym_, QWidget* parent)
   : QCheckableAction(text, parent)
-  , keyCode(keyCode)
-  , keySym(keySym)
+  , keyCode(keyCode_)
+  , keySym(keySym_)
 {
   connect(this, &QAction::triggered, this, [this](bool checked) {
     QAbstractVNCView* view = AppManager::instance()->getView();

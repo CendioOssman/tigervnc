@@ -184,11 +184,11 @@ bool ViewerConfig::canFullScreenOnMultiDisplays()
   return !cocoa_displays_have_separate_spaces();
 #elif defined(Q_OS_LINUX)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  auto display = QX11Info::display();
+  auto dpy = QX11Info::display();
 #else
-  auto display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+  auto dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
 #endif
-  bool supported = X11Utils::isEWMHsupported(display);
+  bool supported = X11Utils::isEWMHsupported(dpy);
   vlog.debug("isEWMHsupported %d", supported);
   bool wm = hasWM();
   return supported || !wm;
@@ -201,11 +201,11 @@ bool ViewerConfig::hasWM()
 {
 #if defined(Q_OS_LINUX)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    auto display = QX11Info::display();
+    auto dpy = QX11Info::display();
 #else
-    auto display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+    auto dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
 #endif
-  bool hasWM = X11Utils::hasWM(display);
+  bool hasWM = X11Utils::hasWM(dpy);
   vlog.debug("hasWM %d", hasWM);
   return hasWM;
 #else
@@ -213,9 +213,9 @@ bool ViewerConfig::hasWM()
 #endif
 }
 
-void ViewerConfig::saveViewerParameters(QString path, QString serverName)
+void ViewerConfig::saveViewerParameters(QString path, QString name)
 {
-  ::saveViewerParameters(path.isEmpty() ? nullptr : path.toStdString().c_str(), serverName.toStdString().c_str());
+  ::saveViewerParameters(path.isEmpty() ? nullptr : path.toStdString().c_str(), name.toStdString().c_str());
 }
 
 QString ViewerConfig::loadViewerParameters(QString path)
@@ -420,13 +420,13 @@ void ViewerConfig::parseServerName()
   serverHost = shost.c_str();
 }
 
-void ViewerConfig::addServer(QString serverName)
+void ViewerConfig::addServer(QString name)
 {
-  if (serverName.isEmpty())
+  if (name.isEmpty())
     return;
 
-  serverHistory.removeOne(serverName);
-  serverHistory.push_front(serverName);
+  serverHistory.removeOne(name);
+  serverHistory.push_front(name);
   parseServerName();
   try {
     saveServerHistory();
@@ -437,10 +437,10 @@ void ViewerConfig::addServer(QString serverName)
   }
 }
 
-void ViewerConfig::setServer(QString serverName)
+void ViewerConfig::setServer(QString name)
 {
-  this->serverName = serverName;
-  addServer(serverName);
+  serverName = name;
+  addServer(name);
 }
 
 QString ViewerConfig::getFinalAddress() const

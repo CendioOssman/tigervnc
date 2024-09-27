@@ -89,8 +89,8 @@ void TunnelFactory::close()
         "exit",
         gatewayHost,
     });
-    QProcess process;
-    process.start(command, args);
+    QProcess exitproc;
+    exitproc.start(command, args);
     QThread::msleep(500);
   }
 #endif

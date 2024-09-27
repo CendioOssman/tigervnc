@@ -316,7 +316,6 @@ void AppManager::openDialog(QDialog* d)
   disconnect(qApp, &QGuiApplication::screenRemoved, d, nullptr);
   disconnect(d, nullptr, this, nullptr);
 
-  auto window = AppManager::instance()->getWindow();
   if (window) {
     window->postDialogClosing();
   }
@@ -412,14 +411,12 @@ void AppManager::handleOptions()
   }
 
   /* DesktopWindow::handleOptions() */
-  auto view = AppManager::instance()->getView();
   if (view) {
     if (::fullscreenSystemKeys)
       view->maybeGrabKeyboard();
     else
       view->ungrabKeyboard();
 
-    auto window = AppManager::instance()->getWindow();
     if (window) {
       // Call fullscreen_on even if active since it handles
       // fullScreenMode

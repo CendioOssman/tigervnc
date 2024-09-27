@@ -10,7 +10,7 @@ class QVNCApplication : public QApplication
 public:
   QVNCApplication(int &argc, char **argv);
   virtual ~QVNCApplication();
-  bool notify(QObject *receiver, QEvent *e) override;
+  bool notify(QObject *receiver, QEvent *event) override;
 };
 
 #endif // VNCAPPLICATION_H

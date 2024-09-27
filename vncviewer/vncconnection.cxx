@@ -135,16 +135,14 @@ void QVNCConnection::bind(int fd)
 
   delete socketReadNotifier;
   socketReadNotifier = new QSocketNotifier(fd, QSocketNotifier::Read);
-  QObject::connect(socketReadNotifier, &QSocketNotifier::activated, this, [this](int fd) {
-    Q_UNUSED(fd)
+  QObject::connect(socketReadNotifier, &QSocketNotifier::activated, this, [this](int) {
     emit socketReadNotified();
   });
 
   delete socketWriteNotifier;
   socketWriteNotifier = new QSocketNotifier(fd, QSocketNotifier::Write);
   socketWriteNotifier->setEnabled(false);
-  QObject::connect(socketWriteNotifier, &QSocketNotifier::activated, this, [this](int fd) {
-    Q_UNUSED(fd)
+  QObject::connect(socketWriteNotifier, &QSocketNotifier::activated, this, [this](int) {
     emit socketWriteNotified();
   });
 }

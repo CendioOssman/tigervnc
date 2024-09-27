@@ -39,7 +39,7 @@ static int code_map_keycode_to_qnum[256];
 
 static rfb::LogWriter vlog("X11KeyboardHandler");
 
-Bool eventIsFocusWithSerial(Display* display, XEvent* event, XPointer arg)
+Bool eventIsFocusWithSerial(Display* dpy, XEvent* event, XPointer arg)
 {
   unsigned long serial = *(unsigned long*)arg;
   if (event->xany.serial != serial) {

@@ -62,12 +62,12 @@ public:
 
   int getGatewayLocalPort() const { return gatewayLocalPort; }
 
-  void addServer(QString serverName);
-  void setServer(QString serverName);
+  void addServer(QString name);
+  void setServer(QString name);
 
   QString getFinalAddress() const;
 
-  void saveViewerParameters(QString path, QString serverName);
+  void saveViewerParameters(QString path, QString name);
   QString loadViewerParameters(QString path);
   void loadServerHistory();
   void saveServerHistory();

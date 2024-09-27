@@ -14,10 +14,10 @@ QVNCApplication::~QVNCApplication()
 {
 }
 
-bool QVNCApplication::notify(QObject *receiver, QEvent *e)
+bool QVNCApplication::notify(QObject *receiver, QEvent *event)
 {
   try {
-    return QApplication::notify(receiver, e);
+    return QApplication::notify(receiver, event);
   }
   catch (rdr::Exception &e) {
     vlog.error("Error: %s", e.str());

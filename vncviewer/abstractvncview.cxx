@@ -612,17 +612,17 @@ void QAbstractVNCView::handleClipboardAnnounce(bool available)
   cc->requestClipboard();
 }
 
-void QAbstractVNCView::handleClipboardData(const char* data)
+void QAbstractVNCView::handleClipboardData(const char* cbdata)
 {
-  vlog.debug("QAbstractVNCView::handleClipboardData: %s", data);
-  vlog.debug("Got clipboard data (%d bytes)", (int)strlen(data));
+  vlog.debug("QAbstractVNCView::handleClipboardData: %s", cbdata);
+  vlog.debug("Got clipboard data (%d bytes)", (int)strlen(cbdata));
 #ifdef __APPLE__
-  serverReceivedData = data;
+  serverReceivedData = cbdata;
 #endif
-  QGuiApplication::clipboard()->setText(data);
+  QGuiApplication::clipboard()->setText(cbdata);
 #if !defined(WIN32) && !defined(__APPLE__)
   if (::setPrimary)
-    QGuiApplication::clipboard()->setText(data, QClipboard::Mode::Selection);
+    QGuiApplication::clipboard()->setText(cbdata, QClipboard::Mode::Selection);
 #endif
 }
 
@@ -741,7 +741,7 @@ void QAbstractVNCView::paintEvent(QPaintEvent* event)
 
   if (!damage.isEmpty()) {
     QPainter pixmapPainter(&pixmap);
-    const uint8_t* data;
+    const uint8_t* fbdata;
     int stride;
     QRect bounds = damage.boundingRect();
     int x = bounds.x();
@@ -751,8 +751,8 @@ void QAbstractVNCView::paintEvent(QPaintEvent* event)
     rfb::Rect rfbrect(x, y, x + w, y + h);
 
     if (rfbrect.enclosed_by(framebuffer->getRect())) {
-      data = framebuffer->getBuffer(rfbrect, &stride);
-      QImage image(data, w, h, stride * 4, QImage::Format_RGB32);
+      fbdata = framebuffer->getBuffer(rfbrect, &stride);
+      QImage image(fbdata, w, h, stride * 4, QImage::Format_RGB32);
 #ifdef __APPLE__
       pixmapPainter.fillRect(bounds, QColor("#ff000000"));
       pixmapPainter.setCompositionMode(QPainter::CompositionMode_Plus);

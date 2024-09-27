@@ -375,14 +375,14 @@ void QVNCWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int le
 
   QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    auto display = QX11Info::display();
+    auto dpy = QX11Info::display();
 #else
-    auto display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+    auto dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
 #endif
-    int screen = DefaultScreen(display);
+    int screen = DefaultScreen(dpy);
 
-    X11Utils::fullscreen_screens(display, screen, winId(), top, bottom, left, right);
-    X11Utils::fullscreen(display, screen, winId(), true);
+    X11Utils::fullscreen_screens(dpy, screen, winId(), top, bottom, left, right);
+    X11Utils::fullscreen(dpy, screen, winId(), true);
     QApplication::sync();
 
     QAbstractVNCView* view = AppManager::instance()->getView();
@@ -426,13 +426,13 @@ void QVNCWindow::exitFullscreen()
   vlog.debug("QVNCWindow::exitFullscreen");
 #ifdef Q_OS_LINUX
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  auto display = QX11Info::display();
+  auto dpy = QX11Info::display();
 #else
-  auto display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+  auto dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
 #endif
-  int screen = DefaultScreen(display);
+  int screen = DefaultScreen(dpy);
 
-  X11Utils::fullscreen(display, screen, winId(), false);
+  X11Utils::fullscreen(dpy, screen, winId(), false);
   QApplication::sync();
   if (QString(getenv("DESKTOP_SESSION")).isEmpty()) {
     move(0, 0);
