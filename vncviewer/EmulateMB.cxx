@@ -196,7 +196,7 @@ static const signed char stateTab[11][5][3] = {
 };
 
 EmulateMB::EmulateMB()
-  : state(0), emulatedButtonMask(0), timer(this)
+  : emulateMBState(0), emulatedButtonMask(0), timer(this)
 {
 }
 
@@ -224,16 +224,16 @@ void EmulateMB::filterPointerEvent(const core::Point& pos,
   if (buttonMask & 0x4)
     btstate |= 0x2;
 
-  if ((state > 10) || (state < 0))
+  if ((emulateMBState > 10) || (emulateMBState < 0))
     throw std::runtime_error(_("Invalid state for 3 button emulation"));
 
-  action1 = stateTab[state][btstate][0];
+  action1 = stateTab[emulateMBState][btstate][0];
 
   if (action1 != 0) {
     // Some presses are delayed, that means we have to check if that's
     // the case and send the position corresponding to where the event
     // first was initiated
-    if ((stateTab[state][4][2] >= 0) && action1 > 0)
+    if ((stateTab[emulateMBState][4][2] >= 0) && action1 > 0)
       // We have a timeout state and a button press (a delayed press),
       // always use the original position when leaving a timeout state,
       // whether the timeout was triggered or not
@@ -243,12 +243,12 @@ void EmulateMB::filterPointerEvent(const core::Point& pos,
       sendAction(pos, buttonMask, action1);
   }
 
-  action2 = stateTab[state][btstate][1];
+  action2 = stateTab[emulateMBState][btstate][1];
 
   // In our case with the state machine, action2 always occurs during a button
   // release but if this change we need handle action2 accordingly
   if (action2 != 0) {
-    if ((stateTab[state][4][2] >= 0) && action2 > 0)
+    if ((stateTab[emulateMBState][4][2] >= 0) && action2 > 0)
       sendAction(origPos, buttonMask, action2);
     else
       // Normal non-delayed event
@@ -264,13 +264,13 @@ void EmulateMB::filterPointerEvent(const core::Point& pos,
     sendPointerEvent(pos, buttonMask);
   }
 
-  lastState = state;
-  state = stateTab[state][btstate][2];
+  lastState = emulateMBState;
+  emulateMBState = stateTab[emulateMBState][btstate][2];
 
-  if (lastState != state) {
+  if (lastState != emulateMBState) {
     timer.stop();
 
-    if (stateTab[state][4][2] >= 0) {
+    if (stateTab[emulateMBState][4][2] >= 0) {
       // We need to save the original position so that
       // drags start from the correct position
       origPos = pos;
@@ -287,17 +287,17 @@ void EmulateMB::handleTimeout(core::Timer* t)
   if (&timer != t)
     return;
 
-  if ((state > 10) || (state < 0))
+  if ((emulateMBState > 10) || (emulateMBState < 0))
     throw std::runtime_error(_("Invalid state for 3 button emulation"));
 
   // Timeout shouldn't trigger when there's no timeout action
-  assert(stateTab[state][4][2] >= 0);
+  assert(stateTab[emulateMBState][4][2] >= 0);
 
-  action1 = stateTab[state][4][0];
+  action1 = stateTab[emulateMBState][4][0];
   if (action1 != 0)
     sendAction(origPos, lastButtonMask, action1);
 
-  action2 = stateTab[state][4][1];
+  action2 = stateTab[emulateMBState][4][1];
   if (action2 != 0)
     sendAction(origPos, lastButtonMask, action2);
 
@@ -311,7 +311,7 @@ void EmulateMB::handleTimeout(core::Timer* t)
     sendPointerEvent(lastPos, buttonMask);
   }
 
-  state = stateTab[state][4][2];
+  emulateMBState = stateTab[emulateMBState][4][2];
 }
 
 void EmulateMB::sendAction(const core::Point& pos,

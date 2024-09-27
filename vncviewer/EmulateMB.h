@@ -41,7 +41,7 @@ private:
   int createButtonMask(uint16_t buttonMask);
 
 private:
-  int state;
+  int emulateMBState;
   uint16_t emulatedButtonMask;
   uint16_t lastButtonMask;
   core::Point lastPos, origPos;
