@@ -39,7 +39,7 @@ private:
   int createButtonMask(uint8_t buttonMask);
 
 private:
-  int state;
+  int emulateMBState;
   uint8_t emulatedButtonMask;
   uint8_t lastButtonMask;
   rfb::Point lastPos, origPos;
