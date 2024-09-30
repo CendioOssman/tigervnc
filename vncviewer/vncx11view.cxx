@@ -63,9 +63,9 @@ void QVNCX11View::grabPointer()
   curmasks = XIGetSelectedEvents(display, winId(), &num_masks);
   if (curmasks == nullptr) {
     if (num_masks == -1)
-      vlog.error(_("Unable to get X Input 2 event mask for window 0x%08lx"), winId());
+      vlog.error(_("Unable to get X Input 2 event mask for window 0x%08llx"), winId());
     else
-      vlog.error(_("Window 0x%08lx has no X Input 2 event mask"), winId());
+      vlog.error(_("Window 0x%08llx has no X Input 2 event mask"), winId());
 
     return;
   }
@@ -73,7 +73,7 @@ void QVNCX11View::grabPointer()
          // Our windows should only have a single mask, which allows us to
          // simplify all the code handling the masks
   if (num_masks > 1) {
-    vlog.error(_("Window 0x%08lx has more than one X Input 2 event mask"), winId());
+    vlog.error(_("Window 0x%08llx has more than one X Input 2 event mask"), winId());
     return;
   }
 
