@@ -443,7 +443,7 @@ void saveHistoryToRegKey(const std::vector<std::string>& serverHistory)
   if (res != ERROR_SUCCESS)
     throw rdr::SystemException(_("Failed to create registry key"), res);
 
-  int index = 0;
+  size_t index = 0;
   assert(SERVER_HISTORY_SIZE < 100);
   char indexString[3];
 
