@@ -107,9 +107,9 @@ if(NOT DEFINED BUILD_WINVNC)
   set(BUILD_WINVNC 1)
 endif()
 
-# Minimum version is Windows 7
+# Minimum version is Windows 10
 if(WIN32)
-  add_definitions(-D_WIN32_WINNT=0x0601)
+  add_definitions(-D_WIN32_WINNT=0x0A00)
 endif()
 
 # Legacy macros (macOS 10.12 and older) conflict with our code
