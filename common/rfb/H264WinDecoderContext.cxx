@@ -71,7 +71,6 @@ bool H264WinDecoderContext::initCodec() {
   IMFAttributes* attributes;
   if (SUCCEEDED(decoder->GetAttributes(&attributes)))
   {
-    GUID MF_LOW_LATENCY = { 0x9c27891a, 0xed7a, 0x40e1, { 0x88, 0xe8, 0xb2, 0x27, 0x27, 0xa0, 0x24, 0xee } };
     if (SUCCEEDED(attributes->SetUINT32(MF_LOW_LATENCY, TRUE)))
     {
       vlog.info("Enabled low latency mode");
