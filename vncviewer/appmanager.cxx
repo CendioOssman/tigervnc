@@ -67,7 +67,7 @@ void AppManager::initialize()
   });
   connect(QApplication::eventDispatcher(), &QAbstractEventDispatcher::aboutToBlock, this, [this]() {
     int next = rfb::Timer::checkTimeouts();
-    if (next != 0)
+    if (next != -1)
       rfbTimerProxy->start(next);
   });
   rfbTimerProxy->setSingleShot(true);
