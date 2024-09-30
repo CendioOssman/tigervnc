@@ -143,7 +143,7 @@ bool BaseKeyboardHandler::getMenuAltKey() const
   return menuAltKey;
 }
 
-void BaseKeyboardHandler::setContextMenuVisible(bool newContextMenuVisible)
+void BaseKeyboardHandler::setContextMenuVisible(bool /*newContextMenuVisible*/)
 {
 
 }

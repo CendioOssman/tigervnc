@@ -39,7 +39,7 @@ static int code_map_keycode_to_qnum[256];
 
 static rfb::LogWriter vlog("X11KeyboardHandler");
 
-Bool eventIsFocusWithSerial(Display* dpy, XEvent* event, XPointer arg)
+Bool eventIsFocusWithSerial(Display* /*dpy*/, XEvent* event, XPointer arg)
 {
   unsigned long serial = *(unsigned long*)arg;
   if (event->xany.serial != serial) {
@@ -104,9 +104,9 @@ X11KeyboardHandler::~X11KeyboardHandler()
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* message, long* result)
+bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* message, long* /*result*/)
 #else
-bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* message, qintptr* result)
+bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* message, qintptr* /*result*/)
 #endif
 {
   if (eventType == "xcb_generic_event_t") {

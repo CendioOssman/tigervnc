@@ -66,7 +66,7 @@ QRect Toast::toastGeometry() const
   return QRect(QPoint(x, y), r.size());
 }
 
-void Toast::paintEvent(QPaintEvent *event)
+void Toast::paintEvent(QPaintEvent* /*event*/)
 {
   QPainter painter(this);
   painter.setFont(toastFont());

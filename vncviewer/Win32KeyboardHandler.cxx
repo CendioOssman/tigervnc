@@ -47,9 +47,9 @@ Win32KeyboardHandler::Win32KeyboardHandler(QObject* parent)
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-bool Win32KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* message, long* result)
+bool Win32KeyboardHandler::nativeEventFilter(QByteArray const& /*eventType*/, void* message, long* /*result*/)
 #else
-bool Win32KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* message, qintptr* result)
+bool Win32KeyboardHandler::nativeEventFilter(QByteArray const& /*eventType*/, void* message, qintptr* /*result*/)
 #endif
 {
   MSG* windowsmsg = static_cast<MSG*>(message);

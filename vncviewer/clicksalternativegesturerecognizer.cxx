@@ -12,7 +12,7 @@ QGesture *ClicksAlternativeGestureRecognizer::create(QObject *target)
   return new ClicksAlternativeGesture;
 }
 
-QGestureRecognizer::Result ClicksAlternativeGestureRecognizer::recognize(QGesture *state, QObject *watched, QEvent *event)
+QGestureRecognizer::Result ClicksAlternativeGestureRecognizer::recognize(QGesture *state, QObject */*watched*/, QEvent *event)
 {
   ClicksAlternativeGesture *q = static_cast<ClicksAlternativeGesture *>(state);
   const QTouchEvent *ev = static_cast<const QTouchEvent *>(event);

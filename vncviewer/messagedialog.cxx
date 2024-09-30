@@ -11,7 +11,7 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
-MessageDialog::MessageDialog(bool staysOnTop, int flags, QString title, QString text, QWidget* parent)
+MessageDialog::MessageDialog(bool staysOnTop, int /*flags*/, QString title, QString text, QWidget* parent)
   : QDialog{parent}
 {
   setWindowTitle(title);

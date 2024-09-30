@@ -22,7 +22,7 @@ public:
 protected:
   bool hitButton(const QPoint& pos) const override { return rect().contains(pos); }
 
-  void paintEvent(QPaintEvent* event) override
+  void paintEvent(QPaintEvent* /*event*/) override
   {
     QPainter p(this);
 

@@ -299,6 +299,10 @@ void QVNCWindow::fullscreen(bool enabled)
           fullscreenOnSelectedDisplay(selectedPrimaryScreen);
         }
 #else
+        (void)top;
+        (void)bottom;
+        (void)left;
+        (void)right;
         fullscreenOnSelectedDisplaysPixels(xmin, ymin, w, h);
 #endif
       }

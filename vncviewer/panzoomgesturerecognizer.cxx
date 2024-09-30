@@ -27,7 +27,7 @@ QGesture *PanZoomGestureRecognizer::create(QObject *target)
   return new PanZoomGesture;
 }
 
-QGestureRecognizer::Result PanZoomGestureRecognizer::recognize(QGesture *state, QObject *watched, QEvent *event)
+QGestureRecognizer::Result PanZoomGestureRecognizer::recognize(QGesture *state, QObject */*watched*/, QEvent *event)
 {
   PanZoomGesture *q = static_cast<PanZoomGesture *>(state);
 
