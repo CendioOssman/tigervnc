@@ -20,7 +20,9 @@ Toast::Toast(QWidget* parent)
 
   setAttribute(Qt::WA_TransparentForMouseEvents);
   setAttribute(Qt::WA_NoSystemBackground);
-  setAttribute(Qt::WA_TranslucentBackground);
+  // FIXME: This prevents rendering of lower widgets on Qt6 on X11
+  //setAttribute(Qt::WA_TranslucentBackground);
+  // FIXME: These two are for windows, not widgets. Are they needed?
   setWindowFlag(Qt::WindowTransparentForInput, true);
   setWindowFlag(Qt::WindowDoesNotAcceptFocus, true);
 
