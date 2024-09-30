@@ -82,8 +82,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wsuggest-override")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow")
 # Make sure we catch these issues whilst developing
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=vla")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=vla")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
 ENDIF()
 # clang doesn't support format_arg, which breaks this warning
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
