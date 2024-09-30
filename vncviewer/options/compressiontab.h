@@ -16,8 +16,8 @@ class CompressionTab : public TabElement
 public:
   CompressionTab(QWidget* parent = nullptr);
 
-  void apply();
-  void reset();
+  void apply() override;
+  void reset() override;
 
 private:
   QCheckBox* compressionAutoSelect;

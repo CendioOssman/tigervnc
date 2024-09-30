@@ -14,8 +14,8 @@ class MiscTab : public TabElement
 public:
   MiscTab(QWidget* parent = nullptr);
 
-  void apply();
-  void reset();
+  void apply() override;
+  void reset() override;
 
 private:
   QCheckBox* shared;

@@ -15,8 +15,8 @@ class SecurityTab : public TabElement
 public:
   SecurityTab(QWidget* parent = nullptr);
 
-  void apply();
-  void reset();
+  void apply() override;
+  void reset() override;
 
 private:
   QCheckBox* securityEncryptionNone;

@@ -15,8 +15,8 @@ class InputTab : public TabElement
 public:
   InputTab(QWidget* parent = nullptr);
 
-  void apply();
-  void reset();
+  void apply() override;
+  void reset() override;
 
 private:
   QCheckBox* inputViewOnly;

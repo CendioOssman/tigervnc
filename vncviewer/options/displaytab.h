@@ -15,8 +15,8 @@ class DisplayTab : public TabElement
 public:
   DisplayTab(QWidget* parent = nullptr);
 
-  void apply();
-  void reset();
+  void apply() override;
+  void reset() override;
 
 private:
   QRadioButton* displayWindowed;

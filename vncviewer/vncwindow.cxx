@@ -51,7 +51,7 @@ static rfb::LogWriter vlog("VNCWindow");
 class ScrollBarStyle : public QProxyStyle
 {
 public:
-  int styleHint(StyleHint sh, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *hret) const
+  int styleHint(StyleHint sh, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *hret) const override
   {
     int ret = 0;
 
@@ -66,7 +66,7 @@ public:
     return ret;
   }
 
-  int pixelMetric(PixelMetric metric, const QStyleOption *opt, const QWidget *widget) const
+  int pixelMetric(PixelMetric metric, const QStyleOption *opt, const QWidget *widget) const override
   {
     int ret = 0;
 

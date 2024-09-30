@@ -25,7 +25,7 @@
 class ListViewStyle : public QProxyStyle
 {
 public:
-  void drawPrimitive(PrimitiveElement element, const QStyleOption * option, QPainter * painter, const QWidget * widget = 0) const
+  void drawPrimitive(PrimitiveElement element, const QStyleOption * option, QPainter * painter, const QWidget * widget = nullptr) const override
   {
     if (PE_FrameFocusRect == element) {
       return;
