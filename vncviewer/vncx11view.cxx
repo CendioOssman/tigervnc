@@ -61,7 +61,7 @@ void QVNCX11View::grabPointer()
 
          // We grab for the same events as the window is currently interested in
   curmasks = XIGetSelectedEvents(display, winId(), &num_masks);
-  if (curmasks == NULL) {
+  if (curmasks == nullptr) {
     if (num_masks == -1)
       vlog.error(_("Unable to get X Input 2 event mask for window 0x%08lx"), winId());
     else

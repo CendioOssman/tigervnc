@@ -144,7 +144,7 @@ bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* me
       kev.same_screen = xevent->same_screen;
       char buffer[10];
       KeySym keysym;
-      XLookupString(&kev, buffer, sizeof(buffer), &keysym, NULL);
+      XLookupString(&kev, buffer, sizeof(buffer), &keysym, nullptr);
 
       if (keysym == NoSymbol) {
         vlog.error(_("No symbol for key code %d (in the current state)"), (int)xevent->detail);

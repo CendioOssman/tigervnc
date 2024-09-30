@@ -104,11 +104,11 @@ QString LoggerConfig::getlocaledir()
   static char localebuf[PATH_MAX];
 
   bundle = CFBundleGetMainBundle();
-  if (bundle == NULL)
+  if (bundle == nullptr)
     return QString();
 
-  localeurl = CFBundleCopyResourceURL(bundle, CFSTR("locale"), NULL, NULL);
-  if (localeurl == NULL)
+  localeurl = CFBundleCopyResourceURL(bundle, CFSTR("locale"), nullptr, nullptr);
+  if (localeurl == nullptr)
     return QString();
 
   localestr = CFURLCopyFileSystemPath(localeurl, kCFURLPOSIXPathStyle);

@@ -78,7 +78,7 @@ extern rfb::BoolParameter reconnectOnError;
 
 extern rfb::StringParameter via;
 
-void saveViewerParameters(const char *filename, const char *servername=NULL);
+void saveViewerParameters(const char *filename, const char *servername=nullptr);
 char* loadViewerParameters(const char *filename);
 
 #ifdef _WIN32

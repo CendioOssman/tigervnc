@@ -248,7 +248,7 @@ NSCursor *cocoa_set_cursor(NSView *view, const QCursor *cursor)
   // OS X >= 10.6 can create a NSImage from a CGImage, but we need to
   // support older versions, hence this pesky handling.
   NSBitmapImageRep *bitmap = [[[NSBitmapImageRep alloc]
-                              initWithBitmapDataPlanes: NULL
+                              initWithBitmapDataPlanes: nullptr
                               pixelsWide: iwidth
                               pixelsHigh: iheight
                               bitsPerSample: 8
@@ -283,7 +283,7 @@ CGImageRef cocoa_create_bitmap(int width, int height, unsigned char *data)
   int bytesPerPixel = 4;   // == R G B PaddingByte
   size_t bytesPerRow = width * bytesPerPixel;
   size_t bufferLength = width * height * 4;
-  CGDataProviderRef provider = CGDataProviderCreateWithData(NULL, data, bufferLength, NULL);
+  CGDataProviderRef provider = CGDataProviderCreateWithData(nullptr, data, bufferLength, nullptr);
   size_t bitsPerComponent = 8;
   size_t bitsPerPixel = bytesPerPixel * 8;
   CGColorSpaceRef colorSpaceRef = CGDisplayCopyColorSpace(CGMainDisplayID());
@@ -300,7 +300,7 @@ CGImageRef cocoa_create_bitmap(int width, int height, unsigned char *data)
                                   colorSpaceRef, 
                                   bitmapInfo, 
                                   provider,   // data provider
-                                  NULL,       // decode
+                                  nullptr,       // decode
                                   YES,        // should interpolate
                                   renderingIntent);
   CGColorSpaceRelease(colorSpaceRef);

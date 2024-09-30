@@ -94,7 +94,7 @@ void ViewerConfig::initialize()
     if (argv[i][0] == '-' && i + 1 < argc) {
       QString name = argv[i].mid(1);
       rfb::VoidParameter* param = rfb::Configuration::getParam(name.toStdString().c_str());
-      if ((param != NULL) && (dynamic_cast<rfb::BoolParameter*>(param) != NULL)) {
+      if ((param != nullptr) && (dynamic_cast<rfb::BoolParameter*>(param) != nullptr)) {
         QString opt = argv[i + 1];
         if ((opt.compare("0") == 0) || (opt.compare("1") == 0) || (opt.compare("true", Qt::CaseInsensitive) == 0)
             || (opt.compare("false", Qt::CaseInsensitive) == 0) || (opt.compare("yes", Qt::CaseInsensitive) == 0)

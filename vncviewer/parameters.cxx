@@ -370,7 +370,7 @@ static bool getKeyString(const char* _name, char* dest, size_t destSize, HKEY* h
   }
 
   char* utf8val = new char[destSize];
-  size = WideCharToMultiByte(CP_ACP, 0, value, wcslen(value) + 1, utf8val, destSize, nullptr, FALSE); // QT
+  size = WideCharToMultiByte(CP_ACP, 0, value, wcslen(value) + 1, utf8val, destSize, nullptr, nullptr); // QT
   // size = fl_utf8fromwc(utf8val, destSize, value, wcslen(value)+1);
   delete[] value;
   if (size >= destSize) {

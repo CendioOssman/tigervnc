@@ -36,7 +36,7 @@ bool hasWM(Display* display)
 
   Atom supportingWMCheck = XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", false);
 
-  Window* windowFromRoot = NULL;
+  Window* windowFromRoot = nullptr;
   auto supportingWMCheckOk = getWindowPropertyX11(display,
                                                   rootWindow,
                                                   supportingWMCheck,
@@ -58,7 +58,7 @@ bool isEWMHsupported(Display* display)
 
   Atom supportingWMCheck = XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", false);
 
-  Window* windowFromRoot = NULL;
+  Window* windowFromRoot = nullptr;
   auto supportingWMCheckOk = getWindowPropertyX11(display,
                                                   rootWindow,
                                                   supportingWMCheck,
@@ -71,7 +71,7 @@ bool isEWMHsupported(Display* display)
 
   Atom netSupported = XInternAtom(display, "_NET_SUPPORTED", false);
 
-  Atom* supportedAtoms = NULL;
+  Atom* supportedAtoms = nullptr;
   auto atomCount = getWindowPropertyX11(display,
                                         rootWindow,
                                         netSupported,

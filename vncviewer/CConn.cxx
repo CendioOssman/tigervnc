@@ -231,7 +231,7 @@ void CConn::framebufferUpdateStart()
   CConnection::framebufferUpdateStart();
 
   // For bandwidth estimate
-  gettimeofday(&updateStartTime, NULL);
+  gettimeofday(&updateStartTime, nullptr);
   updateStartPos = getInStream()->pos();
 
   // Update the screen prematurely for very slow updates
@@ -253,7 +253,7 @@ void CConn::framebufferUpdateEnd()
   updateCount++;
 
   // Calculate bandwidth everything managed to maintain during this update
-  gettimeofday(&now, NULL);
+  gettimeofday(&now, nullptr);
   elapsed = (now.tv_sec - updateStartTime.tv_sec) * 1000000;
   elapsed += now.tv_usec - updateStartTime.tv_usec;
   if (elapsed == 0)

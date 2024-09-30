@@ -296,7 +296,7 @@ QAbstractVNCView::QAbstractVNCView(QWidget* parent, Qt::WindowFlags f)
           Qt::QueuedConnection);
 
 #ifdef QT_DEBUG
-  gettimeofday(&fpsLast, NULL);
+  gettimeofday(&fpsLast, nullptr);
   fpsTimer.start(5000);
 #endif
 
@@ -802,7 +802,7 @@ void QAbstractVNCView::handleTimeout(rfb::Timer* t)
   if (t != &fpsTimer)
     return;
 
-  gettimeofday(&now, NULL);
+  gettimeofday(&now, nullptr);
   count = fpsCounter;
 
   fpsValue = int(count * 1000.0 / rfb::msSince(&fpsLast));
