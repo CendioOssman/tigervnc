@@ -71,11 +71,11 @@ endif()
 
 # Make sure we get a sane C and C++ version
 if(MSVC)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /std:c11")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++14")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /std:c17")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
 else()
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu17")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++17")
 endif()
 
 # Tell the compiler to be stringent
