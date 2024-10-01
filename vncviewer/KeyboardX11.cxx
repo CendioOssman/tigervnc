@@ -1,4 +1,4 @@
-#include "X11KeyboardHandler.h"
+#include "KeyboardX11.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -37,7 +37,7 @@ extern unsigned int const code_map_xkb_to_qnum_len;
 
 static int code_map_keycode_to_qnum[256];
 
-static rfb::LogWriter vlog("X11KeyboardHandler");
+static rfb::LogWriter vlog("KeyboardX11");
 
 Bool eventIsFocusWithSerial(Display* /*dpy*/, XEvent* event, XPointer arg)
 {
@@ -51,7 +51,7 @@ Bool eventIsFocusWithSerial(Display* /*dpy*/, XEvent* event, XPointer arg)
   return True;
 }
 
-X11KeyboardHandler::X11KeyboardHandler(QObject* parent)
+KeyboardX11::KeyboardX11(QObject* parent)
   : BaseKeyboardHandler(parent)
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -95,18 +95,18 @@ X11KeyboardHandler::X11KeyboardHandler(QObject* parent)
 
   keyboardGrabberTimer.setInterval(500);
   keyboardGrabberTimer.setSingleShot(true);
-  connect(&keyboardGrabberTimer, &QTimer::timeout, this, &X11KeyboardHandler::grabKeyboard);
+  connect(&keyboardGrabberTimer, &QTimer::timeout, this, &KeyboardX11::grabKeyboard);
 }
 
-X11KeyboardHandler::~X11KeyboardHandler()
+KeyboardX11::~KeyboardX11()
 {
 
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* message, long* /*result*/)
+bool KeyboardX11::nativeEventFilter(QByteArray const& eventType, void* message, long* /*result*/)
 #else
-bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* message, qintptr* /*result*/)
+bool KeyboardX11::nativeEventFilter(QByteArray const& eventType, void* message, qintptr* /*result*/)
 #endif
 {
   if (eventType == "xcb_generic_event_t") {
@@ -184,7 +184,7 @@ bool X11KeyboardHandler::nativeEventFilter(QByteArray const& eventType, void* me
   return false;
 }
 
-void X11KeyboardHandler::setLEDState(unsigned int state)
+void KeyboardX11::setLEDState(unsigned int state)
 {
   vlog.debug("Got server LED state: 0x%08x", state);
 
@@ -211,7 +211,7 @@ void X11KeyboardHandler::setLEDState(unsigned int state)
   }
 }
 
-void X11KeyboardHandler::pushLEDState()
+void KeyboardX11::pushLEDState()
 {
   QVNCConnection* cc = AppManager::instance()->getConnection();
   // Server support?
@@ -254,7 +254,7 @@ void X11KeyboardHandler::pushLEDState()
   }
 }
 
-void X11KeyboardHandler::grabKeyboard()
+void KeyboardX11::grabKeyboard()
 {
   keyboardGrabberTimer.stop();
   Window w;
@@ -285,14 +285,14 @@ void X11KeyboardHandler::grabKeyboard()
   BaseKeyboardHandler::grabKeyboard();
 }
 
-void X11KeyboardHandler::ungrabKeyboard()
+void KeyboardX11::ungrabKeyboard()
 {
   keyboardGrabberTimer.stop();
   XUngrabKeyboard(display, CurrentTime);
   BaseKeyboardHandler::ungrabKeyboard();
 }
 
-unsigned int X11KeyboardHandler::getModifierMask(unsigned int keysym)
+unsigned int KeyboardX11::getModifierMask(unsigned int keysym)
 {
   XkbDescPtr xkb = XkbGetMap(display, XkbAllComponentsMask, XkbUseCoreKbd);
   if (xkb == nullptr) {

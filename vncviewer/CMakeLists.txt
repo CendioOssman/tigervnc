@@ -58,8 +58,8 @@ else()
   set(OS_DEP_SOURCES
       vncx11view.cxx
       vncx11view.h
-      X11KeyboardHandler.cxx
-      X11KeyboardHandler.h
+      KeyboardX11.cxx
+      KeyboardX11.h
       x11utils.h
       x11utils.cxx
       xkb_to_qnum.c

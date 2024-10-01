@@ -5,13 +5,13 @@
 
 struct _XDisplay;
 
-class X11KeyboardHandler : public BaseKeyboardHandler
+class KeyboardX11 : public BaseKeyboardHandler
 {
   Q_OBJECT
 
 public:
-  X11KeyboardHandler(QObject* parent = nullptr);
-  ~X11KeyboardHandler();
+  KeyboardX11(QObject* parent = nullptr);
+  ~KeyboardX11();
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   bool nativeEventFilter(QByteArray const& eventType, void* message, long* result) override;
