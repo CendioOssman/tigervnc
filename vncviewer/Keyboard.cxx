@@ -1,4 +1,4 @@
-#include "BaseKeyboardHandler.h"
+#include "Keyboard.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -16,26 +16,26 @@
 #include <X11/XKBlib.h>
 #endif
 
-static rfb::LogWriter vlog("BaseKeyboardHandler");
+static rfb::LogWriter vlog("Keyboard");
 
-BaseKeyboardHandler::BaseKeyboardHandler(QObject* parent)
+Keyboard::Keyboard(QObject* parent)
   : QObject(parent)
 {
 }
 
-void BaseKeyboardHandler::grabKeyboard()
+void Keyboard::grabKeyboard()
 {
   keyboardGrabbed = true;
 }
 
-void BaseKeyboardHandler::ungrabKeyboard()
+void Keyboard::ungrabKeyboard()
 {
   keyboardGrabbed = false;
 }
 
-bool BaseKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
+bool Keyboard::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
 {
-  vlog.debug("BaseKeyboardHandler::handleKeyPress");
+  vlog.debug("Keyboard::handleKeyPress");
 
   int menuKeyCode;
   quint32 menuKeySym;
@@ -85,9 +85,9 @@ bool BaseKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuS
   return true;
 }
 
-bool BaseKeyboardHandler::handleKeyRelease(int keyCode)
+bool Keyboard::handleKeyRelease(int keyCode)
 {
-  vlog.debug("BaseKeyboardHandler::handleKeyRelease");
+  vlog.debug("Keyboard::handleKeyRelease");
   DownMap::iterator iter;
 
   if (::viewOnly)
@@ -124,7 +124,7 @@ bool BaseKeyboardHandler::handleKeyRelease(int keyCode)
   return true;
 }
 
-void BaseKeyboardHandler::setMenuKeyStatus(quint32 keysym, bool checked)
+void Keyboard::setMenuKeyStatus(quint32 keysym, bool checked)
 {
   if (keysym == XK_Control_L) {
     menuCtrlKey = checked;
@@ -133,27 +133,27 @@ void BaseKeyboardHandler::setMenuKeyStatus(quint32 keysym, bool checked)
   }
 }
 
-bool BaseKeyboardHandler::getMenuCtrlKey() const
+bool Keyboard::getMenuCtrlKey() const
 {
   return menuCtrlKey;
 }
 
-bool BaseKeyboardHandler::getMenuAltKey() const
+bool Keyboard::getMenuAltKey() const
 {
   return menuAltKey;
 }
 
-void BaseKeyboardHandler::setContextMenuVisible(bool /*newContextMenuVisible*/)
+void Keyboard::setContextMenuVisible(bool /*newContextMenuVisible*/)
 {
 
 }
 
-bool BaseKeyboardHandler::isKeyboardGrabbed() const
+bool Keyboard::isKeyboardGrabbed() const
 {
   return keyboardGrabbed;
 }
 
-void BaseKeyboardHandler::resetKeyboard()
+void Keyboard::resetKeyboard()
 {
   while (!downKeySym.empty()) {
     handleKeyRelease(downKeySym.begin()->first);

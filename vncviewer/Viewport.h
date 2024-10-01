@@ -23,7 +23,7 @@ class QMoveEvent;
 class QGestureEvent;
 class QVNCToast;
 class GestureHandler;
-class BaseKeyboardHandler;
+class Keyboard;
 class QGestureRecognizer;
 
 namespace rfb
@@ -110,7 +110,7 @@ protected:
 
   // Keyboard handler
   bool firstLEDState = true;
-  BaseKeyboardHandler* keyboardHandler = nullptr;
+  Keyboard* keyboardHandler = nullptr;
   void initKeyboardHandler();
   void installKeyboardHandler();
   void removeKeyboardHandler();

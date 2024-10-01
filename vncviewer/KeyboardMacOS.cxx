@@ -34,7 +34,7 @@ extern const unsigned int code_map_osx_to_qnum_len;
 static rfb::LogWriter vlog("KeyboardMacOS");
 
 KeyboardMacOS::KeyboardMacOS(QObject* parent)
-  : BaseKeyboardHandler(parent)
+  : Keyboard(parent)
 {
 }
 
@@ -105,7 +105,7 @@ bool KeyboardMacOS::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCu
     break;
   }
 
-  return BaseKeyboardHandler::handleKeyPress(keyCode, keySym, menuShortCutMode);
+  return Keyboard::handleKeyPress(keyCode, keySym, menuShortCutMode);
 }
 
 void KeyboardMacOS::setLEDState(unsigned int state)
@@ -175,11 +175,11 @@ void KeyboardMacOS::grabKeyboard()
       vlog.error(_("Failure grabbing keyboard"));
       return;
   }
-  BaseKeyboardHandler::grabKeyboard();
+  Keyboard::grabKeyboard();
 }
 
 void KeyboardMacOS::ungrabKeyboard()
 {
   cocoa_release_displays();
-  BaseKeyboardHandler::ungrabKeyboard();
+  Keyboard::ungrabKeyboard();
 }

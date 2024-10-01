@@ -1,12 +1,12 @@
 #ifndef X11KEYBOARDHANDLER_H
 #define X11KEYBOARDHANDLER_H
 
-#include "BaseKeyboardHandler.h"
+#include "Keyboard.h"
 
 class NSView;
 class NSCursor;
 
-class KeyboardMacOS : public BaseKeyboardHandler
+class KeyboardMacOS : public Keyboard
 {
   Q_OBJECT
 

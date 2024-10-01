@@ -1,12 +1,12 @@
 #ifndef WIN32KEYBOARDHANDLER_H
 #define WIN32KEYBOARDHANDLER_H
 
-#include "BaseKeyboardHandler.h"
+#include "Keyboard.h"
 
 #include <QTimer>
 #include <windows.h>
 
-class KeyboardWin32 : public BaseKeyboardHandler
+class KeyboardWin32 : public Keyboard
 {
   Q_OBJECT
 

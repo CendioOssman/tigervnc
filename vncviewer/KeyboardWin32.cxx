@@ -36,7 +36,7 @@ static const WORD SCAN_FAKE = 0xaa;
 static const WORD NoSymbol = 0;
 
 KeyboardWin32::KeyboardWin32(QObject* parent)
-  : BaseKeyboardHandler(parent)
+  : Keyboard(parent)
 {
   altGrCtrlTimer.setInterval(100);
   altGrCtrlTimer.setSingleShot(true);
@@ -331,7 +331,7 @@ void KeyboardWin32::pushLEDState()
 
 void KeyboardWin32::grabKeyboard()
 {
-  BaseKeyboardHandler::grabKeyboard();
+  Keyboard::grabKeyboard();
   int ret = win32_enable_lowlevel_keyboard((HWND)AppManager::instance()->getView()->winId());
   if (ret != 0)
   {
@@ -343,5 +343,5 @@ void KeyboardWin32::grabKeyboard()
 void KeyboardWin32::ungrabKeyboard()
 {
   win32_disable_lowlevel_keyboard((HWND)AppManager::instance()->getView()->winId());
-  BaseKeyboardHandler::ungrabKeyboard();
+  Keyboard::ungrabKeyboard();
 }

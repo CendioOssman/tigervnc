@@ -52,7 +52,7 @@ Bool eventIsFocusWithSerial(Display* /*dpy*/, XEvent* event, XPointer arg)
 }
 
 KeyboardX11::KeyboardX11(QObject* parent)
-  : BaseKeyboardHandler(parent)
+  : Keyboard(parent)
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   display = QX11Info::display();
@@ -282,14 +282,14 @@ void KeyboardX11::grabKeyboard()
   while (XCheckIfEvent(display, &xev, &eventIsFocusWithSerial, (XPointer)&serial) == True) {
     vlog.debug("Ignored synthetic focus event cause by grab change");
   }
-  BaseKeyboardHandler::grabKeyboard();
+  Keyboard::grabKeyboard();
 }
 
 void KeyboardX11::ungrabKeyboard()
 {
   keyboardGrabberTimer.stop();
   XUngrabKeyboard(display, CurrentTime);
-  BaseKeyboardHandler::ungrabKeyboard();
+  Keyboard::ungrabKeyboard();
 }
 
 unsigned int KeyboardX11::getModifierMask(unsigned int keysym)

@@ -14,12 +14,12 @@
 
 using DownMap = std::map<int, quint32>;
 
-class BaseKeyboardHandler : public QObject, public QAbstractNativeEventFilter
+class Keyboard : public QObject, public QAbstractNativeEventFilter
 {
   Q_OBJECT
 
 public:
-  BaseKeyboardHandler(QObject* parent = nullptr);
+  Keyboard(QObject* parent = nullptr);
 
   virtual void grabKeyboard();
   virtual void ungrabKeyboard();

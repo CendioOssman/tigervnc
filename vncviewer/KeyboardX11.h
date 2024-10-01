@@ -1,11 +1,11 @@
 #ifndef X11KEYBOARDHANDLER_H
 #define X11KEYBOARDHANDLER_H
 
-#include "BaseKeyboardHandler.h"
+#include "Keyboard.h"
 
 struct _XDisplay;
 
-class KeyboardX11 : public BaseKeyboardHandler
+class KeyboardX11 : public Keyboard
 {
   Q_OBJECT
 

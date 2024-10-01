@@ -11,7 +11,7 @@
 #include <QAction>
 // clang-format on
 
-#include "BaseKeyboardHandler.h"
+#include "Keyboard.h"
 #include "EmulateMB.h"
 #include "PlatformPixelBuffer.h"
 #include "appmanager.h"
@@ -470,7 +470,7 @@ void Viewport::initKeyboardHandler()
       },
       Qt::QueuedConnection);
   connect(keyboardHandler,
-          &BaseKeyboardHandler::contextMenuKeyPressed,
+          &Keyboard::contextMenuKeyPressed,
           this,
           &Viewport::toggleContextMenu,
           Qt::QueuedConnection);
