@@ -1,4 +1,4 @@
-/* Copyright 2011-2021 Pierre Ossman <ossman@cendio.se> for Cendio AB
+/* Copyright 2011-2024 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,8 +28,6 @@
 #ifndef MAPVK_VK_TO_CHAR
 #define MAPVK_VK_TO_CHAR 2
 #endif
-
-#include <FL/Fl.H>
 
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
@@ -166,7 +164,9 @@ static const UINT vkey_map_ko[][3] = {
 
 KeyboardWin32::KeyboardWin32(KeyboardHandler* handler_)
   : Keyboard(handler_), cachedHasAltGr(false), currentLayout(nullptr),
-    altGrArmed(false), leftShiftDown(false), rightShiftDown(false)
+    altGrArmed(false),
+    altGrTimer(this, &KeyboardWin32::handleAltGrTimeout),
+    leftShiftDown(false), rightShiftDown(false)
 {
 }
 
@@ -276,7 +276,7 @@ bool KeyboardWin32::handleEvent(const void* event)
       if ((systemKeyCode == 0x1d) && (keySym == XK_Control_L)) {
         altGrArmed = true;
         altGrCtrlTime = msg->time;
-        Fl::add_timeout(0.1, handleAltGrTimeout, this);
+        altGrTimer.start(0.1);
         return true;
       }
     }
@@ -353,7 +353,7 @@ bool KeyboardWin32::handleEvent(const void* event)
 void KeyboardWin32::reset()
 {
   altGrArmed = false;
-  Fl::remove_timeout(handleAltGrTimeout, this);
+  altGrTimer.stop();
 
   leftShiftDown = false;
   rightShiftDown = false;
@@ -617,20 +617,16 @@ bool KeyboardWin32::hasAltGr()
   return cachedHasAltGr;
 }
 
-void KeyboardWin32::handleAltGrTimeout(void *data)
+void KeyboardWin32::handleAltGrTimeout(rfb::Timer*)
 {
-  KeyboardWin32 *self = (KeyboardWin32 *)data;
-
-  assert(self);
-
-  self->altGrArmed = false;
-  self->handler->handleKeyPress(0x1d, 0x1d, XK_Control_L);
+  altGrArmed = false;
+  handler->handleKeyPress(0x1d, 0x1d, XK_Control_L);
 }
 
 void KeyboardWin32::resolveAltGrDetection(bool isAltGrSequence)
 {
   altGrArmed = false;
-  Fl::remove_timeout(handleAltGrTimeout);
+  altGrTimer.stop();
   // when it's not an AltGr sequence we can't supress the Ctrl anymore
   if (!isAltGrSequence)
     handler->handleKeyPress(0x1d, 0x1d, XK_Control_L);
