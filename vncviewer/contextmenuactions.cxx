@@ -4,7 +4,7 @@
 #include "appmanager.h"
 #include "parameters.h"
 #include "vncconnection.h"
-#include "vncwindow.h"
+#include "DesktopWindow.h"
 
 #include <QApplication>
 
@@ -33,7 +33,7 @@ QRevertSizeAction::QRevertSizeAction(const QString& text, QWidget* parent)
   : QAction(text, parent)
 {
   connect(this, &QAction::triggered, this, []() {
-    QVNCWindow* window = AppManager::instance()->getWindow();
+    DesktopWindow* window = AppManager::instance()->getWindow();
     QAbstractVNCView* view = AppManager::instance()->getView();
     window->resize(view->pixmapSize().width(), view->pixmapSize().height());
   });
@@ -72,7 +72,7 @@ QMinimizeAction::QMinimizeAction(const QString& text, QWidget* parent)
   : QAction(text, parent)
 {
   connect(this, &QAction::triggered, this, []() {
-    QVNCWindow* window = AppManager::instance()->getWindow();
+    DesktopWindow* window = AppManager::instance()->getWindow();
     window->showMinimized();
   });
 }

@@ -4,7 +4,7 @@
 #include <QObject>
 
 class QAbstractVNCView;
-class QVNCWindow;
+class DesktopWindow;
 class QTimer;
 class QVNCConnection;
 class ServerDialog;
@@ -27,7 +27,7 @@ public:
 
   QAbstractVNCView* getView() const { return view; }
 
-  QVNCWindow* getWindow() const { return window; }
+  DesktopWindow* getWindow() const { return window; }
 
   bool isFullScreen() const;
 
@@ -79,7 +79,7 @@ private:
   int errorCount;
   QVNCConnection* connection;
   QAbstractVNCView* view = nullptr;
-  QVNCWindow* window = nullptr;
+  DesktopWindow* window = nullptr;
   QTimer* rfbTimerProxy;
   ServerDialog* serverDialog = nullptr;
   AppManager();

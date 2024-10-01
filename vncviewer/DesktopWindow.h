@@ -9,13 +9,13 @@ class QResizeEvent;
 class Toast;
 class ScrollArea;
 
-class QVNCWindow : public QWidget
+class DesktopWindow : public QWidget
 {
   Q_OBJECT
 
 public:
-  QVNCWindow(QWidget* parent = nullptr);
-  virtual ~QVNCWindow();
+  DesktopWindow(QWidget* parent = nullptr);
+  virtual ~DesktopWindow();
   void updateMonitorsFullscreen();
 
   // Fullscreen

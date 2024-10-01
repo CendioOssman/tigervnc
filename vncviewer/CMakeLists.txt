@@ -77,8 +77,8 @@ set(PROJECT_SOURCES
         contextmenuactions.h
         vncapplication.cxx
         vncapplication.h
-        vncwindow.cxx
-        vncwindow.h
+        DesktopWindow.cxx
+        DesktopWindow.h
         vncconnection.h
         vncconnection.cxx
         vnccredential.cxx

@@ -1,4 +1,4 @@
-#include "vncwindow.h"
+#include "DesktopWindow.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -114,7 +114,7 @@ private:
 #endif
 };
 
-QVNCWindow::QVNCWindow(QWidget* parent)
+DesktopWindow::DesktopWindow(QWidget* parent)
   : QWidget(parent)
   , resizeTimer(new QTimer(this))
   , devicePixelRatio(devicePixelRatioF())
@@ -142,7 +142,7 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   // FIXME: this is a lot faster than before
   resizeTimer->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
   resizeTimer->setSingleShot(true);
-  connect(resizeTimer, &QTimer::timeout, this, &QVNCWindow::handleDesktopSize);
+  connect(resizeTimer, &QTimer::timeout, this, &DesktopWindow::handleDesktopSize);
 
   toast = new Toast(this);
 
@@ -156,13 +156,13 @@ QVNCWindow::QVNCWindow(QWidget* parent)
   cocoa_fix_warping();
 #endif
 
-  connect(qApp, &QGuiApplication::screenAdded, this, &QVNCWindow::updateMonitorsFullscreen);
-  connect(qApp, &QGuiApplication::screenRemoved, this, &QVNCWindow::updateMonitorsFullscreen);
+  connect(qApp, &QGuiApplication::screenAdded, this, &DesktopWindow::updateMonitorsFullscreen);
+  connect(qApp, &QGuiApplication::screenRemoved, this, &DesktopWindow::updateMonitorsFullscreen);
 }
 
-QVNCWindow::~QVNCWindow() {}
+DesktopWindow::~DesktopWindow() {}
 
-void QVNCWindow::updateMonitorsFullscreen()
+void DesktopWindow::updateMonitorsFullscreen()
 {
   if ((fullscreenEnabled || pendingFullscreen)
       && ViewerConfig::fullscreenType() != ViewerConfig::Current) {
@@ -171,7 +171,7 @@ void QVNCWindow::updateMonitorsFullscreen()
   }
 }
 
-QList<int> QVNCWindow::fullscreenScreens() const
+QList<int> DesktopWindow::fullscreenScreens() const
 {
   QApplication* app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
@@ -206,12 +206,12 @@ QList<int> QVNCWindow::fullscreenScreens() const
   return applicableScreens;
 }
 
-QScreen* QVNCWindow::getCurrentScreen() const
+QScreen* DesktopWindow::getCurrentScreen() const
 {
   return windowHandle() ? windowHandle()->screen() : qApp->primaryScreen();
 }
 
-double QVNCWindow::effectiveDevicePixelRatio(QScreen* screen) const
+double DesktopWindow::effectiveDevicePixelRatio(QScreen* screen) const
 {
 #ifdef Q_OS_DARWIN
   return 1.0;
@@ -223,9 +223,9 @@ double QVNCWindow::effectiveDevicePixelRatio(QScreen* screen) const
   return devicePixelRatio;
 }
 
-void QVNCWindow::fullscreen(bool enabled)
+void DesktopWindow::fullscreen(bool enabled)
 {
-  vlog.debug("QVNCWindow::fullscreen enabled=%d", enabled);
+  vlog.debug("DesktopWindow::fullscreen enabled=%d", enabled);
   bool fullscreenEnabled0 = fullscreenEnabled;
   fullscreenEnabled = false;
   pendingFullscreen = enabled;
@@ -271,7 +271,7 @@ void QVNCWindow::fullscreen(bool enabled)
       }
       int w = xmax - xmin;
       int h = ymax - ymin;
-      vlog.debug("QVNCWindow::fullscreen geometry=(%d, %d, %d, %d)", xmin, ymin, w, h);
+      vlog.debug("DesktopWindow::fullscreen geometry=(%d, %d, %d, %d)", xmin, ymin, w, h);
 
       if (selectedScreens.length() == 1) { // Fullscreen on the selected single display.
 #ifdef Q_OS_LINUX
@@ -339,9 +339,9 @@ void QVNCWindow::fullscreen(bool enabled)
   }
 }
 
-void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
+void DesktopWindow::fullscreenOnSelectedDisplay(QScreen* screen)
 {
-  vlog.debug("QVNCWindow::fullscreenOnSelectedDisplay geometry=(%d, %d, %d, %d)",
+  vlog.debug("DesktopWindow::fullscreenOnSelectedDisplay geometry=(%d, %d, %d, %d)",
              screen->geometry().x(),
              screen->geometry().y(),
              screen->geometry().width(),
@@ -367,9 +367,9 @@ void QVNCWindow::fullscreenOnSelectedDisplay(QScreen* screen)
 }
 
 #ifdef Q_OS_LINUX
-void QVNCWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int left, int right) // screens indices
+void DesktopWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int left, int right) // screens indices
 {
-  vlog.debug("QVNCWindow::fullscreenOnSelectedDisplaysIndices top=%d bottom=%d left=%d right=%d",
+  vlog.debug("DesktopWindow::fullscreenOnSelectedDisplaysIndices top=%d bottom=%d left=%d right=%d",
              top,
              bottom,
              left,
@@ -398,9 +398,9 @@ void QVNCWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int le
 }
 #endif
 
-void QVNCWindow::fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, int vheight) // pixels
+void DesktopWindow::fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, int vheight) // pixels
 {
-  vlog.debug("QVNCWindow::fullscreenOnSelectedDisplaysPixels geometry=(%d, %d, %d, %d)",
+  vlog.debug("DesktopWindow::fullscreenOnSelectedDisplaysPixels geometry=(%d, %d, %d, %d)",
              vx,
              vy,
              vwidth,
@@ -425,9 +425,9 @@ void QVNCWindow::fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, 
   });
 }
 
-void QVNCWindow::exitFullscreen()
+void DesktopWindow::exitFullscreen()
 {
-  vlog.debug("QVNCWindow::exitFullscreen");
+  vlog.debug("DesktopWindow::exitFullscreen");
 #ifdef Q_OS_LINUX
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   auto dpy = QX11Info::display();
@@ -462,19 +462,19 @@ void QVNCWindow::exitFullscreen()
 #endif
 }
 
-bool QVNCWindow::allowKeyboardGrab() const
+bool DesktopWindow::allowKeyboardGrab() const
 {
   return fullscreenEnabled || pendingFullscreen;
 }
 
-bool QVNCWindow::isFullscreenEnabled() const
+bool DesktopWindow::isFullscreenEnabled() const
 {
   return fullscreenEnabled;
 }
 
-void QVNCWindow::handleDesktopSize()
+void DesktopWindow::handleDesktopSize()
 {
-  vlog.debug("QVNCWindow::handleDesktopSize");
+  vlog.debug("DesktopWindow::handleDesktopSize");
   double f = effectiveDevicePixelRatio();
   if (!QString(::desktopSize).isEmpty()) {
     int w, h;
@@ -483,22 +483,22 @@ void QVNCWindow::handleDesktopSize()
       return;
     }
     remoteResize(w * f, h * f);
-    vlog.debug("QVNCWindow::handleDesktopSize(explicit) size=(%d, %d)", w, h);
+    vlog.debug("DesktopWindow::handleDesktopSize(explicit) size=(%d, %d)", w, h);
   } else if (::remoteResize) {
     // No explicit size, but remote resizing is on so make sure it
     // matches whatever size the window ended up being
     remoteResize(width() * f, height() * f);
-    vlog.debug("QVNCWindow::handleDesktopSize(implicit) size=(%d, %d)", width(), height());
+    vlog.debug("DesktopWindow::handleDesktopSize(implicit) size=(%d, %d)", width(), height());
   }
 }
 
-void QVNCWindow::postRemoteResizeRequest()
+void DesktopWindow::postRemoteResizeRequest()
 {
-  vlog.debug("QVNCWindow::postRemoteResizeRequest");
+  vlog.debug("DesktopWindow::postRemoteResizeRequest");
   resizeTimer->start();
 }
 
-void QVNCWindow::remoteResize(int w, int h)
+void DesktopWindow::remoteResize(int w, int h)
 {
   QVNCConnection* cc = AppManager::instance()->getConnection();
   rfb::ScreenSet layout;
@@ -623,50 +623,50 @@ void QVNCWindow::remoteResize(int w, int h)
   } else {
     vlog.debug("%s", buffer);
   }
-  vlog.debug("QVNCWindow::remoteResize size=(%d, %d) layout=%s", w, h, buffer);
+  vlog.debug("DesktopWindow::remoteResize size=(%d, %d) layout=%s", w, h, buffer);
   emit AppManager::instance()->getConnection()->writeSetDesktopSize(w, h, layout);
 }
 
-void QVNCWindow::fromBufferResize(int oldW, int oldH, int width, int height)
+void DesktopWindow::fromBufferResize(int oldW, int oldH, int width, int height)
 {
-  vlog.debug("QVNCWindow::resize size=(%d, %d)", width, height);
+  vlog.debug("DesktopWindow::resize size=(%d, %d)", width, height);
 
   if (this->width() == width && this->height() == height) {
-    vlog.debug("QVNCWindow::resize ignored");
+    vlog.debug("DesktopWindow::resize ignored");
     return;
   }
 
   QAbstractVNCView* view = AppManager::instance()->getView();
 
   if (!view) {
-    vlog.debug("QVNCWindow::resize !view");
+    vlog.debug("DesktopWindow::resize !view");
     resize(width, height);
   } else {
-    vlog.debug("QVNCWindow::resize view");
+    vlog.debug("DesktopWindow::resize view");
     if (QSize(oldW, oldH) == size()) {
-      vlog.debug("QVNCWindow::resize because session and client were in sync");
+      vlog.debug("DesktopWindow::resize because session and client were in sync");
       resize(width, height);
     }
   }
 }
 
-void QVNCWindow::showToast()
+void DesktopWindow::showToast()
 {
   toast->showToast();
   toast->setGeometry(rect());
 }
 
-void QVNCWindow::setWidget(QWidget *w)
+void DesktopWindow::setWidget(QWidget *w)
 {
   scrollArea->setWidget(w);
 }
 
-QWidget *QVNCWindow::takeWidget()
+QWidget *DesktopWindow::takeWidget()
 {
   return scrollArea->takeWidget();
 }
 
-void QVNCWindow::postDialogClosing()
+void DesktopWindow::postDialogClosing()
 {
   raise();
   activateWindow();
@@ -677,19 +677,19 @@ void QVNCWindow::postDialogClosing()
   }
 }
 
-void QVNCWindow::moveEvent(QMoveEvent* e)
+void DesktopWindow::moveEvent(QMoveEvent* e)
 {
-  vlog.debug("QVNCWindow::moveEvent pos=(%d, %d) oldPos=(%d, %d)", e->pos().x(), e->pos().y(), e->oldPos().x(), e->oldPos().y());
+  vlog.debug("DesktopWindow::moveEvent pos=(%d, %d) oldPos=(%d, %d)", e->pos().x(), e->pos().y(), e->oldPos().x(), e->oldPos().y());
   QWidget::moveEvent(e);
 }
 
-void QVNCWindow::resizeEvent(QResizeEvent* e)
+void DesktopWindow::resizeEvent(QResizeEvent* e)
 {
-  vlog.debug("QVNCWindow::resizeEvent size=(%d, %d)", e->size().width(), e->size().height());
+  vlog.debug("DesktopWindow::resizeEvent size=(%d, %d)", e->size().width(), e->size().height());
 
   QVNCConnection* cc = AppManager::instance()->getConnection();
 
-  vlog.debug("QVNCWindow::resizeEvent supportsSetDesktopSize=%d", cc->server()->supportsSetDesktopSize);
+  vlog.debug("DesktopWindow::resizeEvent supportsSetDesktopSize=%d", cc->server()->supportsSetDesktopSize);
   if (::remoteResize && cc->server()->supportsSetDesktopSize) {
     postRemoteResizeRequest();
   }
@@ -699,34 +699,34 @@ void QVNCWindow::resizeEvent(QResizeEvent* e)
   QWidget::resizeEvent(e);
 }
 
-void QVNCWindow::changeEvent(QEvent* e)
+void DesktopWindow::changeEvent(QEvent* e)
 {
   if (e->type() == QEvent::WindowStateChange) {
     int oldState = (static_cast<QWindowStateChangeEvent*>(e))->oldState();
-    vlog.debug("QVNCWindow::changeEvent size=(%d, %d) state=%d oldState=%d",
+    vlog.debug("DesktopWindow::changeEvent size=(%d, %d) state=%d oldState=%d",
                width(),
                height(),
                int(windowState()),
                oldState);
-    vlog.debug("QVNCWindow::changeEvent fullscreenEnabled=%d pendingFullscreen=%d",
+    vlog.debug("DesktopWindow::changeEvent fullscreenEnabled=%d pendingFullscreen=%d",
                fullscreenEnabled, pendingFullscreen);
     if (!fullscreenEnabled && !pendingFullscreen) {
       if (!(oldState & Qt::WindowFullScreen) && windowState() & Qt::WindowFullScreen) {
 #ifdef __APPLE__
-        vlog.debug("QVNCWindow::changeEvent window has gone fullscreen, we do not like it on Mac");
+        vlog.debug("DesktopWindow::changeEvent window has gone fullscreen, we do not like it on Mac");
         QTimer::singleShot(std::chrono::milliseconds(1000), [=]() {
           fullscreen(false);
           fullscreen(true);
         });
 #else
-        vlog.debug("QVNCWindow::changeEvent window has gone fullscreen, checking if it is our doing");
+        vlog.debug("DesktopWindow::changeEvent window has gone fullscreen, checking if it is our doing");
         fullscreen(true);
 #endif
       }
     } else if (fullscreenEnabled && !pendingFullscreen) {
       if (oldState & Qt::WindowFullScreen && !(windowState() & Qt::WindowFullScreen)) {
 #ifndef __APPLE__
-        vlog.debug("QVNCWindow::changeEvent window has left fullscreen, checking if it is our doing");
+        vlog.debug("DesktopWindow::changeEvent window has left fullscreen, checking if it is our doing");
         fullscreen(false);
 #endif
       }
@@ -735,9 +735,9 @@ void QVNCWindow::changeEvent(QEvent* e)
   QWidget::changeEvent(e);
 }
 
-void QVNCWindow::focusInEvent(QFocusEvent*)
+void DesktopWindow::focusInEvent(QFocusEvent*)
 {
-  vlog.debug("QVNCWindow::focusInEvent");
+  vlog.debug("DesktopWindow::focusInEvent");
   QAbstractVNCView* view = AppManager::instance()->getView();
   if (view) {
     view->setFocus();
@@ -745,12 +745,12 @@ void QVNCWindow::focusInEvent(QFocusEvent*)
   }
 }
 
-void QVNCWindow::focusOutEvent(QFocusEvent*)
+void DesktopWindow::focusOutEvent(QFocusEvent*)
 {
-  vlog.debug("QVNCWindow::focusOutEvent");
+  vlog.debug("DesktopWindow::focusOutEvent");
 }
 
-void QVNCWindow::closeEvent(QCloseEvent* e)
+void DesktopWindow::closeEvent(QCloseEvent* e)
 {
   emit closed();
   QWidget::closeEvent(e);

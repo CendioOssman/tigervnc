@@ -48,7 +48,7 @@
 #include <QGesture>
 #undef asprintf
 #include "parameters.h"
-#include "vncwindow.h"
+#include "DesktopWindow.h"
 #undef asprintf
 
 #if defined(WIN32) || defined(__APPLE__)
@@ -629,7 +629,7 @@ void QAbstractVNCView::handleClipboardData(const char* cbdata)
 void QAbstractVNCView::maybeGrabKeyboard()
 {
   vlog.debug("QAbstractVNCView::maybeGrabKeyboard");
-  QVNCWindow* window = AppManager::instance()->getWindow();
+  DesktopWindow* window = AppManager::instance()->getWindow();
   if (::fullscreenSystemKeys && window->allowKeyboardGrab() && hasFocus()) {
     grabKeyboard();
   }
@@ -658,7 +658,7 @@ void QAbstractVNCView::ungrabKeyboard()
 void QAbstractVNCView::maybeGrabPointer()
 {
   vlog.debug("QAbstractVNCView::maybeGrabPointer");
-  QVNCWindow* window = AppManager::instance()->getWindow();
+  DesktopWindow* window = AppManager::instance()->getWindow();
   if (::fullscreenSystemKeys && window->allowKeyboardGrab() && hasFocus()) {
     grabPointer();
   }

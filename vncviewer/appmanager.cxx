@@ -29,7 +29,7 @@
 #include "serverdialog.h"
 #include "parameters.h"
 #include "vncconnection.h"
-#include "vncwindow.h"
+#include "DesktopWindow.h"
 #undef asprintf
 
 #if defined(WIN32)
@@ -56,7 +56,7 @@ AppManager::AppManager()
 
 void AppManager::initialize()
 {
-  window = new QVNCWindow;
+  window = new DesktopWindow;
   rfbTimerProxy = new QTimer;
   connection = new QVNCConnection;
   connect(this, &AppManager::connectToServerRequested, connection, &QVNCConnection::connectToServer);
@@ -76,7 +76,7 @@ void AppManager::initialize()
     AuthDialog d(secured, userNeeded, passwordNeeded, topWindow());
     d.exec();
   });
-  connect(window, &QVNCWindow::closed, qApp, &QApplication::quit);
+  connect(window, &DesktopWindow::closed, qApp, &QApplication::quit);
 
 #ifdef __APPLE__
   QMenuBar* menuBar = new QMenuBar(nullptr); // global menu bar for mac
@@ -196,13 +196,13 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   if (!view) {
     throw rdr::Exception(_("Platform not supported."));
   }
-  connect(view, &QAbstractVNCView::bufferResized, window, &QVNCWindow::fromBufferResize, Qt::QueuedConnection);
+  connect(view, &QAbstractVNCView::bufferResized, window, &DesktopWindow::fromBufferResize, Qt::QueuedConnection);
   connect(view,
           &QAbstractVNCView::remoteResizeRequest,
           window,
-          &QVNCWindow::postRemoteResizeRequest,
+          &DesktopWindow::postRemoteResizeRequest,
           Qt::QueuedConnection);
-  connect(view, &QAbstractVNCView::delayedInitialized, window, &QVNCWindow::showToast);
+  connect(view, &QAbstractVNCView::delayedInitialized, window, &DesktopWindow::showToast);
 
   view->resize(width, height);
   window->setWidget(view);

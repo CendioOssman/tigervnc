@@ -14,7 +14,7 @@
 #include "rfb/ServerParams.h"
 #include "rfb/ledStates.h"
 #include "vncconnection.h"
-#include "vncwindow.h"
+#include "DesktopWindow.h"
 
 #include <QDebug>
 extern const unsigned short code_map_osx_to_qnum[];
