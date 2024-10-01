@@ -48,8 +48,8 @@ elseif(APPLE)
   set(OS_DEP_SOURCES
       vncmacview.cxx
       vncmacview.h
-      MacKeyboardHandler.cxx
-      MacKeyboardHandler.h
+      KeyboardMacOS.cxx
+      KeyboardMacOS.h
       cocoa.h
       cocoa.mm
       osx_to_qnum.c

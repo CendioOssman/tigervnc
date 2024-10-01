@@ -1,4 +1,4 @@
-#include "MacKeyboardHandler.h"
+#include "KeyboardMacOS.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -31,17 +31,17 @@ extern const unsigned int code_map_osx_to_qnum_len;
 #define NoSymbol 0
 #endif
 
-static rfb::LogWriter vlog("MacKeyboardHandler");
+static rfb::LogWriter vlog("KeyboardMacOS");
 
-MacKeyboardHandler::MacKeyboardHandler(QObject* parent)
+KeyboardMacOS::KeyboardMacOS(QObject* parent)
   : BaseKeyboardHandler(parent)
 {
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-bool MacKeyboardHandler::nativeEventFilter(const QByteArray& eventType, void* message, long* result)
+bool KeyboardMacOS::nativeEventFilter(const QByteArray& eventType, void* message, long* result)
 #else
-bool MacKeyboardHandler::nativeEventFilter(const QByteArray& eventType, void* message, qintptr* result)
+bool KeyboardMacOS::nativeEventFilter(const QByteArray& eventType, void* message, qintptr* result)
 #endif
 {
   Q_UNUSED(result)
@@ -83,7 +83,7 @@ bool MacKeyboardHandler::nativeEventFilter(const QByteArray& eventType, void* me
   return false;
 }
 
-bool MacKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
+bool KeyboardMacOS::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
 {
   // Alt on OS X behaves more like AltGr on other systems, and to get
   // sane behaviour we should translate things in that manner for the
@@ -108,7 +108,7 @@ bool MacKeyboardHandler::handleKeyPress(int keyCode, quint32 keySym, bool menuSh
   return BaseKeyboardHandler::handleKeyPress(keyCode, keySym, menuShortCutMode);
 }
 
-void MacKeyboardHandler::setLEDState(unsigned int state)
+void KeyboardMacOS::setLEDState(unsigned int state)
 {
   vlog.debug("Got server LED state: 0x%08x", state);
 
@@ -122,7 +122,7 @@ void MacKeyboardHandler::setLEDState(unsigned int state)
   }
 }
 
-void MacKeyboardHandler::pushLEDState()
+void KeyboardMacOS::pushLEDState()
 {
   QVNCConnection* cc = AppManager::instance()->getConnection();
   // Server support?
@@ -168,7 +168,7 @@ void MacKeyboardHandler::pushLEDState()
   }
 }
 
-void MacKeyboardHandler::grabKeyboard()
+void KeyboardMacOS::grabKeyboard()
 {
   int ret = cocoa_capture_displays(AppManager::instance()->getWindow()->fullscreenScreens());
   if (ret == 1) {
@@ -178,7 +178,7 @@ void MacKeyboardHandler::grabKeyboard()
   BaseKeyboardHandler::grabKeyboard();
 }
 
-void MacKeyboardHandler::ungrabKeyboard()
+void KeyboardMacOS::ungrabKeyboard()
 {
   cocoa_release_displays();
   BaseKeyboardHandler::ungrabKeyboard();

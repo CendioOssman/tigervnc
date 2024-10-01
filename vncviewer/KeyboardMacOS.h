@@ -6,12 +6,12 @@
 class NSView;
 class NSCursor;
 
-class MacKeyboardHandler : public BaseKeyboardHandler
+class KeyboardMacOS : public BaseKeyboardHandler
 {
   Q_OBJECT
 
 public:
-  MacKeyboardHandler(QObject* parent = nullptr);
+  KeyboardMacOS(QObject* parent = nullptr);
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   bool nativeEventFilter(QByteArray const& eventType, void* message, long* result) override;

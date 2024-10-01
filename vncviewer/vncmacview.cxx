@@ -2,7 +2,7 @@
 #include "config.h"
 #endif
 
-#include "MacKeyboardHandler.h"
+#include "KeyboardMacOS.h"
 #include "appmanager.h"
 #include "cocoa.h"
 #include "rfb/LogWriter.h"
@@ -19,7 +19,7 @@ static rfb::LogWriter vlog("QVNCMacView");
 QVNCMacView::QVNCMacView(QWidget* parent, Qt::WindowFlags f)
   : Viewport(parent, f)
 {
-  keyboardHandler = new MacKeyboardHandler(this);
+  keyboardHandler = new KeyboardMacOS(this);
   initKeyboardHandler();
 }
 
