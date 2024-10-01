@@ -1,4 +1,4 @@
-#include "Win32KeyboardHandler.h"
+#include "KeyboardWin32.h"
 #include "Viewport.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -29,13 +29,13 @@
 #include <QScreen>
 #include <QTime>
 
-static rfb::LogWriter vlog("Win32KeyboardHandler");
+static rfb::LogWriter vlog("KeyboardWin32");
 
 // Used to detect fake input (0xaa is not a real key)
 static const WORD SCAN_FAKE = 0xaa;
 static const WORD NoSymbol = 0;
 
-Win32KeyboardHandler::Win32KeyboardHandler(QObject* parent)
+KeyboardWin32::KeyboardWin32(QObject* parent)
   : BaseKeyboardHandler(parent)
 {
   altGrCtrlTimer.setInterval(100);
@@ -47,9 +47,9 @@ Win32KeyboardHandler::Win32KeyboardHandler(QObject* parent)
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-bool Win32KeyboardHandler::nativeEventFilter(QByteArray const& /*eventType*/, void* message, long* /*result*/)
+bool KeyboardWin32::nativeEventFilter(QByteArray const& /*eventType*/, void* message, long* /*result*/)
 #else
-bool Win32KeyboardHandler::nativeEventFilter(QByteArray const& /*eventType*/, void* message, qintptr* /*result*/)
+bool KeyboardWin32::nativeEventFilter(QByteArray const& /*eventType*/, void* message, qintptr* /*result*/)
 #endif
 {
   MSG* windowsmsg = static_cast<MSG*>(message);
@@ -66,7 +66,7 @@ bool Win32KeyboardHandler::nativeEventFilter(QByteArray const& /*eventType*/, vo
   return false;
 }
 
-void Win32KeyboardHandler::resolveAltGrDetection(bool isAltGrSequence)
+void KeyboardWin32::resolveAltGrDetection(bool isAltGrSequence)
 {
   altGrArmed = false;
   altGrCtrlTimer.stop();
@@ -75,7 +75,7 @@ void Win32KeyboardHandler::resolveAltGrDetection(bool isAltGrSequence)
     handleKeyPress(0x1d, XK_Control_L);
 }
 
-bool Win32KeyboardHandler::handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lParam)
+bool KeyboardWin32::handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lParam)
 {
   Q_UNUSED(message);
   unsigned int timestamp = GetMessageTime();
@@ -191,7 +191,7 @@ bool Win32KeyboardHandler::handleKeyDownEvent(UINT message, WPARAM wParam, LPARA
   return true;
 }
 
-bool Win32KeyboardHandler::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam)
+bool KeyboardWin32::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam)
 {
   Q_UNUSED(message);
   UINT vKey = wParam;
@@ -247,7 +247,7 @@ bool Win32KeyboardHandler::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM 
   return true;
 }
 
-void Win32KeyboardHandler::setLEDState(unsigned int state)
+void KeyboardWin32::setLEDState(unsigned int state)
 {
   vlog.debug("Got server LED state: 0x%08x", state);
 
@@ -292,7 +292,7 @@ void Win32KeyboardHandler::setLEDState(unsigned int state)
   }
 }
 
-void Win32KeyboardHandler::pushLEDState()
+void KeyboardWin32::pushLEDState()
 {
   QVNCConnection* cc = AppManager::instance()->getConnection();
   // Server support?
@@ -329,7 +329,7 @@ void Win32KeyboardHandler::pushLEDState()
   }
 }
 
-void Win32KeyboardHandler::grabKeyboard()
+void KeyboardWin32::grabKeyboard()
 {
   BaseKeyboardHandler::grabKeyboard();
   int ret = win32_enable_lowlevel_keyboard((HWND)AppManager::instance()->getView()->winId());
@@ -340,7 +340,7 @@ void Win32KeyboardHandler::grabKeyboard()
   }
 }
 
-void Win32KeyboardHandler::ungrabKeyboard()
+void KeyboardWin32::ungrabKeyboard()
 {
   win32_disable_lowlevel_keyboard((HWND)AppManager::instance()->getView()->winId());
   BaseKeyboardHandler::ungrabKeyboard();

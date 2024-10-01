@@ -6,12 +6,12 @@
 #include <QTimer>
 #include <windows.h>
 
-class Win32KeyboardHandler : public BaseKeyboardHandler
+class KeyboardWin32 : public BaseKeyboardHandler
 {
   Q_OBJECT
 
 public:
-  Win32KeyboardHandler(QObject* parent = nullptr);
+  KeyboardWin32(QObject* parent = nullptr);
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   bool nativeEventFilter(QByteArray const& eventType, void* message, long* result) override;

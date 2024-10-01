@@ -12,7 +12,7 @@
 #define XK_LATIN1
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
-#include "Win32KeyboardHandler.h"
+#include "KeyboardWin32.h"
 #include "appmanager.h"
 #include "rfb/LogWriter.h"
 #include "vncwinview.h"
@@ -26,7 +26,7 @@ static rfb::LogWriter vlog("Viewport");
 QVNCWinView::QVNCWinView(QWidget* parent, Qt::WindowFlags f)
   : Viewport(parent, f)
 {
-  keyboardHandler = new Win32KeyboardHandler(this);
+  keyboardHandler = new KeyboardWin32(this);
   initKeyboardHandler();
 }
 
