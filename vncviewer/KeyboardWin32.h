@@ -1,4 +1,4 @@
-/* Copyright 2011-2021 Pierre Ossman <ossman@cendio.se> for Cendio AB
+/* Copyright 2011-2024 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 
 #ifndef __KEYBOARDWIN32_H__
 #define __KEYBOARDWIN32_H__
+
+#include <rfb/Timer.h>
 
 #include "Keyboard.h"
 
@@ -41,7 +43,7 @@ protected:
   uint32_t translateVKey(unsigned vkey, bool extended);
 
   bool hasAltGr();
-  static void handleAltGrTimeout(void *data);
+  void handleAltGrTimeout(rfb::Timer*);
   void resolveAltGrDetection(bool isAltGrSequence);
 
 private:
@@ -50,6 +52,7 @@ private:
 
   bool altGrArmed;
   unsigned int altGrCtrlTime;
+  rfb::MethodTimer<KeyboardWin32> altGrTimer;
 
   bool leftShiftDown;
   bool rightShiftDown;
