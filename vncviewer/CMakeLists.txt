@@ -121,8 +121,8 @@ set(PROJECT_SOURCES
         messagedialog.h
         alertdialog.cxx
         alertdialog.h
-        optionsdialog.cxx
-        optionsdialog.h
+        OptionsDialog.cxx
+        OptionsDialog.h
         options/compressiontab.cxx
         options/compressiontab.h
         options/inputtab.cxx

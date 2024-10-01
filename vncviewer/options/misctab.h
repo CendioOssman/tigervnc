@@ -1,7 +1,7 @@
 #ifndef MISCTAB_H
 #define MISCTAB_H
 
-#include "../optionsdialog.h"
+#include "../OptionsDialog.h"
 
 #include <QWidget>
 

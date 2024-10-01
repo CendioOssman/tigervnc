@@ -1,7 +1,7 @@
 #ifndef COMPRESSIONTAB_H
 #define COMPRESSIONTAB_H
 
-#include "../optionsdialog.h"
+#include "../OptionsDialog.h"
 
 #include <QWidget>
 

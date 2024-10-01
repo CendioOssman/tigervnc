@@ -25,7 +25,7 @@
 #include "authdialog.h"
 #include "infodialog.h"
 #include "messagedialog.h"
-#include "optionsdialog.h"
+#include "OptionsDialog.h"
 #include "serverdialog.h"
 #include "parameters.h"
 #include "vncconnection.h"
