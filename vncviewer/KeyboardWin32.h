@@ -1,4 +1,4 @@
-/* Copyright 2011-2021 Pierre Ossman <ossman@cendio.se> for Cendio AB
+/* Copyright 2011-2024 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 
 #ifndef __KEYBOARDWIN32_H__
 #define __KEYBOARDWIN32_H__
+
+#include <core/Timer.h>
 
 #include "Keyboard.h"
 
@@ -44,7 +46,7 @@ protected:
                          const unsigned char state[256]);
 
   bool hasAltGr();
-  static void handleAltGrTimeout(void *data);
+  void handleAltGrTimeout(core::Timer*);
   void resolveAltGrDetection(bool isAltGrSequence);
 
 private:
@@ -53,6 +55,7 @@ private:
 
   bool altGrArmed;
   unsigned int altGrCtrlTime;
+  core::MethodTimer<KeyboardWin32> altGrTimer;
 
   uint32_t vkPacketHighSurrogate;
 
