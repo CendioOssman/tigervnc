@@ -33,13 +33,13 @@ struct Point;
 
 using DownMap = std::map<int, quint32>;
 
-class QAbstractVNCView : public QWidget, public EmulateMB
+class Viewport : public QWidget, public EmulateMB
 {
   Q_OBJECT
 
 public:
-  QAbstractVNCView(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
-  virtual ~QAbstractVNCView();
+  Viewport(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
+  virtual ~Viewport();
   void toggleContextMenu();
 
   bool hasFocus() const { return QWidget::hasFocus() || isActiveWindow(); }

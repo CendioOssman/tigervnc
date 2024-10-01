@@ -3,7 +3,7 @@
 
 #include <QObject>
 
-class QAbstractVNCView;
+class Viewport;
 class DesktopWindow;
 class QTimer;
 class QVNCConnection;
@@ -25,7 +25,7 @@ public:
 
   int error() const { return errorCount; }
 
-  QAbstractVNCView* getView() const { return view; }
+  Viewport* getView() const { return view; }
 
   DesktopWindow* getWindow() const { return window; }
 
@@ -78,7 +78,7 @@ private:
   bool connectedOnce = false;
   int errorCount;
   QVNCConnection* connection;
-  QAbstractVNCView* view = nullptr;
+  Viewport* view = nullptr;
   DesktopWindow* window = nullptr;
   QTimer* rfbTimerProxy;
   ServerDialog* serverDialog = nullptr;

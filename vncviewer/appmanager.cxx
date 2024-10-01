@@ -20,7 +20,7 @@
 #include <QApplication>
 #undef asprintf
 #include "aboutdialog.h"
-#include "abstractvncview.h"
+#include "Viewport.h"
 #include "alertdialog.h"
 #include "authdialog.h"
 #include "infodialog.h"
@@ -196,13 +196,13 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   if (!view) {
     throw rdr::Exception(_("Platform not supported."));
   }
-  connect(view, &QAbstractVNCView::bufferResized, window, &DesktopWindow::fromBufferResize, Qt::QueuedConnection);
+  connect(view, &Viewport::bufferResized, window, &DesktopWindow::fromBufferResize, Qt::QueuedConnection);
   connect(view,
-          &QAbstractVNCView::remoteResizeRequest,
+          &Viewport::remoteResizeRequest,
           window,
           &DesktopWindow::postRemoteResizeRequest,
           Qt::QueuedConnection);
-  connect(view, &QAbstractVNCView::delayedInitialized, window, &DesktopWindow::showToast);
+  connect(view, &Viewport::delayedInitialized, window, &DesktopWindow::showToast);
 
   view->resize(width, height);
   window->setWidget(view);

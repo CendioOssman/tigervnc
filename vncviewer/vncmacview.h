@@ -1,7 +1,7 @@
 #ifndef VNCMACVIEW_H
 #define VNCMACVIEW_H
 
-#include "abstractvncview.h"
+#include "Viewport.h"
 
 #include <QAbstractNativeEventFilter>
 
@@ -11,7 +11,7 @@ class QLabel;
 class NSView;
 class NSCursor;
 
-class QVNCMacView : public QAbstractVNCView
+class QVNCMacView : public Viewport
 {
   Q_OBJECT
 

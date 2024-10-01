@@ -1,13 +1,13 @@
 #ifndef VNCWINVIEW_H
 #define VNCWINVIEW_H
 
-#include "abstractvncview.h"
+#include "Viewport.h"
 
 #include <windows.h>
 
 class QTimer;
 
-class QVNCWinView : public QAbstractVNCView
+class QVNCWinView : public Viewport
 {
   Q_OBJECT
 

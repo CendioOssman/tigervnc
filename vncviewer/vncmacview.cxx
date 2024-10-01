@@ -17,7 +17,7 @@
 static rfb::LogWriter vlog("QVNCMacView");
 
 QVNCMacView::QVNCMacView(QWidget* parent, Qt::WindowFlags f)
-  : QAbstractVNCView(parent, f)
+  : Viewport(parent, f)
 {
   keyboardHandler = new MacKeyboardHandler(this);
   initKeyboardHandler();
@@ -41,7 +41,7 @@ void QVNCMacView::setCursorPos(int x, int y)
 
 bool QVNCMacView::event(QEvent* e)
 {
-  return QAbstractVNCView::event(e);
+  return Viewport::event(e);
 }
 
 void QVNCMacView::bell()

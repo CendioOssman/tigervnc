@@ -30,7 +30,7 @@
 
 class QCursor;
 class QVNCConnection;
-class VNCCredential;
+class UserDialog;
 
 namespace rfb
 {
@@ -110,7 +110,7 @@ private:
 
   QVNCConnection* facade;
   QCursor* cursor;
-  VNCCredential* credential;
+  UserDialog* credential;
 
   unsigned updateCount;
   unsigned pixelCount;

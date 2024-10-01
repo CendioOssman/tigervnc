@@ -37,7 +37,7 @@
 #include "PlatformPixelBuffer.h"
 #include "i18n.h"
 #include "appmanager.h"
-#include "vnccredential.h"
+#include "UserDialog.h"
 #include "vncconnection.h"
 #include "CConn.h"
 #undef asprintf
@@ -82,7 +82,7 @@ CConn::CConn(QVNCConnection *cfacade)
   supportsLEDState = true;
   
   initialiseProtocol();
-  credential = new VNCCredential;
+  credential = new UserDialog;
   if (::customCompressLevel) {
     setCompressLevel(::compressLevel);
   }

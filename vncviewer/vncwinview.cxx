@@ -24,7 +24,7 @@
 static rfb::LogWriter vlog("Viewport");
 
 QVNCWinView::QVNCWinView(QWidget* parent, Qt::WindowFlags f)
-  : QAbstractVNCView(parent, f)
+  : Viewport(parent, f)
 {
   keyboardHandler = new Win32KeyboardHandler(this);
   initKeyboardHandler();
@@ -34,13 +34,13 @@ QVNCWinView::~QVNCWinView() {}
 
 bool QVNCWinView::event(QEvent* e)
 {
-  return QAbstractVNCView::event(e);
+  return Viewport::event(e);
 }
 
 void QVNCWinView::ungrabKeyboard()
 {
   ungrabPointer();
-  QAbstractVNCView::ungrabKeyboard();
+  Viewport::ungrabKeyboard();
 }
 
 void QVNCWinView::bell()

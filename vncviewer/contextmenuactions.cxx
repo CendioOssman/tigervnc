@@ -1,6 +1,6 @@
 #include "contextmenuactions.h"
 
-#include "abstractvncview.h"
+#include "Viewport.h"
 #include "appmanager.h"
 #include "parameters.h"
 #include "vncconnection.h"
@@ -34,7 +34,7 @@ QRevertSizeAction::QRevertSizeAction(const QString& text, QWidget* parent)
 {
   connect(this, &QAction::triggered, this, []() {
     DesktopWindow* window = AppManager::instance()->getWindow();
-    QAbstractVNCView* view = AppManager::instance()->getView();
+    Viewport* view = AppManager::instance()->getView();
     window->resize(view->pixmapSize().width(), view->pixmapSize().height());
   });
 }
@@ -45,7 +45,7 @@ QKeyToggleAction::QKeyToggleAction(const QString& text, int keyCode_, quint32 ke
   , keySym(keySym_)
 {
   connect(this, &QAction::triggered, this, [this](bool checked) {
-    QAbstractVNCView* view = AppManager::instance()->getView();
+    Viewport* view = AppManager::instance()->getView();
     view->toggleKey(checked, this->keyCode, this->keySym);
   });
 }
@@ -54,7 +54,7 @@ QMenuKeyAction::QMenuKeyAction(QWidget* parent)
   : QAction(parent)
 {
   connect(this, &QAction::triggered, this, []() {
-    QAbstractVNCView* view = AppManager::instance()->getView();
+    Viewport* view = AppManager::instance()->getView();
     view->sendContextMenuKey();
   });
 }
@@ -63,7 +63,7 @@ QCtrlAltDelAction::QCtrlAltDelAction(const QString& text, QWidget* parent)
   : QAction(text, parent)
 {
   connect(this, &QAction::triggered, this, []() {
-    QAbstractVNCView* view = AppManager::instance()->getView();
+    Viewport* view = AppManager::instance()->getView();
     view->sendCtrlAltDel();
   });
 }

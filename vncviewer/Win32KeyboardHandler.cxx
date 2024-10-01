@@ -1,5 +1,5 @@
 #include "Win32KeyboardHandler.h"
-#include "abstractvncview.h"
+#include "Viewport.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif

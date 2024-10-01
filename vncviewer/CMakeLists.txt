@@ -81,10 +81,10 @@ set(PROJECT_SOURCES
         DesktopWindow.h
         vncconnection.h
         vncconnection.cxx
-        vnccredential.cxx
-        vnccredential.h
-        abstractvncview.h
-        abstractvncview.cxx
+        UserDialog.cxx
+        UserDialog.h
+        Viewport.h
+        Viewport.cxx
         keysym2ucs.c
         keysym2ucs.h
         gettext.h

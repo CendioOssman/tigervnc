@@ -21,7 +21,7 @@
 #include <QTimer>
 #undef asprintf
 #include "CConn.h"
-#include "abstractvncview.h"
+#include "Viewport.h"
 #include "tunnelfactory.h"
 #undef asprintf
 

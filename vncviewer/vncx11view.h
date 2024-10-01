@@ -1,11 +1,11 @@
 #ifndef VNCX11VIEW_H
 #define VNCX11VIEW_H
 
-#include "abstractvncview.h"
+#include "Viewport.h"
 
 struct _XDisplay;
 
-class QVNCX11View : public QAbstractVNCView
+class QVNCX11View : public Viewport
 {
   Q_OBJECT
 

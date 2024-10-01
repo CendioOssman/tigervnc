@@ -1,4 +1,4 @@
-#include "vnccredential.h"
+#include "UserDialog.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -12,16 +12,16 @@
 
 #include <QEventLoop>
 
-VNCCredential::VNCCredential()
+UserDialog::UserDialog()
  : QObject(nullptr)
 {
 }
 
-VNCCredential::~VNCCredential()
+UserDialog::~UserDialog()
 {
 }
 
-void VNCCredential::getUserPasswd(bool secure, std::string *user, std::string *password)
+void UserDialog::getUserPasswd(bool secure, std::string *user, std::string *password)
 {
   const char *passwordFileName(::passwordFile);
   bool userNeeded = user != nullptr;
@@ -70,7 +70,7 @@ void VNCCredential::getUserPasswd(bool secure, std::string *user, std::string *p
   }
 }
 
-bool VNCCredential::showMsgBox(int flags, const char* title, const char* text)
+bool UserDialog::showMsgBox(int flags, const char* title, const char* text)
 {
   return AppManager::instance()->openMessageDialog(flags, title, text);
 }

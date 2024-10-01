@@ -3,13 +3,13 @@
 
 #include <QObject>
 
-class VNCCredential : public QObject
+class UserDialog : public QObject
 {
   Q_OBJECT
 
 public:
-  VNCCredential();
-  virtual ~VNCCredential();
+  UserDialog();
+  virtual ~UserDialog();
 
   // UserPasswdGetter callbacks
 

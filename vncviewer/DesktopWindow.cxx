@@ -4,7 +4,7 @@
 #include "config.h"
 #endif
 
-#include "abstractvncview.h"
+#include "Viewport.h"
 #include "appmanager.h"
 #include "i18n.h"
 #include "parameters.h"
@@ -359,7 +359,7 @@ void DesktopWindow::fullscreenOnSelectedDisplay(QScreen* screen)
     move(screen->geometry().x(), screen->geometry().y());
     resize(screen->geometry().width(), screen->geometry().height());
     showFullScreen();
-    QAbstractVNCView* view = AppManager::instance()->getView();
+    Viewport* view = AppManager::instance()->getView();
     view->setFocus();
     view->giveKeyboardFocus();
   });
@@ -389,7 +389,7 @@ void DesktopWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int
     X11Utils::fullscreen(dpy, screen, winId(), true);
     QApplication::sync();
 
-    QAbstractVNCView* view = AppManager::instance()->getView();
+    Viewport* view = AppManager::instance()->getView();
     view->setFocus();
     view->giveKeyboardFocus();
 
@@ -419,7 +419,7 @@ void DesktopWindow::fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidt
 #endif
     raise();
     activateWindow();
-    QAbstractVNCView* view = AppManager::instance()->getView();
+    Viewport* view = AppManager::instance()->getView();
     view->setFocus();
     view->giveKeyboardFocus();
   });
@@ -446,7 +446,7 @@ void DesktopWindow::exitFullscreen()
 #else
   setWindowFlag(Qt::WindowStaysOnTopHint, false);
   setWindowFlag(Qt::FramelessWindowHint, false);
-  QAbstractVNCView* view = AppManager::instance()->getView();
+  Viewport* view = AppManager::instance()->getView();
   if (view) {
     view->ungrabKeyboard();
   }
@@ -636,7 +636,7 @@ void DesktopWindow::fromBufferResize(int oldW, int oldH, int width, int height)
     return;
   }
 
-  QAbstractVNCView* view = AppManager::instance()->getView();
+  Viewport* view = AppManager::instance()->getView();
 
   if (!view) {
     vlog.debug("DesktopWindow::resize !view");
@@ -670,7 +670,7 @@ void DesktopWindow::postDialogClosing()
 {
   raise();
   activateWindow();
-  QAbstractVNCView* view = AppManager::instance()->getView();
+  Viewport* view = AppManager::instance()->getView();
   if (view) {
     view->setFocus();
     view->giveKeyboardFocus();
@@ -738,7 +738,7 @@ void DesktopWindow::changeEvent(QEvent* e)
 void DesktopWindow::focusInEvent(QFocusEvent*)
 {
   vlog.debug("DesktopWindow::focusInEvent");
-  QAbstractVNCView* view = AppManager::instance()->getView();
+  Viewport* view = AppManager::instance()->getView();
   if (view) {
     view->setFocus();
     view->giveKeyboardFocus();

@@ -31,7 +31,7 @@
 static rfb::LogWriter vlog("QVNCX11View");
 
 QVNCX11View::QVNCX11View(QWidget* parent, Qt::WindowFlags f)
-  : QAbstractVNCView(parent, f)
+  : Viewport(parent, f)
 {
   keyboardHandler = new X11KeyboardHandler(this);
   initKeyboardHandler();
@@ -118,7 +118,7 @@ void QVNCX11View::grabPointer()
   if (!gotGrab)
     return;
 
-  QAbstractVNCView::grabPointer();
+  Viewport::grabPointer();
 }
 
 void QVNCX11View::ungrabPointer()
@@ -141,7 +141,7 @@ void QVNCX11View::ungrabPointer()
 
   XIFreeDeviceInfo(devices);
 
-  QAbstractVNCView::ungrabPointer();
+  Viewport::ungrabPointer();
 }
 
 void QVNCX11View::bell()
