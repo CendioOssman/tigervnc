@@ -1,4 +1,4 @@
-#include "serverdialog.h"
+#include "ServerDialog.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"

@@ -26,7 +26,7 @@
 #include "infodialog.h"
 #include "messagedialog.h"
 #include "OptionsDialog.h"
-#include "serverdialog.h"
+#include "ServerDialog.h"
 #include "parameters.h"
 #include "vncconnection.h"
 #include "DesktopWindow.h"

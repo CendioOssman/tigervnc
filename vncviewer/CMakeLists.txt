@@ -109,8 +109,8 @@ set(PROJECT_SOURCES
         loggerconfig.h
         viewerconfig.cxx
         viewerconfig.h
-        serverdialog.cxx
-        serverdialog.h
+        ServerDialog.cxx
+        ServerDialog.h
         aboutdialog.cxx
         aboutdialog.h
         authdialog.cxx
