@@ -12,24 +12,29 @@
 #define XK_XKB_KEYS
 #include "rfb/keysymdef.h"
 
-using DownMap = std::map<int, quint32>;
+class KeyboardHandler {
+public:
+  virtual void handleKeyPress(int systemKeyCode,
+                              uint32_t keyCode, uint32_t keySym) = 0;
+  virtual void handleKeyRelease(int systemKeyCode) = 0;
+};
 
-class Keyboard : public QObject, public QAbstractNativeEventFilter
+class Keyboard : public QObject
 {
   Q_OBJECT
 
 public:
-  Keyboard(QObject* parent = nullptr);
+  Keyboard(KeyboardHandler* handler, QObject* parent = nullptr);
+
+  virtual bool handleEvent(const char* eventType, void* message) = 0;
+
+  virtual void reset() {};
 
   virtual void grabKeyboard();
   virtual void ungrabKeyboard();
 
-  virtual void setLEDState(unsigned int state) = 0;
-  virtual void pushLEDState() = 0;
-
-  virtual bool handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false);
-  virtual bool handleKeyRelease(int keyCode);
-  void resetKeyboard();
+  virtual unsigned getLEDState() = 0;
+  virtual void setLEDState(unsigned state) = 0;
 
   void setMenuKeyStatus(quint32 keysym, bool checked);
 
@@ -44,9 +49,9 @@ signals:
   void contextMenuKeyPressed(bool menuShortCutMode);
 
 protected:
-  bool keyboardGrabbed = false;
+  KeyboardHandler* handler;
 
-  DownMap downKeySym;
+  bool keyboardGrabbed = false;
 
   bool menuCtrlKey = false;
   bool menuAltKey = false;

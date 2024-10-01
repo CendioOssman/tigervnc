@@ -12,6 +12,9 @@
 // clang-format on
 
 #include "Keyboard.h"
+#ifdef __APPLE__
+#include "KeyboardMacOS.h"
+#endif
 #include "EmulateMB.h"
 #include "PlatformPixelBuffer.h"
 #include "appmanager.h"
@@ -21,6 +24,7 @@
 #include "menukey.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ServerParams.h"
+#include "rfb/ledStates.h"
 #include "rfb/util.h"
 #include "vncconnection.h"
 #include "clicksalternativegesture.h"
@@ -66,6 +70,17 @@
 
 static rfb::LogWriter vlog("VNCView");
 
+// Used for fake key presses from the menu
+static const int FAKE_CTRL_KEY_CODE = 0x10001;
+static const int FAKE_ALT_KEY_CODE = 0x10002;
+static const int FAKE_DEL_KEY_CODE = 0x10003;
+
+// Used for fake key presses for lock key sync
+static const int FAKE_KEY_CODE = 0xffff;
+
+// Used for fake key presses for gestures
+static const int FAKE_GESTURE_KEY_CODE = 0x20001;
+
 Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   : QWidget(parent, f)
   , mousePointerTimer(new QTimer(this))
@@ -85,7 +100,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
     if (ClicksAlternativeGesture *gesture = static_cast<ClicksAlternativeGesture *>(event->gesture(type))) {
       if (gesture->state() == Qt::GestureFinished) {
         QPoint pos = gesture->getPosition();
-        keyboardHandler->handleKeyRelease(0x1d); // Prevents non handling of PanZoomGesture Finished
+        handleKeyRelease(FAKE_GESTURE_KEY_CODE); // Prevents non handling of PanZoomGesture Finished
         if (gesture->getType() == ClicksAlternativeGesture::TwoPoints) {
           vlog.debug("Cendio Right click alternative gesture");
           filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 4 /* RightButton */);
@@ -148,7 +163,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
             wheelMask |= 16;
           }
           vlog.debug("Cendio Zoom gesture %d %f", wheelMask, gesture->getScaleFactor());
-          keyboardHandler->handleKeyPress(0x1d, XK_Control_L);
+          handleKeyPress(FAKE_GESTURE_KEY_CODE, 0x1d, XK_Control_L);
           if (!panZoomGesture) {
             panZoomGesture = true;
             QTimer::singleShot(100, this, [=](){
@@ -166,7 +181,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
         }
       } else {
         event->accept();
-        keyboardHandler->handleKeyRelease(0x1d);
+        handleKeyRelease(FAKE_GESTURE_KEY_CODE);
         return true;
       }
     }
@@ -353,8 +368,8 @@ void Viewport::createContextMenu()
     });
     contextMenuActions << revertSizeAction;
     contextMenuActions << new QMenuSeparator();
-    contextMenuActions << new QKeyToggleAction(p_("ContextMenu|", "&Ctrl"), 0x1d, XK_Control_L);
-    contextMenuActions << new QKeyToggleAction(p_("ContextMenu|", "&Alt"), 0x38, XK_Alt_L);
+    contextMenuActions << new QKeyToggleAction(p_("ContextMenu|", "&Ctrl"), FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+    contextMenuActions << new QKeyToggleAction(p_("ContextMenu|", "&Alt"), FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
     auto menuKeyAction = new QMenuKeyAction();
     contextMenuActions << menuKeyAction;
     connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
@@ -388,27 +403,27 @@ void Viewport::sendContextMenuKey()
   int keyCode;
   quint32 keySym;
   ::getMenuKey(&keyCode, &keySym);
-  keyboardHandler->handleKeyPress(keyCode, keySym, true);
-  keyboardHandler->handleKeyRelease(keyCode);
+  handleKeyPress(FAKE_KEY_CODE, keyCode, keySym);
+  handleKeyRelease(FAKE_KEY_CODE);
   contextMenu->hide();
 }
 
 void Viewport::sendCtrlAltDel()
 {
-  keyboardHandler->handleKeyPress(0x1d, XK_Control_L);
-  keyboardHandler->handleKeyPress(0x38, XK_Alt_L);
-  keyboardHandler->handleKeyPress(0xd3, XK_Delete);
-  keyboardHandler->handleKeyRelease(0xd3);
-  keyboardHandler->handleKeyRelease(0x38);
-  keyboardHandler->handleKeyRelease(0x1d);
+  handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+  handleKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+  handleKeyPress(FAKE_DEL_KEY_CODE, 0xd3, XK_Delete);
+  handleKeyRelease(FAKE_DEL_KEY_CODE);
+  handleKeyRelease(FAKE_ALT_KEY_CODE);
+  handleKeyRelease(FAKE_CTRL_KEY_CODE);
 }
 
-void Viewport::toggleKey(bool toggle, int keyCode, quint32 keySym)
+void Viewport::toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint32 keySym)
 {
   if (toggle) {
-    keyboardHandler->handleKeyPress(keyCode, keySym);
+    handleKeyPress(systemKeyCode, keyCode, keySym);
   } else {
-    keyboardHandler->handleKeyRelease(keyCode);
+    handleKeyRelease(systemKeyCode);
   }
   keyboardHandler->setMenuKeyStatus(keySym, toggle);
 }
@@ -461,7 +476,7 @@ void Viewport::initKeyboardHandler()
           firstLEDState = false;
           if (hasFocus()) {
             vlog.debug("KeyboardHandler::pushLEDState");
-            keyboardHandler->pushLEDState();
+            pushLEDState();
           }
         } else if (hasFocus()) {
           vlog.debug("KeyboardHandler::setLEDState");
@@ -479,19 +494,96 @@ void Viewport::initKeyboardHandler()
 void Viewport::installKeyboardHandler()
 {
   vlog.debug("Viewport::installKeyboardHandler");
-  QAbstractEventDispatcher::instance()->installNativeEventFilter(keyboardHandler);
+  QAbstractEventDispatcher::instance()->installNativeEventFilter(this);
 }
 
 void Viewport::removeKeyboardHandler()
 {
   vlog.debug("Viewport::removeNativeEventFilter");
-  QAbstractEventDispatcher::instance()->removeNativeEventFilter(keyboardHandler);
+  QAbstractEventDispatcher::instance()->removeNativeEventFilter(this);
+}
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, long*)
+#else
+bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, qintptr*)
+#endif
+{
+  bool consumed;
+
+#ifdef __APPLE__
+  // Special event that means we temporarily lost some input
+  if (KeyboardMacOS::isKeyboardSync(eventType, message)) {
+    resetKeyboard();
+    return true;
+  }
+#endif
+
+  consumed = keyboardHandler->handleEvent(eventType, message);
+  if (consumed)
+    return true;
+
+  return false;
+}
+
+void Viewport::pushLEDState()
+{
+  unsigned int state;
+
+  QVNCConnection* cc = AppManager::instance()->getConnection();
+
+  // Server support?
+  if (cc->server()->ledState() == rfb::ledUnknown)
+    return;
+
+  state = keyboardHandler->getLEDState();
+  if (state == rfb::ledUnknown)
+    return;
+
+#if defined(__APPLE__)
+  // No support for Scroll Lock //
+  state |= (cc->server()->ledState() & rfb::ledScrollLock);
+#endif
+
+  if ((state & rfb::ledCapsLock) != (cc->server()->ledState() & rfb::ledCapsLock)) {
+    vlog.debug("Inserting fake CapsLock to get in sync with server");
+    handleKeyPress(FAKE_KEY_CODE, 0x3a, XK_Caps_Lock);
+    handleKeyRelease(FAKE_KEY_CODE);
+  }
+  if ((state & rfb::ledNumLock) != (cc->server()->ledState() & rfb::ledNumLock)) {
+    vlog.debug("Inserting fake NumLock to get in sync with server");
+    handleKeyPress(FAKE_KEY_CODE, 0x45, XK_Num_Lock);
+    handleKeyRelease(FAKE_KEY_CODE);
+  }
+  if ((state & rfb::ledScrollLock) != (cc->server()->ledState() & rfb::ledScrollLock)) {
+    vlog.debug("Inserting fake ScrollLock to get in sync with server");
+    handleKeyPress(FAKE_KEY_CODE, 0x46, XK_Scroll_Lock);
+    handleKeyRelease(FAKE_KEY_CODE);
+  }
 }
 
 void Viewport::resetKeyboard()
 {
+  AppManager::instance()->getConnection()->releaseAllKeys();
   if (keyboardHandler)
-    keyboardHandler->resetKeyboard();
+    keyboardHandler->reset();
+}
+
+void Viewport::handleKeyPress(int systemKeyCode,
+                              uint32_t keyCode, uint32_t keySym)
+{
+  if (viewOnly)
+    return;
+
+  AppManager::instance()->getConnection()->sendKeyPress(systemKeyCode, keyCode, keySym);
+}
+
+void Viewport::handleKeyRelease(int systemKeyCode)
+{
+  if (viewOnly)
+    return;
+
+  AppManager::instance()->getConnection()->sendKeyRelease(systemKeyCode);
 }
 
 void Viewport::setCursorPos(int x, int y)
@@ -952,14 +1044,14 @@ void Viewport::giveKeyboardFocus()
            // We may have gotten our lock keys out of sync with the server
            // whilst we didn't have focus. Try to sort this out.
     vlog.debug("KeyboardHandler::pushLEDState");
-    keyboardHandler->pushLEDState();
+    pushLEDState();
 
            // Resend Ctrl/Alt if needed
     if (keyboardHandler->getMenuCtrlKey()) {
-      keyboardHandler->handleKeyPress(0x1d, XK_Control_L);
+      handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
     }
     if (keyboardHandler->getMenuAltKey()) {
-      keyboardHandler->handleKeyPress(0x38, XK_Alt_L);
+      handleKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
     }
   }
 }

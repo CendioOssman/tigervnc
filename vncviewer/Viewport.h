@@ -12,6 +12,7 @@
 #include "rfb/Timer.h"
 
 #include "EmulateMB.h"
+#include "Keyboard.h"
 
 class QMenu;
 class QAction;
@@ -33,7 +34,7 @@ struct Point;
 
 using DownMap = std::map<int, quint32>;
 
-class Viewport : public QWidget, public EmulateMB
+class Viewport : public QWidget, protected EmulateMB, protected KeyboardHandler, protected QAbstractNativeEventFilter
 {
   Q_OBJECT
 
@@ -47,9 +48,8 @@ public:
   bool isVisibleContextMenu() const;
   void sendContextMenuKey();
   void sendCtrlAltDel();
-  void toggleKey(bool toggle, int keyCode, quint32 keySym);
+  void toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint32 keySym);
   void resize(int width, int height);
-  virtual void resetKeyboard();
 
   QSize pixmapSize() const { return pixmap.size(); };
 
@@ -114,6 +114,16 @@ protected:
   void initKeyboardHandler();
   void installKeyboardHandler();
   void removeKeyboardHandler();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  bool nativeEventFilter(QByteArray const& eventType, void* message, long*) override;
+#else
+  bool nativeEventFilter(QByteArray const& eventType, void* message, qintptr*) override;
+#endif
+  void pushLEDState();
+  void resetKeyboard();
+  void handleKeyPress(int systemKeyCode,
+                      uint32_t keyCode, uint32_t keySym) override;
+  void handleKeyRelease(int systemKeyCode) override;
 
   // Context menu
   QMenu* contextMenu = nullptr;

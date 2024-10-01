@@ -51,8 +51,8 @@ Bool eventIsFocusWithSerial(Display* /*dpy*/, XEvent* event, XPointer arg)
   return True;
 }
 
-KeyboardX11::KeyboardX11(QObject* parent)
-  : Keyboard(parent)
+KeyboardX11::KeyboardX11(KeyboardHandler* handler_, QObject* parent)
+  : Keyboard(handler_, parent)
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   display = QX11Info::display();
@@ -103,13 +103,9 @@ KeyboardX11::~KeyboardX11()
 
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-bool KeyboardX11::nativeEventFilter(QByteArray const& eventType, void* message, long* /*result*/)
-#else
-bool KeyboardX11::nativeEventFilter(QByteArray const& eventType, void* message, qintptr* /*result*/)
-#endif
+bool KeyboardX11::handleEvent(const char* eventType, void* message)
 {
-  if (eventType == "xcb_generic_event_t") {
+  if (strcmp(eventType, "xcb_generic_event_t") == 0) {
     xcb_generic_event_t* ev = static_cast<xcb_generic_event_t*>(message);
     uint16_t xcbEventType = ev->response_type;
     if (xcbEventType == XCB_KEY_PRESS) {
@@ -120,11 +116,6 @@ bool KeyboardX11::nativeEventFilter(QByteArray const& eventType, void* message, 
       if (keycode == 50) {
         keycode = 42;
       }
-
-      // Generate a fake keycode just for tracking if we can't figure
-      // out the proper one
-      if (keycode == 0)
-        keycode = 0x100 | xevent->detail;
 
       XKeyEvent kev;
       kev.type = xevent->response_type;
@@ -150,41 +141,42 @@ bool KeyboardX11::nativeEventFilter(QByteArray const& eventType, void* message, 
         vlog.error(_("No symbol for key code %d (in the current state)"), (int)xevent->detail);
       }
 
-      switch (keysym) {
-      // For the first few years, there wasn't a good consensus on what the
-      // Windows keys should be mapped to for X11. So we need to help out a
-      // bit and map all variants to the same key...
-      case XK_Hyper_L:
-        keysym = XK_Super_L;
-        break;
-      case XK_Hyper_R:
-        keysym = XK_Super_R;
-        break;
-        // There has been several variants for Shift-Tab over the years.
-        // RFB states that we should always send a normal tab.
-      case XK_ISO_Left_Tab:
-        keysym = XK_Tab;
-        break;
-      }
-
-      if (!handleKeyPress(keycode, keysym))
-        return false;
+      handler->handleKeyPress(xevent->detail, keycode, keysym);
       return true;
     } else if (xcbEventType == XCB_KEY_RELEASE) {
       xcb_key_release_event_t* xevent = reinterpret_cast<xcb_key_release_event_t*>(message);
-      int keycode = code_map_keycode_to_qnum[xevent->detail]; // TODO: what's this table???
-      // int keycode = xevent->detail;
-      if (keycode == 0)
-        keycode = 0x100 | xevent->detail;
-      if (!handleKeyRelease(keycode))
-        return false;
+      handler->handleKeyRelease(xevent->detail);
       return true;
     }
   }
   return false;
 }
 
-void KeyboardX11::setLEDState(unsigned int state)
+unsigned KeyboardX11::getLEDState()
+{
+  XkbStateRec xkbState;
+  Status status = XkbGetState(display, XkbUseCoreKbd, &xkbState);
+  if (status != Success) {
+    vlog.error(_("Failed to get keyboard LED state: %d"), status);
+    return rfb::ledUnknown;
+  }
+  unsigned int state = 0;
+  if (xkbState.locked_mods & LockMask) {
+    state |= rfb::ledCapsLock;
+  }
+  unsigned int mask = getModifierMask(XK_Num_Lock);
+  if (xkbState.locked_mods & mask) {
+    state |= rfb::ledNumLock;
+  }
+  mask = getModifierMask(XK_Scroll_Lock);
+  if (xkbState.locked_mods & mask) {
+    state |= rfb::ledScrollLock;
+  }
+
+  return state;
+}
+
+void KeyboardX11::setLEDState(unsigned state)
 {
   vlog.debug("Got server LED state: 0x%08x", state);
 
@@ -208,49 +200,6 @@ void KeyboardX11::setLEDState(unsigned int state)
   Bool ret = XkbLockModifiers(display, XkbUseCoreKbd, affect, values);
   if (!ret) {
     vlog.error(_("Failed to update keyboard LED state"));
-  }
-}
-
-void KeyboardX11::pushLEDState()
-{
-  QVNCConnection* cc = AppManager::instance()->getConnection();
-  // Server support?
-  rfb::ServerParams* server = AppManager::instance()->getConnection()->server();
-  if (!server || server->ledState() == rfb::ledUnknown) {
-    return;
-  }
-  XkbStateRec xkbState;
-  Status status = XkbGetState(display, XkbUseCoreKbd, &xkbState);
-  if (status != Success) {
-    vlog.error(_("Failed to get keyboard LED state: %d"), status);
-    return;
-  }
-  unsigned int state = 0;
-  if (xkbState.locked_mods & LockMask) {
-    state |= rfb::ledCapsLock;
-  }
-  unsigned int mask = getModifierMask(XK_Num_Lock);
-  if (xkbState.locked_mods & mask) {
-    state |= rfb::ledNumLock;
-  }
-  mask = getModifierMask(XK_Scroll_Lock);
-  if (xkbState.locked_mods & mask) {
-    state |= rfb::ledScrollLock;
-  }
-  if ((state & rfb::ledCapsLock) != (cc->server()->ledState() & rfb::ledCapsLock)) {
-    vlog.debug("Inserting fake CapsLock to get in sync with server");
-    handleKeyPress(0x3a, XK_Caps_Lock);
-    handleKeyRelease(0x3a);
-  }
-  if ((state & rfb::ledNumLock) != (cc->server()->ledState() & rfb::ledNumLock)) {
-    vlog.debug("Inserting fake NumLock to get in sync with server");
-    handleKeyPress(0x45, XK_Num_Lock);
-    handleKeyRelease(0x45);
-  }
-  if ((state & rfb::ledScrollLock) != (cc->server()->ledState() & rfb::ledScrollLock)) {
-    vlog.debug("Inserting fake ScrollLock to get in sync with server");
-    handleKeyPress(0x46, XK_Scroll_Lock);
-    handleKeyRelease(0x46);
   }
 }
 

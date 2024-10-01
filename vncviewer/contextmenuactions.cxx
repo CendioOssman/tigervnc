@@ -39,14 +39,15 @@ QRevertSizeAction::QRevertSizeAction(const QString& text, QWidget* parent)
   });
 }
 
-QKeyToggleAction::QKeyToggleAction(const QString& text, int keyCode_, quint32 keySym_, QWidget* parent)
+QKeyToggleAction::QKeyToggleAction(const QString& text, int systemKeyCode_, quint32 keyCode_, quint32 keySym_, QWidget* parent)
   : QCheckableAction(text, parent)
+  , systemKeyCode(systemKeyCode_)
   , keyCode(keyCode_)
   , keySym(keySym_)
 {
   connect(this, &QAction::triggered, this, [this](bool checked) {
     Viewport* view = AppManager::instance()->getView();
-    view->toggleKey(checked, this->keyCode, this->keySym);
+    view->toggleKey(checked, this->systemKeyCode, this->keyCode, this->keySym);
   });
 }
 

@@ -101,6 +101,10 @@ public:
   void refreshFramebuffer();
   void sendClipboardData(QString data);
   void requestClipboard();
+  void sendKeyPress(int systemKeyCode, uint32_t keyCode, uint32_t keySym);
+  void sendKeyRelease(int systemKeyCode);
+  void releaseAllKeys();
+
 
   QString infoText() { return rfbcon ? rfbcon->connectionInfo() : ""; }
 

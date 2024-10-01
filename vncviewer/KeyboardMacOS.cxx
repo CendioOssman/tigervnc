@@ -33,31 +33,21 @@ extern const unsigned int code_map_osx_to_qnum_len;
 
 static rfb::LogWriter vlog("KeyboardMacOS");
 
-KeyboardMacOS::KeyboardMacOS(QObject* parent)
-  : Keyboard(parent)
+KeyboardMacOS::KeyboardMacOS(KeyboardHandler* handler_, QObject* parent)
+  : Keyboard(handler_, parent)
 {
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-bool KeyboardMacOS::nativeEventFilter(const QByteArray& eventType, void* message, long* result)
-#else
-bool KeyboardMacOS::nativeEventFilter(const QByteArray& eventType, void* message, qintptr* result)
-#endif
+bool KeyboardMacOS::handleEvent(const char* eventType, void* message)
 {
-  Q_UNUSED(result)
-  if (eventType == "mac_generic_NSEvent") {
-    if (cocoa_is_keyboard_sync(message)) {
-      while (!downKeySym.empty()) {
-        handleKeyRelease(downKeySym.begin()->first);
-      }
-      return true;
-    }
+  if (strcmp(eventType, "mac_generic_NSEvent") == 0) {
     if (cocoa_is_keyboard_event(message)) {
-      int keyCode = cocoa_event_keycode(message);
-      if ((unsigned)keyCode >= code_map_osx_to_qnum_len) {
+      int systemKeyCode = cocoa_event_keycode(message);
+      uint32_t keyCode;
+      if ((unsigned)systemKeyCode >= code_map_osx_to_qnum_len) {
         keyCode = 0;
       } else {
-        keyCode = code_map_osx_to_qnum[keyCode];
+        keyCode = code_map_osx_to_qnum[systemKeyCode];
       }
       if (cocoa_is_key_press(message)) {
         uint32_t keySym = cocoa_event_keysym(message);
@@ -65,17 +55,15 @@ bool KeyboardMacOS::nativeEventFilter(const QByteArray& eventType, void* message
           vlog.error(_("No symbol for key code 0x%02x (in the current state)"), (int)keyCode);
         }
 
-        if (!handleKeyPress(keyCode, keySym))
-          return false;
+        handler->handleKeyPress(systemKeyCode, keyCode, keySym);
 
         // We don't get any release events for CapsLock, so we have to
         // send the release right away.
         if (keySym == XK_Caps_Lock) {
-          handleKeyRelease(keyCode);
+          handler->handleKeyRelease(systemKeyCode);
         }
       } else {
-        if (!handleKeyRelease(keyCode))
-          return false;
+        handler->handleKeyRelease(systemKeyCode);
       }
       return true;
     }
@@ -83,32 +71,40 @@ bool KeyboardMacOS::nativeEventFilter(const QByteArray& eventType, void* message
   return false;
 }
 
-bool KeyboardMacOS::handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode)
+bool KeyboardMacOS::isKeyboardSync(QByteArray const& eventType, void* message)
 {
-  // Alt on OS X behaves more like AltGr on other systems, and to get
-  // sane behaviour we should translate things in that manner for the
-  // remote VNC server. However that means we lose the ability to use
-  // Alt as a shortcut modifier. Do what RealVNC does and hijack the
-  // left command key as an Alt replacement.
-  switch (keySym) {
-  case XK_Super_L:
-    keySym = XK_Alt_L;
-    break;
-  case XK_Super_R:
-    keySym = XK_Super_L;
-    break;
-  case XK_Alt_L:
-    keySym = XK_Mode_switch;
-    break;
-  case XK_Alt_R:
-    keySym = XK_ISO_Level3_Shift;
-    break;
+  if (strcmp(eventType, "mac_generic_NSEvent") == 0) {
+    if (cocoa_is_keyboard_sync(message)) {
+      return true;
+    }
   }
-
-  return Keyboard::handleKeyPress(keyCode, keySym, menuShortCutMode);
+  return false;
 }
 
-void KeyboardMacOS::setLEDState(unsigned int state)
+unsigned KeyboardMacOS::getLEDState()
+{
+  bool on;
+  int ret = cocoa_get_caps_lock_state(&on);
+  if (ret != 0) {
+    vlog.error(_("Failed to get keyboard LED state: %d"), ret);
+    return rfb::ledUnknown;
+  }
+  unsigned int state = 0;
+  if (on) {
+    state |= rfb::ledCapsLock;
+  }
+  ret = cocoa_get_num_lock_state(&on);
+  if (ret != 0) {
+    vlog.error(_("Failed to get keyboard LED state: %d"), ret);
+    return rfb::ledUnknown;
+  }
+  if (on) {
+    state |= rfb::ledNumLock;
+  }
+  return state;
+}
+
+void KeyboardMacOS::setLEDState(unsigned state)
 {
   vlog.debug("Got server LED state: 0x%08x", state);
 
@@ -119,52 +115,6 @@ void KeyboardMacOS::setLEDState(unsigned int state)
 
   if (ret != 0) {
     vlog.error(_("Failed to update keyboard LED state: %d"), ret);
-  }
-}
-
-void KeyboardMacOS::pushLEDState()
-{
-  QVNCConnection* cc = AppManager::instance()->getConnection();
-  // Server support?
-  rfb::ServerParams* server = AppManager::instance()->getConnection()->server();
-  if (!server || server->ledState() == rfb::ledUnknown) {
-    return;
-  }
-
-  bool on;
-  int ret = cocoa_get_caps_lock_state(&on);
-  if (ret != 0) {
-    vlog.error(_("Failed to get keyboard LED state: %d"), ret);
-    return;
-  }
-  unsigned int state = 0;
-  if (on) {
-    state |= rfb::ledCapsLock;
-  }
-  ret = cocoa_get_num_lock_state(&on);
-  if (ret != 0) {
-    vlog.error(_("Failed to get keyboard LED state: %d"), ret);
-    return;
-  }
-  if (on) {
-    state |= rfb::ledNumLock;
-  }
-  // No support for Scroll Lock //
-  state |= (cc->server()->ledState() & rfb::ledScrollLock);
-  if ((state & rfb::ledCapsLock) != (cc->server()->ledState() & rfb::ledCapsLock)) {
-    vlog.debug("Inserting fake CapsLock to get in sync with server");
-    handleKeyPress(0x3a, XK_Caps_Lock);
-    handleKeyRelease(0x3a);
-  }
-  if ((state & rfb::ledNumLock) != (cc->server()->ledState() & rfb::ledNumLock)) {
-    vlog.debug("Inserting fake NumLock to get in sync with server");
-    handleKeyPress(0x45, XK_Num_Lock);
-    handleKeyRelease(0x45);
-  }
-  if ((state & rfb::ledScrollLock) != (cc->server()->ledState() & rfb::ledScrollLock)) {
-    vlog.debug("Inserting fake ScrollLock to get in sync with server");
-    handleKeyPress(0x46, XK_Scroll_Lock);
-    handleKeyRelease(0x46);
   }
 }
 

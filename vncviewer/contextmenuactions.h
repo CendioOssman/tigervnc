@@ -30,10 +30,11 @@ public:
 class QKeyToggleAction : public QCheckableAction
 {
 public:
-  QKeyToggleAction(const QString& text, int keyCode, quint32 keySym, QWidget* parent = nullptr);
+  QKeyToggleAction(const QString& text, int systemKeyCode, quint32 keyCode, quint32 keySym, QWidget* parent = nullptr);
 
 private:
-  int keyCode;
+  int systemKeyCode;
+  quint32 keyCode;
   quint32 keySym;
 };
 

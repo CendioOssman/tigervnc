@@ -330,6 +330,45 @@ void QVNCConnection::requestClipboard()
   }
 }
 
+void QVNCConnection::sendKeyPress(int systemKeyCode, uint32_t keyCode, uint32_t keySym)
+{
+  try {
+    if (rfbcon) {
+      rfbcon->sendKeyPress(systemKeyCode, keyCode, keySym);
+    }
+  } catch (rdr::Exception& e) {
+    AppManager::instance()->publishUnexpectedError(e.str());
+  } catch (int& e) {
+    AppManager::instance()->publishUnexpectedError(strerror(e));
+  }
+}
+
+void QVNCConnection::sendKeyRelease(int systemKeyCode)
+{
+  try {
+    if (rfbcon) {
+      rfbcon->sendKeyRelease(systemKeyCode);
+    }
+  } catch (rdr::Exception& e) {
+    AppManager::instance()->publishUnexpectedError(e.str());
+  } catch (int& e) {
+    AppManager::instance()->publishUnexpectedError(strerror(e));
+  }
+}
+
+void QVNCConnection::releaseAllKeys()
+{
+  try {
+    if (rfbcon) {
+      rfbcon->releaseAllKeys();
+    }
+  } catch (rdr::Exception& e) {
+    AppManager::instance()->publishUnexpectedError(e.str());
+  } catch (int& e) {
+    AppManager::instance()->publishUnexpectedError(strerror(e));
+  }
+}
+
 void QVNCConnection::setState(int state)
 {
   try {

@@ -35,22 +35,18 @@ static rfb::LogWriter vlog("KeyboardWin32");
 static const WORD SCAN_FAKE = 0xaa;
 static const WORD NoSymbol = 0;
 
-KeyboardWin32::KeyboardWin32(QObject* parent)
-  : Keyboard(parent)
+KeyboardWin32::KeyboardWin32(KeyboardHandler* handler_, QObject* parent)
+  : Keyboard(handler_, parent), leftShiftDown(false), rightShiftDown(false)
 {
   altGrCtrlTimer.setInterval(100);
   altGrCtrlTimer.setSingleShot(true);
   connect(&altGrCtrlTimer, &QTimer::timeout, this, [=]() {
     altGrArmed = false;
-    handleKeyPress(0x1d, XK_Control_L);
+    handler->handleKeyPress(0x1d, 0x1d, XK_Control_L);
   });
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-bool KeyboardWin32::nativeEventFilter(QByteArray const& /*eventType*/, void* message, long* /*result*/)
-#else
-bool KeyboardWin32::nativeEventFilter(QByteArray const& /*eventType*/, void* message, qintptr* /*result*/)
-#endif
+bool KeyboardWin32::handleEvent(const char* /*eventType*/, void* message)
 {
   MSG* windowsmsg = static_cast<MSG*>(message);
 
@@ -72,7 +68,7 @@ void KeyboardWin32::resolveAltGrDetection(bool isAltGrSequence)
   altGrCtrlTimer.stop();
   // when it's not an AltGr sequence we can't supress the Ctrl anymore
   if (!isAltGrSequence)
-    handleKeyPress(0x1d, XK_Control_L);
+    handler->handleKeyPress(0x1d, 0x1d, XK_Control_L);
 }
 
 bool KeyboardWin32::handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lParam)
@@ -175,8 +171,7 @@ bool KeyboardWin32::handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lPara
     }
   }
 
-  if (!handleKeyPress(keyCode, keySym))
-    return false;
+  handler->handleKeyPress(keyCode, keyCode, keySym);
 
   // We don't get reliable WM_KEYUP for these
   switch (keySym) {
@@ -185,8 +180,14 @@ bool KeyboardWin32::handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lPara
   case XK_Katakana:
   case XK_Hiragana:
   case XK_Romaji:
-    handleKeyRelease(keyCode);
+    handler->handleKeyRelease(keyCode);
   }
+
+  // Shift key tracking, see below
+  if (keyCode == 0x2a)
+      leftShiftDown = true;
+  if (keyCode == 0x36)
+      rightShiftDown = true;
 
   return true;
 }
@@ -230,24 +231,41 @@ bool KeyboardWin32::handleKeyUpEvent(UINT message, WPARAM wParam, LPARAM lParam)
     keyCode = 0x54;
   }
 
-  if (!handleKeyRelease(keyCode))
-    return false;
+  handler->handleKeyRelease(keyCode);
 
   // Windows has a rather nasty bug where it won't send key release
   // events for a Shift button if the other Shift is still pressed
   if ((keyCode == 0x2a) || (keyCode == 0x36)) {
-    if (downKeySym.count(0x2a)) {
-      handleKeyRelease(0x2a);
+    if (leftShiftDown) {
+      handler->handleKeyRelease(0x2a);
     }
-    if (downKeySym.count(0x36)) {
-      handleKeyRelease(0x36);
+    if (rightShiftDown) {
+      handler->handleKeyRelease(0x36);
     }
+    leftShiftDown = false;
+    rightShiftDown = false;
   }
 
   return true;
 }
 
-void KeyboardWin32::setLEDState(unsigned int state)
+unsigned KeyboardWin32::getLEDState()
+{
+  unsigned int state = 0;
+  if (GetKeyState(VK_CAPITAL) & 0x1) {
+    state |= rfb::ledCapsLock;
+  }
+  if (GetKeyState(VK_NUMLOCK) & 0x1) {
+    state |= rfb::ledNumLock;
+  }
+  if (GetKeyState(VK_SCROLL) & 0x1) {
+    state |= rfb::ledScrollLock;
+  }
+
+  return state;
+}
+
+void KeyboardWin32::setLEDState(unsigned state)
 {
   vlog.debug("Got server LED state: 0x%08x", state);
 
@@ -289,43 +307,6 @@ void KeyboardWin32::setLEDState(unsigned int state)
   UINT ret = SendInput(count, input, sizeof(*input));
   if (ret < count) {
     vlog.error(_("Failed to update keyboard LED state: %lu"), GetLastError());
-  }
-}
-
-void KeyboardWin32::pushLEDState()
-{
-  QVNCConnection* cc = AppManager::instance()->getConnection();
-  // Server support?
-  rfb::ServerParams* server = AppManager::instance()->getConnection()->server();
-  if (!server || server->ledState() == rfb::ledUnknown) {
-    return;
-  }
-
-  unsigned int state = 0;
-  if (GetKeyState(VK_CAPITAL) & 0x1) {
-    state |= rfb::ledCapsLock;
-  }
-  if (GetKeyState(VK_NUMLOCK) & 0x1) {
-    state |= rfb::ledNumLock;
-  }
-  if (GetKeyState(VK_SCROLL) & 0x1) {
-    state |= rfb::ledScrollLock;
-  }
-
-  if ((state & rfb::ledCapsLock) != (cc->server()->ledState() & rfb::ledCapsLock)) {
-    vlog.debug("Inserting fake CapsLock to get in sync with server");
-    handleKeyPress(0x3a, XK_Caps_Lock);
-    handleKeyRelease(0x3a);
-  }
-  if ((state & rfb::ledNumLock) != (cc->server()->ledState() & rfb::ledNumLock)) {
-    vlog.debug("Inserting fake NumLock to get in sync with server");
-    handleKeyPress(0x45, XK_Num_Lock);
-    handleKeyRelease(0x45);
-  }
-  if ((state & rfb::ledScrollLock) != (cc->server()->ledState() & rfb::ledScrollLock)) {
-    vlog.debug("Inserting fake ScrollLock to get in sync with server");
-    handleKeyPress(0x46, XK_Scroll_Lock);
-    handleKeyRelease(0x46);
   }
 }
 

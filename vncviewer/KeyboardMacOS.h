@@ -11,18 +11,15 @@ class KeyboardMacOS : public Keyboard
   Q_OBJECT
 
 public:
-  KeyboardMacOS(QObject* parent = nullptr);
+  KeyboardMacOS(KeyboardHandler* handler, QObject* parent);
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  bool nativeEventFilter(QByteArray const& eventType, void* message, long* result) override;
-#else
-  bool nativeEventFilter(QByteArray const& eventType, void* message, qintptr* result) override;
-#endif
-  bool handleKeyPress(int keyCode, quint32 keySym, bool menuShortCutMode = false) override;
+  bool handleEvent(const char* eventType, void* message) override;
+
+  static bool isKeyboardSync(QByteArray const& eventType, void* message);
 
 public slots:
-  void setLEDState(unsigned int state) override;
-  void pushLEDState() override;
+  unsigned getLEDState() override;
+  void setLEDState(unsigned state) override;
   void grabKeyboard() override;
   void ungrabKeyboard() override;
 

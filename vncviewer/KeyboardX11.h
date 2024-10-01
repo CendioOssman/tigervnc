@@ -10,18 +10,14 @@ class KeyboardX11 : public Keyboard
   Q_OBJECT
 
 public:
-  KeyboardX11(QObject* parent = nullptr);
+  KeyboardX11(KeyboardHandler* handler, QObject* parent);
   ~KeyboardX11();
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  bool nativeEventFilter(QByteArray const& eventType, void* message, long* result) override;
-#else
-  bool nativeEventFilter(QByteArray const& eventType, void* message, qintptr* result) override;
-#endif
+  bool handleEvent(const char* eventType, void* message) override;
 
 public slots:
-  void setLEDState(unsigned int state) override;
-  void pushLEDState() override;
+  unsigned getLEDState() override;
+  void setLEDState(unsigned state) override;
   void grabKeyboard() override;
   void ungrabKeyboard() override;
 
