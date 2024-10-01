@@ -8,10 +8,8 @@ class NSCursor;
 
 class KeyboardMacOS : public Keyboard
 {
-  Q_OBJECT
-
 public:
-  KeyboardMacOS(KeyboardHandler* handler, QObject* parent);
+  KeyboardMacOS(KeyboardHandler* handler);
 
   bool handleEvent(const char* eventType, void* message) override;
 

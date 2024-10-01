@@ -51,8 +51,9 @@ Bool eventIsFocusWithSerial(Display* /*dpy*/, XEvent* event, XPointer arg)
   return True;
 }
 
-KeyboardX11::KeyboardX11(KeyboardHandler* handler_, QObject* parent)
-  : Keyboard(handler_, parent)
+KeyboardX11::KeyboardX11(KeyboardHandler* handler_)
+  : Keyboard(handler_),
+    keyboardGrabberTimer(this, &KeyboardX11::retryGrab)
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   display = QX11Info::display();
@@ -92,10 +93,6 @@ KeyboardX11::KeyboardX11(KeyboardHandler* handler_, QObject* parent)
   }
 
   XkbFreeKeyboard(xkb, 0, True);
-
-  keyboardGrabberTimer.setInterval(500);
-  keyboardGrabberTimer.setSingleShot(true);
-  connect(&keyboardGrabberTimer, &QTimer::timeout, this, &KeyboardX11::grabKeyboard);
 }
 
 KeyboardX11::~KeyboardX11()
@@ -214,7 +211,7 @@ void KeyboardX11::grabKeyboard()
     if (ret == AlreadyGrabbed) {
       // It seems like we can race with the WM in some cases.
       // Try again in a bit.
-      keyboardGrabberTimer.start();
+      keyboardGrabberTimer.start(500);
     } else {
       vlog.error(_("Failure grabbing keyboard"));
     }
@@ -239,6 +236,11 @@ void KeyboardX11::ungrabKeyboard()
   keyboardGrabberTimer.stop();
   XUngrabKeyboard(display, CurrentTime);
   Keyboard::ungrabKeyboard();
+}
+
+void KeyboardX11::retryGrab(rfb::Timer*)
+{
+  grabKeyboard();
 }
 
 unsigned int KeyboardX11::getModifierMask(unsigned int keysym)

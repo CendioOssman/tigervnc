@@ -35,15 +35,10 @@ static rfb::LogWriter vlog("KeyboardWin32");
 static const WORD SCAN_FAKE = 0xaa;
 static const WORD NoSymbol = 0;
 
-KeyboardWin32::KeyboardWin32(KeyboardHandler* handler_, QObject* parent)
-  : Keyboard(handler_, parent), leftShiftDown(false), rightShiftDown(false)
+KeyboardWin32::KeyboardWin32(KeyboardHandler* handler_)
+  : Keyboard(handler_), leftShiftDown(false), rightShiftDown(false),
+    altGrCtrlTimer(this, &KeyboardWin32::handleAltGrTimeout)
 {
-  altGrCtrlTimer.setInterval(100);
-  altGrCtrlTimer.setSingleShot(true);
-  connect(&altGrCtrlTimer, &QTimer::timeout, this, [=]() {
-    altGrArmed = false;
-    handler->handleKeyPress(0x1d, 0x1d, XK_Control_L);
-  });
 }
 
 bool KeyboardWin32::handleEvent(const char* /*eventType*/, void* message)
@@ -166,7 +161,7 @@ bool KeyboardWin32::handleKeyDownEvent(UINT message, WPARAM wParam, LPARAM lPara
     if ((keyCode == 0x1d) && (keySym == XK_Control_L)) {
       altGrArmed = true;
       altGrCtrlTime = timestamp;
-      altGrCtrlTimer.start();
+      altGrCtrlTimer.start(100);
       return true;
     }
   }
@@ -325,4 +320,10 @@ void KeyboardWin32::ungrabKeyboard()
 {
   win32_disable_lowlevel_keyboard((HWND)AppManager::instance()->getView()->winId());
   Keyboard::ungrabKeyboard();
+}
+
+void KeyboardWin32::handleAltGrTimeout(rfb::Timer*)
+{
+  altGrArmed = false;
+  handler->handleKeyPress(0x1d, 0x1d, XK_Control_L);
 }

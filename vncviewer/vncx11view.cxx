@@ -33,7 +33,7 @@ static rfb::LogWriter vlog("QVNCX11View");
 QVNCX11View::QVNCX11View(QWidget* parent, Qt::WindowFlags f)
   : Viewport(parent, f)
 {
-  keyboardHandler = new KeyboardX11(this, this);
+  keyboardHandler = new KeyboardX11(this);
   initKeyboardHandler();
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)

@@ -33,8 +33,8 @@ extern const unsigned int code_map_osx_to_qnum_len;
 
 static rfb::LogWriter vlog("KeyboardMacOS");
 
-KeyboardMacOS::KeyboardMacOS(KeyboardHandler* handler_, QObject* parent)
-  : Keyboard(handler_, parent)
+KeyboardMacOS::KeyboardMacOS(KeyboardHandler* handler_)
+  : Keyboard(handler_)
 {
 }
 

@@ -19,12 +19,10 @@ public:
   virtual void handleKeyRelease(int systemKeyCode) = 0;
 };
 
-class Keyboard : public QObject
+class Keyboard
 {
-  Q_OBJECT
-
 public:
-  Keyboard(KeyboardHandler* handler, QObject* parent = nullptr);
+  Keyboard(KeyboardHandler* handler);
 
   virtual bool handleEvent(const char* eventType, void* message) = 0;
 
@@ -44,9 +42,6 @@ public:
   void setContextMenuVisible(bool newContextMenuVisible);
 
   bool isKeyboardGrabbed() const;
-
-signals:
-  void contextMenuKeyPressed(bool menuShortCutMode);
 
 protected:
   KeyboardHandler* handler;

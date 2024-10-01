@@ -484,11 +484,6 @@ void Viewport::initKeyboardHandler()
         }
       },
       Qt::QueuedConnection);
-  connect(keyboardHandler,
-          &Keyboard::contextMenuKeyPressed,
-          this,
-          &Viewport::toggleContextMenu,
-          Qt::QueuedConnection);
 }
 
 void Viewport::installKeyboardHandler()
@@ -572,6 +567,20 @@ void Viewport::resetKeyboard()
 void Viewport::handleKeyPress(int systemKeyCode,
                               uint32_t keyCode, uint32_t keySym)
 {
+  static bool menuRecursion = false;
+  int menuKeyCode;
+  quint32 menuKeySym;
+  ::getMenuKey(&menuKeyCode, &menuKeySym);
+
+  // Prevent recursion if the menu wants to send its own
+  // activation key.
+  if (menuKeySym && keySym == menuKeySym && !menuRecursion) {
+    menuRecursion = true;
+    toggleContextMenu();
+    menuRecursion = false;
+    return;
+  }
+
   if (viewOnly)
     return;
 

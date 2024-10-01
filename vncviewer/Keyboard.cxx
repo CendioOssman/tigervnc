@@ -18,8 +18,8 @@
 
 static rfb::LogWriter vlog("Keyboard");
 
-Keyboard::Keyboard(KeyboardHandler* handler_, QObject* parent)
-  : QObject(parent), handler(handler_)
+Keyboard::Keyboard(KeyboardHandler* handler_)
+  : handler(handler_)
 {
 }
 

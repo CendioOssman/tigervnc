@@ -26,7 +26,7 @@ static rfb::LogWriter vlog("Viewport");
 QVNCWinView::QVNCWinView(QWidget* parent, Qt::WindowFlags f)
   : Viewport(parent, f)
 {
-  keyboardHandler = new KeyboardWin32(this, this);
+  keyboardHandler = new KeyboardWin32(this);
   initKeyboardHandler();
 }
 
