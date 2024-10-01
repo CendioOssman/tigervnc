@@ -228,9 +228,9 @@ void ViewerConfig::loadServerHistory()
   serverHistory.clear();
 
 #ifdef _WIN32
-  std::vector<std::string> vector;
-  ::loadHistoryFromRegKey(vector);
-  for (auto const& s : vector)
+  std::list<std::string> history;
+  history = ::loadHistoryFromRegKey();
+  for (auto const& s : history)
     serverHistory.push_back(s.c_str());
   return;
 #endif
@@ -296,10 +296,10 @@ void ViewerConfig::saveServerHistory()
   serverName = serverHistory.length() > 0 ? serverHistory[0] : "";
   parseServerName();
 #ifdef _WIN32
-  std::vector<std::string> vector;
+  std::list<std::string> history;
   for (auto const& s : qAsConst(serverHistory))
-    vector.push_back(s.toStdString());
-  ::saveHistoryToRegKey(vector);
+    history.push_back(s.toStdString());
+  ::saveHistoryToRegKey(history);
 #else
   const char* homeDir = os::getvncconfigdir();
   if (homeDir == nullptr) {

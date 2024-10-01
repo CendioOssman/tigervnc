@@ -422,8 +422,7 @@ static void removeValue(const char* _name, HKEY* hKey) {
   }
 }
 
-void saveHistoryToRegKey(const std::vector<std::string>& serverHistory)
-{
+void saveHistoryToRegKey(const list<string>& serverHistory) {
   HKEY hKey;
   LONG res = RegCreateKeyExW(HKEY_CURRENT_USER,
                              L"Software\\TigerVNC\\vncviewer\\history", 0, nullptr,
@@ -438,9 +437,11 @@ void saveHistoryToRegKey(const std::vector<std::string>& serverHistory)
   char indexString[3];
 
   try {
-    while (index < serverHistory.size() && index <= SERVER_HISTORY_SIZE) {
-      snprintf(indexString, 3, "%d", (int)index);
-      setKeyString(indexString, serverHistory[index].c_str(), &hKey);
+    for (const string& entry : serverHistory) {
+      if (index > SERVER_HISTORY_SIZE)
+        break;
+      snprintf(indexString, 3, "%d", index);
+      setKeyString(indexString, entry.c_str(), &hKey);
       index++;
     }
   } catch (Exception& e) {
@@ -508,9 +509,9 @@ static void saveToReg(const char* servername) {
     throw rdr::SystemException(_("Failed to close registry key"), res);
 }
 
-void loadHistoryFromRegKey(std::vector<std::string>& serverHistory)
-{
+list<string> loadHistoryFromRegKey() {
   HKEY hKey;
+  list<string> serverHistory;
 
   LONG res = RegOpenKeyExW(HKEY_CURRENT_USER,
                            L"Software\\TigerVNC\\vncviewer\\history", 0,
@@ -518,7 +519,7 @@ void loadHistoryFromRegKey(std::vector<std::string>& serverHistory)
   if (res != ERROR_SUCCESS) {
     if (res == ERROR_FILE_NOT_FOUND) {
       // The key does not exist, defaults will be used.
-      return;
+      return serverHistory;
     }
 
     throw rdr::SystemException(_("Failed to open registry key"), res);
@@ -549,6 +550,8 @@ void loadHistoryFromRegKey(std::vector<std::string>& serverHistory)
   res = RegCloseKey(hKey);
   if (res != ERROR_SUCCESS)
     throw rdr::SystemException(_("Failed to close registry key"), res);
+
+  return serverHistory;
 }
 
 static void getParametersFromReg(VoidParameter* parameters[],
