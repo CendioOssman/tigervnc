@@ -39,10 +39,7 @@
 
 #define NoSymbol 0
 
-#include "appmanager.h"
 #include "i18n.h"
-#include "win32.h"
-#include "Viewport.h"
 #include "keysym2ucs.h"
 #include "KeyboardWin32.h"
 
@@ -424,23 +421,6 @@ void KeyboardWin32::setLEDState(unsigned state)
   ret = SendInput(count, input, sizeof(*input));
   if (ret < count)
     vlog.error(_("Failed to update keyboard LED state: %lu"), GetLastError());
-}
-
-void KeyboardWin32::grabKeyboard()
-{
-  Keyboard::grabKeyboard();
-  int ret = win32_enable_lowlevel_keyboard((HWND)AppManager::instance()->getView()->winId());
-  if (ret != 0)
-  {
-      vlog.error(_("Failure grabbing keyboard"));
-      return;
-  }
-}
-
-void KeyboardWin32::ungrabKeyboard()
-{
-  win32_disable_lowlevel_keyboard((HWND)AppManager::instance()->getView()->winId());
-  Keyboard::ungrabKeyboard();
 }
 
 uint32_t KeyboardWin32::translateSystemKeyCode(int systemKeyCode)

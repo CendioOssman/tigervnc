@@ -24,18 +24,3 @@ Keyboard::Keyboard(KeyboardHandler* handler_)
   : handler(handler_)
 {
 }
-
-void Keyboard::grabKeyboard()
-{
-  keyboardGrabbed = true;
-}
-
-void Keyboard::ungrabKeyboard()
-{
-  keyboardGrabbed = false;
-}
-
-bool Keyboard::isKeyboardGrabbed() const
-{
-  return keyboardGrabbed;
-}

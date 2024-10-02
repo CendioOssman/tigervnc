@@ -16,7 +16,6 @@ public:
   virtual ~QVNCWinView();
 
 public slots:
-  void ungrabKeyboard() override;
   void bell() override;
 
 protected:

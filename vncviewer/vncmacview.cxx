@@ -28,8 +28,7 @@ QVNCMacView::~QVNCMacView() {}
 void QVNCMacView::setCursorPos(int x, int y)
 {
   vlog.debug("QVNCMacView::setCursorPos mouseGrabbed=%d", mouseGrabbed);
-  vlog.debug("QVNCMacView::setCursorPos keyboardGrabbed=%d", keyboardHandler->isKeyboardGrabbed());
-  if (!mouseGrabbed || !keyboardHandler->isKeyboardGrabbed()) {
+  if (!mouseGrabbed) {
     // Do nothing if we do not have the mouse captured.
     return;
   }

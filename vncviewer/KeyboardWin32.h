@@ -34,8 +34,6 @@ public:
 
   unsigned getLEDState() override;
   void setLEDState(unsigned state) override;
-  void grabKeyboard() override;
-  void ungrabKeyboard() override;
 
 protected:
   uint32_t translateSystemKeyCode(int systemKeyCode);

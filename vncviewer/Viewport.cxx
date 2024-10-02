@@ -600,8 +600,7 @@ void Viewport::handleKeyRelease(int systemKeyCode)
 void Viewport::setCursorPos(int x, int y)
 {
   vlog.debug("Viewport::setCursorPos mouseGrabbed=%d", mouseGrabbed);
-  vlog.debug("Viewport::setCursorPos keyboardGrabbed=%d", keyboardHandler->isKeyboardGrabbed());
-  if (!mouseGrabbed || !keyboardHandler->isKeyboardGrabbed()) {
+  if (!mouseGrabbed) {
     // Do nothing if we do not have the mouse captured.
     return;
   }
@@ -727,35 +726,6 @@ void Viewport::handleClipboardData(const char* cbdata)
   if (::setPrimary)
     QGuiApplication::clipboard()->setText(cbdata, QClipboard::Mode::Selection);
 #endif
-}
-
-void Viewport::maybeGrabKeyboard()
-{
-  vlog.debug("Viewport::maybeGrabKeyboard");
-  DesktopWindow* window = AppManager::instance()->getWindow();
-  if (::fullscreenSystemKeys && window->allowKeyboardGrab() && hasFocus()) {
-    grabKeyboard();
-  }
-}
-
-void Viewport::grabKeyboard()
-{
-  vlog.debug("Viewport::grabKeyboard");
-  keyboardHandler->grabKeyboard();
-
-  QPoint gpos = QCursor::pos();
-  QPoint lpos = mapFromGlobal(gpos);
-  QRect r = rect();
-  if (r.contains(lpos)) {
-    grabPointer();
-  }
-}
-
-void Viewport::ungrabKeyboard()
-{
-  if (keyboardHandler)
-    keyboardHandler->ungrabKeyboard();
-  ungrabPointer();
 }
 
 void Viewport::maybeGrabPointer()
@@ -975,7 +945,6 @@ void Viewport::mouseMoveEvent(QMouseEvent* event)
     return;
   }
 
-  maybeGrabKeyboard();
   int x, y, buttonMask;
   getMouseProperties(event, x, y, buttonMask);
   filterPointerEvent(rfb::Point(x, y), buttonMask);
@@ -1000,8 +969,6 @@ void Viewport::mousePressEvent(QMouseEvent* event)
   int x, y, buttonMask;
   getMouseProperties(event, x, y, buttonMask);
   filterPointerEvent(rfb::Point(x, y), buttonMask);
-
-  maybeGrabKeyboard();
 }
 
 void Viewport::mouseReleaseEvent(QMouseEvent* event)
@@ -1023,8 +990,6 @@ void Viewport::mouseReleaseEvent(QMouseEvent* event)
   int x, y, buttonMask;
   getMouseProperties(event, x, y, buttonMask);
   filterPointerEvent(rfb::Point(x, y), buttonMask);
-
-  maybeGrabKeyboard();
 }
 
 void Viewport::wheelEvent(QWheelEvent* event)
@@ -1048,7 +1013,6 @@ void Viewport::giveKeyboardFocus()
   }
   if (keyboardHandler && !qApp->activeModalWidget()) {
     installKeyboardHandler();
-    maybeGrabKeyboard();
 
     flushPendingClipboard();
 
@@ -1085,9 +1049,6 @@ void Viewport::focusInEvent(QFocusEvent* event)
 void Viewport::focusOutEvent(QFocusEvent* event)
 {
   vlog.debug("Viewport::focusOutEvent");
-  if (::fullscreenSystemKeys) {
-    ungrabKeyboard();
-  }
   // We won't get more key events, so reset our knowledge about keys
   resetKeyboard();
   removeKeyboardHandler();
@@ -1099,16 +1060,6 @@ void Viewport::focusOutEvent(QFocusEvent* event)
     cocoa_update_window_level(window, false);
   }
 #endif
-}
-
-void Viewport::resizeEvent(QResizeEvent* event)
-{
-  vlog.debug("Viewport::resizeEvent size=(%d, %d)",
-             event->size().width(),
-             event->size().height());
-  // Some systems require a grab after the window size has been changed.
-  // Otherwise they might hold on to displays, resulting in them being unusable.
-  maybeGrabKeyboard();
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)

@@ -37,18 +37,11 @@ public:
 
   virtual void reset() {};
 
-  virtual void grabKeyboard();
-  virtual void ungrabKeyboard();
-
   virtual unsigned getLEDState() = 0;
   virtual void setLEDState(unsigned state) = 0;
 
-  bool isKeyboardGrabbed() const;
-
 protected:
   KeyboardHandler* handler;
-
-  bool keyboardGrabbed = false;
 };
 
 #endif

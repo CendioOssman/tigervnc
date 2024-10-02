@@ -411,20 +411,18 @@ void AppManager::handleOptions()
   }
 
   /* DesktopWindow::handleOptions() */
-  if (view) {
-    if (::fullscreenSystemKeys)
-      view->maybeGrabKeyboard();
-    else
-      view->ungrabKeyboard();
-
     if (window) {
-      // Call fullscreen_on even if active since it handles
-      // fullScreenMode
-      if (::fullScreen)
-        window->fullscreen(true);
-      else if (!::fullScreen && window->isFullscreenEnabled())
-        window->fullscreen(false);
-    }
+    if (::fullscreenSystemKeys)
+      window->maybeGrabKeyboard();
+    else
+      window->ungrabKeyboard();
+
+    // Call fullscreen_on even if active since it handles
+    // fullScreenMode
+    if (::fullScreen)
+      window->fullscreen(true);
+    else if (!::fullScreen && window->isFullscreenEnabled())
+      window->fullscreen(false);
   }
 }
 

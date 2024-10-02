@@ -19,8 +19,6 @@
 #ifndef __KEYBOARDX11_H__
 #define __KEYBOARDX11_H__
 
-#include <rfb/Timer.h>
-
 #include "Keyboard.h"
 
 class KeyboardX11 : public Keyboard {
@@ -33,18 +31,11 @@ public:
   unsigned getLEDState() override;
   void setLEDState(unsigned state) override;
 
-  void grabKeyboard() override;
-  void ungrabKeyboard() override;
-
 protected:
-  void retryGrab(rfb::Timer*);
-
   unsigned getModifierMask(uint32_t keysym);
 
 private:
   int code_map_keycode_to_qnum[256];
-
-  rfb::MethodTimer<KeyboardX11> keyboardGrabberTimer;
 };
 
 #endif

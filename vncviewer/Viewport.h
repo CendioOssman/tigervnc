@@ -61,9 +61,6 @@ public slots:
   void handleClipboardChange(QClipboard::Mode mode);
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* data);
-  virtual void maybeGrabKeyboard();
-  virtual void grabKeyboard();
-  virtual void ungrabKeyboard();
   virtual void maybeGrabPointer();
   virtual void grabPointer();
   virtual void ungrabPointer();
@@ -93,7 +90,6 @@ protected:
   void wheelEvent(QWheelEvent* event) override;
   void focusInEvent(QFocusEvent* event) override;
   void focusOutEvent(QFocusEvent* event) override;
-  void resizeEvent(QResizeEvent* event) override;
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   void enterEvent(QEvent* event) override;
 #else

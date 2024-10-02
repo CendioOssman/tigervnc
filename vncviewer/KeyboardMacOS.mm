@@ -44,10 +44,7 @@ const int kVK_Menu = 0x6E;
 
 #define NoSymbol 0
 
-#include "appmanager.h"
-#include "cocoa.h"
 #include "i18n.h"
-#include "DesktopWindow.h"
 #include "keysym2ucs.h"
 #include "KeyboardMacOS.h"
 
@@ -229,22 +226,6 @@ void KeyboardMacOS::setLEDState(unsigned state)
   }
 
   // No support for Scroll Lock //
-}
-
-void KeyboardMacOS::grabKeyboard()
-{
-  int ret = cocoa_capture_displays(AppManager::instance()->getWindow()->fullscreenScreens());
-  if (ret == 1) {
-      vlog.error(_("Failure grabbing keyboard"));
-      return;
-  }
-  Keyboard::grabKeyboard();
-}
-
-void KeyboardMacOS::ungrabKeyboard()
-{
-  cocoa_release_displays();
-  Keyboard::ungrabKeyboard();
 }
 
 bool KeyboardMacOS::isKeyboardSync(const char* eventType, void* message)

@@ -4,6 +4,8 @@
 #include <QScrollArea>
 #include <QScrollBar>
 
+#include <rfb/Timer.h>
+
 class QMoveEvent;
 class QResizeEvent;
 class Toast;
@@ -55,6 +57,15 @@ protected:
   void focusInEvent(QFocusEvent*) override;
   void focusOutEvent(QFocusEvent*) override;
   void closeEvent(QCloseEvent* e) override;
+  bool event(QEvent* event) override;
+
+public:
+  void maybeGrabKeyboard();
+  void grabKeyboard();
+  void ungrabKeyboard();
+  void grabPointer();
+  void ungrabPointer();
+  void handleGrab(rfb::Timer*);
 
 private:
   QTimer* resizeTimer;
@@ -64,6 +75,8 @@ private:
 
   QScreen* previousScreen;
   QByteArray previousGeometry;
+
+  rfb::MethodTimer<DesktopWindow> keyboardGrabberTimer;
 
   Toast* toast;
   ScrollArea* scrollArea = nullptr;

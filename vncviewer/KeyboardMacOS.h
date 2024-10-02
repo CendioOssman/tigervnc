@@ -38,8 +38,6 @@ public:
 
   unsigned getLEDState() override;
   void setLEDState(unsigned state) override;
-  void grabKeyboard() override;
-  void ungrabKeyboard() override;
 
   // Special helper on macOS
   static bool isKeyboardSync(const char* eventType, void* message);
