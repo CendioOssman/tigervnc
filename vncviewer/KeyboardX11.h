@@ -15,15 +15,11 @@ public:
 
   bool handleEvent(const char* eventType, void* message) override;
 
-public slots:
   unsigned getLEDState() override;
   void setLEDState(unsigned state) override;
   void grabKeyboard() override;
   void ungrabKeyboard() override;
   void retryGrab(rfb::Timer*);
-
-signals:
-  void message(QString const& msg, int timeout);
 
 private:
   _XDisplay* display;

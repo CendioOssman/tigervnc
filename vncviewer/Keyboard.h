@@ -1,16 +1,25 @@
-#ifndef BASEKEYBOARDHANDLER_H
-#define BASEKEYBOARDHANDLER_H
+/* Copyright 2011-2021 Pierre Ossman <ossman@cendio.se> for Cendio AB
+ * 
+ * This is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this software; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+ * USA.
+ */
 
-#include <QAbstractNativeEventFilter>
-#include <QDataStream>
-#include <QTextStream>
-#include <QTimer>
-#include <QUrl>
+#ifndef __KEYBOARD_H__
+#define __KEYBOARD_H__
 
-#define XK_LATIN1
-#define XK_MISCELLANY
-#define XK_XKB_KEYS
-#include "rfb/keysymdef.h"
+#include <stdint.h>
 
 class KeyboardHandler {
 public:
@@ -19,10 +28,10 @@ public:
   virtual void handleKeyRelease(int systemKeyCode) = 0;
 };
 
-class Keyboard
-{
+class Keyboard {
 public:
-  Keyboard(KeyboardHandler* handler);
+  Keyboard(KeyboardHandler* handler_);
+  virtual ~Keyboard() {};
 
   virtual bool handleEvent(const char* eventType, void* message) = 0;
 
@@ -34,12 +43,10 @@ public:
   virtual unsigned getLEDState() = 0;
   virtual void setLEDState(unsigned state) = 0;
 
-  void setMenuKeyStatus(quint32 keysym, bool checked);
+  void setMenuKeyStatus(uint32_t keysym, bool checked);
 
   bool getMenuCtrlKey() const;
   bool getMenuAltKey() const;
-
-  void setContextMenuVisible(bool newContextMenuVisible);
 
   bool isKeyboardGrabbed() const;
 
@@ -52,4 +59,4 @@ protected:
   bool menuAltKey = false;
 };
 
-#endif // BASEKEYBOARDHANDLER_H
+#endif

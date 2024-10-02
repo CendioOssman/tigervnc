@@ -10,6 +10,8 @@
 #include "parameters.h"
 #include "rdr/Exception.h"
 #include "rfb/LogWriter.h"
+#define XK_MISCELLANY
+#include "rfb/keysymdef.h"
 #include "vncconnection.h"
 
 #if !defined(WIN32) && !defined(__APPLE__)
@@ -50,11 +52,6 @@ bool Keyboard::getMenuCtrlKey() const
 bool Keyboard::getMenuAltKey() const
 {
   return menuAltKey;
-}
-
-void Keyboard::setContextMenuVisible(bool /*newContextMenuVisible*/)
-{
-
 }
 
 bool Keyboard::isKeyboardGrabbed() const

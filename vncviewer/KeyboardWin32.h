@@ -14,7 +14,6 @@ public:
 
   bool handleEvent(const char* eventType, void* message) override;
 
-public slots:
   unsigned getLEDState() override;
   void setLEDState(unsigned state) override;
   void grabKeyboard() override;

@@ -1,6 +1,7 @@
 #ifndef ABSTRACTVNCVIEW_H
 #define ABSTRACTVNCVIEW_H
 
+#include <QAbstractNativeEventFilter>
 #include <QClipboard>
 #include <QLabel>
 #include <QMap>
