@@ -35,25 +35,6 @@ void Keyboard::ungrabKeyboard()
   keyboardGrabbed = false;
 }
 
-void Keyboard::setMenuKeyStatus(quint32 keysym, bool checked)
-{
-  if (keysym == XK_Control_L) {
-    menuCtrlKey = checked;
-  } else if (keysym == XK_Alt_L) {
-    menuAltKey = checked;
-  }
-}
-
-bool Keyboard::getMenuCtrlKey() const
-{
-  return menuCtrlKey;
-}
-
-bool Keyboard::getMenuAltKey() const
-{
-  return menuAltKey;
-}
-
 bool Keyboard::isKeyboardGrabbed() const
 {
   return keyboardGrabbed;

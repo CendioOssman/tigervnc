@@ -43,20 +43,12 @@ public:
   virtual unsigned getLEDState() = 0;
   virtual void setLEDState(unsigned state) = 0;
 
-  void setMenuKeyStatus(uint32_t keysym, bool checked);
-
-  bool getMenuCtrlKey() const;
-  bool getMenuAltKey() const;
-
   bool isKeyboardGrabbed() const;
 
 protected:
   KeyboardHandler* handler;
 
   bool keyboardGrabbed = false;
-
-  bool menuCtrlKey = false;
-  bool menuAltKey = false;
 };
 
 #endif

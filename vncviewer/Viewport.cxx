@@ -423,7 +423,11 @@ void Viewport::toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint3
   } else {
     handleKeyRelease(systemKeyCode);
   }
-  keyboardHandler->setMenuKeyStatus(keySym, toggle);
+  if (keySym == XK_Control_L) {
+    menuCtrlKey = toggle;
+  } else if (keySym == XK_Alt_L) {
+    menuAltKey = toggle;
+  }
 }
 
 // As QMenu eventFilter
@@ -1054,10 +1058,10 @@ void Viewport::giveKeyboardFocus()
     pushLEDState();
 
            // Resend Ctrl/Alt if needed
-    if (keyboardHandler->getMenuCtrlKey()) {
+    if (menuCtrlKey) {
       handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
     }
-    if (keyboardHandler->getMenuAltKey()) {
+    if (menuAltKey) {
       handleKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
     }
   }

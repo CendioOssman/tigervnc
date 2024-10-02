@@ -129,6 +129,8 @@ protected:
   // Context menu
   QMenu* contextMenu = nullptr;
   QList<QAction*> contextMenuActions;
+  bool menuCtrlKey = false;
+  bool menuAltKey = false;
   void createContextMenu();
   void sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask) override;
   // As QMenu eventFilter
