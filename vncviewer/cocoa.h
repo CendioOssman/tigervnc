@@ -21,9 +21,15 @@
 
 #include <QList>
 #include <QWindow>
+#ifdef __OBJC__
+@class NSWindow;
+@class NSView;
+@class NSCursor;
+#else
 class NSWindow;
 class NSView;
 class NSCursor;
+#endif
 class CGImage;
 class CGContext;
 class QWidget;
@@ -43,22 +49,9 @@ void cocoa_release_displays();
 
 void cocoa_update_window_level(QWidget *widget, bool enabled, bool shielding = false);
 
-int cocoa_is_keyboard_sync(const void *event);
-int cocoa_is_keyboard_event(const void *event);
-
-int cocoa_is_key_press(const void *event);
 bool cocoa_is_mouse_entered(const void *event);
 bool cocoa_is_mouse_exited(const void *event);
 bool cocoa_is_mouse_moved(const void *event);
-
-int cocoa_event_keycode(const void *event);
-int cocoa_event_keysym(const void *event);
-
-int cocoa_set_caps_lock_state(bool on);
-int cocoa_set_num_lock_state(bool on);
-
-int cocoa_get_caps_lock_state(bool *on);
-int cocoa_get_num_lock_state(bool *on);
 
 void cocoa_get_mouse_properties(const void *event, int *x, int *y, int *buttonMask);
 bool cocoa_displays_have_separate_spaces();

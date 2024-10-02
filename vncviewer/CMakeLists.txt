@@ -48,7 +48,7 @@ elseif(APPLE)
   set(OS_DEP_SOURCES
       vncmacview.cxx
       vncmacview.h
-      KeyboardMacOS.cxx
+      KeyboardMacOS.mm
       KeyboardMacOS.h
       cocoa.h
       cocoa.mm
