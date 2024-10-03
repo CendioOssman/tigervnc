@@ -21,7 +21,8 @@
 
 #include "Keyboard.h"
 
-class KeyboardX11 : public Keyboard {
+class KeyboardX11 : public Keyboard
+{
 public:
   KeyboardX11(KeyboardHandler* handler);
   virtual ~KeyboardX11();

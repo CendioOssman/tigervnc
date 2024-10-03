@@ -29,7 +29,8 @@ class NSEvent;
 class NSString;
 #endif
 
-class KeyboardMacOS : public Keyboard {
+class KeyboardMacOS : public Keyboard
+{
 public:
   KeyboardMacOS(KeyboardHandler* handler);
   virtual ~KeyboardMacOS();

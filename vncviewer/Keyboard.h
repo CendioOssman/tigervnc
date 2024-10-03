@@ -21,16 +21,18 @@
 
 #include <stdint.h>
 
-class KeyboardHandler {
+class KeyboardHandler
+{
 public:
   virtual void handleKeyPress(int systemKeyCode,
                               uint32_t keyCode, uint32_t keySym) = 0;
   virtual void handleKeyRelease(int systemKeyCode) = 0;
 };
 
-class Keyboard {
+class Keyboard
+{
 public:
-  Keyboard(KeyboardHandler* handler_);
+  Keyboard(KeyboardHandler* handler_) : handler(handler_) {};
   virtual ~Keyboard() {};
 
   virtual bool handleEvent(const char* eventType, void* message) = 0;
