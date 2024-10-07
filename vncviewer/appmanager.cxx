@@ -53,9 +53,9 @@ AppManager::AppManager()
 
 void AppManager::initialize()
 {
-  window = new DesktopWindow;
   rfbTimerProxy = new QTimer;
   connection = new QVNCConnection;
+  window = new DesktopWindow(connection);
   connect(this, &AppManager::connectToServerRequested, connection, &QVNCConnection::connectToServer);
   connect(connection, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
   connect(this, &AppManager::resetConnectionRequested, connection, &QVNCConnection::resetConnection);
@@ -93,6 +93,8 @@ void AppManager::initialize()
   }, QKeySequence("Ctrl+N"));
   menuBar->addMenu(file);
 #endif
+
+  connection->initialize();
 }
 
 AppManager::~AppManager()
@@ -121,7 +123,7 @@ void AppManager::connectToServer()
   if (serverDialog) {
     serverDialog->hide();
   }
-  emit connectToServerRequested();
+  QTimer::singleShot(0, this, &AppManager::connectToServerRequested);
 }
 
 void AppManager::authenticate(QString user, QString password)
@@ -186,13 +188,13 @@ void AppManager::openVNCWindow(int width, int height, QString name)
   window->takeWidget();
   delete view;
 #if defined(WIN32)
-  view = new QVNCWinView(window);
+  view = new QVNCWinView(connection, window);
 #elif defined(__APPLE__)
-  view = new QVNCMacView(window);
+  view = new QVNCMacView(connection, window);
 #elif defined(Q_OS_UNIX)
   QString platform = QApplication::platformName();
   if (platform == "xcb") {
-    view = new QVNCX11View(window);
+    view = new QVNCX11View(connection, window);
   } else if (platform == "wayland") {
     ;
   }
@@ -361,7 +363,7 @@ void AppManager::handleOptions()
   // a pain. Assume something has changed, as resending the encoding
   // list is cheap. Avoid overriding what the auto logic has selected
   // though.
-  QVNCConnection* cc = AppManager::instance()->getConnection();
+  QVNCConnection* cc = connection;
   if (cc && cc->hasConnection()) {
     if (!::autoSelect) {
       int encNum = encodingNum(::preferredEncoding);

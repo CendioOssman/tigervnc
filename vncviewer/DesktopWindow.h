@@ -9,14 +9,16 @@
 class QMoveEvent;
 class QResizeEvent;
 class Toast;
+class Viewport;
 class ScrollArea;
+class QVNCConnection;
 
 class DesktopWindow : public QWidget
 {
   Q_OBJECT
 
 public:
-  DesktopWindow(QWidget* parent = nullptr);
+  DesktopWindow(QVNCConnection* cc, QWidget* parent = nullptr);
   virtual ~DesktopWindow();
   void updateMonitorsFullscreen();
 
@@ -41,7 +43,7 @@ public:
   void fromBufferResize(int oldW, int oldH, int width, int height);
 
   void showToast();
-  void setWidget(QWidget* w);
+  void setWidget(Viewport* w);
   QWidget* takeWidget();
 
   void postDialogClosing();
@@ -68,6 +70,9 @@ public:
   void handleGrab(rfb::Timer*);
 
 private:
+  QVNCConnection* cc;
+  Viewport* view;
+
   QTimer* resizeTimer;
   bool fullscreenEnabled = false;
   bool pendingFullscreen = false;

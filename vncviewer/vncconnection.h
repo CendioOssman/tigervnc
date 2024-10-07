@@ -117,6 +117,7 @@ private:
   QSocketNotifier* socketWriteNotifier;
   QTimer* updateTimer;
   TunnelFactory* tunnelFactory;
+  bool established;
 
   void bind(int fd);
 

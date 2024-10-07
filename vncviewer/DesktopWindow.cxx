@@ -117,8 +117,9 @@ private:
 #endif
 };
 
-DesktopWindow::DesktopWindow(QWidget* parent)
+DesktopWindow::DesktopWindow(QVNCConnection* cc_, QWidget* parent)
   : QWidget(parent)
+  , cc(cc_)
   , resizeTimer(new QTimer(this))
   , devicePixelRatio(devicePixelRatioF())
   , keyboardGrabberTimer(this, &DesktopWindow::handleGrab)
@@ -363,7 +364,6 @@ void DesktopWindow::fullscreenOnSelectedDisplay(QScreen* screen)
     move(screen->geometry().x(), screen->geometry().y());
     resize(screen->geometry().width(), screen->geometry().height());
     showFullScreen();
-    Viewport* view = AppManager::instance()->getView();
     view->setFocus();
     view->giveKeyboardFocus();
   });
@@ -393,7 +393,6 @@ void DesktopWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int
     X11Utils::fullscreen(dpy, screen, winId(), true);
     QApplication::sync();
 
-    Viewport* view = AppManager::instance()->getView();
     view->setFocus();
     view->giveKeyboardFocus();
 
@@ -423,7 +422,6 @@ void DesktopWindow::fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidt
 #endif
     raise();
     activateWindow();
-    Viewport* view = AppManager::instance()->getView();
     view->setFocus();
     view->giveKeyboardFocus();
   });
@@ -501,7 +499,6 @@ void DesktopWindow::postRemoteResizeRequest()
 
 void DesktopWindow::remoteResize(int w, int h)
 {
-  QVNCConnection* cc = AppManager::instance()->getConnection();
   rfb::ScreenSet layout;
   rfb::ScreenSet::const_iterator iter;
   double f = effectiveDevicePixelRatio();
@@ -625,7 +622,7 @@ void DesktopWindow::remoteResize(int w, int h)
     vlog.debug("%s", buffer);
   }
   vlog.debug("DesktopWindow::remoteResize size=(%d, %d) layout=%s", w, h, buffer);
-  emit AppManager::instance()->getConnection()->writeSetDesktopSize(w, h, layout);
+  emit cc->writeSetDesktopSize(w, h, layout);
 }
 
 void DesktopWindow::fromBufferResize(int oldW, int oldH, int width, int height)
@@ -636,8 +633,6 @@ void DesktopWindow::fromBufferResize(int oldW, int oldH, int width, int height)
     vlog.debug("DesktopWindow::resize ignored");
     return;
   }
-
-  Viewport* view = AppManager::instance()->getView();
 
   if (!view) {
     vlog.debug("DesktopWindow::resize !view");
@@ -657,13 +652,16 @@ void DesktopWindow::showToast()
   toast->setGeometry(rect());
 }
 
-void DesktopWindow::setWidget(QWidget *w)
+void DesktopWindow::setWidget(Viewport* w)
 {
+  assert(view == nullptr);
+  view = w;
   scrollArea->setWidget(w);
 }
 
 QWidget *DesktopWindow::takeWidget()
 {
+  view = nullptr;
   return scrollArea->takeWidget();
 }
 
@@ -671,7 +669,6 @@ void DesktopWindow::postDialogClosing()
 {
   raise();
   activateWindow();
-  Viewport* view = AppManager::instance()->getView();
   if (view) {
     view->setFocus();
     view->giveKeyboardFocus();
@@ -687,8 +684,6 @@ void DesktopWindow::moveEvent(QMoveEvent* e)
 void DesktopWindow::resizeEvent(QResizeEvent* e)
 {
   vlog.debug("DesktopWindow::resizeEvent size=(%d, %d)", e->size().width(), e->size().height());
-
-  QVNCConnection* cc = AppManager::instance()->getConnection();
 
   vlog.debug("DesktopWindow::resizeEvent supportsSetDesktopSize=%d", cc->server()->supportsSetDesktopSize);
   if (::remoteResize && cc->server()->supportsSetDesktopSize) {
@@ -743,7 +738,6 @@ void DesktopWindow::changeEvent(QEvent* e)
 void DesktopWindow::focusInEvent(QFocusEvent*)
 {
   vlog.debug("DesktopWindow::focusInEvent");
-  Viewport* view = AppManager::instance()->getView();
   if (view) {
     view->setFocus();
     view->giveKeyboardFocus();

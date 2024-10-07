@@ -16,7 +16,7 @@ class QVNCMacView : public Viewport
   Q_OBJECT
 
 public:
-  QVNCMacView(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
+  QVNCMacView(QVNCConnection* cc, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~QVNCMacView();
 
 public slots:

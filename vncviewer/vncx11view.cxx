@@ -30,8 +30,8 @@
 
 static rfb::LogWriter vlog("QVNCX11View");
 
-QVNCX11View::QVNCX11View(QWidget* parent, Qt::WindowFlags f)
-  : Viewport(parent, f)
+QVNCX11View::QVNCX11View(QVNCConnection* cc_, QWidget* parent, Qt::WindowFlags f)
+  : Viewport(cc_, parent, f)
 {
   keyboardHandler = new KeyboardX11(this);
   initKeyboardHandler();

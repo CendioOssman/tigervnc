@@ -21,13 +21,7 @@ public:
 
   void initialize();
 
-  QVNCConnection* getConnection() const { return connection; }
-
   int error() const { return errorCount; }
-
-  Viewport* getView() const { return view; }
-
-  DesktopWindow* getWindow() const { return window; }
 
   bool isFullScreen() const;
 

@@ -81,9 +81,10 @@ static const int FAKE_KEY_CODE = 0xffff;
 // Used for fake key presses for gestures
 static const int FAKE_GESTURE_KEY_CODE = 0x20001;
 
-Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
+Viewport::Viewport(QVNCConnection* cc_, QWidget* parent, Qt::WindowFlags f)
   : QWidget(parent, f)
   , mousePointerTimer(new QTimer(this))
+  , cc(cc_)
   , delayedInitializeTimer(new QTimer(this))
 #ifdef QT_DEBUG
   , fpsTimer(this)
@@ -246,7 +247,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   delayedInitializeTimer->setInterval(1000);
   delayedInitializeTimer->setSingleShot(true);
   connect(delayedInitializeTimer, &QTimer::timeout, this, [this]() {
-    AppManager::instance()->getConnection()->refreshFramebuffer();
+    cc->refreshFramebuffer();
     emit delayedInitialized();
   });
   delayedInitializeTimer->start();
@@ -254,40 +255,40 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
   mousePointerTimer->setInterval(::pointerEventInterval);
   mousePointerTimer->setSingleShot(true);
   connect(mousePointerTimer, &QTimer::timeout, this, [this]() {
-    emit AppManager::instance()->getConnection()->writePointerEvent(lastPointerPos, lastButtonMask);
+    emit cc->writePointerEvent(lastPointerPos, lastButtonMask);
   });
 
-  connect(AppManager::instance()->getConnection(),
+  connect(cc,
           &QVNCConnection::cursorChanged,
           this,
           &Viewport::setCursor,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->getConnection(),
+  connect(cc,
           &QVNCConnection::cursorPositionChanged,
           this,
           &Viewport::setCursorPos,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->getConnection(),
+  connect(cc,
           &QVNCConnection::clipboardRequested,
           this,
           &Viewport::handleClipboardRequest,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->getConnection(),
+  connect(cc,
           &QVNCConnection::clipboardAnnounced,
           this,
           &Viewport::handleClipboardAnnounce,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->getConnection(),
+  connect(cc,
           &QVNCConnection::clipboardDataReceived,
           this,
           &Viewport::handleClipboardData,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->getConnection(),
+  connect(cc,
           &QVNCConnection::bellRequested,
           this,
           &Viewport::bell,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->getConnection(),
+  connect(cc,
           &QVNCConnection::refreshFramebufferEnded,
           this,
           &Viewport::updateWindow,
@@ -297,7 +298,7 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
           this,
           &Viewport::updateWindow,
           Qt::QueuedConnection);
-  connect(AppManager::instance()->getConnection(),
+  connect(cc,
           &QVNCConnection::framebufferResized,
           this,
           [=](int w, int h) {
@@ -366,29 +367,26 @@ void Viewport::createContextMenu()
     action = new QAction(p_("ContextMenu|", "&Full screen"), contextMenu);
     action->setCheckable(true);
     connect(action, &QAction::triggered, this,
-            [](bool checked) {
-              AppManager::instance()->getWindow()->fullscreen(checked);
+            [this](bool checked) {
+              ((DesktopWindow*)window())->fullscreen(checked);
             });
     action->setChecked(::fullScreen);
     connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      action->setChecked(AppManager::instance()->getWindow()->isFullscreenEnabled());
+      action->setChecked(((DesktopWindow*)window())->isFullscreenEnabled());
     });
     contextMenu->addAction(action);
 
     action = new QAction(p_("ContextMenu|", "Minimi&ze"), contextMenu);
     connect(action, &QAction::triggered, this,
-            []() {
-              DesktopWindow* window = AppManager::instance()->getWindow();
-              window->showMinimized();
+            [this]() {
+              window()->showMinimized();
             });
     contextMenu->addAction(action);
 
     action = new QAction(p_("ContextMenu|", "Resize &window to session"), contextMenu);
     connect(action, &QAction::triggered, this,
-            []() {
-              DesktopWindow* window = AppManager::instance()->getWindow();
-              Viewport* view = AppManager::instance()->getView();
-              window->resize(view->pixmapSize().width(), view->pixmapSize().height());
+            [this]() {
+              window()->resize(pixmapSize().width(), pixmapSize().height());
             });
     contextMenu->addAction(action);
 
@@ -397,26 +395,23 @@ void Viewport::createContextMenu()
     action = new QAction(p_("ContextMenu|", "&Ctrl"), contextMenu);
     action->setCheckable(true);
     connect(action, &QAction::triggered, this,
-            [](bool checked) {
-              Viewport* view = AppManager::instance()->getView();
-              view->toggleKey(checked, FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+            [this](bool checked) {
+              toggleKey(checked, FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
             });
     contextMenu->addAction(action);
 
     action = new QAction(p_("ContextMenu|", "&Alt"), contextMenu);
     action->setCheckable(true);
     connect(action, &QAction::triggered, this,
-            [](bool checked) {
-              Viewport* view = AppManager::instance()->getView();
-              view->toggleKey(checked, FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+            [this](bool checked) {
+              toggleKey(checked, FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
             });
     contextMenu->addAction(action);
 
     action = new QAction(contextMenu);
     connect(action, &QAction::triggered, this,
-            []() {
-              Viewport* view = AppManager::instance()->getView();
-              view->sendContextMenuKey();
+            [this]() {
+              sendContextMenuKey();
             });
     connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
       action->setText(QString::asprintf(p_("ContextMenu|", "Send %s"), ::menuKey.getValueStr().c_str()));
@@ -425,9 +420,8 @@ void Viewport::createContextMenu()
 
     action = new QAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"), contextMenu);
     connect(action, &QAction::triggered, this,
-            []() {
-              Viewport* view = AppManager::instance()->getView();
-              view->sendCtrlAltDel();
+            [this]() {
+              sendCtrlAltDel();
             });
     contextMenu->addAction(action);
 
@@ -435,8 +429,8 @@ void Viewport::createContextMenu()
 
     action = new QAction(p_("ContextMenu|", "&Refresh screen"), contextMenu);
     connect(action, &QAction::triggered, this,
-            []() {
-              AppManager::instance()->getConnection()->refreshFramebuffer();
+            [this]() {
+              cc->refreshFramebuffer();
             });
     contextMenu->addAction(action);
 
@@ -551,7 +545,7 @@ void Viewport::initKeyboardHandler()
           &Viewport::removeKeyboardHandler,
           Qt::QueuedConnection);
   connect(
-      AppManager::instance()->getConnection(),
+      cc,
       &QVNCConnection::ledStateChanged,
       this,
       [=](unsigned int state) {
@@ -613,8 +607,6 @@ void Viewport::pushLEDState()
 {
   unsigned int state;
 
-  QVNCConnection* cc = AppManager::instance()->getConnection();
-
   // Server support?
   if (cc->server()->ledState() == rfb::ledUnknown)
     return;
@@ -647,7 +639,7 @@ void Viewport::pushLEDState()
 
 void Viewport::resetKeyboard()
 {
-  AppManager::instance()->getConnection()->releaseAllKeys();
+  cc->releaseAllKeys();
   if (keyboardHandler)
     keyboardHandler->reset();
 }
@@ -672,7 +664,7 @@ void Viewport::handleKeyPress(int systemKeyCode,
   if (viewOnly)
     return;
 
-  AppManager::instance()->getConnection()->sendKeyPress(systemKeyCode, keyCode, keySym);
+  cc->sendKeyPress(systemKeyCode, keyCode, keySym);
 }
 
 void Viewport::handleKeyRelease(int systemKeyCode)
@@ -680,7 +672,7 @@ void Viewport::handleKeyRelease(int systemKeyCode)
   if (viewOnly)
     return;
 
-  AppManager::instance()->getConnection()->sendKeyRelease(systemKeyCode);
+  cc->sendKeyRelease(systemKeyCode);
 }
 
 void Viewport::setCursorPos(int x, int y)
@@ -702,12 +694,12 @@ void Viewport::flushPendingClipboard()
 {
   if (pendingServerClipboard) {
     vlog.debug("Focus regained after remote clipboard change, requesting data");
-    AppManager::instance()->getConnection()->requestClipboard();
+    cc->requestClipboard();
   }
 
   if (pendingClientClipboard) {
     vlog.debug("Focus regained after local clipboard change, notifying server");
-    AppManager::instance()->getConnection()->announceClipboard(true);
+    cc->announceClipboard(true);
   }
 
   pendingServerClipboard = false;
@@ -718,7 +710,7 @@ void Viewport::handleClipboardRequest()
 {
   vlog.debug("Viewport::handleClipboardRequest: %s", pendingClientData.toStdString().c_str());
   vlog.debug("Sending clipboard data (%d bytes)", (int)pendingClientData.size());
-  AppManager::instance()->getConnection()->sendClipboardData(pendingClientData);
+  cc->sendClipboardData(pendingClientData);
   pendingClientData = "";
 }
 
@@ -765,12 +757,12 @@ void Viewport::handleClipboardChange(QClipboard::Mode mode)
     vlog.debug("Local clipboard changed whilst not focused, will notify server later");
     pendingClientClipboard = true;
     // Clear any older client clipboard from the server
-    AppManager::instance()->getConnection()->announceClipboard(false);
+    cc->announceClipboard(false);
     return;
   }
 
   vlog.debug("Local clipboard changed, notifying server");
-  AppManager::instance()->getConnection()->announceClipboard(true);
+  cc->announceClipboard(true);
 }
 
 void Viewport::handleClipboardAnnounce(bool available)
@@ -796,7 +788,6 @@ void Viewport::handleClipboardAnnounce(bool available)
   }
 
   vlog.debug("Got notification of new clipboard on server, requesting data");
-  QVNCConnection* cc = AppManager::instance()->getConnection();
   cc->requestClipboard();
 }
 
@@ -817,8 +808,7 @@ void Viewport::handleClipboardData(const char* cbdata)
 void Viewport::maybeGrabPointer()
 {
   vlog.debug("Viewport::maybeGrabPointer");
-  DesktopWindow* window = AppManager::instance()->getWindow();
-  if (::fullscreenSystemKeys && window->allowKeyboardGrab() && hasFocus()) {
+  if (::fullscreenSystemKeys && ((DesktopWindow*)window())->allowKeyboardGrab() && hasFocus()) {
     grabPointer();
   }
 }
@@ -868,7 +858,6 @@ rfb::Point Viewport::remotePointAdjust(const rfb::Point& pos)
 void Viewport::updateWindow()
 {
   // copied from DesktopWindow.cxx.
-  QVNCConnection* cc = AppManager::instance()->getConnection();
   if (firstUpdate) {
     if (cc->server()->supportsSetDesktopSize) {
       emit remoteResizeRequest();
@@ -890,7 +879,6 @@ void Viewport::updateWindow()
 
 void Viewport::paintEvent(QPaintEvent* event)
 {
-  QVNCConnection* cc = AppManager::instance()->getConnection();
   PlatformPixelBuffer* framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
 
   if ((framebuffer->width() != pixmap.width()) || (framebuffer->height() != pixmap.height())) {
@@ -1125,9 +1113,8 @@ void Viewport::focusInEvent(QFocusEvent* event)
 #ifdef __APPLE__
   vlog.debug("cocoa_update_window_level hasFocus=%d", hasFocus());
   if (hasFocus()) {
-    auto window = AppManager::instance()->getWindow();
-    bool shielding = ::fullscreenSystemKeys && window->allowKeyboardGrab();
-    cocoa_update_window_level(window, window->isFullscreenEnabled(), shielding);
+    bool shielding = ::fullscreenSystemKeys && ((DesktopWindow*)window())->allowKeyboardGrab();
+    cocoa_update_window_level(window(),((DesktopWindow*)window())->isFullscreenEnabled(), shielding);
   }
 #endif
 }
@@ -1142,8 +1129,7 @@ void Viewport::focusOutEvent(QFocusEvent* event)
 #ifdef __APPLE__
   vlog.debug("cocoa_update_window_level hasFocus=%d", hasFocus());
   if (!hasFocus()) {
-    auto window = AppManager::instance()->getWindow();
-    cocoa_update_window_level(window, false);
+    cocoa_update_window_level(window(), false);
   }
 #endif
 }
@@ -1196,7 +1182,7 @@ void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
   lastPointerPos = remotePointAdjust(pos);
   lastButtonMask = buttonMask;
   if (instantPosting) {
-    emit AppManager::instance()->getConnection()->writePointerEvent(pos, buttonMask);
+    emit cc->writePointerEvent(pos, buttonMask);
   } else {
     if (!mousePointerTimer->isActive()) {
       mousePointerTimer->start();
