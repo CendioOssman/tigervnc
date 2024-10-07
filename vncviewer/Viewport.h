@@ -124,7 +124,6 @@ protected:
 
   // Context menu
   QMenu* contextMenu = nullptr;
-  QList<QAction*> contextMenuActions;
   bool menuCtrlKey = false;
   bool menuAltKey = false;
   void createContextMenu();

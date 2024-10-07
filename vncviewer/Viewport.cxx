@@ -18,7 +18,6 @@
 #include "EmulateMB.h"
 #include "PlatformPixelBuffer.h"
 #include "appmanager.h"
-#include "contextmenuactions.h"
 #include "i18n.h"
 #include "locale.h"
 #include "menukey.h"
@@ -328,9 +327,6 @@ Viewport::Viewport(QWidget* parent, Qt::WindowFlags f)
 
 Viewport::~Viewport()
 {
-  for (QAction*& action : contextMenuActions) {
-    delete action;
-  }
   delete contextMenu;
   for (auto gr : gestureRecognizers.keys()) {
     QGestureRecognizer::unregisterRecognizer(gr);
@@ -351,38 +347,119 @@ void Viewport::toggleContextMenu()
 void Viewport::createContextMenu()
 {
   if (!contextMenu) {
+    QAction* action;
+
     contextMenu = new QMenu(this);
-    contextMenuActions << new QDisconnectAction(p_("ContextMenu|", "Dis&connect"));
-    contextMenuActions << new QMenuSeparator();
-    auto fullScreenAction = new QFullScreenAction(p_("ContextMenu|", "&Full screen"));
+
+    action = new QAction(p_("ContextMenu|", "Dis&connect"), contextMenu);
+    connect(action, &QAction::triggered, this,
+            []() {
+              QApplication::quit();
+            });
+    contextMenu->addAction(action);
+
+    contextMenu->addSeparator();
+
+    action = new QAction(p_("ContextMenu|", "&Full screen"), contextMenu);
+    action->setCheckable(true);
+    connect(action, &QAction::triggered, this,
+            [](bool checked) {
+              AppManager::instance()->getWindow()->fullscreen(checked);
+            });
+    action->setChecked(::fullScreen);
     connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      fullScreenAction->setChecked(AppManager::instance()->getWindow()->isFullscreenEnabled());
+      action->setChecked(AppManager::instance()->getWindow()->isFullscreenEnabled());
     });
-    contextMenuActions << fullScreenAction;
-    contextMenuActions << new QMinimizeAction(p_("ContextMenu|", "Minimi&ze"));
-    auto revertSizeAction = new QRevertSizeAction(p_("ContextMenu|", "Resize &window to session"));
+    contextMenu->addAction(action);
+
+    action = new QAction(p_("ContextMenu|", "Minimi&ze"), contextMenu);
+    connect(action, &QAction::triggered, this,
+            []() {
+              DesktopWindow* window = AppManager::instance()->getWindow();
+              window->showMinimized();
+            });
+    contextMenu->addAction(action);
+
+    action = new QAction(p_("ContextMenu|", "Resize &window to session"), contextMenu);
+    connect(action, &QAction::triggered, this,
+            []() {
+              DesktopWindow* window = AppManager::instance()->getWindow();
+              Viewport* view = AppManager::instance()->getView();
+              window->resize(view->pixmapSize().width(), view->pixmapSize().height());
+            });
+    contextMenu->addAction(action);
+
+    contextMenu->addSeparator();
+
+    action = new QAction(p_("ContextMenu|", "&Ctrl"), contextMenu);
+    action->setCheckable(true);
+    connect(action, &QAction::triggered, this,
+            [](bool checked) {
+              Viewport* view = AppManager::instance()->getView();
+              view->toggleKey(checked, FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+            });
+    contextMenu->addAction(action);
+
+    action = new QAction(p_("ContextMenu|", "&Alt"), contextMenu);
+    action->setCheckable(true);
+    connect(action, &QAction::triggered, this,
+            [](bool checked) {
+              Viewport* view = AppManager::instance()->getView();
+              view->toggleKey(checked, FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+            });
+    contextMenu->addAction(action);
+
+    action = new QAction(contextMenu);
+    connect(action, &QAction::triggered, this,
+            []() {
+              Viewport* view = AppManager::instance()->getView();
+              view->sendContextMenuKey();
+            });
     connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      revertSizeAction->setChecked(!AppManager::instance()->getWindow()->isFullscreenEnabled());
+      action->setText(QString::asprintf(p_("ContextMenu|", "Send %s"), ::menuKey.getValueStr().c_str()));
     });
-    contextMenuActions << revertSizeAction;
-    contextMenuActions << new QMenuSeparator();
-    contextMenuActions << new QKeyToggleAction(p_("ContextMenu|", "&Ctrl"), FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-    contextMenuActions << new QKeyToggleAction(p_("ContextMenu|", "&Alt"), FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-    auto menuKeyAction = new QMenuKeyAction();
-    contextMenuActions << menuKeyAction;
-    connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      menuKeyAction->setText(QString::asprintf(p_("ContextMenu|", "Send %s"), ::menuKey.getValueStr().c_str()));
-    });
-    contextMenuActions << new QCtrlAltDelAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"));
-    contextMenuActions << new QMenuSeparator();
-    contextMenuActions << new QRefreshAction(p_("ContextMenu|", "&Refresh screen"));
-    contextMenuActions << new QMenuSeparator();
-    contextMenuActions << new QOptionDialogAction(p_("ContextMenu|", "&Options..."));
-    contextMenuActions << new QInfoDialogAction(p_("ContextMenu|", "Connection &info..."));
-    contextMenuActions << new QAboutDialogAction(p_("ContextMenu|", "About &TigerVNC viewer..."));
-    for (QAction*& action : contextMenuActions) {
-      contextMenu->addAction(action);
-    }
+    contextMenu->addAction(action);
+
+    action = new QAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"), contextMenu);
+    connect(action, &QAction::triggered, this,
+            []() {
+              Viewport* view = AppManager::instance()->getView();
+              view->sendCtrlAltDel();
+            });
+    contextMenu->addAction(action);
+
+    contextMenu->addSeparator();
+
+    action = new QAction(p_("ContextMenu|", "&Refresh screen"), contextMenu);
+    connect(action, &QAction::triggered, this,
+            []() {
+              AppManager::instance()->getConnection()->refreshFramebuffer();
+            });
+    contextMenu->addAction(action);
+
+    contextMenu->addSeparator();
+
+    action = new QAction(p_("ContextMenu|", "&Options..."), contextMenu);
+    connect(action, &QAction::triggered, this,
+            []() {
+              AppManager::instance()->openOptionDialog();
+            });
+    contextMenu->addAction(action);
+
+    action = new QAction(p_("ContextMenu|", "Connection &info..."), contextMenu);
+    connect(action, &QAction::triggered, this,
+            []() {
+              AppManager::instance()->openInfoDialog();
+            });
+    contextMenu->addAction(action);
+
+    action = new QAction(p_("ContextMenu|", "About &TigerVNC viewer..."), contextMenu);
+    connect(action, &QAction::triggered, this,
+            []() {
+              AppManager::instance()->openAboutDialog();
+            });
+    contextMenu->addAction(action);
+
     contextMenu->installEventFilter(this);
   }
 }
