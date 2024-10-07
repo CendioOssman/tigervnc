@@ -252,6 +252,7 @@ set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc")
 endif()
 
 set_target_properties(vncviewer PROPERTIES AUTOMOC ON)
+set_target_properties(vncviewer PROPERTIES AUTORCC ON)
 
 if(APPLE)
     set_target_properties(vncviewer PROPERTIES MACOSX_BUNDLE TRUE)
