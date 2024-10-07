@@ -6,6 +6,8 @@
 
 #include "appmanager.h"
 #include "viewerconfig.h"
+#include "aboutdialog.h"
+#include "OptionsDialog.h"
 #include "i18n.h"
 #undef asprintf
 #include "rfb/Exception.h"
@@ -104,12 +106,14 @@ void ServerDialog::connectTo()
 
 void ServerDialog::openOptionDialog()
 {
-  AppManager::instance()->openOptionDialog();
+  OptionsDialog* d = new OptionsDialog(isFullScreen(), this);
+  AppManager::instance()->openDialog(d);
 }
 
 void ServerDialog::openAboutDialog()
 {
-  AppManager::instance()->openAboutDialog();
+  AboutDialog* d = new AboutDialog(isFullScreen(), this);
+  AppManager::instance()->openDialog(d);
 }
 
 void ServerDialog::openLoadConfigDialog()

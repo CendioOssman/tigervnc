@@ -19,13 +19,10 @@
 #include <QAbstractEventDispatcher>
 #include <QApplication>
 #undef asprintf
-#include "aboutdialog.h"
 #include "Viewport.h"
 #include "alertdialog.h"
 #include "authdialog.h"
-#include "infodialog.h"
 #include "messagedialog.h"
-#include "OptionsDialog.h"
 #include "ServerDialog.h"
 #include "parameters.h"
 #include "vncconnection.h"
@@ -351,24 +348,6 @@ void AppManager::openDialog(QDialog* d)
 void AppManager::openErrorDialog(QString message)
 {
   AlertDialog* d = new AlertDialog(isFullScreen(), message, false, false, topWindow());
-  openDialog(d);
-}
-
-void AppManager::openInfoDialog()
-{
-  InfoDialog* d = new InfoDialog(topWindow());
-  openDialog(d);
-}
-
-void AppManager::openOptionDialog()
-{
-  OptionsDialog* d = new OptionsDialog(isFullScreen(), topWindow());
-  openDialog(d);
-}
-
-void AppManager::openAboutDialog()
-{
-  AboutDialog* d = new AboutDialog(isFullScreen(), topWindow());
   openDialog(d);
 }
 

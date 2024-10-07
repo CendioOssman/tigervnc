@@ -53,6 +53,9 @@
 #include "parameters.h"
 #include "DesktopWindow.h"
 #undef asprintf
+#include "aboutdialog.h"
+#include "infodialog.h"
+#include "OptionsDialog.h"
 
 #define XK_LATIN1
 #define XK_MISCELLANY
@@ -441,22 +444,25 @@ void Viewport::createContextMenu()
 
     action = new QAction(p_("ContextMenu|", "&Options..."), contextMenu);
     connect(action, &QAction::triggered, this,
-            []() {
-              AppManager::instance()->openOptionDialog();
+            [this]() {
+              OptionsDialog* dlg = new OptionsDialog(isFullScreen(), this);
+              AppManager::instance()->openDialog(dlg);
             });
     contextMenu->addAction(action);
 
     action = new QAction(p_("ContextMenu|", "Connection &info..."), contextMenu);
     connect(action, &QAction::triggered, this,
-            []() {
-              AppManager::instance()->openInfoDialog();
+            [this]() {
+              InfoDialog* dlg = new InfoDialog(this);
+              AppManager::instance()->openDialog(dlg);
             });
     contextMenu->addAction(action);
 
     action = new QAction(p_("ContextMenu|", "About &TigerVNC viewer..."), contextMenu);
     connect(action, &QAction::triggered, this,
-            []() {
-              AppManager::instance()->openAboutDialog();
+            [this]() {
+              AboutDialog* dlg = new AboutDialog(isFullScreen(), this);
+              AppManager::instance()->openDialog(dlg);
             });
     contextMenu->addAction(action);
 

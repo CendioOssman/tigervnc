@@ -63,16 +63,13 @@ public slots:
   void refresh();
   void openContextMenu();
   void openErrorDialog(QString message);
-  void openInfoDialog();
-  void openOptionDialog();
-  void openAboutDialog();
   int openMessageDialog(int flags, QString title, QString text);
   void handleOptions();
   void openServerDialog();
+  void openDialog(QDialog* d);
 
 private:
   QWidget* topWindow() const;
-  void openDialog(QDialog* d);
 
   bool commandLine = false;
   bool connectedOnce = false;
