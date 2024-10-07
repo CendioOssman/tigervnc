@@ -38,6 +38,7 @@
 #include <QCheckBox>
 #include <QClipboard>
 #include <QMenu>
+#include <QMessageBox>
 #include <QMoveEvent>
 #include <QPainter>
 #include <QPushButton>
@@ -52,9 +53,8 @@
 #undef asprintf
 #include "parameters.h"
 #include "DesktopWindow.h"
+#include "viewerconfig.h"
 #undef asprintf
-#include "aboutdialog.h"
-#include "infodialog.h"
 #include "OptionsDialog.h"
 
 #define XK_LATIN1
@@ -453,7 +453,11 @@ void Viewport::createContextMenu()
     action = new QAction(p_("ContextMenu|", "Connection &info..."), contextMenu);
     connect(action, &QAction::triggered, this,
             [this]() {
-              InfoDialog* dlg = new InfoDialog(this);
+              QMessageBox* dlg;
+              dlg = new QMessageBox(QMessageBox::Information,
+                                    _("VNC connection info"),
+                                    cc->infoText(),
+                                    QMessageBox::Close, this);
               AppManager::instance()->openDialog(dlg);
             });
     contextMenu->addAction(action);
@@ -461,8 +465,7 @@ void Viewport::createContextMenu()
     action = new QAction(p_("ContextMenu|", "About &TigerVNC viewer..."), contextMenu);
     connect(action, &QAction::triggered, this,
             [this]() {
-              AboutDialog* dlg = new AboutDialog(isFullScreen(), this);
-              AppManager::instance()->openDialog(dlg);
+              ViewerConfig::aboutDialog(this);
             });
     contextMenu->addAction(action);
 

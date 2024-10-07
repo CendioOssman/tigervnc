@@ -6,7 +6,6 @@
 
 #include "appmanager.h"
 #include "viewerconfig.h"
-#include "aboutdialog.h"
 #include "OptionsDialog.h"
 #include "i18n.h"
 #undef asprintf
@@ -112,8 +111,7 @@ void ServerDialog::openOptionDialog()
 
 void ServerDialog::openAboutDialog()
 {
-  AboutDialog* d = new AboutDialog(isFullScreen(), this);
-  AppManager::instance()->openDialog(d);
+  ViewerConfig::aboutDialog(this);
 }
 
 void ServerDialog::openLoadConfigDialog()
@@ -127,8 +125,15 @@ void ServerDialog::openLoadConfigDialog()
       QString server = ViewerConfig::instance()->loadViewerParameters(filename);
       validateServerText(server);
     } catch (rfb::Exception& e) {
+      QMessageBox* dlg;
+
       vlog.error("%s", e.str());
-      AppManager::instance()->openErrorDialog(QString::asprintf(_("Unable to load the specified configuration file:\n\n%s"), e.str()));
+
+      dlg = new QMessageBox(QMessageBox::Critical,
+                            _("Unable to load configuration"),
+                            QString::asprintf(_("Unable to load the specified configuration file:\n\n%s"), e.str()),
+                            QMessageBox::Ok, this);
+      AppManager::instance()->openDialog(dlg);
     }
   }
 }
@@ -163,8 +168,15 @@ void ServerDialog::openSaveConfigDialog()
     try {
       ViewerConfig::instance()->saveViewerParameters(filename, comboBox->currentText());
     } catch (rfb::Exception& e) {
+      QMessageBox* dlg;
+
       vlog.error("%s", e.str());
-      AppManager::instance()->openErrorDialog(QString::asprintf(_("Unable to save the specified configuration file:\n\n%s"), e.str()));
+
+      dlg = new QMessageBox(QMessageBox::Critical,
+                            _("Unable to save configuration"),
+                            QString::asprintf(_("Unable to save the specified configuration file:\n\n%s"), e.str()),
+                            QMessageBox::Ok, this);
+      AppManager::instance()->openDialog(dlg);
     }
   }
 }

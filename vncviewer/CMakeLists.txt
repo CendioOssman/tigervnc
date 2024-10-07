@@ -108,16 +108,8 @@ set(PROJECT_SOURCES
         viewerconfig.h
         ServerDialog.cxx
         ServerDialog.h
-        aboutdialog.cxx
-        aboutdialog.h
         authdialog.cxx
         authdialog.h
-        infodialog.cxx
-        infodialog.h
-        messagedialog.cxx
-        messagedialog.h
-        alertdialog.cxx
-        alertdialog.h
         OptionsDialog.cxx
         OptionsDialog.h
         options/compressiontab.cxx

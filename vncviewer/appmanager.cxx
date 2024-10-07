@@ -4,6 +4,7 @@
 #include "config.h"
 #endif
 
+#include <QMessageBox>
 #include <QProcess>
 #include <QScreen>
 #include <QTimer>
@@ -20,11 +21,10 @@
 #include <QApplication>
 #undef asprintf
 #include "Viewport.h"
-#include "alertdialog.h"
 #include "authdialog.h"
-#include "messagedialog.h"
 #include "ServerDialog.h"
 #include "parameters.h"
+#include "viewerconfig.h"
 #include "vncconnection.h"
 #include "DesktopWindow.h"
 #undef asprintf
@@ -79,7 +79,7 @@ void AppManager::initialize()
   QMenuBar* menuBar = new QMenuBar(nullptr); // global menu bar for mac
   QMenu* appMenu = new QMenu(nullptr);
   QAction* aboutAction = new QAction(nullptr);
-  connect(aboutAction, &QAction::triggered, this, &AppManager::openAboutDialog);
+  connect(aboutAction, &QAction::triggered, this, []() { ViewerConfig::aboutDialog(nullptr); });
   aboutAction->setText(_("About"));
   aboutAction->setMenuRole(QAction::AboutRole);
   appMenu->addAction(aboutAction);
@@ -155,9 +155,17 @@ void AppManager::publishError(const QString message, bool quit)
     }
   }
 
-  AlertDialog* d = new AlertDialog(isFullScreen(), text, quit, ::reconnectOnError, topWindow());
+  QMessageBox* d = new QMessageBox(QMessageBox::Critical,
+                                   _("Connection error"), text,
+                                   QMessageBox::NoButton, topWindow());
+  if (::reconnectOnError && !quit)
+    d->addButton(_("Reconnect"), QMessageBox::AcceptRole);
+  d->addButton(QMessageBox::Close);
+
   openDialog(d);
-  if (d->result() == QDialog::Rejected) {
+  if (d->buttonRole(d->clickedButton()) == QMessageBox::AcceptRole) {
+    connectToServer();
+  } else {
     if (!serverDialog || !serverDialog->isVisible()) {
       qApp->quit();
     }
@@ -344,20 +352,6 @@ void AppManager::openDialog(QDialog* d)
   }
 #endif
 }
-
-void AppManager::openErrorDialog(QString message)
-{
-  AlertDialog* d = new AlertDialog(isFullScreen(), message, false, false, topWindow());
-  openDialog(d);
-}
-
-int AppManager::openMessageDialog(int flags, QString title, QString text)
-{
-  MessageDialog* d = new MessageDialog(isFullScreen(), flags, title, text, topWindow());
-  openDialog(d);
-  return d->result() == QDialog::Accepted ? 1 : 0;
-}
-
 
 void AppManager::handleOptions()
 {

@@ -62,8 +62,6 @@ public slots:
   void setWindowName(QString name);
   void refresh();
   void openContextMenu();
-  void openErrorDialog(QString message);
-  int openMessageDialog(int flags, QString title, QString text);
   void handleOptions();
   void openServerDialog();
   void openDialog(QDialog* d);
