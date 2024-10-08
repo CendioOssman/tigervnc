@@ -45,7 +45,6 @@ static rfb::LogWriter vlog("AppManager");
 
 AppManager::AppManager()
   : QObject(nullptr)
-  , errorCount(0)
   , view(nullptr)
 {
 
@@ -97,6 +96,54 @@ void AppManager::initialize()
   connection->initialize();
 }
 
+int AppManager::exec()
+{
+  int ret = 0;
+
+  while (true) {
+    ret = QApplication::exec();
+
+    if (fatalError) {
+      if (alertOnFatalError) {
+        QMessageBox* d = new QMessageBox(QMessageBox::Critical,
+                                        _("Connection error"),
+                                        exitError.c_str(),
+                                        QMessageBox::NoButton);
+        d->addButton(QMessageBox::Close);
+        openDialog(d);
+      }
+      break;
+    }
+
+    if (exitError.empty())
+      break;
+
+    if (reconnectOnError) {
+      QString text;
+      text = QString::asprintf(_("%s\n\nAttempt to reconnect?"), exitError.c_str());
+
+      QMessageBox* d = new QMessageBox(QMessageBox::Critical,
+                                        _("Connection error"), text,
+                                        QMessageBox::NoButton);
+      d->addButton(_("Reconnect"), QMessageBox::AcceptRole);
+      d->addButton(QMessageBox::Close);
+
+      openDialog(d);
+      if (d->buttonRole(d->clickedButton()) == QMessageBox::AcceptRole) {
+        exitError.clear();
+        connectToServer();
+        continue;
+      } else {
+        break;
+      }
+    }
+
+    break;
+  }
+
+  return ret;
+}
+
 AppManager::~AppManager()
 {
   connection->deleteLater();
@@ -143,35 +190,10 @@ void AppManager::resetConnection()
 
 void AppManager::publishError(const QString message, bool quit)
 {
-  QString text(message);
-  if (::reconnectOnError && !quit) {
-    text = QString::asprintf(_("%s\n\nAttempt to reconnect?"), message.toStdString().c_str());
-  }
-  errorCount++;
-
-  if (!commandLine) {
-    if (!connectedOnce) {
-      if(serverDialog) {
-        serverDialog->show();
-      }
-    }
-  }
-
-  QMessageBox* d = new QMessageBox(QMessageBox::Critical,
-                                   _("Connection error"), text,
-                                   QMessageBox::NoButton, topWindow());
-  if (::reconnectOnError && !quit)
-    d->addButton(_("Reconnect"), QMessageBox::AcceptRole);
-  d->addButton(QMessageBox::Close);
-
-  openDialog(d);
-  if (d->buttonRole(d->clickedButton()) == QMessageBox::AcceptRole) {
-    connectToServer();
-  } else {
-    if (!serverDialog || !serverDialog->isVisible()) {
-      qApp->quit();
-    }
-  }
+  fatalError = quit;
+  exitError = message.toStdString();
+  resetConnection();
+  qApp->quit();
 }
 
 void AppManager::publishUnexpectedError(QString message, bool quit)

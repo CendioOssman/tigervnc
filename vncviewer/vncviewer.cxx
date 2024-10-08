@@ -94,9 +94,9 @@ int main(int argc, char *argv[])
   if (!ViewerConfig::instance()->getServerName().isEmpty()) {
     AppManager::instance()->setCommandLine(true);
     AppManager::instance()->connectToServer();
-    return app.exec();
+    return AppManager::instance()->exec();
   } else {
     AppManager::instance()->openServerDialog();
-    return app.exec();
+    return AppManager::instance()->exec();
   }
 }

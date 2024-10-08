@@ -21,7 +21,7 @@ public:
 
   void initialize();
 
-  int error() const { return errorCount; }
+  int exec();
 
   bool isFullScreen() const;
 
@@ -65,7 +65,8 @@ private:
 
   bool commandLine = false;
   bool connectedOnce = false;
-  int errorCount;
+  bool fatalError = false;
+  std::string exitError;
   QVNCConnection* connection;
   Viewport* view = nullptr;
   DesktopWindow* window = nullptr;
