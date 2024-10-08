@@ -54,7 +54,6 @@ void AppManager::initialize()
 {
   rfbTimerProxy = new QTimer;
   connection = new QVNCConnection;
-  window = new DesktopWindow(connection);
   connect(this, &AppManager::connectToServerRequested, connection, &QVNCConnection::connectToServer);
   connect(connection, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
   connect(this, &AppManager::resetConnectionRequested, connection, &QVNCConnection::resetConnection);
@@ -72,7 +71,6 @@ void AppManager::initialize()
     AuthDialog d(secured, userNeeded, passwordNeeded, topWindow());
     d.exec();
   });
-  connect(window, &DesktopWindow::closed, qApp, &QApplication::quit);
 
 #ifdef __APPLE__
   QMenuBar* menuBar = new QMenuBar(nullptr); // global menu bar for mac
@@ -147,7 +145,9 @@ int AppManager::exec()
 AppManager::~AppManager()
 {
   connection->deleteLater();
-  window->deleteLater();
+  if (window) {
+    window->deleteLater();
+  }
   if (view) {
     view->deleteLater();
   }
@@ -207,6 +207,9 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 {
   connectedOnce = true;
 
+  window = new DesktopWindow(connection);
+  connect(window, &DesktopWindow::closed, qApp, &QApplication::quit);
+
   window->takeWidget();
   delete view;
 #if defined(WIN32)
@@ -223,6 +226,8 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 #endif
 
   if (!view) {
+    delete window;
+    window = nullptr;
     throw rdr::Exception(_("Platform not supported."));
   }
   connect(view, &Viewport::bufferResized, window, &DesktopWindow::fromBufferResize, Qt::QueuedConnection);
@@ -286,11 +291,11 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 void AppManager::closeVNCWindow()
 {
   vlog.debug("AppManager::closeVNCWindow");
-  QWidget* w = window->takeWidget();
-  if (w) {
-    window->setVisible(false);
-    w->setVisible(false);
-    w->deleteLater();
+  if (window) {
+    window->takeWidget();
+    window->deleteLater();
+    window = nullptr;
+    view->deleteLater();
     view = nullptr;
     emit vncWindowClosed();
   }
