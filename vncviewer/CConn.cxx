@@ -207,7 +207,7 @@ void CConn::initDone()
   setFramebuffer(new PlatformPixelBuffer(server.width(), server.height()));
 
   desktop = new DesktopWindow(server.width(), server.height(),
-                              server.name(), facade);
+                              server.name(), this);
   *fullColourPF = getFramebuffer()->getPF();
 
   // Force a switch to the format and encoding we'd like

@@ -27,7 +27,7 @@ class QVNCToast;
 class GestureHandler;
 class Keyboard;
 class QGestureRecognizer;
-class QVNCConnection;
+class CConn;
 
 namespace rfb
 {
@@ -41,7 +41,7 @@ class Viewport : public QWidget, protected EmulateMB, protected KeyboardHandler,
   Q_OBJECT
 
 public:
-  Viewport(QVNCConnection* cc, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
+  Viewport(CConn* cc, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~Viewport();
   void toggleContextMenu();
 
@@ -157,7 +157,7 @@ protected:
   void registerGesture(QGestureRecognizer* gr, GestureCallbackWithType cb);
 
 private:
-  QVNCConnection* cc;
+  CConn* cc;
 
   // Initialization
   bool firstUpdate = true;

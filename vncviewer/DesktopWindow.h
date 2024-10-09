@@ -12,7 +12,7 @@ class QResizeEvent;
 class Toast;
 class Viewport;
 class ScrollArea;
-class QVNCConnection;
+class CConn;
 
 class DesktopWindow : public QWidget
 {
@@ -20,7 +20,7 @@ class DesktopWindow : public QWidget
 
 public:
   DesktopWindow(int w, int h, const char *name,
-                QVNCConnection* cc, QWidget* parent = nullptr);
+                CConn* cc, QWidget* parent = nullptr);
   virtual ~DesktopWindow();
   void updateMonitorsFullscreen();
 
@@ -94,7 +94,7 @@ public:
   void handleGrab(rfb::Timer*);
 
 private:
-  QVNCConnection* cc;
+  CConn* cc;
   Viewport* view;
 
   QTimer* resizeTimer;

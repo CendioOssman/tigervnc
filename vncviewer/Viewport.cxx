@@ -21,6 +21,8 @@
 #include "i18n.h"
 #include "locale.h"
 #include "menukey.h"
+#include "rdr/Exception.h"
+#include "rfb/CMsgWriter.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ServerParams.h"
 #include "rfb/ledStates.h"
@@ -81,7 +83,7 @@ static const int FAKE_KEY_CODE = 0xffff;
 // Used for fake key presses for gestures
 static const int FAKE_GESTURE_KEY_CODE = 0x20001;
 
-Viewport::Viewport(QVNCConnection* cc_, QWidget* parent, Qt::WindowFlags f)
+Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
   : QWidget(parent, f)
   , mousePointerTimer(new QTimer(this))
   , cursor(nullptr)
@@ -256,7 +258,11 @@ Viewport::Viewport(QVNCConnection* cc_, QWidget* parent, Qt::WindowFlags f)
   mousePointerTimer->setInterval(::pointerEventInterval);
   mousePointerTimer->setSingleShot(true);
   connect(mousePointerTimer, &QTimer::timeout, this, [this]() {
-    emit cc->writePointerEvent(lastPointerPos, lastButtonMask);
+    try {
+      cc->writer()->writePointerEvent(lastPointerPos, lastButtonMask);
+    } catch (rdr::Exception& e) {
+      AppManager::instance()->publishUnexpectedError(e.str());
+    }
   });
 
 #ifdef QT_DEBUG
@@ -400,7 +406,7 @@ void Viewport::createContextMenu()
               QMessageBox* dlg;
               dlg = new QMessageBox(QMessageBox::Information,
                                     _("VNC connection info"),
-                                    cc->infoText(),
+                                    cc->connectionInfo(),
                                     QMessageBox::Close, this);
               AppManager::instance()->openDialog(dlg);
             });
@@ -531,7 +537,7 @@ void Viewport::pushLEDState()
   unsigned int state;
 
   // Server support?
-  if (cc->server()->ledState() == rfb::ledUnknown)
+  if (cc->server.ledState() == rfb::ledUnknown)
     return;
 
   state = keyboardHandler->getLEDState();
@@ -540,20 +546,20 @@ void Viewport::pushLEDState()
 
 #if defined(__APPLE__)
   // No support for Scroll Lock //
-  state |= (cc->server()->ledState() & rfb::ledScrollLock);
+  state |= (cc->server.ledState() & rfb::ledScrollLock);
 #endif
 
-  if ((state & rfb::ledCapsLock) != (cc->server()->ledState() & rfb::ledCapsLock)) {
+  if ((state & rfb::ledCapsLock) != (cc->server.ledState() & rfb::ledCapsLock)) {
     vlog.debug("Inserting fake CapsLock to get in sync with server");
     handleKeyPress(FAKE_KEY_CODE, 0x3a, XK_Caps_Lock);
     handleKeyRelease(FAKE_KEY_CODE);
   }
-  if ((state & rfb::ledNumLock) != (cc->server()->ledState() & rfb::ledNumLock)) {
+  if ((state & rfb::ledNumLock) != (cc->server.ledState() & rfb::ledNumLock)) {
     vlog.debug("Inserting fake NumLock to get in sync with server");
     handleKeyPress(FAKE_KEY_CODE, 0x45, XK_Num_Lock);
     handleKeyRelease(FAKE_KEY_CODE);
   }
-  if ((state & rfb::ledScrollLock) != (cc->server()->ledState() & rfb::ledScrollLock)) {
+  if ((state & rfb::ledScrollLock) != (cc->server.ledState() & rfb::ledScrollLock)) {
     vlog.debug("Inserting fake ScrollLock to get in sync with server");
     handleKeyPress(FAKE_KEY_CODE, 0x46, XK_Scroll_Lock);
     handleKeyRelease(FAKE_KEY_CODE);
@@ -703,7 +709,7 @@ void Viewport::handleClipboardRequest()
 {
   vlog.debug("Viewport::handleClipboardRequest: %s", pendingClientData.toStdString().c_str());
   vlog.debug("Sending clipboard data (%d bytes)", (int)pendingClientData.size());
-  cc->sendClipboardData(pendingClientData);
+  cc->sendClipboardData(pendingClientData.toStdString().c_str());
   pendingClientData = "";
 }
 
@@ -852,7 +858,7 @@ void Viewport::updateWindow()
 {
   // copied from DesktopWindow.cxx.
   if (firstUpdate) {
-    if (cc->server()->supportsSetDesktopSize) {
+    if (cc->server.supportsSetDesktopSize) {
       emit remoteResizeRequest();
     }
     firstUpdate = false;
@@ -1175,7 +1181,11 @@ void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
   lastPointerPos = remotePointAdjust(pos);
   lastButtonMask = buttonMask;
   if (instantPosting) {
-    emit cc->writePointerEvent(pos, buttonMask);
+    try {
+      cc->writer()->writePointerEvent(pos, buttonMask);
+    } catch (rdr::Exception& e) {
+      AppManager::instance()->publishUnexpectedError(e.str());
+    }
   } else {
     if (!mousePointerTimer->isActive()) {
       mousePointerTimer->start();

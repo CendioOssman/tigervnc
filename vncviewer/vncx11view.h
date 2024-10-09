@@ -10,7 +10,7 @@ class QVNCX11View : public Viewport
   Q_OBJECT
 
 public:
-  QVNCX11View(QVNCConnection* cc, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
+  QVNCX11View(CConn* cc, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
 
 public slots:
   void grabPointer() override;

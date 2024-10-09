@@ -12,7 +12,7 @@ class QVNCWinView : public Viewport
   Q_OBJECT
 
 public:
-  QVNCWinView(QVNCConnection* cc, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Window);
+  QVNCWinView(CConn* cc, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Window);
   virtual ~QVNCWinView();
 
 protected:

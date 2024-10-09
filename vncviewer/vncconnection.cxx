@@ -48,43 +48,6 @@ QVNCConnection::QVNCConnection()
 {
   connect(this, &QVNCConnection::socketReadNotified, this, &QVNCConnection::startProcessing);
   connect(this, &QVNCConnection::socketWriteNotified, this, &QVNCConnection::flushSocket);
-
-  connect(this, &QVNCConnection::writePointerEvent, this, [this](const rfb::Point& pos, int buttonMask) {
-    try {
-      if (rfbcon) {
-        rfbcon->writer()->writePointerEvent(pos, buttonMask);
-      }
-    } catch (rdr::Exception& e) {
-      AppManager::instance()->publishUnexpectedError(e.str());
-    } catch (int& e) {
-      AppManager::instance()->publishUnexpectedError(strerror(e));
-    }
-  });
-  connect(this,
-          &QVNCConnection::writeSetDesktopSize,
-          this,
-          [this](int width, int height, const rfb::ScreenSet& layout) {
-            try {
-              if (rfbcon) {
-                rfbcon->writer()->writeSetDesktopSize(width, height, layout);
-              }
-            } catch (rdr::Exception& e) {
-              AppManager::instance()->publishError(e.str());
-            } catch (int& e) {
-              AppManager::instance()->publishError(strerror(e));
-            }
-          });
-  connect(this, &QVNCConnection::writeKeyEvent, this, [this](uint32_t keysym, uint32_t keycode, bool down) {
-    try {
-      if (rfbcon) {
-        rfbcon->writer()->writeKeyEvent(keysym, keycode, down);
-      }
-    } catch (rdr::Exception& e) {
-      AppManager::instance()->publishUnexpectedError(e.str());
-    } catch (int& e) {
-      AppManager::instance()->publishUnexpectedError(strerror(e));
-    }
-  });
 }
 
 void QVNCConnection::initialize()
