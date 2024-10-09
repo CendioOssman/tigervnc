@@ -11,6 +11,7 @@
 #include "rdr/Exception.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ScreenSet.h"
+#include "OptionsDialog.h"
 #include "toast.h"
 #include "vncconnection.h"
 #include "viewerconfig.h"
@@ -183,6 +184,8 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   scrollArea->setWidget(view);
   setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name));
 
+  OptionsDialog::addCallback(handleOptions, this);
+
   // FIXME: this is a lot faster than before
   resizeTimer->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
   resizeTimer->setSingleShot(true);
@@ -243,7 +246,10 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   }
 }
 
-DesktopWindow::~DesktopWindow() {}
+DesktopWindow::~DesktopWindow()
+{
+  OptionsDialog::removeCallback(handleOptions);
+}
 
 void DesktopWindow::updateMonitorsFullscreen()
 {
@@ -926,4 +932,21 @@ void DesktopWindow::ungrabPointer()
 void DesktopWindow::handleGrab(rfb::Timer*)
 {
   maybeGrabKeyboard();
+}
+
+void DesktopWindow::handleOptions(void *data)
+{
+  DesktopWindow *window = (DesktopWindow*)data;
+
+  if (::fullscreenSystemKeys)
+    window->maybeGrabKeyboard();
+  else
+    window->ungrabKeyboard();
+
+  // Call fullscreen_on even if active since it handles
+  // fullScreenMode
+  if (::fullScreen)
+    window->fullscreen(true);
+  else if (!::fullScreen && window->isFullscreenEnabled())
+    window->fullscreen(false);
 }

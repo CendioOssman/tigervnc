@@ -291,52 +291,6 @@ void AppManager::openDialog(QDialog* d)
 #endif
 }
 
-void AppManager::handleOptions()
-{
-  /* CConn::handleOptions() */
-
-  // Checking all the details of the current set of encodings is just
-  // a pain. Assume something has changed, as resending the encoding
-  // list is cheap. Avoid overriding what the auto logic has selected
-  // though.
-  QVNCConnection* cc = connection;
-  if (cc && cc->hasConnection()) {
-    if (!::autoSelect) {
-      int encNum = encodingNum(::preferredEncoding);
-
-      if (encNum != -1)
-        cc->setPreferredEncoding(encNum);
-    }
-
-    if (::customCompressLevel)
-      cc->setCompressLevel(::compressLevel);
-    else
-      cc->setCompressLevel(-1);
-
-    if (!::noJpeg && !::autoSelect)
-      cc->setQualityLevel(::qualityLevel);
-    else
-      cc->setQualityLevel(-1);
-
-    cc->updatePixelFormat();
-  }
-
-  /* DesktopWindow::handleOptions() */
-    if (window) {
-    if (::fullscreenSystemKeys)
-      window->maybeGrabKeyboard();
-    else
-      window->ungrabKeyboard();
-
-    // Call fullscreen_on even if active since it handles
-    // fullScreenMode
-    if (::fullScreen)
-      window->fullscreen(true);
-    else if (!::fullScreen && window->isFullscreenEnabled())
-      window->fullscreen(false);
-  }
-}
-
 void AppManager::openServerDialog()
 {
   serverDialog = new ServerDialog;

@@ -104,6 +104,8 @@ private:
   void autoSelectFormatAndEncoding();
   int securityType();
 
+  static void handleOptions(void *data);
+
 private:
   QString serverHost;
   int serverPort;
