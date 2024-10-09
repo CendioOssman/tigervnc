@@ -182,7 +182,7 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   view->resize(w, h);
   resize(w, h);
   scrollArea->setWidget(view);
-  setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name));
+  setName(name);
 
   OptionsDialog::addCallback(handleOptions, this);
 
@@ -258,6 +258,11 @@ void DesktopWindow::updateMonitorsFullscreen()
     fullscreen(false);
     fullscreen(true);
   }
+}
+
+void DesktopWindow::setName(const char *name)
+{
+  setWindowTitle(QString::asprintf("%s - TigerVNC", name));
 }
 
 QList<int> DesktopWindow::fullscreenScreens() const
@@ -822,8 +827,8 @@ void DesktopWindow::focusOutEvent(QFocusEvent*)
 
 void DesktopWindow::closeEvent(QCloseEvent* e)
 {
-  emit closed();
   QWidget::closeEvent(e);
+  qApp->quit();
 }
 
 bool DesktopWindow::event(QEvent* event)

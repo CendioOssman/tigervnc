@@ -105,9 +105,6 @@ void QVNCConnection::initialize()
     }
   });
 
-  connect(this, &QVNCConnection::newVncWindowRequested, this,
-          [this]() { established = true; });
-
   QString gatewayHost = ViewerConfig::instance()->getGatewayHost();
   QString remoteHost = ViewerConfig::instance()->getServerHost();
   if (!gatewayHost.isEmpty() && !remoteHost.isEmpty()) {
@@ -162,7 +159,6 @@ void QVNCConnection::connectToServer()
     address = ViewerConfig::instance()->getFinalAddress();
     delete rfbcon;
     rfbcon = new CConn(this);
-    established = false;
     try {
       ViewerConfig::instance()->saveViewerParameters("", address);
     } catch (rfb::Exception& e) {
@@ -264,7 +260,6 @@ void QVNCConnection::resetConnection()
   }
   rfbcon = nullptr;
 
-  AppManager::instance()->closeVNCWindow();
   delete socketReadNotifier;
   socketReadNotifier = nullptr;
   delete socketWriteNotifier;
@@ -419,7 +414,7 @@ void QVNCConnection::startProcessing()
     recursing = false;
     vlog.info("%s", e.str());
     // FIXME
-    if (!established) {
+    if (!rfbcon || !rfbcon->desktop) {
       vlog.error(_("The connection was dropped by the server before "
                    "the session could be established."));
       QString message = _("The connection was dropped by the server "
