@@ -84,6 +84,7 @@ static const int FAKE_GESTURE_KEY_CODE = 0x20001;
 Viewport::Viewport(QVNCConnection* cc_, QWidget* parent, Qt::WindowFlags f)
   : QWidget(parent, f)
   , mousePointerTimer(new QTimer(this))
+  , cursor(nullptr)
   , cc(cc_)
   , delayedInitializeTimer(new QTimer(this))
 #ifdef QT_DEBUG
@@ -258,59 +259,6 @@ Viewport::Viewport(QVNCConnection* cc_, QWidget* parent, Qt::WindowFlags f)
     emit cc->writePointerEvent(lastPointerPos, lastButtonMask);
   });
 
-  connect(cc,
-          &QVNCConnection::cursorChanged,
-          this,
-          &Viewport::setCursor,
-          Qt::QueuedConnection);
-  connect(cc,
-          &QVNCConnection::cursorPositionChanged,
-          this,
-          &Viewport::setCursorPos,
-          Qt::QueuedConnection);
-  connect(cc,
-          &QVNCConnection::clipboardRequested,
-          this,
-          &Viewport::handleClipboardRequest,
-          Qt::QueuedConnection);
-  connect(cc,
-          &QVNCConnection::clipboardAnnounced,
-          this,
-          &Viewport::handleClipboardAnnounce,
-          Qt::QueuedConnection);
-  connect(cc,
-          &QVNCConnection::clipboardDataReceived,
-          this,
-          &Viewport::handleClipboardData,
-          Qt::QueuedConnection);
-  connect(cc,
-          &QVNCConnection::bellRequested,
-          this,
-          &Viewport::bell,
-          Qt::QueuedConnection);
-  connect(cc,
-          &QVNCConnection::refreshFramebufferEnded,
-          this,
-          &Viewport::updateWindow,
-          Qt::QueuedConnection);
-  connect(AppManager::instance(),
-          &AppManager::refreshRequested,
-          this,
-          &Viewport::updateWindow,
-          Qt::QueuedConnection);
-  connect(cc,
-          &QVNCConnection::framebufferResized,
-          this,
-          [=](int w, int h) {
-            pixmap = QPixmap(w, h);
-            damage = QRegion(0, 0, pixmap.width(), pixmap.height());
-            vlog.debug("Viewport::bufferResized pixmapSize=(%d, %d) size=(%d, %d)",
-                       pixmap.size().width(), pixmap.size().height(), width(), height());
-            emit bufferResized(width(), height(), w, h);
-            resize(w, h);
-          },
-          Qt::QueuedConnection);
-
 #ifdef QT_DEBUG
   gettimeofday(&fpsLast, nullptr);
   fpsTimer.start(5000);
@@ -333,6 +281,7 @@ Viewport::~Viewport()
 {
   removeKeyboardHandler();
   delete contextMenu;
+  delete cursor;
   for (auto gr : gestureRecognizers.keys()) {
     QGestureRecognizer::unregisterRecognizer(gr);
   }
@@ -540,28 +489,6 @@ void Viewport::resize(int width, int height)
 void Viewport::initKeyboardHandler()
 {
   installKeyboardHandler();
-  connect(
-      cc,
-      &QVNCConnection::ledStateChanged,
-      this,
-      [=](unsigned int state) {
-        vlog.debug("QVNCConnection::ledStateChanged");
-        // The first message is just considered to be the server announcing
-        // support for this extension. We will push our state to sync up the
-        // server when we get focus. If we already have focus we need to push
-        // it here though.
-        if (firstLEDState) {
-          firstLEDState = false;
-          if (hasFocus()) {
-            vlog.debug("KeyboardHandler::pushLEDState");
-            pushLEDState();
-          }
-        } else if (hasFocus()) {
-          vlog.debug("KeyboardHandler::setLEDState");
-          keyboardHandler->setLEDState(state);
-        }
-      },
-      Qt::QueuedConnection);
 }
 
 void Viewport::installKeyboardHandler()
@@ -671,19 +598,89 @@ void Viewport::handleKeyRelease(int systemKeyCode)
   cc->sendKeyRelease(systemKeyCode);
 }
 
-void Viewport::setCursorPos(int x, int y)
+void Viewport::resizeFramebuffer(int new_w, int new_h)
+{
+  pixmap = QPixmap(new_w, new_h);
+  damage = QRegion(0, 0, pixmap.width(), pixmap.height());
+  vlog.debug("Viewport::bufferResized pixmapSize=(%d, %d) size=(%d, %d)",
+              pixmap.size().width(), pixmap.size().height(), width(), height());
+  emit bufferResized(width(), height(), new_w, new_h);
+  resize(new_w, new_h);
+}
+
+void Viewport::setCursor(int width, int height,
+                         const rfb::Point& hotspot,
+                         const uint8_t* pixels)
+{
+  bool emptyCursor = true;
+  for (int i = 0; i < width * height; i++) {
+    if (pixels[i*4 + 3] != 0) {
+      emptyCursor = false;
+      break;
+    }
+  }
+  if (emptyCursor) {
+    if (::dotWhenNoCursor) {
+      static const char * dotcursor_xpm[] = {
+        "5 5 2 1",
+        ".	c #000000",
+        " 	c #FFFFFF",
+        "     ",
+        " ... ",
+        " ... ",
+        " ... ",
+        "     "};
+      delete cursor;
+      cursor = new QCursor(QPixmap(dotcursor_xpm), 2, 2);
+    }
+    else {
+      static const char * emptycursor_xpm[] = {
+        "2 2 1 1",
+        ".	c None",
+        "..",
+        ".."};
+      delete cursor;
+      cursor = new QCursor(QPixmap(emptycursor_xpm), 0, 0);
+    }
+  }
+  else {
+    QImage image(pixels, width, height, QImage::Format_RGBA8888);
+    delete cursor;
+    cursor = new QCursor(QPixmap::fromImage(image), hotspot.x, hotspot.y);
+  }
+  QWidget::setCursor(*cursor);
+}
+
+void Viewport::setCursorPos(const rfb::Point& pos)
 {
   vlog.debug("Viewport::setCursorPos mouseGrabbed=%d", mouseGrabbed);
   if (!mouseGrabbed) {
     // Do nothing if we do not have the mouse captured.
     return;
   }
-  QPoint gp = mapToGlobal(localPointAdjust(QPoint(x, y)));
-  vlog.debug("Viewport::setCursorPos local x=%d y=%d", x, y);
+  QPoint gp = mapToGlobal(localPointAdjust(QPoint(pos.x, pos.y)));
+  vlog.debug("Viewport::setCursorPos local x=%d y=%d", pos.x, pos.y);
   vlog.debug("Viewport::setCursorPos screen x=%d y=%d", gp.x(), gp.y());
-  x = gp.x();
-  y = gp.y();
-  QCursor::setPos(x, y);
+  QCursor::setPos(gp.x(), gp.y());
+}
+
+void Viewport::setLEDState(unsigned int state)
+{
+  vlog.debug("QVNCConnection::ledStateChanged");
+  // The first message is just considered to be the server announcing
+  // support for this extension. We will push our state to sync up the
+  // server when we get focus. If we already have focus we need to push
+  // it here though.
+  if (firstLEDState) {
+    firstLEDState = false;
+    if (hasFocus()) {
+      vlog.debug("KeyboardHandler::pushLEDState");
+      pushLEDState();
+    }
+  } else if (hasFocus()) {
+    vlog.debug("KeyboardHandler::setLEDState");
+    keyboardHandler->setLEDState(state);
+  }
 }
 
 void Viewport::flushPendingClipboard()

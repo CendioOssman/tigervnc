@@ -290,7 +290,6 @@ void QVNCConnection::announceClipboard(bool available)
 void QVNCConnection::refreshFramebuffer()
 {
   try {
-    emit refreshFramebufferStarted();
     if (rfbcon) {
       rfbcon->refreshFramebuffer();
     }

@@ -36,8 +36,3 @@ bool QVNCWinView::event(QEvent* e)
 {
   return Viewport::event(e);
 }
-
-void QVNCWinView::bell()
-{
-  MessageBeep(0xFFFFFFFF); // cf. fltk/src/drivers/WinAPI/Fl_WinAPI_Screen_Driver.cxx:245
-}

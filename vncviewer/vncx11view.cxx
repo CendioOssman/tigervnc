@@ -143,8 +143,3 @@ void QVNCX11View::ungrabPointer()
 
   Viewport::ungrabPointer();
 }
-
-void QVNCX11View::bell()
-{
-  XBell(display, 0 /* volume */);
-}
