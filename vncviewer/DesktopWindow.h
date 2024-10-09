@@ -18,7 +18,8 @@ class DesktopWindow : public QWidget
   Q_OBJECT
 
 public:
-  DesktopWindow(QVNCConnection* cc, QWidget* parent = nullptr);
+  DesktopWindow(int w, int h, const char *name,
+                QVNCConnection* cc, QWidget* parent = nullptr);
   virtual ~DesktopWindow();
   void updateMonitorsFullscreen();
 
@@ -43,8 +44,6 @@ public:
   void fromBufferResize(int oldW, int oldH, int width, int height);
 
   void showToast();
-  void setWidget(Viewport* w);
-  QWidget* takeWidget();
 
   void postDialogClosing();
 
