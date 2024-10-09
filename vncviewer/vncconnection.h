@@ -44,21 +44,7 @@ public:
   QVNCConnection();
   virtual ~QVNCConnection();
 
-  rfb::ServerParams* server() { return rfbcon ? &rfbcon->server : nullptr; }
-
-  void setState(int state);
-
-  rdr::InStream* istream() { return rfbcon->getInStream(); }
-
-  rdr::OutStream* ostream() { return rfbcon->getOutStream(); }
-
-  rfb::CMsgReader* reader() { return rfbcon->reader(); }
-
-  rfb::CMsgWriter* writer() { return rfbcon->writer(); }
-
   void setQualityLevel(int level) { rfbcon->setQualityLevel(level); }
-
-  rfb::ModifiablePixelBuffer* framebuffer() { return rfbcon->framebuffer(); }
 
   void setCompressLevel(int level) { rfbcon->setCompressLevel(level); }
 
@@ -66,11 +52,7 @@ public:
 
   void updatePixelFormat() { rfbcon->updatePixelFormat(); }
 
-  void announceClipboard(bool available);
-
   void setPreferredEncoding(int encoding) { rfbcon->setPreferredEncoding(encoding); }
-
-  CConn* connection() const { return rfbcon; }
 
   bool hasConnection() const { return rfbcon; }
 
@@ -85,15 +67,6 @@ public:
   void resetConnection();
   void startProcessing();
   void flushSocket();
-  void refreshFramebuffer();
-  void sendClipboardData(QString data);
-  void requestClipboard();
-  void sendKeyPress(int systemKeyCode, uint32_t keyCode, uint32_t keySym);
-  void sendKeyRelease(int systemKeyCode);
-  void releaseAllKeys();
-
-
-  QString infoText() { return rfbcon ? rfbcon->connectionInfo() : ""; }
 
   QString host() { return rfbcon ? rfbcon->host() : ""; }
 
