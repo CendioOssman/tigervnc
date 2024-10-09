@@ -16,7 +16,7 @@
 
 static rfb::LogWriter vlog("QVNCMacView");
 
-QVNCMacView::QVNCMacView(QVNCConnection* cc_, QWidget* parent, Qt::WindowFlags f)
+QVNCMacView::QVNCMacView(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
   : Viewport(cc_, parent, f)
 {
   keyboardHandler = new KeyboardMacOS(this);

@@ -70,15 +70,13 @@ public:
 
   void setPreferredEncoding(int encoding) { rfbcon->setPreferredEncoding(encoding); }
 
+  CConn* connection() const { return rfbcon; }
+
   bool hasConnection() const { return rfbcon; }
 
 signals:
   void socketReadNotified();
   void socketWriteNotified();
-
-  void writePointerEvent(const rfb::Point& pos, int buttonMask);
-  void writeSetDesktopSize(int width, int height, const rfb::ScreenSet& layout);
-  void writeKeyEvent(uint32_t keysym, uint32_t keycode, bool down);
 
 public:
   void initialize();

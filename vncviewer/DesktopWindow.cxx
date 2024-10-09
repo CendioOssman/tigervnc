@@ -9,6 +9,7 @@
 #include "i18n.h"
 #include "parameters.h"
 #include "rdr/Exception.h"
+#include "rfb/CMsgWriter.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ScreenSet.h"
 #include "OptionsDialog.h"
@@ -128,7 +129,7 @@ private:
 };
 
 DesktopWindow::DesktopWindow(int w, int h, const char *name,
-                             QVNCConnection* cc_, QWidget* parent)
+                             CConn* cc_, QWidget* parent)
   : QWidget(parent)
   , cc(cc_)
   , resizeTimer(new QTimer(this))
@@ -596,7 +597,7 @@ void DesktopWindow::remoteResize(int w, int h)
     // to scroll) we just report a single virtual screen that covers
     // the entire framebuffer.
 
-    layout = cc->server()->screenLayout();
+    layout = cc->server.screenLayout();
 
     // Not sure why we have no screens, but adding a new one should be
     // safe as there is nothing to conflict with...
@@ -662,14 +663,14 @@ void DesktopWindow::remoteResize(int w, int h)
 
       // Look for perfectly matching existing screen that is not yet present in
       // in the screen layout...
-      for (iter = cc->server()->screenLayout().begin(); iter != cc->server()->screenLayout().end(); ++iter) {
+      for (iter = cc->server.screenLayout().begin(); iter != cc->server.screenLayout().end(); ++iter) {
         if ((iter->dimensions.tl.x == sx) && (iter->dimensions.tl.y == sy) && (iter->dimensions.width() == sw)
             && (iter->dimensions.height() == sh) && (std::find(layout.begin(), layout.end(), *iter) == layout.end()))
           break;
       }
 
       // Found it?
-      if (iter != cc->server()->screenLayout().end()) {
+      if (iter != cc->server.screenLayout().end()) {
         layout.add_screen(*iter);
         continue;
       }
@@ -677,12 +678,12 @@ void DesktopWindow::remoteResize(int w, int h)
       // Need to add a new one, which means we need to find an unused id
       while (true) {
         id = rand();
-        for (iter = cc->server()->screenLayout().begin(); iter != cc->server()->screenLayout().end(); ++iter) {
+        for (iter = cc->server.screenLayout().begin(); iter != cc->server.screenLayout().end(); ++iter) {
           if (iter->id == id)
             break;
         }
 
-        if (iter == cc->server()->screenLayout().end())
+        if (iter == cc->server.screenLayout().end())
           break;
       }
 
@@ -696,10 +697,10 @@ void DesktopWindow::remoteResize(int w, int h)
   }
 
   // Do we actually change anything?
-  if ((w == cc->server()->width()) && (h == cc->server()->height()) && (layout == cc->server()->screenLayout()))
+  if ((w == cc->server.width()) && (h == cc->server.height()) && (layout == cc->server.screenLayout()))
     return;
 
-  vlog.debug("Requesting framebuffer resize from %dx%d to %dx%d", cc->server()->width(), cc->server()->height(), w, h);
+  vlog.debug("Requesting framebuffer resize from %dx%d to %dx%d", cc->server.width(), cc->server.height(), w, h);
 
   char buffer[2048];
   layout.print(buffer, sizeof(buffer));
@@ -711,7 +712,11 @@ void DesktopWindow::remoteResize(int w, int h)
     vlog.debug("%s", buffer);
   }
   vlog.debug("DesktopWindow::remoteResize size=(%d, %d) layout=%s", w, h, buffer);
-  emit cc->writeSetDesktopSize(w, h, layout);
+  try {
+    cc->writer()->writeSetDesktopSize(w, h, layout);
+  } catch (rdr::Exception& e) {
+    AppManager::instance()->publishError(e.str());
+  }
 }
 
 void DesktopWindow::fromBufferResize(int oldW, int oldH, int width, int height)
@@ -803,8 +808,8 @@ void DesktopWindow::resizeEvent(QResizeEvent* e)
 {
   vlog.debug("DesktopWindow::resizeEvent size=(%d, %d)", e->size().width(), e->size().height());
 
-  vlog.debug("DesktopWindow::resizeEvent supportsSetDesktopSize=%d", cc->server()->supportsSetDesktopSize);
-  if (::remoteResize && cc->server()->supportsSetDesktopSize) {
+  vlog.debug("DesktopWindow::resizeEvent supportsSetDesktopSize=%d", cc->server.supportsSetDesktopSize);
+  if (::remoteResize && cc->server.supportsSetDesktopSize) {
     postRemoteResizeRequest();
   }
 
