@@ -331,6 +331,7 @@ Viewport::Viewport(QVNCConnection* cc_, QWidget* parent, Qt::WindowFlags f)
 
 Viewport::~Viewport()
 {
+  removeKeyboardHandler();
   delete contextMenu;
   for (auto gr : gestureRecognizers.keys()) {
     QGestureRecognizer::unregisterRecognizer(gr);
@@ -539,11 +540,6 @@ void Viewport::resize(int width, int height)
 void Viewport::initKeyboardHandler()
 {
   installKeyboardHandler();
-  connect(AppManager::instance(),
-          &AppManager::vncWindowClosed,
-          this,
-          &Viewport::removeKeyboardHandler,
-          Qt::QueuedConnection);
   connect(
       cc,
       &QVNCConnection::ledStateChanged,

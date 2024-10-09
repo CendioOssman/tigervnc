@@ -23,6 +23,8 @@ public:
   virtual ~DesktopWindow();
   void updateMonitorsFullscreen();
 
+  void setName(const char* name);
+
   // Fullscreen
   QList<int> fullscreenScreens() const;
   QScreen* getCurrentScreen() const;
@@ -49,7 +51,6 @@ public:
 
 signals:
   void fullscreenChanged(bool enabled);
-  void closed();
 
 protected:
   void moveEvent(QMoveEvent* e) override;

@@ -21,11 +21,11 @@
 #undef asprintf
 #include "Viewport.h"
 #include "authdialog.h"
+#include "DesktopWindow.h"
 #include "ServerDialog.h"
 #include "parameters.h"
 #include "viewerconfig.h"
 #include "vncconnection.h"
-#include "DesktopWindow.h"
 #undef asprintf
 
 #ifdef __APPLE__
@@ -45,7 +45,6 @@ void AppManager::initialize()
   rfbTimerProxy = new QTimer;
   connection = new QVNCConnection;
   connect(this, &AppManager::connectToServerRequested, connection, &QVNCConnection::connectToServer);
-  connect(connection, &QVNCConnection::newVncWindowRequested, this, &AppManager::openVNCWindow);
   connect(this, &AppManager::resetConnectionRequested, connection, &QVNCConnection::resetConnection);
   connect(rfbTimerProxy, &QTimer::timeout, this, []() {
     rfb::Timer::checkTimeouts();
@@ -58,7 +57,7 @@ void AppManager::initialize()
   rfbTimerProxy->setSingleShot(true);
 
   connect(this, &AppManager::credentialRequested, this, [=](bool secured, bool userNeeded, bool passwordNeeded) {
-    AuthDialog d(secured, userNeeded, passwordNeeded, topWindow());
+    AuthDialog d(secured, userNeeded, passwordNeeded);
     d.exec();
   });
 
@@ -135,9 +134,6 @@ int AppManager::exec()
 AppManager::~AppManager()
 {
   connection->deleteLater();
-  if (window) {
-    window->deleteLater();
-  }
   rfbTimerProxy->deleteLater();
 }
 
@@ -145,11 +141,6 @@ AppManager *AppManager::instance()
 {
   static AppManager manager;
   return &manager;
-}
-
-bool AppManager::isFullScreen() const
-{
-  return window && window->isFullscreenEnabled();
 }
 
 void AppManager::connectToServer()
@@ -188,31 +179,6 @@ void AppManager::publishUnexpectedError(QString message, bool quit)
   message = QString::asprintf(_("An unexpected error occurred when communicating "
                                 "with the server:\n\n%s"), message.toStdString().c_str());
   publishError(message, quit);
-}
-
-void AppManager::openVNCWindow(int width, int height, QString name)
-{
-  connectedOnce = true;
-
-  window = new DesktopWindow(width, height, name.toStdString().c_str(), connection);
-  connect(window, &DesktopWindow::closed, qApp, &QApplication::quit);
-
-  emit vncWindowOpened();
-}
-
-void AppManager::closeVNCWindow()
-{
-  vlog.debug("AppManager::closeVNCWindow");
-  if (window) {
-    window->deleteLater();
-    window = nullptr;
-    emit vncWindowClosed();
-  }
-}
-
-void AppManager::setWindowName(QString name)
-{
-  window->setWindowTitle(QString::asprintf("%s - TigerVNC", name.toStdString().c_str()));
 }
 
 void AppManager::refresh()
@@ -259,8 +225,10 @@ void AppManager::openDialog(QDialog* d)
   disconnect(qApp, &QGuiApplication::screenRemoved, d, nullptr);
   disconnect(d, nullptr, this, nullptr);
 
-  if (window) {
-    window->postDialogClosing();
+  if (d->parentWidget()) {
+    DesktopWindow* window = dynamic_cast<DesktopWindow*>(d->parentWidget());
+    if (window)
+      window->postDialogClosing();
   }
   if (reopen) {
     QTimer::singleShot(100, [this, d](){
@@ -295,11 +263,6 @@ void AppManager::openServerDialog()
 {
   serverDialog = new ServerDialog;
   serverDialog->setVisible(!::listenMode);
-  connect(AppManager::instance(), &AppManager::vncWindowOpened, serverDialog, &QWidget::hide);
+  connect(AppManager::instance(), &AppManager::connectToServerRequested, serverDialog, &QWidget::hide);
   connect(serverDialog, &ServerDialog::closed, qApp, &QApplication::quit);
-}
-
-QWidget *AppManager::topWindow() const
-{
-  return window ? qobject_cast<QWidget*>(window) : qobject_cast<QWidget*>(serverDialog);
 }

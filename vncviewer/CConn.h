@@ -38,6 +38,8 @@ class PixelFormat;
 class ModifiablePixelBuffer;
 } // namespace rfb
 
+class DesktopWindow;
+
 class CConn : public rfb::CConnection
 {
 public:
@@ -110,6 +112,9 @@ private:
   QString serverHost;
   int serverPort;
 
+  DesktopWindow *desktop;
+
+  friend QVNCConnection;
   QVNCConnection* facade;
   QCursor* cursor;
   UserDialog* credential;

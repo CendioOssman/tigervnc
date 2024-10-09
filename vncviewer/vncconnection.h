@@ -75,7 +75,6 @@ public:
 signals:
   void socketReadNotified();
   void socketWriteNotified();
-  void newVncWindowRequested(int width, int height, QString name);
   void cursorChanged(const QCursor& cursor);
   void cursorPositionChanged(int x, int y);
   void ledStateChanged(unsigned int state);
@@ -117,7 +116,6 @@ private:
   QSocketNotifier* socketWriteNotifier;
   QTimer* updateTimer;
   TunnelFactory* tunnelFactory;
-  bool established;
 
   void bind(int fd);
 

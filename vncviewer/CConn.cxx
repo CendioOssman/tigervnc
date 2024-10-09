@@ -38,6 +38,7 @@
 #include "i18n.h"
 #include "appmanager.h"
 #include "OptionsDialog.h"
+#include "DesktopWindow.h"
 #include "UserDialog.h"
 #include "vncconnection.h"
 #include "CConn.h"
@@ -65,6 +66,7 @@ CConn::CConn(QVNCConnection *cfacade)
  : CConnection()
  , serverHost("")
  , serverPort(5900)
+ , desktop(nullptr)
  , facade(cfacade)
  , cursor(nullptr)
  , updateCount(0)
@@ -100,6 +102,9 @@ CConn::~CConn()
   close();
 
   OptionsDialog::removeCallback(handleOptions);
+
+  if (desktop)
+    delete desktop;
 
   delete serverPF;
   delete fullColourPF;
@@ -188,7 +193,9 @@ void CConn::initDone()
   *serverPF = server.pf();
 
   setFramebuffer(new PlatformPixelBuffer(server.width(), server.height()));
-  emit facade->newVncWindowRequested(server.width(), server.height(), server.name() /*, serverPF_, this */);
+
+  desktop = new DesktopWindow(server.width(), server.height(),
+                              server.name(), facade);
   *fullColourPF = getFramebuffer()->getPF();
 
   // Force a switch to the format and encoding we'd like
@@ -224,7 +231,7 @@ void CConn::setExtendedDesktopSize(unsigned reason, unsigned result,
 void CConn::setName(const char* name)
 {
   CConnection::setName(name);
-  AppManager::instance()->setWindowName(name);
+  desktop->setName(name);
 }
 
 // framebufferUpdateStart() is called at the beginning of an update.
