@@ -15,7 +15,6 @@ public:
 public slots:
   void grabPointer() override;
   void ungrabPointer() override;
-  void bell() override;
 
 signals:
   void message(const QString& msg, int timeout);

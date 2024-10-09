@@ -735,6 +735,48 @@ void DesktopWindow::fromBufferResize(int oldW, int oldH, int width, int height)
   }
 }
 
+void DesktopWindow::updateWindow()
+{
+  view->updateWindow();
+}
+
+void DesktopWindow::resizeFramebuffer(int new_w, int new_h)
+{
+  view->resizeFramebuffer(new_w, new_h);
+}
+
+void DesktopWindow::setCursor(int width, int height,
+                              const rfb::Point& hotspot,
+                              const uint8_t* pixels)
+{
+  view->setCursor(width, height, hotspot, pixels);
+}
+
+void DesktopWindow::setCursorPos(const rfb::Point& pos)
+{
+  view->setCursorPos(pos);
+}
+
+void DesktopWindow::setLEDState(unsigned int state)
+{
+  view->setLEDState(state);
+}
+
+void DesktopWindow::handleClipboardRequest()
+{
+  view->handleClipboardRequest();
+}
+
+void DesktopWindow::handleClipboardAnnounce(bool available)
+{
+  view->handleClipboardAnnounce(available);
+}
+
+void DesktopWindow::handleClipboardData(const char* text)
+{
+  view->handleClipboardData(text);
+}
+
 void DesktopWindow::showToast()
 {
   toast->showToast();

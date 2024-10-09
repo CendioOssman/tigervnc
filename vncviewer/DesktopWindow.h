@@ -4,6 +4,7 @@
 #include <QScrollArea>
 #include <QScrollBar>
 
+#include <rfb/Rect.h>
 #include <rfb/Timer.h>
 
 class QMoveEvent;
@@ -44,6 +45,27 @@ public:
   void postRemoteResizeRequest();
   void remoteResize(int width, int height);
   void fromBufferResize(int oldW, int oldH, int width, int height);
+
+  // Flush updates to screen
+  void updateWindow();
+
+  // Resize the current framebuffer, but retain the contents
+  void resizeFramebuffer(int new_w, int new_h);
+
+  // New image for the locally rendered cursor
+  void setCursor(int width, int height, const rfb::Point& hotspot,
+                 const uint8_t* pixels);
+
+  // Server-provided cursor position
+  void setCursorPos(const rfb::Point& pos);
+
+  // Change client LED state
+  void setLEDState(unsigned int state);
+
+  // Clipboard events
+  void handleClipboardRequest();
+  void handleClipboardAnnounce(bool available);
+  void handleClipboardData(const char* text);
 
   void showToast();
 

@@ -116,7 +116,6 @@ private:
 
   friend QVNCConnection;
   QVNCConnection* facade;
-  QCursor* cursor;
   UserDialog* credential;
 
   unsigned updateCount;

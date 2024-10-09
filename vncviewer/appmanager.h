@@ -35,7 +35,6 @@ signals:
   void cancelAuthRequested();
   void resetConnectionRequested();
   void invalidateRequested(int x0, int y0, int x1, int y1);
-  void refreshRequested();
   void contextMenuRequested();
 
 public slots:
@@ -45,7 +44,6 @@ public slots:
   void authenticate(QString user, QString password);
   void cancelAuth();
   void resetConnection();
-  void refresh();
   void openContextMenu();
   void openServerDialog();
   void openDialog(QDialog* d);

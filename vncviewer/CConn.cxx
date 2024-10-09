@@ -28,6 +28,17 @@
 #include <QCursor>
 #include <QClipboard>
 #include <QPixmap>
+
+#if !defined(__APPLE__) && !defined(WIN32)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QX11Info>
+#else
+#include <QGuiApplication>
+#include <xcb/xcb.h>
+#endif
+#include <X11/Xlib.h>
+#endif
+
 #include <time.h>
 #include "rfb/LogWriter.h"
 #include "rfb/fenceTypes.h"
@@ -43,6 +54,10 @@
 #include "vncconnection.h"
 #include "CConn.h"
 #undef asprintf
+
+#ifdef __APPLE__
+#include "cocoa.h"
+#endif
 
 using namespace rdr;
 using namespace rfb;
@@ -68,7 +83,6 @@ CConn::CConn(QVNCConnection *cfacade)
  , serverPort(5900)
  , desktop(nullptr)
  , facade(cfacade)
- , cursor(nullptr)
  , updateCount(0)
  , pixelCount(0)
  , serverPF(new PixelFormat)
@@ -173,8 +187,6 @@ void CConn::setProcessState(int state)
 
 void CConn::resetConnection()
 {
-  delete cursor;
-  cursor = nullptr;
   initialiseProtocol();
 }
 
@@ -282,7 +294,7 @@ void CConn::framebufferUpdateEnd()
                  (bps * weight)) / 1000000;
   
   facade->getUpdateTimer()->stop();
-  emit facade->refreshFramebufferEnded();
+  desktop->updateWindow();
 
   // Compute new settings based on updated bandwidth values
   if (::autoSelect)
@@ -301,7 +313,21 @@ void CConn::setColourMapEntries(int firstColour, int nColours, uint16_t *rgbs)
 
 void CConn::bell()
 {
-  emit facade->bellRequested();
+#if defined(__APPLE__)
+  cocoa_beep();
+#elif defined(WIN32)
+  MessageBeep(0xFFFFFFFF); // cf. fltk/src/drivers/WinAPI/Fl_WinAPI_Screen_Driver.cxx:245
+#else
+  Display* dpy;
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  dpy = QX11Info::display();
+#else
+  dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+
+  XBell(dpy, 0 /* volume */);
+#endif
 }
 
 bool CConn::dataRect(const Rect& r, int encoding)
@@ -322,48 +348,12 @@ bool CConn::dataRect(const Rect& r, int encoding)
 void CConn::setCursor(int width, int height, const Point &hotspot,
                       const uint8_t *data)
 {
-  bool emptyCursor = true;
-  for (int i = 0; i < width * height; i++) {
-    if (data[i*4 + 3] != 0) {
-      emptyCursor = false;
-      break;
-    }
-  }
-  if (emptyCursor) {
-    if (::dotWhenNoCursor) {
-      static const char * dotcursor_xpm[] = {
-        "5 5 2 1",
-        ".	c #000000",
-        " 	c #FFFFFF",
-        "     ",
-        " ... ",
-        " ... ",
-        " ... ",
-        "     "};
-      delete cursor;
-      cursor = new QCursor(QPixmap(dotcursor_xpm), 2, 2);
-    }
-    else {
-      static const char * emptycursor_xpm[] = {
-        "2 2 1 1",
-        ".	c None",
-        "..",
-        ".."};
-      delete cursor;
-      cursor = new QCursor(QPixmap(emptycursor_xpm), 0, 0);
-    }
-  }
-  else {
-    QImage image(data, width, height, QImage::Format_RGBA8888);
-    delete cursor;
-    cursor = new QCursor(QPixmap::fromImage(image), hotspot.x, hotspot.y);
-  }
-  emit facade->cursorChanged(*cursor);
+  desktop->setCursor(width, height, hotspot, data);
 }
 
 void CConn::setCursorPos(const Point &pos)
 {
-  emit facade->cursorPositionChanged(pos.x, pos.y);
+  desktop->setCursorPos(pos);
 }
 
 void CConn::fence(uint32_t flags, unsigned len, const uint8_t data[])
@@ -384,22 +374,22 @@ void CConn::setLEDState(unsigned int state)
   vlog.debug("Got server LED state: 0x%08x", state);
   CConnection::setLEDState(state);
 
-  emit facade->ledStateChanged(state);
+  desktop->setLEDState(state);
 }
 
 void CConn::handleClipboardRequest()
 {
-  emit facade->clipboardRequested();
+  desktop->handleClipboardRequest();
 }
 
 void CConn::handleClipboardAnnounce(bool available)
 {
-  emit facade->clipboardAnnounced(available);
+  desktop->handleClipboardAnnounce(available);
 }
 
 void CConn::handleClipboardData(const char* data)
 {
-  emit facade->clipboardDataReceived(data);
+  desktop->handleClipboardData(data);
 }
 
 void CConn::getUserPasswd(bool secure, std::string* user,
@@ -421,7 +411,7 @@ void CConn::resizeFramebuffer()
   PlatformPixelBuffer *framebuffer = new PlatformPixelBuffer(server.width(), server.height());
   setFramebuffer(framebuffer);
 
-  emit facade->framebufferResized(server.width(), server.height());
+  desktop->resizeFramebuffer(server.width(), server.height());
 }
 
 // autoSelectFormatAndEncoding() chooses the format and encoding appropriate

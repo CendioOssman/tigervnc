@@ -75,16 +75,6 @@ public:
 signals:
   void socketReadNotified();
   void socketWriteNotified();
-  void cursorChanged(const QCursor& cursor);
-  void cursorPositionChanged(int x, int y);
-  void ledStateChanged(unsigned int state);
-  void clipboardRequested();
-  void clipboardAnnounced(bool available);
-  void clipboardDataReceived(const char* data);
-  void framebufferResized(int width, int height);
-  void refreshFramebufferStarted();
-  void refreshFramebufferEnded();
-  void bellRequested();
 
   void writePointerEvent(const rfb::Point& pos, int buttonMask);
   void writeSetDesktopSize(int width, int height, const rfb::ScreenSet& layout);

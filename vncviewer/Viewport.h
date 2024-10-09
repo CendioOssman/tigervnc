@@ -55,17 +55,26 @@ public:
 
   QSize pixmapSize() const { return pixmap.size(); };
 
-public slots:
-  virtual void setCursorPos(int x, int y);
+  void updateWindow();
+
+  void resizeFramebuffer(int new_w, int new_h);
+
+  void setCursor(int width, int height, const rfb::Point& hotspot,
+                 const uint8_t* pixels);
+  virtual void setCursorPos(const rfb::Point& pos);
+
+  void setLEDState(unsigned int state);
+
   void flushPendingClipboard();
   void handleClipboardRequest();
-  void handleClipboardChange(QClipboard::Mode mode);
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* data);
+
+public slots:
+  void handleClipboardChange(QClipboard::Mode mode);
   virtual void maybeGrabPointer();
   virtual void grabPointer();
   virtual void ungrabPointer();
-  virtual void bell() = 0;
   void giveKeyboardFocus();
 
 signals:
@@ -78,7 +87,6 @@ protected:
   QRect localRectAdjust(QRect r);
   QRect remoteRectAdjust(QRect r);
   rfb::Point remotePointAdjust(rfb::Point const& pos);
-  void updateWindow();
   void paintEvent(QPaintEvent* event) override;
 #ifdef QT_DEBUG
   void handleTimeout(rfb::Timer* t) override;
@@ -105,6 +113,7 @@ protected:
   rfb::Point lastPointerPos;
   int lastButtonMask = 0;
   QTimer* mousePointerTimer;
+  QCursor* cursor;
 
   // Keyboard handler
   bool firstLEDState = true;

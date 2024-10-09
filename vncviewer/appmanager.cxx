@@ -181,11 +181,6 @@ void AppManager::publishUnexpectedError(QString message, bool quit)
   publishError(message, quit);
 }
 
-void AppManager::refresh()
-{
-  emit refreshRequested();
-}
-
 void AppManager::openContextMenu()
 {
   emit contextMenuRequested();
