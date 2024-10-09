@@ -37,6 +37,7 @@
 #include "PlatformPixelBuffer.h"
 #include "i18n.h"
 #include "appmanager.h"
+#include "OptionsDialog.h"
 #include "UserDialog.h"
 #include "vncconnection.h"
 #include "CConn.h"
@@ -90,11 +91,15 @@ CConn::CConn(QVNCConnection *cfacade)
   if (!::noJpeg) {
     setQualityLevel(::qualityLevel);
   }
+
+  OptionsDialog::addCallback(handleOptions, this);
 }
 
 CConn::~CConn()
 {
   close();
+
+  OptionsDialog::removeCallback(handleOptions);
 
   delete serverPF;
   delete fullColourPF;
@@ -497,4 +502,35 @@ void CConn::updatePixelFormat()
   pf.print(str, 256);
   vlog.info(_("Using pixel format %s"),str);
   setPF(pf);
+}
+
+void CConn::handleOptions(void *data)
+{
+  CConn *conn = (CConn*)data;
+
+  // Checking all the details of the current set of encodings is just
+  // a pain. Assume something has changed, as resending the encoding
+  // list is cheap. Avoid overriding what the auto logic has selected
+  // though.
+  QVNCConnection* cc = conn->facade;
+  if (cc && cc->hasConnection()) {
+    if (!::autoSelect) {
+      int encNum = encodingNum(::preferredEncoding);
+
+      if (encNum != -1)
+        cc->setPreferredEncoding(encNum);
+    }
+
+    if (::customCompressLevel)
+      cc->setCompressLevel(::compressLevel);
+    else
+      cc->setCompressLevel(-1);
+
+    if (!::noJpeg && !::autoSelect)
+      cc->setQualityLevel(::qualityLevel);
+    else
+      cc->setQualityLevel(-1);
+
+    cc->updatePixelFormat();
+  }
 }

@@ -21,6 +21,8 @@
 #include <QProxyStyle>
 #include <QTimer>
 
+std::map<OptionsCallback*, void*> OptionsDialog::callbacks;
+
 #ifdef Q_OS_LINUX
 class ListViewStyle : public QProxyStyle
 {
@@ -143,7 +145,12 @@ void OptionsDialog::apply()
       w->apply();
     }
   }
-  AppManager::instance()->handleOptions();
+
+  std::map<OptionsCallback*, void*>::const_iterator iter;
+
+  for (iter = callbacks.begin();iter != callbacks.end();++iter)
+    iter->first(iter->second);
+
   close();
 }
 
@@ -155,4 +162,15 @@ void OptionsDialog::reset()
       w->reset();
     }
   }
+}
+
+void OptionsDialog::addCallback(OptionsCallback *cb, void *data)
+{
+  callbacks[cb] = data;
+}
+
+
+void OptionsDialog::removeCallback(OptionsCallback *cb)
+{
+  callbacks.erase(cb);
 }

@@ -19,6 +19,8 @@ public:
   virtual void reset() = 0;
 };
 
+typedef void (OptionsCallback)(void*);
+
 class OptionsDialog : public QDialog
 {
   Q_OBJECT
@@ -29,7 +31,12 @@ public:
   void apply();
   void reset();
 
+  static void addCallback(OptionsCallback *cb, void *data = nullptr);
+  static void removeCallback(OptionsCallback *cb);
+
 private:
+  static std::map<OptionsCallback*, void*> callbacks;
+
   QStackedWidget* tabWidget = nullptr;
 };
 

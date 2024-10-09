@@ -55,7 +55,6 @@ public slots:
   void setWindowName(QString name);
   void refresh();
   void openContextMenu();
-  void handleOptions();
   void openServerDialog();
   void openDialog(QDialog* d);
 

@@ -60,6 +60,8 @@ protected:
   void closeEvent(QCloseEvent* e) override;
   bool event(QEvent* event) override;
 
+  static void handleOptions(void *data);
+
 public:
   void maybeGrabKeyboard();
   void grabKeyboard();
