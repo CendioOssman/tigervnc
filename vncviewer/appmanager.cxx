@@ -13,7 +13,6 @@
 #include <QMenuBar>
 #endif
 #include "i18n.h"
-#include "rdr/Exception.h"
 #include "rfb/Timer.h"
 #include "rfb/LogWriter.h"
 
@@ -29,14 +28,6 @@
 #include "DesktopWindow.h"
 #undef asprintf
 
-#if defined(WIN32)
-#include "vncwinview.h"
-#elif defined(__APPLE__)
-#include "vncmacview.h"
-#elif defined(Q_OS_UNIX)
-#include "vncx11view.h"
-#endif
-
 #ifdef __APPLE__
 #include "cocoa.h"
 #endif
@@ -45,7 +36,6 @@ static rfb::LogWriter vlog("AppManager");
 
 AppManager::AppManager()
   : QObject(nullptr)
-  , view(nullptr)
 {
 
 }
@@ -148,9 +138,6 @@ AppManager::~AppManager()
   if (window) {
     window->deleteLater();
   }
-  if (view) {
-    view->deleteLater();
-  }
   rfbTimerProxy->deleteLater();
 }
 
@@ -207,83 +194,8 @@ void AppManager::openVNCWindow(int width, int height, QString name)
 {
   connectedOnce = true;
 
-  window = new DesktopWindow(connection);
+  window = new DesktopWindow(width, height, name.toStdString().c_str(), connection);
   connect(window, &DesktopWindow::closed, qApp, &QApplication::quit);
-
-  window->takeWidget();
-  delete view;
-#if defined(WIN32)
-  view = new QVNCWinView(connection, window);
-#elif defined(__APPLE__)
-  view = new QVNCMacView(connection, window);
-#elif defined(Q_OS_UNIX)
-  QString platform = QApplication::platformName();
-  if (platform == "xcb") {
-    view = new QVNCX11View(connection, window);
-  } else if (platform == "wayland") {
-    ;
-  }
-#endif
-
-  if (!view) {
-    delete window;
-    window = nullptr;
-    throw rdr::Exception(_("Platform not supported."));
-  }
-  connect(view, &Viewport::bufferResized, window, &DesktopWindow::fromBufferResize, Qt::QueuedConnection);
-  connect(view,
-          &Viewport::remoteResizeRequest,
-          window,
-          &DesktopWindow::postRemoteResizeRequest,
-          Qt::QueuedConnection);
-  connect(view, &Viewport::delayedInitialized, window, &DesktopWindow::showToast);
-
-  view->resize(width, height);
-  window->setWidget(view);
-  window->resize(width, height);
-  window->setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name.toStdString().c_str()));
-
-  // Support for -geometry option. Note that although we do support
-  // negative coordinates, we do not support -XOFF-YOFF (ie
-  // coordinates relative to the right edge / bottom edge) at this
-  // time.
-  int geom_x = 0, geom_y = 0;
-  if (!QString(::geometry).isEmpty()) {
-    int nfields =
-        sscanf(::geometry.getValueStr().c_str(), "+%d+%d", &geom_x, &geom_y);
-    if (nfields != 2) {
-      int geom_w, geom_h;
-      nfields = sscanf(::geometry.getValueStr().c_str(),
-                       "%dx%d+%d+%d",
-                       &geom_w,
-                       &geom_h,
-                       &geom_x,
-                       &geom_y);
-      if (nfields != 4) {
-        vlog.debug(_("Invalid geometry specified!"));
-      }
-    }
-    if (nfields == 2 || nfields == 4) {
-      window->move(geom_x, geom_y);
-    }
-  }
-
-#ifdef __APPLE__
-  cocoa_prevent_native_fullscreen(window);
-#endif
-
-  if (::fullScreen) {
-#ifdef __APPLE__
-    QTimer::singleShot(100, [=](){
-#endif
-      window->fullscreen(true);
-#ifdef __APPLE__
-    });
-#endif
-  } else {
-    vlog.debug("SHOW");
-    window->show();
-  }
 
   emit vncWindowOpened();
 }
@@ -292,11 +204,8 @@ void AppManager::closeVNCWindow()
 {
   vlog.debug("AppManager::closeVNCWindow");
   if (window) {
-    window->takeWidget();
     window->deleteLater();
     window = nullptr;
-    view->deleteLater();
-    view = nullptr;
     emit vncWindowClosed();
   }
 }
@@ -438,5 +347,5 @@ void AppManager::openServerDialog()
 
 QWidget *AppManager::topWindow() const
 {
-  return view ? qobject_cast<QWidget*>(view) : qobject_cast<QWidget*>(serverDialog);
+  return window ? qobject_cast<QWidget*>(window) : qobject_cast<QWidget*>(serverDialog);
 }

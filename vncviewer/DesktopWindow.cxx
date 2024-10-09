@@ -8,6 +8,7 @@
 #include "appmanager.h"
 #include "i18n.h"
 #include "parameters.h"
+#include "rdr/Exception.h"
 #include "rfb/LogWriter.h"
 #include "rfb/ScreenSet.h"
 #include "toast.h"
@@ -46,6 +47,14 @@
 #endif
 #ifdef __APPLE__
 #include "cocoa.h"
+#endif
+
+#if defined(WIN32)
+#include "vncwinview.h"
+#elif defined(__APPLE__)
+#include "vncmacview.h"
+#elif defined(Q_OS_UNIX)
+#include "vncx11view.h"
 #endif
 
 static rfb::LogWriter vlog("VNCWindow");
@@ -117,7 +126,8 @@ private:
 #endif
 };
 
-DesktopWindow::DesktopWindow(QVNCConnection* cc_, QWidget* parent)
+DesktopWindow::DesktopWindow(int w, int h, const char *name,
+                             QVNCConnection* cc_, QWidget* parent)
   : QWidget(parent)
   , cc(cc_)
   , resizeTimer(new QTimer(this))
@@ -144,6 +154,34 @@ DesktopWindow::DesktopWindow(QVNCConnection* cc_, QWidget* parent)
   setPalette(p);
   setBackgroundRole(QPalette::Window);
 
+#if defined(WIN32)
+  view = new QVNCWinView(cc, scrollArea);
+#elif defined(__APPLE__)
+  view = new QVNCMacView(cc, scrollArea);
+#elif defined(Q_OS_UNIX)
+  QString platform = QApplication::platformName();
+  if (platform == "xcb") {
+    view = new QVNCX11View(cc, scrollArea);
+  } else if (platform == "wayland") {
+    ;
+  }
+#endif
+
+  if (!view) {
+    throw rdr::Exception(_("Platform not supported."));
+  }
+  connect(view, &Viewport::bufferResized, this, &DesktopWindow::fromBufferResize, Qt::QueuedConnection);
+  connect(view,
+          &Viewport::remoteResizeRequest,
+          this,
+          &DesktopWindow::postRemoteResizeRequest,
+          Qt::QueuedConnection);
+  connect(view, &Viewport::delayedInitialized, this, &DesktopWindow::showToast);
+
+  view->resize(w, h);
+  resize(w, h);
+  setWindowTitle(QString::asprintf(_("%s - TigerVNC"), name));
+
   // FIXME: this is a lot faster than before
   resizeTimer->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
   resizeTimer->setSingleShot(true);
@@ -159,10 +197,49 @@ DesktopWindow::DesktopWindow(QVNCConnection* cc_, QWidget* parent)
 
 #ifdef __APPLE__
   cocoa_fix_warping();
+  cocoa_prevent_native_fullscreen(this);
 #endif
 
   connect(qApp, &QGuiApplication::screenAdded, this, &DesktopWindow::updateMonitorsFullscreen);
   connect(qApp, &QGuiApplication::screenRemoved, this, &DesktopWindow::updateMonitorsFullscreen);
+
+  // Support for -geometry option. Note that although we do support
+  // negative coordinates, we do not support -XOFF-YOFF (ie
+  // coordinates relative to the right edge / bottom edge) at this
+  // time.
+  int geom_x = 0, geom_y = 0;
+  if (!QString(::geometry).isEmpty()) {
+    int nfields =
+        sscanf(::geometry.getValueStr().c_str(), "+%d+%d", &geom_x, &geom_y);
+    if (nfields != 2) {
+      int geom_w, geom_h;
+      nfields = sscanf(::geometry.getValueStr().c_str(),
+                       "%dx%d+%d+%d",
+                       &geom_w,
+                       &geom_h,
+                       &geom_x,
+                       &geom_y);
+      if (nfields != 4) {
+        vlog.debug(_("Invalid geometry specified!"));
+      }
+    }
+    if (nfields == 2 || nfields == 4) {
+      move(geom_x, geom_y);
+    }
+  }
+
+  if (::fullScreen) {
+#ifdef __APPLE__
+    QTimer::singleShot(100, [=](){
+#endif
+      fullscreen(true);
+#ifdef __APPLE__
+    });
+#endif
+  } else {
+    vlog.debug("SHOW");
+    show();
+  }
 }
 
 DesktopWindow::~DesktopWindow() {}
@@ -650,19 +727,6 @@ void DesktopWindow::showToast()
 {
   toast->showToast();
   toast->setGeometry(rect());
-}
-
-void DesktopWindow::setWidget(Viewport* w)
-{
-  assert(view == nullptr);
-  view = w;
-  scrollArea->setWidget(w);
-}
-
-QWidget *DesktopWindow::takeWidget()
-{
-  view = nullptr;
-  return scrollArea->takeWidget();
 }
 
 void DesktopWindow::postDialogClosing()

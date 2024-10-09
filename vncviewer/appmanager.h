@@ -3,7 +3,6 @@
 
 #include <QObject>
 
-class Viewport;
 class DesktopWindow;
 class QTimer;
 class QVNCConnection;
@@ -68,7 +67,6 @@ private:
   bool fatalError = false;
   std::string exitError;
   QVNCConnection* connection;
-  Viewport* view = nullptr;
   DesktopWindow* window = nullptr;
   QTimer* rfbTimerProxy;
   ServerDialog* serverDialog = nullptr;
