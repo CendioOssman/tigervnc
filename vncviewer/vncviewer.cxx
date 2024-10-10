@@ -19,7 +19,6 @@
 #include "viewerconfig.h"
 #include "vncapplication.h"
 #include "vnctranslator.h"
-#include "vncconnection.h"
 #include "tunnelfactory.h"
 
 static rfb::LogWriter vlog("main");

@@ -76,8 +76,6 @@ set(PROJECT_SOURCES
         vncapplication.h
         DesktopWindow.cxx
         DesktopWindow.h
-        vncconnection.h
-        vncconnection.cxx
         UserDialog.cxx
         UserDialog.h
         Viewport.h

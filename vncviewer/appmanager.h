@@ -5,7 +5,7 @@
 
 class DesktopWindow;
 class QTimer;
-class QVNCConnection;
+class CConn;
 class ServerDialog;
 class QDialog;
 
@@ -53,7 +53,7 @@ private:
   bool connectedOnce = false;
   bool fatalError = false;
   std::string exitError;
-  QVNCConnection* connection = nullptr;
+  CConn* connection = nullptr;
   QTimer* rfbTimerProxy;
   AppManager();
 };

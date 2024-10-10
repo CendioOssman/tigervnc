@@ -53,7 +53,6 @@
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"
 #include "UserDialog.h"
-#include "vncconnection.h"
 #include "CConn.h"
 #undef asprintf
 
@@ -83,7 +82,7 @@ static const PixelFormat mediumColourPF(8, 8, false, true,
 // Time new bandwidth estimates are weighted against (in ms)
 static const unsigned bpsEstimateWindow = 1000;
 
-CConn::CConn(QVNCConnection *cfacade, const char* vncserver, network::Socket* socket_)
+CConn::CConn(const char* vncserver, network::Socket* socket_)
  : CConnection()
  , serverHost("")
  , serverPort(5900)
@@ -91,7 +90,6 @@ CConn::CConn(QVNCConnection *cfacade, const char* vncserver, network::Socket* so
  , socketReadNotifier(nullptr)
  , socketWriteNotifier(nullptr)
  , desktop(nullptr)
- , facade(cfacade)
  , updateCount(0)
  , pixelCount(0)
  , serverPF(new PixelFormat)
@@ -609,33 +607,30 @@ void CConn::updatePixelFormat()
 
 void CConn::handleOptions(void *data)
 {
-  CConn *conn = (CConn*)data;
+  CConn *cc = (CConn*)data;
 
   // Checking all the details of the current set of encodings is just
   // a pain. Assume something has changed, as resending the encoding
   // list is cheap. Avoid overriding what the auto logic has selected
   // though.
-  QVNCConnection* cc = conn->facade;
-  if (cc && cc->hasConnection()) {
-    if (!::autoSelect) {
-      int encNum = encodingNum(::preferredEncoding);
+  if (!::autoSelect) {
+    int encNum = encodingNum(::preferredEncoding);
 
-      if (encNum != -1)
-        cc->setPreferredEncoding(encNum);
-    }
-
-    if (::customCompressLevel)
-      cc->setCompressLevel(::compressLevel);
-    else
-      cc->setCompressLevel(-1);
-
-    if (!::noJpeg && !::autoSelect)
-      cc->setQualityLevel(::qualityLevel);
-    else
-      cc->setQualityLevel(-1);
-
-    cc->updatePixelFormat();
+    if (encNum != -1)
+      cc->setPreferredEncoding(encNum);
   }
+
+  if (::customCompressLevel)
+    cc->setCompressLevel(::compressLevel);
+  else
+    cc->setCompressLevel(-1);
+
+  if (!::noJpeg && !::autoSelect)
+    cc->setQualityLevel(::qualityLevel);
+  else
+    cc->setQualityLevel(-1);
+
+  cc->updatePixelFormat();
 }
 
 void CConn::handleUpdateTimeout(rfb::Timer*)

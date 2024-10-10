@@ -24,7 +24,7 @@
 #include "DesktopWindow.h"
 #include "parameters.h"
 #include "viewerconfig.h"
-#include "vncconnection.h"
+#include "CConn.h"
 #undef asprintf
 
 #ifdef __APPLE__
@@ -82,7 +82,7 @@ int AppManager::exec(const char* vncserver, network::Socket* sock)
   int ret = 0;
 
   while (true) {
-    connection = new QVNCConnection(vncserver, sock);
+    connection = new CConn(vncserver, sock);
 
     if (exitError.empty())
       ret = qApp->exec();

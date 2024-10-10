@@ -27,7 +27,7 @@
 #include "rfb/ServerParams.h"
 #include "rfb/ledStates.h"
 #include "rfb/util.h"
-#include "vncconnection.h"
+#include "CConn.h"
 #include "clicksalternativegesture.h"
 #include "clicksalternativegesturerecognizer.h"
 #include "panzoomgesture.h"
