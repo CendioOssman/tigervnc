@@ -26,7 +26,7 @@
 static rfb::LogWriter vlog("ServerDialog");
 
 ServerDialog::ServerDialog(QWidget* parent)
-  : QWidget{parent}
+  : QDialog(parent)
 {
   setWindowTitle(_("VNC Viewer: Connection Details"));
 #ifdef __APPLE__
@@ -72,7 +72,7 @@ ServerDialog::ServerDialog(QWidget* parent)
   connect(saveAsBtn, &QPushButton::clicked, this, &ServerDialog::openSaveConfigDialog);
 
   connect(aboutBtn, &QPushButton::clicked, this, &ServerDialog::openAboutDialog);
-  connect(cancelBtn, &QPushButton::clicked, qApp, &QApplication::quit);
+  connect(cancelBtn, &QPushButton::clicked, this, &ServerDialog::reject);
   connect(connectBtn, &QPushButton::clicked, this, &ServerDialog::connectTo);
   
   updateServerList(ViewerConfig::instance()->getServerHistory());
@@ -100,7 +100,14 @@ void ServerDialog::connectTo()
   QString text = comboBox->currentText();
   validateServerText(text);
   ViewerConfig::instance()->setServer(text);
-  AppManager::instance()->connectToServer();
+  try {
+    ViewerConfig::instance()->saveViewerParameters("", text);
+  } catch (rfb::Exception& e) {
+    vlog.error("%s", e.str());
+    AppManager::instance()->publishError(QString::asprintf(_("Unable to save the default configuration:\n\n%s"),
+                                                            e.str()));
+  }
+  accept();
 }
 
 void ServerDialog::openOptionDialog()
@@ -179,23 +186,4 @@ void ServerDialog::openSaveConfigDialog()
       AppManager::instance()->openDialog(dlg);
     }
   }
-}
-
-
-void ServerDialog::keyPressEvent(QKeyEvent* e)
-{
-  if(e->key() == Qt::Key_Escape)
-  {
-    e->accept();
-    close();
-    return;
-  }
-
-  QWidget::keyPressEvent(e);
-}
-
-void ServerDialog::closeEvent(QCloseEvent* e)
-{
-  emit closed();
-  QWidget::closeEvent(e);
 }

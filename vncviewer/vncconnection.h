@@ -41,7 +41,7 @@ class QVNCConnection : public QObject
   Q_OBJECT
 
 public:
-  QVNCConnection();
+  QVNCConnection(const char* vncserver, network::Socket* sock);
   virtual ~QVNCConnection();
 
   void setQualityLevel(int level) { rfbcon->setQualityLevel(level); }
@@ -61,10 +61,8 @@ signals:
   void socketWriteNotified();
 
 public:
-  void initialize();
-  void listen();
-  void connectToServer();
-  void resetConnection();
+  void listen(network::Socket* sock);
+  void connectToServer(const char* vncserver);
   void startProcessing();
   void flushSocket();
 
@@ -76,7 +74,6 @@ private:
   QSocketNotifier* socketReadNotifier;
   QSocketNotifier* socketWriteNotifier;
   QTimer* updateTimer;
-  TunnelFactory* tunnelFactory;
 
   void bind(int fd);
 

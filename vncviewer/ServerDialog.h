@@ -1,11 +1,11 @@
 #ifndef SERVERDIALOG_H
 #define SERVERDIALOG_H
 
-#include <QWidget>
+#include <QDialog>
 
 class QComboBox;
 
-class ServerDialog : public QWidget
+class ServerDialog : public QDialog
 {
   Q_OBJECT
 
@@ -20,13 +20,6 @@ public:
   void openAboutDialog();
   void openLoadConfigDialog();
   void openSaveConfigDialog();
-
-signals:
-  void closed();
-
-protected:
-  void keyPressEvent(QKeyEvent* e) override;
-  void closeEvent(QCloseEvent* e) override;
 
 private:
   QComboBox* comboBox;

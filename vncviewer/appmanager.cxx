@@ -22,7 +22,6 @@
 #include "Viewport.h"
 #include "authdialog.h"
 #include "DesktopWindow.h"
-#include "ServerDialog.h"
 #include "parameters.h"
 #include "viewerconfig.h"
 #include "vncconnection.h"
@@ -43,9 +42,6 @@ AppManager::AppManager()
 void AppManager::initialize()
 {
   rfbTimerProxy = new QTimer;
-  connection = new QVNCConnection;
-  connect(this, &AppManager::connectToServerRequested, connection, &QVNCConnection::connectToServer);
-  connect(this, &AppManager::resetConnectionRequested, connection, &QVNCConnection::resetConnection);
   connect(rfbTimerProxy, &QTimer::timeout, this, []() {
     rfb::Timer::checkTimeouts();
   });
@@ -79,16 +75,20 @@ void AppManager::initialize()
   }, QKeySequence("Ctrl+N"));
   menuBar->addMenu(file);
 #endif
-
-  connection->initialize();
 }
 
-int AppManager::exec()
+int AppManager::exec(const char* vncserver, network::Socket* sock)
 {
   int ret = 0;
 
   while (true) {
-    ret = QApplication::exec();
+    connection = new QVNCConnection(vncserver, sock);
+
+    if (exitError.empty())
+      ret = qApp->exec();
+
+    delete connection;
+    connection = nullptr;
 
     if (fatalError) {
       if (alertOnFatalError) {
@@ -105,7 +105,7 @@ int AppManager::exec()
     if (exitError.empty())
       break;
 
-    if (reconnectOnError) {
+    if (reconnectOnError && (sock == nullptr)) {
       QString text;
       text = QString::asprintf(_("%s\n\nAttempt to reconnect?"), exitError.c_str());
 
@@ -118,7 +118,6 @@ int AppManager::exec()
       openDialog(d);
       if (d->buttonRole(d->clickedButton()) == QMessageBox::AcceptRole) {
         exitError.clear();
-        connectToServer();
         continue;
       } else {
         break;
@@ -133,7 +132,6 @@ int AppManager::exec()
 
 AppManager::~AppManager()
 {
-  connection->deleteLater();
   rfbTimerProxy->deleteLater();
 }
 
@@ -141,14 +139,6 @@ AppManager *AppManager::instance()
 {
   static AppManager manager;
   return &manager;
-}
-
-void AppManager::connectToServer()
-{
-  if (serverDialog) {
-    serverDialog->hide();
-  }
-  QTimer::singleShot(0, this, &AppManager::connectToServerRequested);
 }
 
 void AppManager::authenticate(QString user, QString password)
@@ -161,16 +151,10 @@ void AppManager::cancelAuth()
   emit cancelAuthRequested();
 }
 
-void AppManager::resetConnection()
-{
-  emit resetConnectionRequested();
-}
-
 void AppManager::publishError(const QString message, bool quit)
 {
   fatalError = quit;
   exitError = message.toStdString();
-  resetConnection();
   qApp->quit();
 }
 
@@ -252,12 +236,4 @@ void AppManager::openDialog(QDialog* d)
     d->deleteLater();
   }
 #endif
-}
-
-void AppManager::openServerDialog()
-{
-  serverDialog = new ServerDialog;
-  serverDialog->setVisible(!::listenMode);
-  connect(AppManager::instance(), &AppManager::connectToServerRequested, serverDialog, &QWidget::hide);
-  connect(serverDialog, &ServerDialog::closed, qApp, &QApplication::quit);
 }
