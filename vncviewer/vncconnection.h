@@ -56,23 +56,14 @@ public:
 
   bool hasConnection() const { return rfbcon; }
 
-signals:
-  void socketReadNotified();
-  void socketWriteNotified();
-
 public:
   void listen(network::Socket* sock);
   void connectToServer(const char* vncserver);
-  void startProcessing();
-  void flushSocket();
 
   QString host() { return rfbcon ? rfbcon->host() : ""; }
 
 private:
   CConn* rfbcon;
-  network::Socket* socket;
-  QSocketNotifier* socketReadNotifier;
-  QSocketNotifier* socketWriteNotifier;
   QTimer* updateTimer;
 
   void bind(int fd);

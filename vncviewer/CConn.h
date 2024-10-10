@@ -29,6 +29,7 @@
 #include "rfb/CConnection.h"
 
 class QCursor;
+class QSocketNotifier;
 class QVNCConnection;
 class UserDialog;
 
@@ -38,12 +39,17 @@ class PixelFormat;
 class ModifiablePixelBuffer;
 } // namespace rfb
 
+namespace network
+{
+class Socket;
+}
+
 class DesktopWindow;
 
 class CConn : public rfb::CConnection
 {
 public:
-  CConn(QVNCConnection* facade);
+  CConn(QVNCConnection* facade, const char* vncServerName, network::Socket* socket=nullptr);
   ~CConn();
 
   QString connectionInfo();
@@ -103,6 +109,9 @@ public:
   void resetConnection();
 
 private:
+  void startProcessing();
+  void flushSocket();
+
   void autoSelectFormatAndEncoding();
   int securityType();
 
@@ -111,6 +120,9 @@ private:
 private:
   QString serverHost;
   int serverPort;
+  network::Socket* socket;
+  QSocketNotifier* socketReadNotifier;
+  QSocketNotifier* socketWriteNotifier;
 
   DesktopWindow *desktop;
 
