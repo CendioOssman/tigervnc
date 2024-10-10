@@ -41,6 +41,7 @@
 #endif
 
 #include <time.h>
+#include "rfb/Hostname.h"
 #include "rfb/LogWriter.h"
 #include "rfb/fenceTypes.h"
 #include "rfb/CMsgWriter.h"
@@ -55,6 +56,10 @@
 #include "vncconnection.h"
 #include "CConn.h"
 #undef asprintf
+
+#if !defined(Q_OS_WIN)
+#include "network/UnixSocket.h"
+#endif
 
 #ifdef __APPLE__
 #include "cocoa.h"
@@ -78,7 +83,7 @@ static const PixelFormat mediumColourPF(8, 8, false, true,
 // Time new bandwidth estimates are weighted against (in ms)
 static const unsigned bpsEstimateWindow = 1000;
 
-CConn::CConn(QVNCConnection *cfacade, const char* /*vncServerName*/, network::Socket* socket_)
+CConn::CConn(QVNCConnection *cfacade, const char* vncserver, network::Socket* socket_)
  : CConnection()
  , serverHost("")
  , serverPort(5900)
@@ -101,6 +106,33 @@ CConn::CConn(QVNCConnection *cfacade, const char* /*vncServerName*/, network::So
   supportsCursorPosition = true;
   supportsDesktopResize = true;
   supportsLEDState = true;
+
+  QString address = vncserver;
+  if (socket == nullptr) {
+    try {
+#ifndef Q_OS_WIN
+      if (address.contains("/")) {
+        socket = new network::UnixSocket(address.toStdString().c_str());
+        serverHost = socket->getPeerAddress();
+        vlog.info(_("Connected to socket %s"), serverHost.toStdString().c_str());
+      } else
+#endif
+      {
+        std::string shost;
+        rfb::getHostAndPort(address.toStdString().c_str(), &shost, &serverPort);
+        serverHost = shost.c_str();
+
+        socket = new network::TcpSocket(shost.c_str(), serverPort);
+        vlog.info(_("Connected to host %s port %d"),
+                  shost.c_str(), serverPort);
+      }
+    } catch (rdr::Exception& e) {
+      vlog.error("%s", e.str());
+      AppManager::instance()->publishError(QString::asprintf(_("Failed to connect to \"%s\":\n\n%s"),
+                                                            address.toStdString().c_str(), e.str()));
+      return;
+    }
+  }
 
   setStreams(&socket->inStream(), &socket->outStream());
 
