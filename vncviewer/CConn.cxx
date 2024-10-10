@@ -99,6 +99,7 @@ CConn::CConn(QVNCConnection *cfacade, const char* vncserver, network::Socket* so
  , lastServerEncoding((unsigned int)-1)
  , updateStartPos(0)
  , bpsEstimate(20000000)
+ , updateTimer(this, &CConn::handleUpdateTimeout)
 {
   setShared(::shared);
   
@@ -364,8 +365,7 @@ void CConn::framebufferUpdateStart()
   updateStartPos = getInStream()->pos();
 
   // Update the screen prematurely for very slow updates
-  facade->getUpdateTimer()->setInterval(1000);
-  facade->getUpdateTimer()->start();
+  updateTimer.start(1000);
 }
 
 // framebufferUpdateEnd() is called at the end of an update.
@@ -398,7 +398,7 @@ void CConn::framebufferUpdateEnd()
   bpsEstimate = ((bpsEstimate * (1000000 - weight)) +
                  (bps * weight)) / 1000000;
   
-  facade->getUpdateTimer()->stop();
+  updateTimer.stop();
   desktop->updateWindow();
 
   // Compute new settings based on updated bandwidth values
@@ -635,5 +635,14 @@ void CConn::handleOptions(void *data)
       cc->setQualityLevel(-1);
 
     cc->updatePixelFormat();
+  }
+}
+
+void CConn::handleUpdateTimeout(rfb::Timer*)
+{
+  try {
+    framebufferUpdateEnd();
+  } catch (rdr::Exception& e) {
+    AppManager::instance()->publishError(e.str());
   }
 }

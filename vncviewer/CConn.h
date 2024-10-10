@@ -27,6 +27,7 @@
 //#include "rdr/types.h"
 #include "rfb/Rect.h"
 #include "rfb/CConnection.h"
+#include "rfb/Timer.h"
 
 class QCursor;
 class QSocketNotifier;
@@ -117,6 +118,8 @@ private:
 
   static void handleOptions(void *data);
 
+  void handleUpdateTimeout(rfb::Timer*);
+
 private:
   QString serverHost;
   int serverPort;
@@ -141,6 +144,8 @@ private:
   struct timeval updateStartTime;
   size_t updateStartPos;
   unsigned long long bpsEstimate;
+
+  rfb::MethodTimer<CConn> updateTimer;
 };
 
 #endif

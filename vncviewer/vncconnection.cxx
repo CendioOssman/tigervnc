@@ -38,20 +38,7 @@ static rfb::LogWriter vlog("CConnection");
 QVNCConnection::QVNCConnection(const char* vncserver, network::Socket* sock)
   : QObject(nullptr)
   , rfbcon(nullptr)
-  , updateTimer(nullptr)
 {
-  updateTimer = new QTimer;
-  updateTimer->setSingleShot(true);
-  connect(updateTimer, &QTimer::timeout, this, [this]() {
-    try {
-      rfbcon->framebufferUpdateEnd();
-    } catch (rdr::Exception& e) {
-      AppManager::instance()->publishError(e.str());
-    } catch (int& e) {
-      AppManager::instance()->publishError(strerror(e));
-    }
-  });
-
   rfbcon = new CConn(this, vncserver, sock);
 }
 
@@ -61,6 +48,4 @@ QVNCConnection::~QVNCConnection()
     delete rfbcon;
   }
   rfbcon = nullptr;
-  updateTimer->stop();
-  delete updateTimer;
 }
