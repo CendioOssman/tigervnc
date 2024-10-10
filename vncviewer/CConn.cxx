@@ -313,6 +313,7 @@ void CConn::setColourMapEntries(int firstColour, int nColours, uint16_t *rgbs)
 
 void CConn::bell()
 {
+  // FIXME: QApplication::beep()?
 #if defined(__APPLE__)
   cocoa_beep();
 #elif defined(WIN32)
