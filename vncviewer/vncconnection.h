@@ -48,8 +48,6 @@ public:
 
   void setCompressLevel(int level) { rfbcon->setCompressLevel(level); }
 
-  QTimer* getUpdateTimer() const { return updateTimer; }
-
   void updatePixelFormat() { rfbcon->updatePixelFormat(); }
 
   void setPreferredEncoding(int encoding) { rfbcon->setPreferredEncoding(encoding); }
@@ -58,7 +56,6 @@ public:
 
 private:
   CConn* rfbcon;
-  QTimer* updateTimer;
 };
 
 #endif // VNCCONNECTION_H
