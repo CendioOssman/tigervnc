@@ -11,7 +11,6 @@
 #include "viewerconfig.h"
 #include "rfb/CMsgWriter.h"
 #include "rfb/Exception.h"
-#include "rfb/Hostname.h"
 #include "rfb/LogWriter.h"
 
 #include <QApplication>
@@ -53,11 +52,7 @@ QVNCConnection::QVNCConnection(const char* vncserver, network::Socket* sock)
     }
   });
 
-  if (sock) {
-    listen(sock);
-  } else {
-    connectToServer(vncserver);
-  }
+  rfbcon = new CConn(this, vncserver, sock);
 }
 
 QVNCConnection::~QVNCConnection()
@@ -68,50 +63,4 @@ QVNCConnection::~QVNCConnection()
   rfbcon = nullptr;
   updateTimer->stop();
   delete updateTimer;
-}
-
-void QVNCConnection::connectToServer(const char* vncserver)
-{
-  if (::listenMode) {
-    return;
-  }
-
-  QString address = vncserver;
-  try {
-    network::Socket* socket;
-    QString serverHost;
-    int serverPort;
-#ifndef Q_OS_WIN
-    if (address.contains("/")) {
-      socket = new network::UnixSocket(address.toStdString().c_str());
-      serverHost = socket->getPeerAddress();
-      serverPort = 0;
-      vlog.info(_("Connected to socket %s"), serverHost.toStdString().c_str());
-    } else
-#endif
-    {
-      std::string shost;
-      int port;
-      rfb::getHostAndPort(address.toStdString().c_str(), &shost, &port);
-      serverHost = shost.c_str();
-      serverPort = port;
-      socket = new network::TcpSocket(shost.c_str(), port);
-      vlog.info(_("Connected to host %s port %d"),
-                shost.c_str(), port);
-    }
-    rfbcon = new CConn(this, address.toStdString().c_str(), socket);
-    setHost(serverHost);
-    setPort(serverPort);
-  } catch (rdr::Exception& e) {
-    vlog.error("%s", e.str());
-    AppManager::instance()->publishError(QString::asprintf(_("Failed to connect to \"%s\":\n\n%s"),
-                                                           address.toStdString().c_str(), e.str()));
-  } catch (int& e) {
-    AppManager::instance()->publishError(strerror(e));
-  }
-}
-
-void QVNCConnection::listen(network::Socket* sock)
-{
-  rfbcon = new CConn(this, "", sock);
 }

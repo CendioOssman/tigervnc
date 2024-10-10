@@ -56,25 +56,9 @@ public:
 
   bool hasConnection() const { return rfbcon; }
 
-public:
-  void listen(network::Socket* sock);
-  void connectToServer(const char* vncserver);
-
-  QString host() { return rfbcon ? rfbcon->host() : ""; }
-
 private:
   CConn* rfbcon;
   QTimer* updateTimer;
-
-  void bind(int fd);
-
-  void setHost(QString host)
-  {
-    rfbcon->setServerName(host.toStdString().c_str());
-    rfbcon->setHost(host);
-  }
-
-  void setPort(int port) { rfbcon->setPort(port); }
 };
 
 #endif // VNCCONNECTION_H
