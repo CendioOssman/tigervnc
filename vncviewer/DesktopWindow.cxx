@@ -14,7 +14,7 @@
 #include "rfb/ScreenSet.h"
 #include "OptionsDialog.h"
 #include "toast.h"
-#include "vncconnection.h"
+#include "CConn.h"
 #include "viewerconfig.h"
 
 #include <QApplication>

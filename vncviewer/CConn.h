@@ -31,7 +31,6 @@
 
 class QCursor;
 class QSocketNotifier;
-class QVNCConnection;
 class UserDialog;
 
 namespace rfb
@@ -50,7 +49,7 @@ class DesktopWindow;
 class CConn : public rfb::CConnection
 {
 public:
-  CConn(QVNCConnection* facade, const char* vncServerName, network::Socket* socket=nullptr);
+  CConn(const char* vncServerName, network::Socket* socket=nullptr);
   ~CConn();
 
   QString connectionInfo();
@@ -129,8 +128,6 @@ private:
 
   DesktopWindow *desktop;
 
-  friend QVNCConnection;
-  QVNCConnection* facade;
   UserDialog* credential;
 
   unsigned updateCount;
