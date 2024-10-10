@@ -28,6 +28,7 @@
 #include <QCursor>
 #include <QClipboard>
 #include <QPixmap>
+#include <QSocketNotifier>
 
 #if !defined(__APPLE__) && !defined(WIN32)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -77,10 +78,13 @@ static const PixelFormat mediumColourPF(8, 8, false, true,
 // Time new bandwidth estimates are weighted against (in ms)
 static const unsigned bpsEstimateWindow = 1000;
 
-CConn::CConn(QVNCConnection *cfacade)
+CConn::CConn(QVNCConnection *cfacade, const char* /*vncServerName*/, network::Socket* socket_)
  : CConnection()
  , serverHost("")
  , serverPort(5900)
+ , socket(socket_)
+ , socketReadNotifier(nullptr)
+ , socketWriteNotifier(nullptr)
  , desktop(nullptr)
  , facade(cfacade)
  , updateCount(0)
@@ -97,8 +101,22 @@ CConn::CConn(QVNCConnection *cfacade)
   supportsCursorPosition = true;
   supportsDesktopResize = true;
   supportsLEDState = true;
-  
+
+  setStreams(&socket->inStream(), &socket->outStream());
+
+  socketReadNotifier = new QSocketNotifier(socket->getFd(), QSocketNotifier::Read);
+  QObject::connect(socketReadNotifier, &QSocketNotifier::activated, [this](int) {
+    startProcessing();
+  });
+
+  socketWriteNotifier = new QSocketNotifier(socket->getFd(), QSocketNotifier::Write);
+  socketWriteNotifier->setEnabled(false);
+  QObject::connect(socketWriteNotifier, &QSocketNotifier::activated, [this](int) {
+    flushSocket();
+  });
+
   initialiseProtocol();
+
   credential = new UserDialog;
   if (::customCompressLevel) {
     setCompressLevel(::compressLevel);
@@ -122,6 +140,10 @@ CConn::~CConn()
 
   delete serverPF;
   delete fullColourPF;
+
+  delete socketReadNotifier;
+  delete socketWriteNotifier;
+  delete socket;
 }
 
 QString CConn::connectionInfo()
@@ -188,6 +210,57 @@ void CConn::setProcessState(int state)
 void CConn::resetConnection()
 {
   initialiseProtocol();
+}
+
+void CConn::startProcessing()
+{
+  static bool recursing = false;
+
+  // I don't think processMsg() is recursion safe, so add this check
+  assert(!recursing);
+
+  recursing = true;
+  socketReadNotifier->setEnabled(false);
+  socketWriteNotifier->setEnabled(false);
+
+  try {
+    getOutStream()->cork(true);
+
+    while (processMsg()) {
+      qApp->processEvents();
+      if (AppManager::instance()->should_disconnect())
+        break;
+    }
+
+    getOutStream()->cork(false);
+  } catch (rdr::EndOfStream& e) {
+    recursing = false;
+    vlog.info("%s", e.str());
+    if (!desktop) {
+      vlog.error(_("The connection was dropped by the server before "
+                   "the session could be established."));
+      QString message = _("The connection was dropped by the server "
+                        "before the session could be established.");
+      AppManager::instance()->publishError(message);
+    } else {
+      qApp->quit();
+    }
+  } catch (rdr::Exception& e) {
+    recursing = false;
+    AppManager::instance()->publishUnexpectedError(e.str());
+  }
+
+  socketReadNotifier->setEnabled(true);
+  socketWriteNotifier->setEnabled(socket->outStream().hasBufferedData());
+
+  recursing = false;
+}
+
+void CConn::flushSocket()
+{
+  socket->outStream().flush();
+
+  socketWriteNotifier->setEnabled(socket->outStream().hasBufferedData());
 }
 
 ////////////////////// CConnection callback methods //////////////////////

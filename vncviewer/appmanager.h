@@ -42,6 +42,7 @@ signals:
 public slots:
   void publishError(const QString message, bool quit = false);
   void publishUnexpectedError(QString message, bool quit = false);
+  bool should_disconnect();
   void authenticate(QString user, QString password);
   void cancelAuth();
   void openContextMenu();

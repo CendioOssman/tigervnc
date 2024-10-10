@@ -165,6 +165,12 @@ void AppManager::publishUnexpectedError(QString message, bool quit)
   publishError(message, quit);
 }
 
+bool AppManager::should_disconnect()
+{
+  // FIXME: Doesn't handle clean disconnect
+  return !exitError.empty();
+}
+
 void AppManager::openContextMenu()
 {
   emit contextMenuRequested();
