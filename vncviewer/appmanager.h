@@ -9,6 +9,10 @@ class QVNCConnection;
 class ServerDialog;
 class QDialog;
 
+namespace network {
+  class Socket;
+}
+
 class AppManager : public QObject
 {
   Q_OBJECT
@@ -20,7 +24,7 @@ public:
 
   void initialize();
 
-  int exec();
+  int exec(const char* vncserver, network::Socket* sock);
 
   void setCommandLine(bool b) { commandLine = b; }
 
@@ -30,22 +34,17 @@ signals:
   void credentialRequested(bool secured, bool userNeeded, bool passwordNeeded);
   void messageDialogRequested(int flags, QString title, QString text);
   void dataReady(QByteArray bytes);
-  void connectToServerRequested();
   void authenticateRequested(QString user, QString password);
   void cancelAuthRequested();
-  void resetConnectionRequested();
   void invalidateRequested(int x0, int y0, int x1, int y1);
   void contextMenuRequested();
 
 public slots:
   void publishError(const QString message, bool quit = false);
   void publishUnexpectedError(QString message, bool quit = false);
-  void connectToServer();
   void authenticate(QString user, QString password);
   void cancelAuth();
-  void resetConnection();
   void openContextMenu();
-  void openServerDialog();
   void openDialog(QDialog* d);
 
 private:
@@ -53,9 +52,8 @@ private:
   bool connectedOnce = false;
   bool fatalError = false;
   std::string exitError;
-  QVNCConnection* connection;
+  QVNCConnection* connection = nullptr;
   QTimer* rfbTimerProxy;
-  ServerDialog* serverDialog = nullptr;
   AppManager();
 };
 

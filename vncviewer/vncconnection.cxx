@@ -22,7 +22,6 @@
 #undef asprintf
 #include "CConn.h"
 #include "Viewport.h"
-#include "tunnelfactory.h"
 #undef asprintf
 
 #if !defined(Q_OS_WIN)
@@ -37,24 +36,16 @@
 
 static rfb::LogWriter vlog("CConnection");
 
-QVNCConnection::QVNCConnection()
+QVNCConnection::QVNCConnection(const char* vncserver, network::Socket* sock)
   : QObject(nullptr)
   , rfbcon(nullptr)
   , socket(nullptr)
   , socketReadNotifier(nullptr)
   , socketWriteNotifier(nullptr)
   , updateTimer(nullptr)
-  , tunnelFactory(nullptr)
 {
   connect(this, &QVNCConnection::socketReadNotified, this, &QVNCConnection::startProcessing);
   connect(this, &QVNCConnection::socketWriteNotified, this, &QVNCConnection::flushSocket);
-}
-
-void QVNCConnection::initialize()
-{
-  if (::listenMode) {
-    listen();
-  }
 
   updateTimer = new QTimer;
   updateTimer->setSingleShot(true);
@@ -68,28 +59,31 @@ void QVNCConnection::initialize()
     }
   });
 
-  QString gatewayHost = ViewerConfig::instance()->getGatewayHost();
-  QString remoteHost = ViewerConfig::instance()->getServerHost();
-  if (!gatewayHost.isEmpty() && !remoteHost.isEmpty()) {
-    tunnelFactory = new TunnelFactory;
-    tunnelFactory->start();
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-    tunnelFactory->wait(20000);
-#else
-    tunnelFactory->wait(QDeadlineTimer(20000));
-#endif
+  if (sock) {
+    listen(sock);
+  } else {
+    connectToServer(vncserver);
   }
 }
 
 QVNCConnection::~QVNCConnection()
 {
-  if (tunnelFactory) {
-    tunnelFactory->close();
+  if (rfbcon) {
+    delete rfbcon;
   }
-  resetConnection();
+  rfbcon = nullptr;
+
+  delete socketReadNotifier;
+  socketReadNotifier = nullptr;
+  delete socketWriteNotifier;
+  socketWriteNotifier = nullptr;
+  if (socket) {
+    socket->shutdown();
+  }
+  delete socket;
+  socket = nullptr;
   updateTimer->stop();
   delete updateTimer;
-  delete tunnelFactory;
 }
 
 void QVNCConnection::bind(int fd)
@@ -110,28 +104,18 @@ void QVNCConnection::bind(int fd)
   });
 }
 
-void QVNCConnection::connectToServer()
+void QVNCConnection::connectToServer(const char* vncserver)
 {
   if (::listenMode) {
     return;
   }
 
-  QString address;
+  QString address = vncserver;
   try {
-    resetConnection();
-    address = ViewerConfig::instance()->getFinalAddress();
     delete rfbcon;
     rfbcon = new CConn(this);
-    try {
-      ViewerConfig::instance()->saveViewerParameters("", address);
-    } catch (rfb::Exception& e) {
-      vlog.error("%s", e.str());
-      AppManager::instance()->publishError(QString::asprintf(_("Unable to save the default configuration:\n\n%s"),
-                                                             e.str()));
-    }
     if (address.contains("/")) {
 #ifndef Q_OS_WIN
-      delete socket;
       socket = new network::UnixSocket(address.toStdString().c_str());
       setHost(socket->getPeerAddress());
       vlog.info(_("Connected to socket %s"), host().toStdString().c_str());
@@ -143,7 +127,6 @@ void QVNCConnection::connectToServer()
       rfb::getHostAndPort(address.toStdString().c_str(), &shost, &port);
       setHost(shost.c_str());
       setPort(port);
-      delete socket;
       socket = new network::TcpSocket(shost.c_str(), port);
       vlog.info(_("Connected to host %s port %d"),
                 shost.c_str(), port);
@@ -152,86 +135,18 @@ void QVNCConnection::connectToServer()
     }
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    resetConnection();
     AppManager::instance()->publishError(QString::asprintf(_("Failed to connect to \"%s\":\n\n%s"),
                                                            address.toStdString().c_str(), e.str()));
   } catch (int& e) {
-    resetConnection();
     AppManager::instance()->publishError(strerror(e));
   }
 }
 
-void QVNCConnection::listen()
+void QVNCConnection::listen(network::Socket* sock)
 {
   rfbcon = new CConn(this);
-  std::list<network::SocketListener*> listeners;
-  try {
-    bool ok;
-    int port = ViewerConfig::instance()->getServerName().toInt(&ok);
-    if (!ok) {
-      port = 5500;
-    }
-    network::createTcpListeners(&listeners, nullptr, port);
-
-    vlog.info(_("Listening on port %d"), port);
-
-    /* Wait for a connection */
-    while (socket == nullptr) {
-      fd_set rfds;
-      FD_ZERO(&rfds);
-      for (network::SocketListener* listener : listeners) {
-        FD_SET(listener->getFd(), &rfds);
-      }
-
-      int n = select(FD_SETSIZE, &rfds, nullptr, nullptr, nullptr);
-      if (n < 0) {
-        if (errno == EINTR) {
-          vlog.debug("Interrupted select() system call");
-          continue;
-        } else {
-          throw rdr::SystemException("select", errno);
-        }
-      }
-
-      for (network::SocketListener* listener : listeners) {
-        if (FD_ISSET(listener->getFd(), &rfds)) {
-          socket = listener->accept();
-          if (socket) {
-            /* Got a connection */
-            bind(socket->getFd());
-            break;
-          }
-        }
-      }
-    }
-  } catch (rdr::Exception& e) {
-    vlog.error("%s", e.str());
-    AppManager::instance()->publishError(QString::asprintf(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str()));
-    QCoreApplication::exit(1);
-  }
-
-  while (!listeners.empty()) {
-    delete listeners.back();
-    listeners.pop_back();
-  }
-}
-
-void QVNCConnection::resetConnection()
-{
-  if (rfbcon) {
-    delete rfbcon;
-  }
-  rfbcon = nullptr;
-
-  delete socketReadNotifier;
-  socketReadNotifier = nullptr;
-  delete socketWriteNotifier;
-  socketWriteNotifier = nullptr;
-  if (socket) {
-    socket->shutdown();
-  }
-  delete socket;
-  socket = nullptr;
+  socket = sock;
+  bind(socket->getFd());
 }
 
 void QVNCConnection::startProcessing()
@@ -270,19 +185,15 @@ void QVNCConnection::startProcessing()
                    "the session could be established."));
       QString message = _("The connection was dropped by the server "
                         "before the session could be established.");
-      resetConnection();
       AppManager::instance()->publishError(message);
     } else {
-      resetConnection();
       qApp->quit();
     }
   } catch (rdr::Exception& e) {
     recursing = false;
-    resetConnection();
     AppManager::instance()->publishUnexpectedError(e.str());
   } catch (int& e) {
     recursing = false;
-    resetConnection();
     AppManager::instance()->publishUnexpectedError(strerror(e));
   }
 
