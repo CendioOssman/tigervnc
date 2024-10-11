@@ -20,7 +20,6 @@
 #ifndef _I18N_H
 #define _I18N_H 1
 
-#ifdef ENABLE_NLS
 /* Need to tell gcc that pgettext() doesn't screw up format strings */
 #ifdef __GNUC__
 static const char *
@@ -56,11 +55,5 @@ extern int swprintf (wchar_t *, size_t, const wchar_t *, ...)
 #define _(String) gettext (String)
 #define p_(Context, String) pgettext (Context, String)
 #define N_(String) gettext_noop (String)
-#else
-#define _(String) (String)
-#define p_(Context, String) (String)
-#define N_(String) (String)
-#endif
 
 #endif /* _I18N_H */
-
