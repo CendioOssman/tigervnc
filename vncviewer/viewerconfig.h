@@ -41,8 +41,6 @@ public:
   static const int SERVER_PORT_OFFSET = 5900; // ??? 5500;
 
   static ViewerConfig* instance();
-  static QString aboutText();
-  static void aboutDialog(QWidget* parent=nullptr);
 
   static FullscreenType fullscreenType();
   static bool canFullScreenOnMultiDisplays();

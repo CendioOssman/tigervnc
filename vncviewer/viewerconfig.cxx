@@ -7,7 +7,6 @@
 #include <QApplication>
 #include <QDate>
 #include <QDir>
-#include <QMessageBox>
 #include <QTextStream>
 #include <signal.h>
 
@@ -152,27 +151,6 @@ ViewerConfig *ViewerConfig::instance()
 {
   static ViewerConfig config;
   return &config;
-}
-
-QString ViewerConfig::aboutText()
-{
-  return QString::asprintf(_("TigerVNC Viewer v%s\n"
-                             "Built on: %s\n"
-                             "Copyright (C) 1999-%d TigerVNC Team and many others (see README.rst)\n"
-                             "See https://www.tigervnc.org for information on TigerVNC."),
-                           PACKAGE_VERSION,
-                           BUILD_TIMESTAMP,
-                           QDate::currentDate().year());
-}
-
-void ViewerConfig::aboutDialog(QWidget* parent)
-{
-  QMessageBox* dlg;
-
-  dlg = new QMessageBox(QMessageBox::Information,
-                        _("About TigerVNC Viewer"),
-                        aboutText(), QMessageBox::Close, parent);
-  AppManager::instance()->openDialog(dlg);
 }
 
 ViewerConfig::FullscreenType ViewerConfig::fullscreenType()

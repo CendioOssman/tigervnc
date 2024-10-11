@@ -21,6 +21,7 @@
 #include "i18n.h"
 #include "locale.h"
 #include "menukey.h"
+#include "vncviewer.h"
 #include "rdr/Exception.h"
 #include "rfb/CMsgWriter.h"
 #include "rfb/LogWriter.h"
@@ -55,7 +56,6 @@
 #undef asprintf
 #include "parameters.h"
 #include "DesktopWindow.h"
-#include "viewerconfig.h"
 #undef asprintf
 #include "OptionsDialog.h"
 
@@ -415,7 +415,7 @@ void Viewport::createContextMenu()
     action = new QAction(p_("ContextMenu|", "About &TigerVNC viewer..."), contextMenu);
     connect(action, &QAction::triggered, this,
             [this]() {
-              ViewerConfig::aboutDialog(this);
+              about_vncviewer(this);
             });
     contextMenu->addAction(action);
 

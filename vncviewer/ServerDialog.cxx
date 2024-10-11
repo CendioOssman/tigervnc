@@ -9,6 +9,7 @@
 #include "OptionsDialog.h"
 #include "i18n.h"
 #undef asprintf
+#include "vncviewer.h"
 #include "rfb/Exception.h"
 #include "rfb/LogWriter.h"
 
@@ -118,7 +119,7 @@ void ServerDialog::openOptionDialog()
 
 void ServerDialog::openAboutDialog()
 {
-  ViewerConfig::aboutDialog(this);
+  about_vncviewer(this);
 }
 
 void ServerDialog::openLoadConfigDialog()
