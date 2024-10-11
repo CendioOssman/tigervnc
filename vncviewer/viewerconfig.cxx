@@ -7,7 +7,6 @@
 #include <QApplication>
 #include <QDate>
 #include <QDir>
-#include <QTextStream>
 #include <signal.h>
 
 #if !defined(WIN32)
@@ -44,8 +43,6 @@
 #include "network/TcpSocket.h"
 #include "rfb/Exception.h"
 #undef asprintf
-
-#define SERVER_HISTORY_SIZE 20
 
 using namespace rfb;
 using namespace std;
@@ -137,13 +134,6 @@ void ViewerConfig::initialize()
     QGuiApplication::exit(1);
   }
 
-  try {
-    loadServerHistory();
-  } catch (Exception& e) {
-    vlog.error("%s", e.str());
-    emit errorOccurred(QString::asprintf(_("Unable to load the server history:\n\n%s"), e.str()));
-  }
-
   parseServerName();
 }
 
@@ -211,107 +201,6 @@ void ViewerConfig::saveViewerParameters(QString path, QString name)
 QString ViewerConfig::loadViewerParameters(QString path)
 {
   return QString(::loadViewerParameters(path.trimmed().length() > 0 ? path.toStdString().c_str() : nullptr));
-}
-
-void ViewerConfig::loadServerHistory()
-{
-  serverHistory.clear();
-
-#ifdef _WIN32
-  std::list<std::string> history;
-  history = ::loadHistoryFromRegKey();
-  for (auto const& s : history)
-    serverHistory.push_back(s.c_str());
-  return;
-#endif
-
-  const char* homeDir = os::getvncconfigdir();
-  if (homeDir == nullptr)
-    throw rdr::Exception("%s", _("Could not obtain the home directory path"));
-
-  char filepath[PATH_MAX];
-  snprintf(filepath, sizeof(filepath), "%s/%s", homeDir, SERVER_HISTORY);
-
-  /* Read server history from file */
-  FILE* f = fopen(filepath, "r");
-  if (!f) {
-    if (errno == ENOENT) {
-      // no history file
-      return;
-    }
-    throw rdr::Exception(_("Could not open \"%s\": %s"), filepath, strerror(errno));
-  }
-
-  int lineNr = 0;
-  while (!feof(f)) {
-    char line[256];
-
-    // Read the next line
-    lineNr++;
-    if (!fgets(line, sizeof(line), f)) {
-      if (feof(f))
-        break;
-
-      fclose(f);
-      throw rdr::Exception(_("Failed to read line %d in file %s: %s"), lineNr, filepath, strerror(errno));
-    }
-
-    int len = strlen(line);
-
-    if (len == (sizeof(line) - 1)) {
-      fclose(f);
-      throw rdr::Exception(_("Failed to read line %d in file %s: %s"), lineNr, filepath, _("Line too long"));
-    }
-
-    if ((len > 0) && (line[len - 1] == '\n')) {
-      line[len - 1] = '\0';
-      len--;
-    }
-    if ((len > 0) && (line[len - 1] == '\r')) {
-      line[len - 1] = '\0';
-      len--;
-    }
-
-    if (len == 0)
-      continue;
-
-    serverHistory.push_back(line);
-  }
-
-  fclose(f);
-}
-
-void ViewerConfig::saveServerHistory()
-{
-  serverName = serverHistory.length() > 0 ? serverHistory[0] : "";
-  parseServerName();
-#ifdef _WIN32
-  std::list<std::string> history;
-  for (auto const& s : qAsConst(serverHistory))
-    history.push_back(s.toStdString());
-  ::saveHistoryToRegKey(history);
-#else
-  const char* homeDir = os::getvncconfigdir();
-  if (homeDir == nullptr) {
-    throw rdr::Exception("%s", _("Could not obtain the home directory path"));
-  }
-  char filepath[PATH_MAX];
-  snprintf(filepath, sizeof(filepath), "%s/%s", homeDir, SERVER_HISTORY);
-
-  /* Write server history to file */
-  FILE* f = fopen(filepath, "w");
-  if (!f) {
-    throw rdr::Exception(_("Could not open \"%s\": %s"), filepath, strerror(errno));
-  }
-  QTextStream stream(f, QIODevice::WriteOnly | QIODevice::WriteOnly);
-
-  // Save the last X elements to the config file.
-  for (int i = 0; i < serverHistory.size() && i <= SERVER_HISTORY_SIZE; i++) {
-    stream << serverHistory[i] << "\n";
-  }
-  stream.flush();
-  fclose(f);
-#endif
 }
 
 bool ViewerConfig::potentiallyLoadConfigurationFile(QString vncServerName)
@@ -410,27 +299,10 @@ void ViewerConfig::parseServerName()
   serverHost = shost.c_str();
 }
 
-void ViewerConfig::addServer(QString name)
-{
-  if (name.isEmpty())
-    return;
-
-  serverHistory.removeOne(name);
-  serverHistory.push_front(name);
-  parseServerName();
-  try {
-    saveServerHistory();
-  } catch (rfb::Exception& e) {
-    vlog.error("%s", e.str());
-    emit errorOccurred(QString::asprintf(_("Unable to save the server history:\n\n%s"),
-                                         e.str()));
-  }
-}
-
 void ViewerConfig::setServer(QString name)
 {
   serverName = name;
-  addServer(name);
+  parseServerName();
 }
 
 QString ViewerConfig::getFinalAddress() const

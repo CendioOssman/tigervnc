@@ -9,7 +9,9 @@
 #include "OptionsDialog.h"
 #include "i18n.h"
 #undef asprintf
+#include "parameters.h"
 #include "vncviewer.h"
+#include "os/os.h"
 #include "rfb/Exception.h"
 #include "rfb/LogWriter.h"
 
@@ -20,11 +22,14 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QStringListModel>
+#include <QTextStream>
 #include <QVBoxLayout>
 #include <QKeyEvent>
 #include <QMessageBox>
 
 static rfb::LogWriter vlog("ServerDialog");
+
+const char* SERVER_HISTORY = "tigervnc.history";
 
 ServerDialog::ServerDialog(QWidget* parent)
   : QDialog(parent)
@@ -75,32 +80,24 @@ ServerDialog::ServerDialog(QWidget* parent)
   connect(aboutBtn, &QPushButton::clicked, this, &ServerDialog::openAboutDialog);
   connect(cancelBtn, &QPushButton::clicked, this, &ServerDialog::reject);
   connect(connectBtn, &QPushButton::clicked, this, &ServerDialog::connectTo);
-  
-  updateServerList(ViewerConfig::instance()->getServerHistory());
-}
 
-void ServerDialog::updateServerList(QStringList list)
-{
-  QStringListModel* model = new QStringListModel();
-  model->setStringList(list);
-  comboBox->setModel(model);
-}
-
-void ServerDialog::validateServerText(QString text)
-{
-  auto model = qobject_cast<QStringListModel*>(comboBox->model());
-  if (model && model->stringList().contains(text)) {
-    comboBox->setCurrentText(text);
-  } else {
-    ViewerConfig::instance()->addServer(text);
+  try {
+    loadServerHistory();
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    AppManager::instance()->publishError(QString::asprintf(_("Unable to load the server history:\n\n%s"), e.str()));
   }
+
+  QStringListModel* model = new QStringListModel();
+  model->setStringList(serverHistory);
+  comboBox->setModel(model);
 }
 
 void ServerDialog::connectTo()
 {
   QString text = comboBox->currentText();
-  validateServerText(text);
   ViewerConfig::instance()->setServer(text);
+
   try {
     ViewerConfig::instance()->saveViewerParameters("", text);
   } catch (rfb::Exception& e) {
@@ -108,6 +105,18 @@ void ServerDialog::connectTo()
     AppManager::instance()->publishError(QString::asprintf(_("Unable to save the default configuration:\n\n%s"),
                                                             e.str()));
   }
+
+  serverHistory.removeOne(text);
+  serverHistory.push_front(text);
+
+  try {
+    saveServerHistory();
+  } catch (rfb::Exception& e) {
+    vlog.error("%s", e.str());
+    AppManager::instance()->publishError(QString::asprintf(_("Unable to save the server history:\n\n%s"),
+                                                            e.str()));
+  }
+
   accept();
 }
 
@@ -131,7 +140,7 @@ void ServerDialog::openLoadConfigDialog()
   if (!filename.isEmpty()) {
     try {
       QString server = ViewerConfig::instance()->loadViewerParameters(filename);
-      validateServerText(server);
+      comboBox->setCurrentText(server);
     } catch (rfb::Exception& e) {
       QMessageBox* dlg;
 
@@ -187,4 +196,103 @@ void ServerDialog::openSaveConfigDialog()
       AppManager::instance()->openDialog(dlg);
     }
   }
+}
+
+void ServerDialog::loadServerHistory()
+{
+  serverHistory.clear();
+
+#ifdef _WIN32
+  std::list<std::string> history;
+  history = ::loadHistoryFromRegKey();
+  for (auto const& s : history)
+    serverHistory.push_back(s.c_str());
+  return;
+#endif
+
+  const char* homeDir = os::getvncconfigdir();
+  if (homeDir == nullptr)
+    throw rdr::Exception("%s", _("Could not obtain the home directory path"));
+
+  char filepath[PATH_MAX];
+  snprintf(filepath, sizeof(filepath), "%s/%s", homeDir, SERVER_HISTORY);
+
+  /* Read server history from file */
+  FILE* f = fopen(filepath, "r");
+  if (!f) {
+    if (errno == ENOENT) {
+      // no history file
+      return;
+    }
+    throw rdr::Exception(_("Could not open \"%s\": %s"), filepath, strerror(errno));
+  }
+
+  int lineNr = 0;
+  while (!feof(f)) {
+    char line[256];
+
+    // Read the next line
+    lineNr++;
+    if (!fgets(line, sizeof(line), f)) {
+      if (feof(f))
+        break;
+
+      fclose(f);
+      throw rdr::Exception(_("Failed to read line %d in file %s: %s"), lineNr, filepath, strerror(errno));
+    }
+
+    int len = strlen(line);
+
+    if (len == (sizeof(line) - 1)) {
+      fclose(f);
+      throw rdr::Exception(_("Failed to read line %d in file %s: %s"), lineNr, filepath, _("Line too long"));
+    }
+
+    if ((len > 0) && (line[len - 1] == '\n')) {
+      line[len - 1] = '\0';
+      len--;
+    }
+    if ((len > 0) && (line[len - 1] == '\r')) {
+      line[len - 1] = '\0';
+      len--;
+    }
+
+    if (len == 0)
+      continue;
+
+    serverHistory.push_back(line);
+  }
+
+  fclose(f);
+}
+
+void ServerDialog::saveServerHistory()
+{
+#ifdef _WIN32
+  std::list<std::string> history;
+  for (auto const& s : qAsConst(serverHistory))
+    history.push_back(s.toStdString());
+  ::saveHistoryToRegKey(history);
+#else
+  const char* homeDir = os::getvncconfigdir();
+  if (homeDir == nullptr) {
+    throw rdr::Exception("%s", _("Could not obtain the home directory path"));
+  }
+  char filepath[PATH_MAX];
+  snprintf(filepath, sizeof(filepath), "%s/%s", homeDir, SERVER_HISTORY);
+
+  /* Write server history to file */
+  FILE* f = fopen(filepath, "w");
+  if (!f) {
+    throw rdr::Exception(_("Could not open \"%s\": %s"), filepath, strerror(errno));
+  }
+  QTextStream stream(f, QIODevice::WriteOnly | QIODevice::WriteOnly);
+
+  // Save the last X elements to the config file.
+  for (int i = 0; i < serverHistory.size() && i <= SERVER_HISTORY_SIZE; i++) {
+    stream << serverHistory[i] << "\n";
+  }
+  stream.flush();
+  fclose(f);
+#endif
 }

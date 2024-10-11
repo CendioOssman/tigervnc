@@ -12,8 +12,6 @@ class ServerDialog : public QDialog
 public:
   ServerDialog(QWidget* parent = nullptr);
 
-  void updateServerList(QStringList list);
-  void validateServerText(QString text);
   void connectTo();
 
   void openOptionDialog();
@@ -22,7 +20,12 @@ public:
   void openSaveConfigDialog();
 
 private:
+  void loadServerHistory();
+  void saveServerHistory();
+
+private:
   QComboBox* comboBox;
+  QStringList serverHistory;
 };
 
 #endif // SERVERDIALOG_H
