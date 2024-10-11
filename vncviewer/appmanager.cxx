@@ -23,6 +23,7 @@
 #include "authdialog.h"
 #include "DesktopWindow.h"
 #include "parameters.h"
+#include "vncviewer.h"
 #include "viewerconfig.h"
 #include "CConn.h"
 #undef asprintf
@@ -61,7 +62,7 @@ void AppManager::initialize()
   QMenuBar* menuBar = new QMenuBar(nullptr); // global menu bar for mac
   QMenu* appMenu = new QMenu(nullptr);
   QAction* aboutAction = new QAction(nullptr);
-  connect(aboutAction, &QAction::triggered, this, []() { ViewerConfig::aboutDialog(nullptr); });
+  connect(aboutAction, &QAction::triggered, this, []() { about_vncviewer(nullptr); });
   aboutAction->setText(_("About"));
   aboutAction->setMenuRole(QAction::AboutRole);
   appMenu->addAction(aboutAction);

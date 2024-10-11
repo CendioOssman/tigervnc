@@ -5,6 +5,7 @@
 #include <QIcon>
 #include <QLibraryInfo>
 #include <QDeadlineTimer>
+#include <QMessageBox>
 
 #include <network/TcpSocket.h>
 
@@ -22,6 +23,27 @@
 #include "tunnelfactory.h"
 
 static rfb::LogWriter vlog("main");
+
+static QString about_text()
+{
+  return QString::asprintf(_("TigerVNC Viewer v%s\n"
+                             "Built on: %s\n"
+                             "Copyright (C) 1999-%d TigerVNC Team and many others (see README.rst)\n"
+                             "See https://www.tigervnc.org for information on TigerVNC."),
+                           PACKAGE_VERSION,
+                           BUILD_TIMESTAMP,
+                           QDate::currentDate().year());
+}
+
+void about_vncviewer(QWidget* parent)
+{
+  QMessageBox* dlg;
+
+  dlg = new QMessageBox(QMessageBox::Information,
+                        _("About TigerVNC Viewer"),
+                        about_text(), QMessageBox::Close, parent);
+  AppManager::instance()->openDialog(dlg);
+}
 
 static bool loadCatalog(const QString &catalog, const QString &location)
 {
@@ -95,6 +117,9 @@ int main(int argc, char *argv[])
   VNCTranslator translator;
   app.installTranslator(&translator);
   installQtTranslators();
+
+  QString about = about_text();
+  fprintf(stderr, "\n%s\n", about.toStdString().c_str());
 
   app.setQuitOnLastWindowClosed(false);
 

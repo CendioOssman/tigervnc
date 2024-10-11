@@ -41,10 +41,6 @@ LoggerConfig::LoggerConfig()
   textdomain(PACKAGE_NAME);
 #endif
 
-  // Write about text to console, still using normal locale codeset
-  QString about = ViewerConfig::aboutText();
-  fprintf(stderr, "\n%s\n", about.toStdString().c_str());
-
 #ifdef ENABLE_NLS
   // Set gettext codeset to what our GUI toolkit uses. Since we are
   // passing strings from strerror/gai_strerror to the GUI, these must
