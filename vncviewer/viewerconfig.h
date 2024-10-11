@@ -37,7 +37,6 @@ public:
     Selected
   };
 
-  const char* SERVER_HISTORY = "tigervnc.history";
   static const int SERVER_PORT_OFFSET = 5900; // ??? 5500;
 
   static ViewerConfig* instance();
@@ -49,8 +48,6 @@ public:
 
   void initialize();
 
-  QStringList getServerHistory() const { return serverHistory; }
-
   QString getServerName() const { return serverName; }
 
   QString getServerHost() const { return serverHost; }
@@ -61,15 +58,12 @@ public:
 
   int getGatewayLocalPort() const { return gatewayLocalPort; }
 
-  void addServer(QString name);
   void setServer(QString name);
 
   QString getFinalAddress() const;
 
   void saveViewerParameters(QString path, QString name);
   QString loadViewerParameters(QString path);
-  void loadServerHistory();
-  void saveServerHistory();
 
 signals:
   void errorOccurred(QString str);
@@ -77,7 +71,6 @@ signals:
 private:
   ViewerConfig();
 
-  QStringList serverHistory;
   QString serverName;
   QString serverHost;
   int serverPort = SERVER_PORT_OFFSET;
