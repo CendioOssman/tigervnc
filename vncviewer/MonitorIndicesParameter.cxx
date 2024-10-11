@@ -74,11 +74,7 @@ std::set<int> MonitorIndicesParameter::getParam()
 
 bool MonitorIndicesParameter::setParam(const char* v)
 {
-    int index;
     std::set<int> indices;
-
-    if (!v)
-        return false;
 
     if (!parseIndices(v, &indices, true)) {
         vlog.error(_("Invalid configuration specified for %s"), name);
@@ -86,9 +82,8 @@ bool MonitorIndicesParameter::setParam(const char* v)
     }
 
     QList<QScreen*> screens = QApplication::screens();
-    for (std::set<int>::iterator it = indices.begin(); it != indices.end(); it++) {
-        index = *it + 1;
-
+    for (int index : indices) {
+        index += 1;
         if (index <= 0 || index > screens.count())
             vlog.error(_("Monitor index %d does not exist"), index);
     }
@@ -201,10 +196,16 @@ std::vector<MonitorIndicesParameter::Monitor> MonitorIndicesParameter::fetchMoni
     // Start by creating a struct for every monitor.
     QList<QScreen*> screens = QApplication::screens();
     for (int i = 0; i < screens.count(); i++) {
-        // Get the properties of the monitor at the current index;
-        QRect g = screens[i]->geometry();
-        Monitor monitor = { g.x(), g.y(), g.width(), g.height(), i+1 };
+        QRect geometry;
+        Monitor monitor;
         bool match;
+
+        // Get the properties of the monitor at the current index;
+        geometry = screens[i]->geometry();
+        monitor.x = geometry.x();
+        monitor.y = geometry.y();
+        monitor.w = geometry.width();
+        monitor.h = geometry.height();
 
         // Only keep a single entry for mirrored screens
         match = false;
@@ -224,6 +225,7 @@ std::vector<MonitorIndicesParameter::Monitor> MonitorIndicesParameter::fetchMoni
         if (match)
             continue;
 
+        monitor.screenIndex = i+1;
         monitors.push_back(monitor);
     }
 
