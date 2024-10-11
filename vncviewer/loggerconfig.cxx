@@ -1,7 +1,7 @@
 #include "loggerconfig.h"
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include <config.h>
 #endif
 
 #include "i18n.h"
