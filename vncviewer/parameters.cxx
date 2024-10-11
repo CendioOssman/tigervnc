@@ -38,8 +38,6 @@
 #include <rfb/SecurityClient.h>
 #include <rfb/util.h>
 
-#include <FL/fl_utf8.h>
-
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
@@ -303,7 +301,9 @@ static void setKeyString(const char *_name, const char *_value, HKEY* hKey) {
   const DWORD buffersize = 256;
 
   wchar_t name[buffersize];
-  unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
+  unsigned size = MultiByteToWideChar(CP_UTF8, 0,
+                                      _name, strlen(_name) + 1,
+                                      name, buffersize);
   if (size >= buffersize)
     throw Exception(_("The name of the parameter is too large"));
 
@@ -312,7 +312,9 @@ static void setKeyString(const char *_name, const char *_value, HKEY* hKey) {
     throw Exception(_("The parameter is too large"));
 
   wchar_t value[buffersize];
-  size = fl_utf8towc(encodingBuffer, strlen(encodingBuffer)+1, value, buffersize);
+  size = MultiByteToWideChar(CP_UTF8, 0,
+                             encodingBuffer, strlen(encodingBuffer) + 1,
+                             value, buffersize);
   if (size >= buffersize)
     throw Exception(_("The parameter is too large"));
 
@@ -328,7 +330,9 @@ static void setKeyInt(const char *_name, const int _value, HKEY* hKey) {
   wchar_t name[buffersize];
   DWORD value = _value;
 
-  unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
+  unsigned size = MultiByteToWideChar(CP_UTF8, 0,
+                                      _name, strlen(_name) + 1,
+                                      name, buffersize);
   if (size >= buffersize)
     throw Exception(_("The name of the parameter is too large"));
 
@@ -345,7 +349,9 @@ static bool getKeyString(const char* _name, char* dest, size_t destSize, HKEY* h
   WCHAR* value;
   DWORD valuesize;
 
-  unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
+  unsigned size = MultiByteToWideChar(CP_UTF8, 0,
+                                      _name, strlen(_name) + 1,
+                                      name, buffersize);
   if (size >= buffersize)
     throw Exception(_("The name of the parameter is too large"));
 
@@ -361,7 +367,8 @@ static bool getKeyString(const char* _name, char* dest, size_t destSize, HKEY* h
   }
 
   char* utf8val = new char[destSize];
-  size = fl_utf8fromwc(utf8val, destSize, value, wcslen(value)+1);
+  size = WideCharToMultiByte(CP_UTF8, 0, value, wcslen(value) + 1,
+                             utf8val, destSize, nullptr, nullptr);
   delete [] value;
   if (size >= destSize) {
     delete [] utf8val;
@@ -385,7 +392,9 @@ static bool getKeyInt(const char* _name, int* dest, HKEY* hKey) {
   DWORD value = 0;
   wchar_t name[buffersize];
 
-  unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
+  unsigned size = MultiByteToWideChar(CP_UTF8, 0,
+                                      _name, strlen(_name) + 1,
+                                      name, buffersize);
   if (size >= buffersize)
     throw Exception(_("The name of the parameter is too large"));
 
@@ -405,7 +414,9 @@ static void removeValue(const char* _name, HKEY* hKey) {
   const DWORD buffersize = 256;
   wchar_t name[buffersize];
 
-  unsigned size = fl_utf8towc(_name, strlen(_name)+1, name, buffersize);
+  unsigned size = MultiByteToWideChar(CP_UTF8, 0,
+                                      _name, strlen(_name) + 1,
+                                      name, buffersize);
   if (size >= buffersize)
     throw Exception(_("The name of the parameter is too large"));
 
