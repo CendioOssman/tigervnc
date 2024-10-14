@@ -193,16 +193,6 @@ bool ViewerConfig::hasWM()
 #endif
 }
 
-void ViewerConfig::saveViewerParameters(QString path, QString name)
-{
-  ::saveViewerParameters(path.isEmpty() ? nullptr : path.toStdString().c_str(), name.toStdString().c_str());
-}
-
-QString ViewerConfig::loadViewerParameters(QString path)
-{
-  return QString(::loadViewerParameters(path.trimmed().length() > 0 ? path.toStdString().c_str() : nullptr));
-}
-
 bool ViewerConfig::potentiallyLoadConfigurationFile(QString vncServerName)
 {
   bool hasPathSeparator = vncServerName.contains('/') || vncServerName.contains('\\');
@@ -221,7 +211,7 @@ bool ViewerConfig::potentiallyLoadConfigurationFile(QString vncServerName)
 #endif
 
     try {
-      serverName = loadViewerParameters(vncServerName);
+      serverName = loadViewerParameters(vncServerName.toStdString().c_str());
     } catch (rfb::Exception& e) {
       QString str = QString::asprintf(_("Unable to load the specified configuration file:\n\n%s"), e.str());
       vlog.error("%s", str.toStdString().c_str());
