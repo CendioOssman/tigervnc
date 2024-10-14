@@ -6,8 +6,6 @@
 
 #include "i18n.h"
 #include "viewerconfig.h"
-#include "rfb/Logger_stdio.h"
-#include "rfb/LogWriter.h"
 
 #include <QFileInfo>
 #include <QCoreApplication>
@@ -47,26 +45,6 @@ LoggerConfig::LoggerConfig()
   // be in GUI codeset as well.
   bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
   bind_textdomain_codeset("libc", "UTF-8");
-#endif
-
-  rfb::initStdIOLoggers();
-#ifdef WIN32
-  QString tmp = "C:\\temp";
-  if (!QFileInfo::exists(tmp)) {
-    tmp = QString(qgetenv("TMP"));
-    if (!QFileInfo::exists(tmp)) {
-      tmp = QString(qgetenv("TEMP"));
-    }
-  }
-  QString log = tmp + "\\vncviewer.log";
-  rfb::initFileLogger(log.toStdString().c_str());
-#else
-  rfb::initFileLogger("/tmp/vncviewer.log");
-#endif
-#ifdef QT_DEBUG
-  rfb::LogWriter::setLogParams("*:stderr:100");
-#else
-  rfb::LogWriter::setLogParams("*:stderr:30");
 #endif
 }
 

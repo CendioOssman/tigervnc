@@ -18,6 +18,7 @@
 #include <rfb/Exception.h>
 #include <rfb/Hostname.h>
 #include <rfb/LogWriter.h>
+#include <rfb/Logger_stdio.h>
 
 #include "appmanager.h"
 #include "loggerconfig.h"
@@ -216,6 +217,26 @@ int main(int argc, char *argv[])
   app.setWindowIcon(icon);
 
   LoggerConfig logger;
+
+  rfb::initStdIOLoggers();
+#ifdef WIN32
+  QString tmp = "C:\\temp";
+  if (!QFileInfo::exists(tmp)) {
+    tmp = QString(qgetenv("TMP"));
+    if (!QFileInfo::exists(tmp)) {
+      tmp = QString(qgetenv("TEMP"));
+    }
+  }
+  QString log = tmp + "\\vncviewer.log";
+  rfb::initFileLogger(log.toStdString().c_str());
+#else
+  rfb::initFileLogger("/tmp/vncviewer.log");
+#endif
+#ifdef QT_DEBUG
+  rfb::LogWriter::setLogParams("*:stderr:100");
+#else
+  rfb::LogWriter::setLogParams("*:stderr:30");
+#endif
 
   VNCTranslator translator;
   app.installTranslator(&translator);
