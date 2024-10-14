@@ -9,7 +9,8 @@ class TunnelFactory : public QThread
   Q_OBJECT
 
 public:
-  TunnelFactory();
+  TunnelFactory(const char *gatewayHost, const char *remoteHost,
+                int remotePort, int localPort);
   virtual ~TunnelFactory();
   void close();
   bool hasErrorOccurred() const { return errorOccurred; }
@@ -19,6 +20,10 @@ protected:
   void run() override;
 
 private:
+  QString gatewayHost;
+  QString remoteHost;
+  int remotePort;
+  int localPort;
   bool errorOccurred;
   QProcess::ProcessError error;
   QString command;

@@ -93,10 +93,14 @@ ServerDialog::ServerDialog(QWidget* parent)
   comboBox->setModel(model);
 }
 
+QString ServerDialog::getServerName()
+{
+  return comboBox->currentText();
+}
+
 void ServerDialog::connectTo()
 {
   QString text = comboBox->currentText();
-  ViewerConfig::instance()->setServer(text);
 
   try {
     saveViewerParameters(nullptr, text.toStdString().c_str());

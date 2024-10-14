@@ -12,6 +12,8 @@ class ServerDialog : public QDialog
 public:
   ServerDialog(QWidget* parent = nullptr);
 
+  QString getServerName();
+
   void connectTo();
 
   void openOptionDialog();

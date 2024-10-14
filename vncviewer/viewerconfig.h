@@ -37,44 +37,14 @@ public:
     Selected
   };
 
-  static const int SERVER_PORT_OFFSET = 5900; // ??? 5500;
-
   static ViewerConfig* instance();
 
   static FullscreenType fullscreenType();
   static bool canFullScreenOnMultiDisplays();
   static bool hasWM();
-  static void usage();
-
-  void initialize();
-
-  QString getServerName() const { return serverName; }
-
-  QString getServerHost() const { return serverHost; }
-
-  int getServerPort() const { return serverPort; }
-
-  QString getGatewayHost() const;
-
-  int getGatewayLocalPort() const { return gatewayLocalPort; }
-
-  void setServer(QString name);
-
-  QString getFinalAddress() const;
-
-signals:
-  void errorOccurred(QString str);
 
 private:
   ViewerConfig();
-
-  QString serverName;
-  QString serverHost;
-  int serverPort = SERVER_PORT_OFFSET;
-  int gatewayLocalPort = 0;
-
-  bool potentiallyLoadConfigurationFile(QString vncServerName);
-  void parseServerName();
 };
 
 #endif

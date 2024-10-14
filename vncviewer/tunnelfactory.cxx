@@ -9,8 +9,14 @@
 #include "viewerconfig.h"
 #include "tunnelfactory.h"
 
-TunnelFactory::TunnelFactory()
+TunnelFactory::TunnelFactory(const char *gatewayHost_,
+                             const char *remoteHost_,
+                             int remotePort_, int localPort_)
   : QThread(nullptr)
+  , gatewayHost(gatewayHost_)
+  , remoteHost(remoteHost_)
+  , remotePort(remotePort_)
+  , localPort(localPort_)
   , errorOccurred(false)
   , error(QProcess::FailedToStart)
 #if defined(WIN32)
@@ -25,16 +31,12 @@ TunnelFactory::TunnelFactory()
 
 void TunnelFactory::run()
 {
-  QString gatewayHost = ViewerConfig::instance()->getGatewayHost();
   if (gatewayHost.isEmpty()) {
     return;
   }
-  QString remoteHost = ViewerConfig::instance()->getServerHost();
   if (remoteHost.isEmpty()) {
     return;
   }
-  int remotePort = ViewerConfig::instance()->getServerPort();
-  int localPort = ViewerConfig::instance()->getGatewayLocalPort();
 
   QString viacmd(qgetenv("VNC_VIA_CMD"));
   qputenv("G", gatewayHost.toUtf8());
@@ -81,7 +83,6 @@ void TunnelFactory::close()
 {
 #if !defined(WIN32)
   if (process) {
-    QString gatewayHost = ViewerConfig::instance()->getGatewayHost();
     QStringList args({
         "-S",
         operationSocketName,
