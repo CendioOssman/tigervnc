@@ -5,10 +5,13 @@
 #include <signal.h>
 
 #include <QApplication>
+#include <QDir>
 #include <QIcon>
 #include <QLibraryInfo>
 #include <QDeadlineTimer>
 #include <QMessageBox>
+
+#include <os/os.h>
 
 #include <network/TcpSocket.h>
 
@@ -144,6 +147,14 @@ int main(int argc, char *argv[])
                    AppManager::instance(), [&](QString str){ AppManager::instance()->publishError(str, true); });
   AppManager::instance()->initialize();
   ViewerConfig::instance()->initialize();
+
+  const char* homeDir = os::getvncconfigdir();
+  if (homeDir == nullptr) {
+    QDir dir;
+    if (!dir.mkpath(homeDir)) {
+      vlog.error(_("Could not create VNC home directory:"));
+    }
+  }
 
   TunnelFactory* tunnelFactory = nullptr;
 
