@@ -7,7 +7,6 @@
 #include <QApplication>
 #include <QDate>
 #include <QDir>
-#include <signal.h>
 
 #if !defined(WIN32)
 #include <sys/stat.h>
@@ -49,14 +48,6 @@ using namespace std;
 
 static LogWriter vlog("ViewerConfig");
 
-static void CleanupSignalHandler(int sig)
-{
-  // CleanupSignalHandler allows C++ object cleanup to happen because it calls
-  // exit() rather than the default which is to abort.
-  vlog.info(_("Termination signal %d has been received. TigerVNC Viewer will now exit."), sig);
-  exit(1);
-}
-
 ViewerConfig::ViewerConfig()
   : QObject(nullptr)
 {
@@ -65,12 +56,6 @@ ViewerConfig::ViewerConfig()
 
 void ViewerConfig::initialize()
 {
-#ifdef SIGHUP
-  signal(SIGHUP, CleanupSignalHandler);
-#endif
-  signal(SIGINT, CleanupSignalHandler);
-  signal(SIGTERM, CleanupSignalHandler);
-
   const char* homeDir = os::getvncconfigdir();
   if (homeDir == nullptr) {
     QDir dir;
