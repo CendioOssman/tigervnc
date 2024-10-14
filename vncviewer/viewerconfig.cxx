@@ -6,7 +6,6 @@
 
 #include <QApplication>
 #include <QDate>
-#include <QDir>
 
 #if !defined(WIN32)
 #include <sys/stat.h>
@@ -31,7 +30,6 @@
 
 #include "appmanager.h"
 #include "parameters.h"
-#include "os/os.h"
 #include "rfb/Configuration.h"
 #include "rfb/LogWriter.h"
 #include "rfb/Hostname.h"
@@ -56,13 +54,6 @@ ViewerConfig::ViewerConfig()
 
 void ViewerConfig::initialize()
 {
-  const char* homeDir = os::getvncconfigdir();
-  if (homeDir == nullptr) {
-    QDir dir;
-    if (!dir.mkpath(homeDir)) {
-      vlog.error(_("Could not create VNC home directory:"));
-    }
-  }
 
   rfb::Configuration::enableViewerParams();
   loadViewerParameters("");
