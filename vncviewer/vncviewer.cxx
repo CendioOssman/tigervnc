@@ -1,6 +1,9 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+
+#include <signal.h>
+
 #include <QApplication>
 #include <QIcon>
 #include <QLibraryInfo>
@@ -43,6 +46,14 @@ void about_vncviewer(QWidget* parent)
                         _("About TigerVNC Viewer"),
                         about_text(), QMessageBox::Close, parent);
   AppManager::instance()->openDialog(dlg);
+}
+
+static void CleanupSignalHandler(int sig)
+{
+  // CleanupSignalHandler allows C++ object cleanup to happen because it calls
+  // exit() rather than the default which is to abort.
+  vlog.info(_("Termination signal %d has been received. TigerVNC Viewer will now exit."), sig);
+  exit(1);
 }
 
 static bool loadCatalog(const QString &catalog, const QString &location)
@@ -120,6 +131,12 @@ int main(int argc, char *argv[])
 
   QString about = about_text();
   fprintf(stderr, "\n%s\n", about.toStdString().c_str());
+
+#ifdef SIGHUP
+  signal(SIGHUP, CleanupSignalHandler);
+#endif
+  signal(SIGINT, CleanupSignalHandler);
+  signal(SIGTERM, CleanupSignalHandler);
 
   app.setQuitOnLastWindowClosed(false);
 
