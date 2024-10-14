@@ -62,9 +62,6 @@ public:
 
   QString getFinalAddress() const;
 
-  void saveViewerParameters(QString path, QString name);
-  QString loadViewerParameters(QString path);
-
 signals:
   void errorOccurred(QString str);
 

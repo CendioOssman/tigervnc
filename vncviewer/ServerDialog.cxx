@@ -99,7 +99,7 @@ void ServerDialog::connectTo()
   ViewerConfig::instance()->setServer(text);
 
   try {
-    ViewerConfig::instance()->saveViewerParameters("", text);
+    saveViewerParameters(nullptr, text.toStdString().c_str());
   } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
     AppManager::instance()->publishError(QString::asprintf(_("Unable to save the default configuration:\n\n%s"),
@@ -139,7 +139,7 @@ void ServerDialog::openLoadConfigDialog()
                                                   _("TigerVNC configuration (*.tigervnc);;All files (*)"));
   if (!filename.isEmpty()) {
     try {
-      QString server = ViewerConfig::instance()->loadViewerParameters(filename);
+      QString server = loadViewerParameters(filename.toStdString().c_str());
       comboBox->setCurrentText(server);
     } catch (rfb::Exception& e) {
       QMessageBox* dlg;
@@ -183,7 +183,8 @@ void ServerDialog::openSaveConfigDialog()
     }
 
     try {
-      ViewerConfig::instance()->saveViewerParameters(filename, comboBox->currentText());
+      saveViewerParameters(filename.toStdString().c_str(),
+                           comboBox->currentText().toStdString().c_str());
     } catch (rfb::Exception& e) {
       QMessageBox* dlg;
 
