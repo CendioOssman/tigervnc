@@ -87,6 +87,7 @@ set(PROJECT_SOURCES
         tunnelfactory.cxx
         tunnelfactory.h
         i18n.h
+        i18n.cxx
         menukey.h
         menukey.cxx
         MonitorIndicesParameter.cxx
@@ -99,8 +100,6 @@ set(PROJECT_SOURCES
         CConn.cxx
         toast.cxx
         toast.h
-        loggerconfig.cxx
-        loggerconfig.h
         viewerconfig.cxx
         viewerconfig.h
         ServerDialog.cxx

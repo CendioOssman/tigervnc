@@ -21,7 +21,6 @@
 #include <rfb/Logger_stdio.h>
 
 #include "appmanager.h"
-#include "loggerconfig.h"
 #include "i18n.h"
 #undef asprintf
 #include "parameters.h"
@@ -61,39 +60,6 @@ static void CleanupSignalHandler(int sig)
   // exit() rather than the default which is to abort.
   vlog.info(_("Termination signal %d has been received. TigerVNC Viewer will now exit."), sig);
   exit(1);
-}
-
-static bool loadCatalog(const QString &catalog, const QString &location)
-{
-  QTranslator* qtTranslator = new QTranslator(QCoreApplication::instance());
-  if (!qtTranslator->load(QLocale::system(), catalog, QString(), location)) {
-    return false;
-  }
-  QCoreApplication::instance()->installTranslator(qtTranslator);
-  return true;
-}
-
-static void installQtTranslators()
-{
-  // FIXME: KDE first loads English translation for some reason. See:
-  // https://invent.kde.org/frameworks/ki18n/-/blob/master/src/i18n/main.cpp
-#ifdef Q_OS_LINUX
-  QString location = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
-#else
-  QString location = ":/i18n";
-#endif
-  if (loadCatalog(QStringLiteral("qt_"), location)) {
-    return;
-  }
-  const auto catalogs = {
-      QStringLiteral("qtbase_"),
-      QStringLiteral("qtscript_"),
-      QStringLiteral("qtmultimedia_"),
-      QStringLiteral("qtxmlpatterns_"),
-  };
-  for (const auto &catalog : catalogs) {
-    loadCatalog(catalog, location);
-  }
 }
 
 static void usage()
@@ -215,7 +181,7 @@ int main(int argc, char *argv[])
   icon.addFile(":/tigervnc_128.png", QSize(128, 128));
   app.setWindowIcon(icon);
 
-  LoggerConfig logger;
+  i18n_init();
 
   rfb::initStdIOLoggers();
 #ifdef WIN32
@@ -236,8 +202,6 @@ int main(int argc, char *argv[])
 #else
   rfb::LogWriter::setLogParams("*:stderr:30");
 #endif
-
-  installQtTranslators();
 
   QString about = about_text();
   fprintf(stderr, "\n%s\n", about.toStdString().c_str());
