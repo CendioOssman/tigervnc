@@ -15,6 +15,8 @@
 
 #include <network/TcpSocket.h>
 
+#include <rfb/Exception.h>
+#include <rfb/Hostname.h>
 #include <rfb/LogWriter.h>
 
 #include "appmanager.h"
@@ -29,6 +31,8 @@
 #include "tunnelfactory.h"
 
 static rfb::LogWriter vlog("main");
+
+QString serverName;
 
 static QString about_text()
 {
@@ -92,8 +96,93 @@ static void installQtTranslators()
   }
 }
 
+static void usage()
+{
+  QString argv0 = QGuiApplication::arguments().at(0);
+  std::string str = argv0.toStdString();
+  const char* programName = str.c_str();
+
+  fprintf(stderr,
+          "\n"
+          "usage: %s [parameters] [host][:displayNum]\n"
+          "       %s [parameters] [host][::port]\n"
+#ifndef WIN32
+          "       %s [parameters] [unix socket]\n"
+#endif
+          "       %s [parameters] -listen [port]\n"
+          "       %s [parameters] [.tigervnc file]\n",
+          programName,
+          programName,
+#ifndef WIN32
+          programName,
+#endif
+          programName,
+          programName);
+
+#if !defined(WIN32) && !defined(__APPLE__)
+  fprintf(stderr,
+          "\n"
+          "Options:\n\n"
+          "  -display Xdisplay  - Specifies the X display for the viewer window\n"
+          "  -geometry geometry - Initial position of the main VNC viewer window. See the\n"
+          "                       man page for details.\n");
+#endif
+
+  fprintf(stderr,
+          "\n"
+          "Parameters can be turned on with -<param> or off with -<param>=0\n"
+          "Parameters which take a value can be specified as "
+          "-<param> <value>\n"
+          "Other valid forms are <param>=<value> -<param>=<value> "
+          "--<param>=<value>\n"
+          "Parameter names are case-insensitive.  The parameters are:\n\n");
+  rfb::Configuration::listParams(79, 14);
+
+#if defined(WIN32)
+  // Just wait for the user to kill the console window
+  Sleep(INFINITE);
+#endif
+
+  QGuiApplication::exit(1);
+  exit(1);
+}
+
+static bool potentiallyLoadConfigurationFile(QString vncServerName)
+{
+  bool hasPathSeparator = vncServerName.contains('/') || vncServerName.contains('\\');
+  if (hasPathSeparator) {
+#ifndef WIN32
+    struct stat sb;
+
+    // This might be a UNIX socket, we need to check
+    if (stat(vncServerName.toStdString().c_str(), &sb) == -1) {
+      // Some access problem; let loadViewerParameters() deal with it...
+    } else {
+      if ((sb.st_mode & S_IFMT) == S_IFSOCK) {
+        return true;
+      }
+    }
+#endif
+
+    try {
+      serverName = loadViewerParameters(vncServerName.toStdString().c_str());
+    } catch (rfb::Exception& e) {
+      QString str = QString::asprintf(_("Unable to load the specified configuration file:\n\n%s"), e.str());
+      vlog.error("%s", str.toStdString().c_str());
+      AppManager::instance()->publishError(str, true);
+      return false;
+    }
+  }
+  return true;
+}
+
 int main(int argc, char *argv[])
 {
+  QString serverHost;
+  static const int SERVER_PORT_OFFSET = 5900; // ??? 5500;
+  int serverPort = SERVER_PORT_OFFSET;
+  int gatewayLocalPort = 0;
+
   if (qEnvironmentVariableIsEmpty("QTGLESSTREAM_DISPLAY")) {
     qputenv("QT_QPA_EGLFS_PHYSICAL_WIDTH", QByteArray("213"));
     qputenv("QT_QPA_EGLFS_PHYSICAL_HEIGHT", QByteArray("120"));
@@ -141,12 +230,70 @@ int main(int argc, char *argv[])
   signal(SIGINT, CleanupSignalHandler);
   signal(SIGTERM, CleanupSignalHandler);
 
+  rfb::Configuration::enableViewerParams();
+  loadViewerParameters(nullptr);
+  if (::fullScreenAllMonitors) {
+    vlog.info(_("FullScreenAllMonitors is deprecated, set FullScreenMode to 'all' instead"));
+    ::fullScreenMode.setParam("all");
+  }
+  for (int i = 1; i < argc;) {
+    /* We need to resolve an ambiguity for booleans */
+    if (argv[i][0] == '-' && i + 1 < argc) {
+      QString name = &argv[i][1];
+      rfb::VoidParameter* param = rfb::Configuration::getParam(name.toStdString().c_str());
+      if ((param != nullptr) && (dynamic_cast<rfb::BoolParameter*>(param) != nullptr)) {
+        QString opt = argv[i + 1];
+        if ((opt.compare("0") == 0) || (opt.compare("1") == 0) || (opt.compare("true", Qt::CaseInsensitive) == 0)
+            || (opt.compare("false", Qt::CaseInsensitive) == 0) || (opt.compare("yes", Qt::CaseInsensitive) == 0)
+            || (opt.compare("no", Qt::CaseInsensitive) == 0)) {
+          param->setParam(opt.toStdString().c_str());
+          i += 2;
+          continue;
+        }
+      }
+    }
+
+    if (rfb::Configuration::setParam(argv[i])) {
+      i++;
+      continue;
+    }
+
+    if (argv[i][0] == '-') {
+      if (i + 1 < argc) {
+        if (rfb::Configuration::setParam(&argv[i][1], argv[i + 1])) {
+          i += 2;
+          continue;
+        }
+      }
+
+      usage();
+    }
+
+    serverName = argv[i];
+    i++;
+  }
+  // Check if the server name in reality is a configuration file
+  potentiallyLoadConfigurationFile(serverName);
+
+  /* Specifying -via and -listen together is nonsense */
+  if (::listenMode && ::via.getValueStr().length() > 0) {
+    // TRANSLATORS: "Parameters" are command line arguments, or settings
+    // from a file or the Windows registry.
+    vlog.error(_("Parameters -listen and -via are incompatible"));
+    QGuiApplication::exit(1);
+  }
+
+  if (!QString(::via).isEmpty() && !gatewayLocalPort) {
+    network::initSockets();
+    gatewayLocalPort = network::findFreeTcpPort();
+  }
+  std::string shost;
+  rfb::getHostAndPort(serverName.toStdString().c_str(), &shost, &serverPort);
+  serverHost = shost.c_str();
+
   app.setQuitOnLastWindowClosed(false);
 
-  QObject::connect(ViewerConfig::instance(), &ViewerConfig::errorOccurred,
-                   AppManager::instance(), [&](QString str){ AppManager::instance()->publishError(str, true); });
   AppManager::instance()->initialize();
-  ViewerConfig::instance()->initialize();
 
   const char* homeDir = os::getvncconfigdir();
   if (homeDir == nullptr) {
@@ -164,7 +311,7 @@ int main(int argc, char *argv[])
     std::list<network::SocketListener*> listeners;
     try {
       bool ok;
-      int port = ViewerConfig::instance()->getServerName().toInt(&ok);
+      int port = serverName.toInt(&ok);
       if (!ok) {
         port = 5500;
       }
@@ -211,7 +358,7 @@ int main(int argc, char *argv[])
       listeners.pop_back();
     }
   } else {
-    if (!ViewerConfig::instance()->getServerName().isEmpty()) {
+    if (!serverName.isEmpty()) {
       AppManager::instance()->setCommandLine(true);
     } else {
       ServerDialog* dlg = new ServerDialog;
@@ -226,13 +373,18 @@ int main(int argc, char *argv[])
         return 1;
       }
 
+      serverName = dlg->getServerName();
+
       delete dlg;
     }
 
-    QString gatewayHost = ViewerConfig::instance()->getGatewayHost();
-    QString remoteHost = ViewerConfig::instance()->getServerHost();
+    rfb::getHostAndPort(serverName.toStdString().c_str(), &shost, &serverPort);
+    serverHost = shost.c_str();
+
+    QString gatewayHost = QString(::via);
+    QString remoteHost = serverHost;
     if (!gatewayHost.isEmpty() && !remoteHost.isEmpty()) {
-      tunnelFactory = new TunnelFactory;
+      tunnelFactory = new TunnelFactory(gatewayHost.toStdString().c_str(), remoteHost.toStdString().c_str(), serverPort, gatewayLocalPort);
       tunnelFactory->start();
   #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
       tunnelFactory->wait(20000);
@@ -242,7 +394,14 @@ int main(int argc, char *argv[])
     }
   }
 
-  int ret = AppManager::instance()->exec(ViewerConfig::instance()->getFinalAddress().toStdString().c_str(), socket);
+  QString finalAddress;
+  if(!QString(::via).isEmpty()) {
+    finalAddress = QString("localhost::%2").arg(gatewayLocalPort);
+  } else {
+    finalAddress = QString("%1::%2").arg(serverHost).arg(serverPort);
+  }
+
+  int ret = AppManager::instance()->exec(finalAddress.toStdString().c_str(), socket);
 
   delete tunnelFactory;
 
