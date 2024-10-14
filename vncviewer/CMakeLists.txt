@@ -68,7 +68,6 @@ endif()
 
 set(PROJECT_SOURCES
         vncviewer.cxx
-        vnctranslator.h
         appmanager.h
         appmanager.cxx
         Keyboard.h

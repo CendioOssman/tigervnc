@@ -28,7 +28,6 @@
 #include "ServerDialog.h"
 #include "viewerconfig.h"
 #include "vncapplication.h"
-#include "vnctranslator.h"
 #include "tunnelfactory.h"
 
 static rfb::LogWriter vlog("main");
@@ -238,8 +237,6 @@ int main(int argc, char *argv[])
   rfb::LogWriter::setLogParams("*:stderr:30");
 #endif
 
-  VNCTranslator translator;
-  app.installTranslator(&translator);
   installQtTranslators();
 
   QString about = about_text();
