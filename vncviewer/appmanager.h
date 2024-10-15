@@ -30,17 +30,10 @@ public:
 
   bool isCommandLine() const { return commandLine; }
 
-signals:
-  void credentialRequested(bool secured, bool userNeeded, bool passwordNeeded);
-  void authenticateRequested(QString user, QString password);
-  void cancelAuthRequested();
-
 public slots:
   void publishError(const QString message, bool quit = false);
   void publishUnexpectedError(QString message, bool quit = false);
   bool should_disconnect();
-  void authenticate(QString user, QString password);
-  void cancelAuth();
   void openDialog(QDialog* d);
 
 private:
