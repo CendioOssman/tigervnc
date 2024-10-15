@@ -1,5 +1,5 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
- * Copyright 2011-2023 Pierre Ossman <ossman@cendio.se> for Cendio AB
+ * Copyright 2011-2024 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,8 @@
 
 #ifndef _I18N_H
 #define _I18N_H 1
+
+void i18n_init();
 
 /* Need to tell gcc that pgettext() doesn't screw up format strings */
 #ifdef __GNUC__
