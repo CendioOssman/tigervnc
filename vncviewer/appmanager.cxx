@@ -172,11 +172,6 @@ bool AppManager::should_disconnect()
   return !exitError.empty();
 }
 
-void AppManager::openContextMenu()
-{
-  emit contextMenuRequested();
-}
-
 void AppManager::openDialog(QDialog* d)
 {
   bool reopen = false;
