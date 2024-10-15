@@ -68,14 +68,12 @@ AuthDialog::AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidg
   connect(okBtn, &QPushButton::clicked, this, &AuthDialog::accept);
 }
 
-void AuthDialog::accept()
+QString AuthDialog::getUser() const
 {
-  QDialog::accept();
-  AppManager::instance()->authenticate(userText ? userText->text() : "", passwordText ? passwordText->text() : "");
+  return userText ? userText->text() : QString();
 }
 
-void AuthDialog::reject()
+QString AuthDialog::getPassword() const
 {
-  QDialog::reject();
-  AppManager::instance()->cancelAuth();
+  return passwordText ? passwordText->text() : QString();
 }

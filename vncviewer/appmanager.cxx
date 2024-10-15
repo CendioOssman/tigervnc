@@ -20,7 +20,6 @@
 #include <QApplication>
 #undef asprintf
 #include "Viewport.h"
-#include "authdialog.h"
 #include "DesktopWindow.h"
 #include "parameters.h"
 #include "vncviewer.h"
@@ -52,11 +51,6 @@ void AppManager::initialize()
       rfbTimerProxy->start(next);
   });
   rfbTimerProxy->setSingleShot(true);
-
-  connect(this, &AppManager::credentialRequested, this, [=](bool secured, bool userNeeded, bool passwordNeeded) {
-    AuthDialog d(secured, userNeeded, passwordNeeded);
-    d.exec();
-  });
 
 #ifdef __APPLE__
   QMenuBar* menuBar = new QMenuBar(nullptr); // global menu bar for mac
@@ -140,16 +134,6 @@ AppManager *AppManager::instance()
 {
   static AppManager manager;
   return &manager;
-}
-
-void AppManager::authenticate(QString user, QString password)
-{
-  emit authenticateRequested(user, password);
-}
-
-void AppManager::cancelAuth()
-{
-  emit cancelAuthRequested();
 }
 
 void AppManager::publishError(const QString message, bool quit)

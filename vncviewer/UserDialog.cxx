@@ -8,6 +8,7 @@
 #include "rfb/Exception.h"
 #include "rfb/obfuscate.h"
 #include "appmanager.h"
+#include "authdialog.h"
 #include "i18n.h"
 #include "parameters.h"
 
@@ -28,8 +29,6 @@ void UserDialog::getUserPasswd(bool secure, std::string *user, std::string *pass
   const char *passwordFileName(::passwordFile);
   bool userNeeded = user != nullptr;
   bool passwordNeeded = password != nullptr;
-  bool canceled = false;
-  AppManager *manager = AppManager::instance();
   QString envUsername = QString(qgetenv("VNC_USERNAME"));
   QString envPassword = QString(qgetenv("VNC_PASSWORD"));
   if (user && !envUsername.isEmpty() && !envPassword.isEmpty()) {
@@ -55,20 +54,18 @@ void UserDialog::getUserPasswd(bool secure, std::string *user, std::string *pass
     password->assign(rfb::deobfuscate(obfPwd.data(), obfPwd.size()));
     return;
   }
-  connect(AppManager::instance(), &AppManager::authenticateRequested, this, [&](QString userText, QString passwordText) {
-    if (userNeeded) {
-      user->assign(userText.toStdString());
-    }
-    if (passwordNeeded) {
-      password->assign(passwordText.toStdString());
-    }
-  });
-  connect(AppManager::instance(), &AppManager::cancelAuthRequested, this, [&]() {
-    canceled = true;
-  });
-  emit manager->credentialRequested(secure, userNeeded, passwordNeeded);
-  if (canceled) {
+
+  AuthDialog d(secure, userNeeded, passwordNeeded);
+  d.exec();
+  if (d.result() != QDialog::Accepted) {
     throw rfb::Exception(_("Authentication cancelled"));
+  }
+
+  if (userNeeded) {
+    user->assign(d.getUser().toStdString());
+  }
+  if (passwordNeeded) {
+    password->assign(d.getPassword().toStdString());
   }
 }
 
