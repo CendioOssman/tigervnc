@@ -32,12 +32,8 @@ public:
 
 signals:
   void credentialRequested(bool secured, bool userNeeded, bool passwordNeeded);
-  void messageDialogRequested(int flags, QString title, QString text);
-  void dataReady(QByteArray bytes);
   void authenticateRequested(QString user, QString password);
   void cancelAuthRequested();
-  void invalidateRequested(int x0, int y0, int x1, int y1);
-  void contextMenuRequested();
 
 public slots:
   void publishError(const QString message, bool quit = false);
@@ -45,7 +41,6 @@ public slots:
   bool should_disconnect();
   void authenticate(QString user, QString password);
   void cancelAuth();
-  void openContextMenu();
   void openDialog(QDialog* d);
 
 private:
