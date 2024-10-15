@@ -92,37 +92,41 @@ static const char* getlocaledir()
 #endif
 }
 
-static bool loadCatalog(const QString &catalog, const QString &location)
+static bool load_catalog(const char* catalog, const QString& location)
 {
-  QTranslator* qtTranslator = new QTranslator(QCoreApplication::instance());
-  if (!qtTranslator->load(QLocale::system(), catalog, QString(), location)) {
+  QTranslator* translator;
+
+  translator = new QTranslator(QCoreApplication::instance());
+  if (!translator->load(QLocale::system(), catalog, "", location))
     return false;
-  }
-  QCoreApplication::instance()->installTranslator(qtTranslator);
+
+  QCoreApplication::instance()->installTranslator(translator);
+
   return true;
 }
 
-static void installQtTranslators()
+// This is based on how KDE loads Qt's translations
+static void load_catalogs(const QString& location)
 {
   // FIXME: KDE first loads English translation for some reason. See:
   // https://invent.kde.org/frameworks/ki18n/-/blob/master/src/i18n/main.cpp
-#ifdef Q_OS_LINUX
-  QString location = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
-#else
-  QString location = ":/i18n";
-#endif
-  if (loadCatalog(QStringLiteral("qt_"), location)) {
+
+  // First try to load the primary catalog
+  if (load_catalog("qt_", location))
     return;
-  }
-  const auto catalogs = {
-      QStringLiteral("qtbase_"),
-      QStringLiteral("qtscript_"),
-      QStringLiteral("qtmultimedia_"),
-      QStringLiteral("qtxmlpatterns_"),
+
+  // For some languages, that is just a meta catalog, which might be
+  // missing. Try loading the individual catalogs instead.
+  const char* catalogs[] = {
+      "qtbase_",
+      "qtmultimedia_",
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+      "qtscript_",
+      "qtxmlpatterns_",
+#endif
   };
-  for (const auto &catalog : catalogs) {
-    loadCatalog(catalog, location);
-  }
+  for (const char* catalog : catalogs)
+    load_catalog(catalog, location);
 }
 
 void i18n_init()
@@ -144,5 +148,10 @@ void i18n_init()
   bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
   bind_textdomain_codeset("libc", "UTF-8");
 
-  installQtTranslators();
+#ifdef Q_OS_LINUX
+  load_catalogs(QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+#else
+  // FIXME: Only for static builds? Only fallback?
+  load_catalogs(":/i18n");
+#endif
 }
