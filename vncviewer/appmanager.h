@@ -23,16 +23,10 @@ public:
 
   void initialize();
 
-  void setCommandLine(bool b) { commandLine = b; }
-
-  bool isCommandLine() const { return commandLine; }
-
 public slots:
   void openDialog(QDialog* d);
 
 private:
-  bool commandLine = false;
-  bool connectedOnce = false;
   AppManager();
 };
 
