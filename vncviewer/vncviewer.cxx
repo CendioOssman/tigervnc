@@ -4,12 +4,14 @@
 
 #include <signal.h>
 
+#include <QAbstractEventDispatcher>
 #include <QApplication>
 #include <QDir>
 #include <QIcon>
 #include <QLibraryInfo>
 #include <QDeadlineTimer>
 #include <QMessageBox>
+#include <QTimer>
 
 #include <os/os.h>
 
@@ -19,6 +21,7 @@
 #include <rfb/Hostname.h>
 #include <rfb/LogWriter.h>
 #include <rfb/Logger_stdio.h>
+#include <rfb/Timer.h>
 
 #include "appmanager.h"
 #include "i18n.h"
@@ -274,6 +277,18 @@ int main(int argc, char *argv[])
   serverHost = shost.c_str();
 
   app.setQuitOnLastWindowClosed(false);
+
+  QTimer rfbTimerProxy;
+  QObject::connect(&rfbTimerProxy, &QTimer::timeout,
+                   []() { rfb::Timer::checkTimeouts(); });
+  QObject::connect(QApplication::eventDispatcher(),
+                   &QAbstractEventDispatcher::aboutToBlock,
+                   [&rfbTimerProxy]() {
+                     int next = rfb::Timer::checkTimeouts();
+                       if (next != -1)
+                         rfbTimerProxy.start(next);
+                   });
+  rfbTimerProxy.setSingleShot(true);
 
   AppManager::instance()->initialize();
 

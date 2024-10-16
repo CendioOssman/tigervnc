@@ -4,7 +4,6 @@
 #include <QObject>
 
 class DesktopWindow;
-class QTimer;
 class CConn;
 class ServerDialog;
 class QDialog;
@@ -42,7 +41,6 @@ private:
   bool fatalError = false;
   std::string exitError;
   CConn* connection = nullptr;
-  QTimer* rfbTimerProxy;
   AppManager();
 };
 
