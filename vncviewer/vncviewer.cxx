@@ -440,9 +440,7 @@ int main(int argc, char *argv[])
       listeners.pop_back();
     }
   } else {
-    if (!serverName.isEmpty()) {
-      AppManager::instance()->setCommandLine(true);
-    } else {
+    if (serverName.isEmpty()) {
       ServerDialog* dlg = new ServerDialog;
 
       QObject::connect(dlg, &ServerDialog::finished, []() { qApp->quit(); });
