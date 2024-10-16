@@ -23,24 +23,16 @@ public:
 
   void initialize();
 
-  int exec(const char* vncserver, network::Socket* sock);
-
   void setCommandLine(bool b) { commandLine = b; }
 
   bool isCommandLine() const { return commandLine; }
 
 public slots:
-  void publishError(const QString message, bool quit = false);
-  void publishUnexpectedError(QString message, bool quit = false);
-  bool should_disconnect();
   void openDialog(QDialog* d);
 
 private:
   bool commandLine = false;
   bool connectedOnce = false;
-  bool fatalError = false;
-  std::string exitError;
-  CConn* connection = nullptr;
   AppManager();
 };
 

@@ -16,6 +16,7 @@
 #include "toast.h"
 #include "CConn.h"
 #include "viewerconfig.h"
+#include "vncviewer.h"
 
 #include <QApplication>
 #include <QMoveEvent>
@@ -715,7 +716,7 @@ void DesktopWindow::remoteResize(int w, int h)
   try {
     cc->writer()->writeSetDesktopSize(w, h, layout);
   } catch (rdr::Exception& e) {
-    AppManager::instance()->publishError(e.str());
+    abort_connection(e.str());
   }
 }
 

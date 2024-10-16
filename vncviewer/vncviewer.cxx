@@ -24,17 +24,22 @@
 #include <rfb/Timer.h>
 
 #include "appmanager.h"
+#include "CConn.h"
 #include "i18n.h"
 #undef asprintf
 #include "parameters.h"
 #include "ServerDialog.h"
 #include "viewerconfig.h"
 #include "vncapplication.h"
+#include "vncviewer.h"
 #include "tunnelfactory.h"
 
 static rfb::LogWriter vlog("main");
 
 QString serverName;
+
+static bool fatalError = false;
+static std::string exitError;
 
 static QString about_text()
 {
@@ -47,6 +52,31 @@ static QString about_text()
                            QDate::currentDate().year());
 }
 
+void abort_vncviewer(const QString &message)
+{
+  abort_connection(message, true);
+}
+
+void abort_connection(const QString &message, bool quit)
+{
+  fatalError = quit;
+  exitError = message.toStdString();
+  qApp->quit();
+}
+
+void abort_connection_with_unexpected_error(QString message, bool quit)
+{
+  message = QString::asprintf(_("An unexpected error occurred when communicating "
+                                "with the server:\n\n%s"), message.toStdString().c_str());
+  abort_connection(message, quit);
+}
+
+bool should_disconnect()
+{
+  // FIXME: Doesn't handle clean disconnect
+  return !exitError.empty();
+}
+
 void about_vncviewer(QWidget* parent)
 {
   QMessageBox* dlg;
@@ -55,6 +85,61 @@ void about_vncviewer(QWidget* parent)
                         _("About TigerVNC Viewer"),
                         about_text(), QMessageBox::Close, parent);
   AppManager::instance()->openDialog(dlg);
+}
+
+static int mainloop(const char* vncserver, network::Socket* sock)
+{
+  int ret = 0;
+
+  while (true) {
+    CConn* connection = nullptr;
+
+    connection = new CConn(vncserver, sock);
+
+    if (exitError.empty())
+      ret = qApp->exec();
+
+    delete connection;
+    connection = nullptr;
+
+    if (fatalError) {
+      if (alertOnFatalError) {
+        QMessageBox* d = new QMessageBox(QMessageBox::Critical,
+                                        _("Connection error"),
+                                        exitError.c_str(),
+                                        QMessageBox::NoButton);
+        d->addButton(QMessageBox::Close);
+        AppManager::instance()->openDialog(d);
+      }
+      break;
+    }
+
+    if (exitError.empty())
+      break;
+
+    if (reconnectOnError && (sock == nullptr)) {
+      QString text;
+      text = QString::asprintf(_("%s\n\nAttempt to reconnect?"), exitError.c_str());
+
+      QMessageBox* d = new QMessageBox(QMessageBox::Critical,
+                                        _("Connection error"), text,
+                                        QMessageBox::NoButton);
+      d->addButton(_("Reconnect"), QMessageBox::AcceptRole);
+      d->addButton(QMessageBox::Close);
+
+      AppManager::instance()->openDialog(d);
+      if (d->buttonRole(d->clickedButton()) == QMessageBox::AcceptRole) {
+        exitError.clear();
+        continue;
+      } else {
+        break;
+      }
+    }
+
+    break;
+  }
+
+  return ret;
 }
 
 static void CleanupSignalHandler(int sig)
@@ -138,7 +223,7 @@ static bool potentiallyLoadConfigurationFile(QString vncServerName)
     } catch (rfb::Exception& e) {
       QString str = QString::asprintf(_("Unable to load the specified configuration file:\n\n%s"), e.str());
       vlog.error("%s", str.toStdString().c_str());
-      AppManager::instance()->publishError(str, true);
+      abort_vncviewer(str);
       return false;
     }
   }
@@ -346,7 +431,7 @@ int main(int argc, char *argv[])
       }
     } catch (rdr::Exception& e) {
       vlog.error("%s", e.str());
-      AppManager::instance()->publishError(QString::asprintf(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str()));
+      abort_vncviewer(QString::asprintf(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str()));
       QCoreApplication::exit(1);
     }
 
@@ -398,7 +483,7 @@ int main(int argc, char *argv[])
     finalAddress = QString("%1::%2").arg(serverHost).arg(serverPort);
   }
 
-  int ret = AppManager::instance()->exec(finalAddress.toStdString().c_str(), socket);
+  int ret = mainloop(finalAddress.toStdString().c_str(), socket);
 
   delete tunnelFactory;
 

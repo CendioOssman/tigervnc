@@ -85,7 +85,11 @@ ServerDialog::ServerDialog(QWidget* parent)
     loadServerHistory();
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    AppManager::instance()->publishError(QString::asprintf(_("Unable to load the server history:\n\n%s"), e.str()));
+    QMessageBox* dlg = new QMessageBox(QMessageBox::Critical,
+                                       _("Error loading server history"),
+                                       QString::asprintf(_("Unable to load the server history:\n\n%s"), e.str()),
+                                       QMessageBox::Close);
+    AppManager::instance()->openDialog(dlg);
   }
 
   QStringListModel* model = new QStringListModel();
@@ -106,8 +110,11 @@ void ServerDialog::connectTo()
     saveViewerParameters(nullptr, text.toStdString().c_str());
   } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
-    AppManager::instance()->publishError(QString::asprintf(_("Unable to save the default configuration:\n\n%s"),
-                                                            e.str()));
+    QMessageBox* dlg = new QMessageBox(QMessageBox::Critical,
+                                       _("Error saving configuration"),
+                                       QString::asprintf(_("Unable to save the default configuration:\n\n%s"), e.str()),
+                                       QMessageBox::Close);
+    AppManager::instance()->openDialog(dlg);
   }
 
   serverHistory.removeOne(text);
@@ -117,8 +124,11 @@ void ServerDialog::connectTo()
     saveServerHistory();
   } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
-    AppManager::instance()->publishError(QString::asprintf(_("Unable to save the server history:\n\n%s"),
-                                                            e.str()));
+    QMessageBox* dlg = new QMessageBox(QMessageBox::Critical,
+                                       _("Error loading server history"),
+                                       QString::asprintf(_("Unable to save the server history:\n\n%s"), e.str()),
+                                       QMessageBox::Close);
+    AppManager::instance()->openDialog(dlg);
   }
 
   accept();
