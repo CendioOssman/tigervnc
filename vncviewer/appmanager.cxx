@@ -13,10 +13,8 @@
 #include <QMenuBar>
 #endif
 #include "i18n.h"
-#include "rfb/Timer.h"
 #include "rfb/LogWriter.h"
 
-#include <QAbstractEventDispatcher>
 #include <QApplication>
 #undef asprintf
 #include "Viewport.h"
@@ -41,17 +39,6 @@ AppManager::AppManager()
 
 void AppManager::initialize()
 {
-  rfbTimerProxy = new QTimer;
-  connect(rfbTimerProxy, &QTimer::timeout, this, []() {
-    rfb::Timer::checkTimeouts();
-  });
-  connect(QApplication::eventDispatcher(), &QAbstractEventDispatcher::aboutToBlock, this, [this]() {
-    int next = rfb::Timer::checkTimeouts();
-    if (next != -1)
-      rfbTimerProxy->start(next);
-  });
-  rfbTimerProxy->setSingleShot(true);
-
 #ifdef __APPLE__
   QMenuBar* menuBar = new QMenuBar(nullptr); // global menu bar for mac
   QMenu* appMenu = new QMenu(nullptr);
@@ -127,7 +114,6 @@ int AppManager::exec(const char* vncserver, network::Socket* sock)
 
 AppManager::~AppManager()
 {
-  rfbTimerProxy->deleteLater();
 }
 
 AppManager *AppManager::instance()
