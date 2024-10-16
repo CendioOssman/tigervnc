@@ -21,6 +21,12 @@
 
 class QWidget;
 
+void abort_vncviewer(const QString &message);
+void abort_connection(const QString &message, bool quit=false);
+void abort_connection_with_unexpected_error(QString message, bool quit=false);
+
+bool should_disconnect();
+
 void about_vncviewer(QWidget* parent);
 
 #endif

@@ -22,7 +22,6 @@
 #include "parameters.h"
 #include "vncviewer.h"
 #include "viewerconfig.h"
-#include "CConn.h"
 #undef asprintf
 
 #ifdef __APPLE__
@@ -59,59 +58,6 @@ void AppManager::initialize()
 #endif
 }
 
-int AppManager::exec(const char* vncserver, network::Socket* sock)
-{
-  int ret = 0;
-
-  while (true) {
-    connection = new CConn(vncserver, sock);
-
-    if (exitError.empty())
-      ret = qApp->exec();
-
-    delete connection;
-    connection = nullptr;
-
-    if (fatalError) {
-      if (alertOnFatalError) {
-        QMessageBox* d = new QMessageBox(QMessageBox::Critical,
-                                        _("Connection error"),
-                                        exitError.c_str(),
-                                        QMessageBox::NoButton);
-        d->addButton(QMessageBox::Close);
-        openDialog(d);
-      }
-      break;
-    }
-
-    if (exitError.empty())
-      break;
-
-    if (reconnectOnError && (sock == nullptr)) {
-      QString text;
-      text = QString::asprintf(_("%s\n\nAttempt to reconnect?"), exitError.c_str());
-
-      QMessageBox* d = new QMessageBox(QMessageBox::Critical,
-                                        _("Connection error"), text,
-                                        QMessageBox::NoButton);
-      d->addButton(_("Reconnect"), QMessageBox::AcceptRole);
-      d->addButton(QMessageBox::Close);
-
-      openDialog(d);
-      if (d->buttonRole(d->clickedButton()) == QMessageBox::AcceptRole) {
-        exitError.clear();
-        continue;
-      } else {
-        break;
-      }
-    }
-
-    break;
-  }
-
-  return ret;
-}
-
 AppManager::~AppManager()
 {
 }
@@ -120,26 +66,6 @@ AppManager *AppManager::instance()
 {
   static AppManager manager;
   return &manager;
-}
-
-void AppManager::publishError(const QString message, bool quit)
-{
-  fatalError = quit;
-  exitError = message.toStdString();
-  qApp->quit();
-}
-
-void AppManager::publishUnexpectedError(QString message, bool quit)
-{
-  message = QString::asprintf(_("An unexpected error occurred when communicating "
-                                "with the server:\n\n%s"), message.toStdString().c_str());
-  publishError(message, quit);
-}
-
-bool AppManager::should_disconnect()
-{
-  // FIXME: Doesn't handle clean disconnect
-  return !exitError.empty();
 }
 
 void AppManager::openDialog(QDialog* d)

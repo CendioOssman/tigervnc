@@ -54,6 +54,7 @@
 #include "DesktopWindow.h"
 #include "UserDialog.h"
 #include "CConn.h"
+#include "vncviewer.h"
 #undef asprintf
 
 #if !defined(Q_OS_WIN)
@@ -127,8 +128,8 @@ CConn::CConn(const char* vncserver, network::Socket* socket_)
       }
     } catch (rdr::Exception& e) {
       vlog.error("%s", e.str());
-      AppManager::instance()->publishError(QString::asprintf(_("Failed to connect to \"%s\":\n\n%s"),
-                                                            address.toStdString().c_str(), e.str()));
+      abort_connection(QString::asprintf(_("Failed to connect to \"%s\":\n\n%s"),
+                                         address.toStdString().c_str(), e.str()));
       return;
     }
   }
@@ -259,7 +260,7 @@ void CConn::startProcessing()
 
     while (processMsg()) {
       qApp->processEvents();
-      if (AppManager::instance()->should_disconnect())
+      if (should_disconnect())
         break;
     }
 
@@ -272,13 +273,13 @@ void CConn::startProcessing()
                    "the session could be established."));
       QString message = _("The connection was dropped by the server "
                         "before the session could be established.");
-      AppManager::instance()->publishError(message);
+      abort_connection(message);
     } else {
       qApp->quit();
     }
   } catch (rdr::Exception& e) {
     recursing = false;
-    AppManager::instance()->publishUnexpectedError(e.str());
+    abort_connection_with_unexpected_error(e.str());
   }
 
   socketReadNotifier->setEnabled(true);
@@ -638,6 +639,6 @@ void CConn::handleUpdateTimeout(rfb::Timer*)
   try {
     framebufferUpdateEnd();
   } catch (rdr::Exception& e) {
-    AppManager::instance()->publishError(e.str());
+    abort_connection(e.str());
   }
 }
