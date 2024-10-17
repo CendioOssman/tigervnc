@@ -39,6 +39,7 @@ static rfb::LogWriter vlog("main");
 
 QString serverName;
 
+static bool exitMainloop = false;
 static bool fatalError = false;
 static std::string exitError;
 
@@ -70,6 +71,8 @@ void abort_connection(const char *error, ...)
   va_start(ap, error);
   exitError = rfb::vformat(error, ap);
   va_end(ap);
+
+  exitMainloop = true;
   qApp->quit();
 }
 
@@ -79,10 +82,15 @@ void abort_connection_with_unexpected_error(const rdr::Exception &e)
                      "with the server:\n\n%s"), e.str());
 }
 
+void disconnect()
+{
+  exitMainloop = true;
+  qApp->quit();
+}
+
 bool should_disconnect()
 {
-  // FIXME: Doesn't handle clean disconnect
-  return !exitError.empty();
+  return exitMainloop;
 }
 
 void about_vncviewer(QWidget* parent)
@@ -102,9 +110,11 @@ static int mainloop(const char* vncserver, network::Socket* sock)
   while (true) {
     CConn* connection = nullptr;
 
+    exitMainloop = false;
+
     connection = new CConn(vncserver, sock);
 
-    if (exitError.empty())
+    if (!exitMainloop)
       ret = qApp->exec();
 
     delete connection;

@@ -876,7 +876,7 @@ void DesktopWindow::focusOutEvent(QFocusEvent*)
 void DesktopWindow::closeEvent(QCloseEvent* e)
 {
   QWidget::closeEvent(e);
-  qApp->quit();
+  ::disconnect();
 }
 
 bool DesktopWindow::event(QEvent* event)
