@@ -64,11 +64,12 @@ void abort_connection(const QString &message, bool quit)
   qApp->quit();
 }
 
-void abort_connection_with_unexpected_error(QString message, bool quit)
+void abort_connection_with_unexpected_error(const rdr::Exception &e)
 {
+  QString message;
   message = QString::asprintf(_("An unexpected error occurred when communicating "
-                                "with the server:\n\n%s"), message.toStdString().c_str());
-  abort_connection(message, quit);
+                                "with the server:\n\n%s"), e.str());
+  abort_connection(message);
 }
 
 bool should_disconnect()
