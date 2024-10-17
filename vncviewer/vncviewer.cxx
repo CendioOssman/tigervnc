@@ -39,6 +39,7 @@ static rfb::LogWriter vlog("main");
 
 QString serverName;
 
+static bool inMainloop = false;
 static bool exitMainloop = false;
 static bool fatalError = false;
 static std::string exitError;
@@ -61,13 +62,31 @@ void abort_vncviewer(const char *error, ...)
   fatalError = true;
 
   va_start(ap, error);
-  abort_connection("%s", rfb::vformat(error, ap).c_str());
+  exitError = rfb::vformat(error, ap);
   va_end(ap);
+
+  if (inMainloop) {
+    exitMainloop = true;
+    qApp->quit();
+  } else {
+    // We're early in the startup. Assume we can just exit().
+    if (alertOnFatalError) {
+      QMessageBox* d = new QMessageBox(QMessageBox::Critical,
+                                      _("Error"),
+                                      exitError.c_str(),
+                                      QMessageBox::Close);
+      AppManager::instance()->openDialog(d);
+    }
+    exit(EXIT_FAILURE);
+  }
 }
 
 void abort_connection(const char *error, ...)
 {
   va_list ap;
+
+  assert(inMainloop);
+
   va_start(ap, error);
   exitError = rfb::vformat(error, ap);
   va_end(ap);
@@ -499,7 +518,9 @@ int main(int argc, char *argv[])
     finalAddress = QString("%1::%2").arg(serverHost).arg(serverPort);
   }
 
+  inMainloop = true;
   int ret = mainloop(finalAddress.toStdString().c_str(), socket);
+  inMainloop = false;
 
   delete tunnelFactory;
 
