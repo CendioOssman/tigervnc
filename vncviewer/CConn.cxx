@@ -279,7 +279,7 @@ void CConn::startProcessing()
     }
   } catch (rdr::Exception& e) {
     recursing = false;
-    abort_connection_with_unexpected_error(e.str());
+    abort_connection_with_unexpected_error(e);
   }
 
   socketReadNotifier->setEnabled(true);

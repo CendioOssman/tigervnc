@@ -21,9 +21,13 @@
 
 class QWidget;
 
+namespace rdr {
+  struct Exception;
+};
+
 void abort_vncviewer(const QString &message);
 void abort_connection(const QString &message, bool quit=false);
-void abort_connection_with_unexpected_error(QString message, bool quit=false);
+void abort_connection_with_unexpected_error(const rdr::Exception &);
 
 bool should_disconnect();
 
