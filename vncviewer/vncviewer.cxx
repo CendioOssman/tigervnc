@@ -56,24 +56,27 @@ static QString about_text()
 void abort_vncviewer(const char *error, ...)
 {
   va_list ap;
+
+  fatalError = true;
+
   va_start(ap, error);
-  abort_connection(QString::vasprintf(error, ap), true);
+  abort_connection("%s", rfb::vformat(error, ap).c_str());
   va_end(ap);
 }
 
-void abort_connection(const QString &message, bool quit)
+void abort_connection(const char *error, ...)
 {
-  fatalError = quit;
-  exitError = message.toStdString();
+  va_list ap;
+  va_start(ap, error);
+  exitError = rfb::vformat(error, ap);
+  va_end(ap);
   qApp->quit();
 }
 
 void abort_connection_with_unexpected_error(const rdr::Exception &e)
 {
-  QString message;
-  message = QString::asprintf(_("An unexpected error occurred when communicating "
-                                "with the server:\n\n%s"), e.str());
-  abort_connection(message);
+  abort_connection(_("An unexpected error occurred when communicating "
+                     "with the server:\n\n%s"), e.str());
 }
 
 bool should_disconnect()

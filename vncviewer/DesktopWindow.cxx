@@ -716,7 +716,7 @@ void DesktopWindow::remoteResize(int w, int h)
   try {
     cc->writer()->writeSetDesktopSize(w, h, layout);
   } catch (rdr::Exception& e) {
-    abort_connection(e.str());
+    abort_connection("%s", e.str());
   }
 }
 

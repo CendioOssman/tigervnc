@@ -128,8 +128,8 @@ CConn::CConn(const char* vncserver, network::Socket* socket_)
       }
     } catch (rdr::Exception& e) {
       vlog.error("%s", e.str());
-      abort_connection(QString::asprintf(_("Failed to connect to \"%s\":\n\n%s"),
-                                         address.toStdString().c_str(), e.str()));
+      abort_connection(_("Failed to connect to \"%s\":\n\n%s"),
+                       address.toStdString().c_str(), e.str());
       return;
     }
   }
@@ -271,9 +271,8 @@ void CConn::startProcessing()
     if (!desktop) {
       vlog.error(_("The connection was dropped by the server before "
                    "the session could be established."));
-      QString message = _("The connection was dropped by the server "
-                        "before the session could be established.");
-      abort_connection(message);
+      abort_connection(_("The connection was dropped by the server "
+                         "before the session could be established."));
     } else {
       qApp->quit();
     }
@@ -639,6 +638,6 @@ void CConn::handleUpdateTimeout(rfb::Timer*)
   try {
     framebufferUpdateEnd();
   } catch (rdr::Exception& e) {
-    abort_connection(e.str());
+    abort_connection("%s", e.str());
   }
 }
