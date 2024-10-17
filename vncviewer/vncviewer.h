@@ -25,13 +25,19 @@ namespace rdr {
   struct Exception;
 };
 
+// Report a fatal issue that requires us to terminate all of vncviewer
 void abort_vncviewer(const char *error, ...)
   __attribute__((__format__ (__printf__, 1, 2)));
+// Report an issue that forces us to terminated the connection, but
+// still permits reconnecting
 void abort_connection(const char *error, ...)
   __attribute__((__format__ (__printf__, 1, 2)));
+// Convenience version of abort_connection() for unexpected exceptions
 void abort_connection_with_unexpected_error(const rdr::Exception &);
 
+// Cleanly terminate the connection
 void disconnect();
+// Are we waiting for the main loop to terminate?
 bool should_disconnect();
 
 void about_vncviewer();
