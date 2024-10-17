@@ -1,7 +1,28 @@
+/* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
+ * Copyright 2011 Pierre Ossman <ossman@cendio.se> for Cendio AB
+ * Copyright (C) 2011 D. R. Commander.  All Rights Reserved.
+ * 
+ * This is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this software; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+ * USA.
+ */
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
+#include <fcntl.h>
 #include <signal.h>
 
 #include <QAbstractEventDispatcher>
@@ -37,33 +58,47 @@
 
 static rfb::LogWriter vlog("main");
 
-QString serverName;
+using namespace network;
+using namespace rfb;
+
+static std::string vncServerName;
 
 static bool inMainloop = false;
 static bool exitMainloop = false;
-static bool fatalError = false;
 static std::string exitError;
+static bool fatalError = false;
 
-static QString about_text()
+static const char *about_text()
 {
-  return QString::asprintf(_("TigerVNC Viewer v%s\n"
-                             "Built on: %s\n"
-                             "Copyright (C) 1999-%d TigerVNC Team and many others (see README.rst)\n"
-                             "See https://www.tigervnc.org for information on TigerVNC."),
-                           PACKAGE_VERSION,
-                           BUILD_TIMESTAMP,
-                           QDate::currentDate().year());
+  static char buffer[1024];
+
+  // This is used in multiple places with potentially different
+  // encodings, so we need to make sure we get a fresh string every
+  // time.
+  snprintf(buffer, sizeof(buffer),
+           _("TigerVNC Viewer v%s\n"
+             "Built on: %s\n"
+             "Copyright (C) 1999-%d TigerVNC Team and many others (see README.rst)\n"
+             "See https://www.tigervnc.org for information on TigerVNC."),
+           PACKAGE_VERSION, BUILD_TIMESTAMP, 2024);
+
+  return buffer;
 }
+
 
 void abort_vncviewer(const char *error, ...)
 {
-  va_list ap;
-
   fatalError = true;
 
-  va_start(ap, error);
-  exitError = rfb::vformat(error, ap);
-  va_end(ap);
+  // Prioritise the first error we get as that is probably the most
+  // relevant one.
+  if (exitError.empty()) {
+    va_list ap;
+
+    va_start(ap, error);
+    exitError = vformat(error, ap);
+    va_end(ap);
+  }
 
   if (inMainloop) {
     exitMainloop = true;
@@ -83,20 +118,23 @@ void abort_vncviewer(const char *error, ...)
 
 void abort_connection(const char *error, ...)
 {
-  va_list ap;
-
   assert(inMainloop);
 
-  va_start(ap, error);
-  exitError = rfb::vformat(error, ap);
-  va_end(ap);
+  // Prioritise the first error we get as that is probably the most
+  // relevant one.
+  if (exitError.empty()) {
+    va_list ap;
+
+    va_start(ap, error);
+    exitError = vformat(error, ap);
+    va_end(ap);
+  }
 
   exitMainloop = true;
   qApp->quit();
 }
 
-void abort_connection_with_unexpected_error(const rdr::Exception &e)
-{
+void abort_connection_with_unexpected_error(const rdr::Exception &e) {
   abort_connection(_("An unexpected error occurred when communicating "
                      "with the server:\n\n%s"), e.str());
 }
@@ -122,24 +160,22 @@ void about_vncviewer(QWidget* parent)
   AppManager::instance()->openDialog(dlg);
 }
 
-static int mainloop(const char* vncserver, network::Socket* sock)
+static void mainloop(const char* vncserver, network::Socket* sock)
 {
-  int ret = 0;
-
   while (true) {
-    CConn* connection = nullptr;
+    CConn *cc;
 
     exitMainloop = false;
 
-    connection = new CConn(vncserver, sock);
+    cc = new CConn(vncserver, sock);
 
     if (!exitMainloop)
-      ret = qApp->exec();
+      qApp->exec();
 
-    delete connection;
-    connection = nullptr;
+    delete cc;
 
     if (fatalError) {
+      assert(!exitError.empty());
       if (alertOnFatalError) {
         QMessageBox* d = new QMessageBox(QMessageBox::Critical,
                                         _("Connection error"),
@@ -153,7 +189,7 @@ static int mainloop(const char* vncserver, network::Socket* sock)
     if (exitError.empty())
       break;
 
-    if (reconnectOnError && (sock == nullptr)) {
+    if(reconnectOnError && (sock == nullptr)) {
       QString text;
       text = QString::asprintf(_("%s\n\nAttempt to reconnect?"), exitError.c_str());
 
@@ -164,18 +200,23 @@ static int mainloop(const char* vncserver, network::Socket* sock)
       d->addButton(QMessageBox::Close);
 
       AppManager::instance()->openDialog(d);
-      if (d->buttonRole(d->clickedButton()) == QMessageBox::AcceptRole) {
-        exitError.clear();
+      exitError.clear();
+      if (d->buttonRole(d->clickedButton()) == QMessageBox::AcceptRole)
         continue;
-      } else {
+      else
         break;
-      }
+    }
+
+    if (alertOnFatalError) {
+      QMessageBox* d = new QMessageBox(QMessageBox::Critical,
+                                      _("Connection error"),
+                                      exitError.c_str(),
+                                      QMessageBox::Close);
+      AppManager::instance()->openDialog(d);
     }
 
     break;
   }
-
-  return ret;
 }
 
 static void CleanupSignalHandler(int sig)
@@ -186,11 +227,21 @@ static void CleanupSignalHandler(int sig)
   exit(1);
 }
 
-static void usage()
+static void usage(const char *programName)
 {
-  QString argv0 = QGuiApplication::arguments().at(0);
-  std::string str = argv0.toStdString();
-  const char* programName = str.c_str();
+#ifdef WIN32
+  // If we don't have a console then we need to create one for output
+  if (GetConsoleWindow() == nullptr) {
+    HANDLE handle;
+    int fd;
+
+    AllocConsole();
+
+    handle = GetStdHandle(STD_ERROR_HANDLE);
+    fd = _open_osfhandle((intptr_t)handle, O_TEXT);
+    *stderr = *fdopen(fd, "w");
+  }
+#endif
 
   fprintf(stderr,
           "\n"
@@ -201,81 +252,131 @@ static void usage()
 #endif
           "       %s [parameters] -listen [port]\n"
           "       %s [parameters] [.tigervnc file]\n",
-          programName,
-          programName,
+          programName, programName,
 #ifndef WIN32
           programName,
 #endif
-          programName,
-          programName);
+          programName, programName);
 
 #if !defined(WIN32) && !defined(__APPLE__)
-  fprintf(stderr,
-          "\n"
+  fprintf(stderr,"\n"
           "Options:\n\n"
           "  -display Xdisplay  - Specifies the X display for the viewer window\n"
           "  -geometry geometry - Initial position of the main VNC viewer window. See the\n"
           "                       man page for details.\n");
 #endif
 
-  fprintf(stderr,
-          "\n"
+  fprintf(stderr,"\n"
           "Parameters can be turned on with -<param> or off with -<param>=0\n"
           "Parameters which take a value can be specified as "
           "-<param> <value>\n"
           "Other valid forms are <param>=<value> -<param>=<value> "
           "--<param>=<value>\n"
           "Parameter names are case-insensitive.  The parameters are:\n\n");
-  rfb::Configuration::listParams(79, 14);
+  Configuration::listParams(79, 14);
 
-#if defined(WIN32)
+#ifdef WIN32
   // Just wait for the user to kill the console window
   Sleep(INFINITE);
 #endif
 
-  QGuiApplication::exit(1);
   exit(1);
 }
 
-static bool potentiallyLoadConfigurationFile(QString vncServerName)
+static void
+potentiallyLoadConfigurationFile(const char *filename)
 {
-  bool hasPathSeparator = vncServerName.contains('/') || vncServerName.contains('\\');
+  const bool hasPathSeparator = (strchr(filename, '/') != nullptr ||
+                                 (strchr(filename, '\\')) != nullptr);
+
   if (hasPathSeparator) {
 #ifndef WIN32
     struct stat sb;
 
     // This might be a UNIX socket, we need to check
-    if (stat(vncServerName.toStdString().c_str(), &sb) == -1) {
+    if (stat(filename, &sb) == -1) {
       // Some access problem; let loadViewerParameters() deal with it...
     } else {
-      if ((sb.st_mode & S_IFMT) == S_IFSOCK) {
-        return true;
-      }
+      if ((sb.st_mode & S_IFMT) == S_IFSOCK)
+        return;
     }
 #endif
 
     try {
-      serverName = loadViewerParameters(vncServerName.toStdString().c_str());
+      // The server name might be empty, but we still need to clear it
+      // so we don't try to connect to the filename
+      vncServerName = loadViewerParameters(filename);
     } catch (rfb::Exception& e) {
-      QString str = QString::asprintf(_("Unable to load the specified configuration file:\n\n%s"), e.str());
-      vlog.error("%s", str.toStdString().c_str());
-      abort_vncviewer("%s", str.toStdString().c_str());
-      return false;
+      vlog.error("%s", e.str());
+      abort_vncviewer(_("Unable to load the specified configuration "
+                        "file:\n\n%s"), e.str());
     }
   }
-  return true;
 }
 
 static void
 migrateDeprecatedOptions()
 {
-  if (::fullScreenAllMonitors) {
+  if (fullScreenAllMonitors) {
     vlog.info(_("FullScreenAllMonitors is deprecated, set FullScreenMode to 'all' instead"));
-    ::fullScreenMode.setParam("all");
+
+    fullScreenMode.setParam("all");
   }
 }
 
-int main(int argc, char *argv[])
+static void
+create_base_dirs()
+{
+  const char *dir;
+
+  dir = os::getvncconfigdir();
+  if (dir == nullptr) {
+    vlog.error(_("Could not determine VNC config directory path"));
+    return;
+  }
+
+#ifndef WIN32
+  const char *dotdir = strrchr(dir, '.');
+  if (dotdir != nullptr && strcmp(dotdir, ".vnc") == 0)
+    vlog.info(_("~/.vnc is deprecated, please consult 'man vncviewer' for paths to migrate to."));
+#else
+  const char *vncdir = strrchr(dir, '\\');
+  if (vncdir != nullptr && strcmp(vncdir, "vnc") == 0)
+    vlog.info(_("%%APPDATA%%\\vnc is deprecated, please switch to the %%APPDATA%%\\TigerVNC location."));
+#endif
+
+  if (os::mkdir_p(dir, 0755) == -1) {
+    if (errno != EEXIST)
+      vlog.error(_("Could not create VNC config directory \"%s\": %s"),
+                 dir, strerror(errno));
+  }
+
+  dir = os::getvncdatadir();
+  if (dir == nullptr) {
+    vlog.error(_("Could not determine VNC data directory path"));
+    return;
+  }
+
+  if (os::mkdir_p(dir, 0755) == -1) {
+    if (errno != EEXIST)
+      vlog.error(_("Could not create VNC data directory \"%s\": %s"),
+                 dir, strerror(errno));
+  }
+
+  dir = os::getvncstatedir();
+  if (dir == nullptr) {
+    vlog.error(_("Could not determine VNC state directory path"));
+    return;
+  }
+
+  if (os::mkdir_p(dir, 0755) == -1) {
+    if (errno != EEXIST)
+      vlog.error(_("Could not create VNC state directory \"%s\": %s"),
+                 dir, strerror(errno));
+  }
+}
+
+int main(int argc, char** argv)
 {
   if (qEnvironmentVariableIsEmpty("QTGLESSTREAM_DISPLAY")) {
     qputenv("QT_QPA_EGLFS_PHYSICAL_WIDTH", QByteArray("213"));
@@ -311,6 +412,8 @@ int main(int argc, char *argv[])
 
   i18n_init();
 
+  fprintf(stderr,"\n%s\n", about_text());
+
   rfb::initStdIOLoggers();
 #ifdef WIN32
   QString tmp = "C:\\temp";
@@ -331,64 +434,78 @@ int main(int argc, char *argv[])
   rfb::LogWriter::setLogParams("*:stderr:30");
 #endif
 
-  QString about = about_text();
-  fprintf(stderr, "\n%s\n", about.toStdString().c_str());
-
 #ifdef SIGHUP
   signal(SIGHUP, CleanupSignalHandler);
 #endif
   signal(SIGINT, CleanupSignalHandler);
   signal(SIGTERM, CleanupSignalHandler);
 
-  rfb::Configuration::enableViewerParams();
-  QString defaultServerName;
-  defaultServerName = loadViewerParameters(nullptr);
-  migrateDeprecatedOptions();
+  Configuration::enableViewerParams();
+
+  /* Load the default parameter settings */
+  std::string defaultServerName;
+  try {
+    defaultServerName = loadViewerParameters(nullptr);
+  } catch (rfb::Exception& e) {
+    vlog.error("%s", e.str());
+  }
+
   for (int i = 1; i < argc;) {
     /* We need to resolve an ambiguity for booleans */
-    if (argv[i][0] == '-' && i + 1 < argc) {
-      QString name = &argv[i][1];
-      rfb::VoidParameter* param = rfb::Configuration::getParam(name.toStdString().c_str());
-      if ((param != nullptr) && (dynamic_cast<rfb::BoolParameter*>(param) != nullptr)) {
-        QString opt = argv[i + 1];
-        if ((opt.compare("0") == 0) || (opt.compare("1") == 0) || (opt.compare("true", Qt::CaseInsensitive) == 0)
-            || (opt.compare("false", Qt::CaseInsensitive) == 0) || (opt.compare("yes", Qt::CaseInsensitive) == 0)
-            || (opt.compare("no", Qt::CaseInsensitive) == 0)) {
-          param->setParam(opt.toStdString().c_str());
-          i += 2;
-          continue;
-        }
+    if (argv[i][0] == '-' && i+1 < argc) {
+        VoidParameter *param;
+
+        param = Configuration::getParam(&argv[i][1]);
+        if ((param != nullptr) &&
+            (dynamic_cast<BoolParameter*>(param) != nullptr)) {
+          if ((strcasecmp(argv[i+1], "0") == 0) ||
+              (strcasecmp(argv[i+1], "1") == 0) ||
+              (strcasecmp(argv[i+1], "true") == 0) ||
+              (strcasecmp(argv[i+1], "false") == 0) ||
+              (strcasecmp(argv[i+1], "yes") == 0) ||
+              (strcasecmp(argv[i+1], "no") == 0)) {
+              param->setParam(argv[i+1]);
+              i += 2;
+              continue;
+          }
       }
     }
 
-    if (rfb::Configuration::setParam(argv[i])) {
+    if (Configuration::setParam(argv[i])) {
       i++;
       continue;
     }
 
     if (argv[i][0] == '-') {
-      if (i + 1 < argc) {
-        if (rfb::Configuration::setParam(&argv[i][1], argv[i + 1])) {
+      if (i+1 < argc) {
+        if (Configuration::setParam(&argv[i][1], argv[i+1])) {
           i += 2;
           continue;
         }
       }
 
-      usage();
+      usage(argv[0]);
     }
 
-    serverName = argv[i];
+    vncServerName = argv[i];
     i++;
   }
   // Check if the server name in reality is a configuration file
-  potentiallyLoadConfigurationFile(serverName);
+  potentiallyLoadConfigurationFile(vncServerName.c_str());
+
+  migrateDeprecatedOptions();
+
+  create_base_dirs();
+
+  Socket *sock = nullptr;
 
   /* Specifying -via and -listen together is nonsense */
-  if (::listenMode && ::via.getValueStr().length() > 0) {
+  if (listenMode && strlen(via) > 0) {
     // TRANSLATORS: "Parameters" are command line arguments, or settings
     // from a file or the Windows registry.
     vlog.error(_("Parameters -listen and -via are incompatible"));
-    QGuiApplication::exit(1);
+    abort_vncviewer(_("Parameters -listen and -via are incompatible"));
+    return 1; /* Not reached */
   }
 
   app.setQuitOnLastWindowClosed(false);
@@ -407,37 +524,27 @@ int main(int argc, char *argv[])
 
   AppManager::instance()->initialize();
 
-  const char* homeDir = os::getvncconfigdir();
-  if (homeDir == nullptr) {
-    QDir dir;
-    if (!dir.mkpath(homeDir)) {
-      vlog.error(_("Could not create VNC home directory:"));
-    }
-  }
-
   TunnelFactory* tunnelFactory = nullptr;
 
-  network::Socket* socket = nullptr;
-
   if (listenMode) {
-    std::list<network::SocketListener*> listeners;
+    std::list<SocketListener*> listeners;
     try {
-      bool ok;
-      int port = serverName.toInt(&ok);
-      if (!ok) {
-        port = 5500;
-      }
-      network::createTcpListeners(&listeners, nullptr, port);
+      int port = 5500;
+      if (!vncServerName.empty() && isdigit(vncServerName[0]))
+        port = atoi(vncServerName.c_str());
+
+      createTcpListeners(&listeners, nullptr, port);
+      if (listeners.empty())
+        throw Exception(_("Unable to listen for incoming connections"));
 
       vlog.info(_("Listening on port %d"), port);
 
       /* Wait for a connection */
-      while (socket == nullptr) {
+      while (sock == nullptr) {
         fd_set rfds;
         FD_ZERO(&rfds);
-        for (network::SocketListener* listener : listeners) {
+        for (SocketListener* listener : listeners)
           FD_SET(listener->getFd(), &rfds);
-        }
 
         int n = select(FD_SETSIZE, &rfds, nullptr, nullptr, nullptr);
         if (n < 0) {
@@ -449,20 +556,18 @@ int main(int argc, char *argv[])
           }
         }
 
-        for (network::SocketListener* listener : listeners) {
+        for (SocketListener* listener : listeners)
           if (FD_ISSET(listener->getFd(), &rfds)) {
-            socket = listener->accept();
-            if (socket) {
+            sock = listener->accept();
+            if (sock)
               /* Got a connection */
               break;
-            }
           }
-        }
       }
     } catch (rdr::Exception& e) {
       vlog.error("%s", e.str());
       abort_vncviewer(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str());
-      QCoreApplication::exit(1);
+      return 1; /* Not reached */
     }
 
     while (!listeners.empty()) {
@@ -470,56 +575,44 @@ int main(int argc, char *argv[])
       listeners.pop_back();
     }
   } else {
-    if (serverName.isEmpty()) {
+    if (vncServerName.empty()) {
       ServerDialog dlg;
 
-      dlg.setServerName(defaultServerName.toStdString().c_str());
+      dlg.setServerName(defaultServerName.c_str());
 
       QObject::connect(&dlg, &ServerDialog::finished, []() { qApp->quit(); });
       dlg.open();
 
       qApp->exec();
 
-      if (dlg.result() != QDialog::Accepted) {
+      if (dlg.result() != QDialog::Accepted)
         return 1;
-      }
 
-      serverName = dlg.getServerName();
+      vncServerName = dlg.getServerName().toStdString();
     }
 
-    QString serverHost;
-    static const int SERVER_PORT_OFFSET = 5900; // ??? 5500;
-    int serverPort = SERVER_PORT_OFFSET;
-    int gatewayLocalPort = 0;
+    if (strlen(via) > 0) {
+      const char *gatewayHost;
+      std::string remoteHost;
+      int localPort = findFreeTcpPort();
+      int remotePort;
 
-    if (!QString(::via).isEmpty() && !gatewayLocalPort) {
-      network::initSockets();
-      gatewayLocalPort = network::findFreeTcpPort();
-    }
+      getHostAndPort(vncServerName.c_str(), &remoteHost, &remotePort);
+      vncServerName = format("localhost::%d", localPort);
+      gatewayHost = (const char*)via;
 
-    std::string shost;
-    rfb::getHostAndPort(serverName.toStdString().c_str(), &shost, &serverPort);
-    serverHost = shost.c_str();
-
-    QString gatewayHost = QString(::via);
-    QString remoteHost = serverHost;
-    if (!gatewayHost.isEmpty() && !remoteHost.isEmpty()) {
-      tunnelFactory = new TunnelFactory(gatewayHost.toStdString().c_str(), remoteHost.toStdString().c_str(), serverPort, gatewayLocalPort);
+      tunnelFactory = new TunnelFactory(gatewayHost, remoteHost.c_str(),
+                                        remotePort, localPort);
       tunnelFactory->start();
-  #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-      tunnelFactory->wait(20000);
-  #else
       tunnelFactory->wait(QDeadlineTimer(20000));
-  #endif
-      serverName = QString("localhost::%2").arg(gatewayLocalPort);
     }
   }
 
   inMainloop = true;
-  int ret = mainloop(serverName.toStdString().c_str(), socket);
+  mainloop(vncServerName.c_str(), sock);
   inMainloop = false;
 
   delete tunnelFactory;
 
-  return ret;
+  return 0;
 }
