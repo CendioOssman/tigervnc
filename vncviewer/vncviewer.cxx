@@ -27,6 +27,7 @@
 #include "CConn.h"
 #include "i18n.h"
 #undef asprintf
+#undef vasprintf
 #include "parameters.h"
 #include "ServerDialog.h"
 #include "viewerconfig.h"
@@ -52,9 +53,12 @@ static QString about_text()
                            QDate::currentDate().year());
 }
 
-void abort_vncviewer(const QString &message)
+void abort_vncviewer(const char *error, ...)
 {
-  abort_connection(message, true);
+  va_list ap;
+  va_start(ap, error);
+  abort_connection(QString::vasprintf(error, ap), true);
+  va_end(ap);
 }
 
 void abort_connection(const QString &message, bool quit)
@@ -224,7 +228,7 @@ static bool potentiallyLoadConfigurationFile(QString vncServerName)
     } catch (rfb::Exception& e) {
       QString str = QString::asprintf(_("Unable to load the specified configuration file:\n\n%s"), e.str());
       vlog.error("%s", str.toStdString().c_str());
-      abort_vncviewer(str);
+      abort_vncviewer("%s", str.toStdString().c_str());
       return false;
     }
   }
@@ -432,7 +436,7 @@ int main(int argc, char *argv[])
       }
     } catch (rdr::Exception& e) {
       vlog.error("%s", e.str());
-      abort_vncviewer(QString::asprintf(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str()));
+      abort_vncviewer(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str());
       QCoreApplication::exit(1);
     }
 

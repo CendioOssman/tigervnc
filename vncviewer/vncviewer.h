@@ -25,7 +25,8 @@ namespace rdr {
   struct Exception;
 };
 
-void abort_vncviewer(const QString &message);
+void abort_vncviewer(const char *error, ...)
+  __attribute__((__format__ (__printf__, 1, 2)));
 void abort_connection(const QString &message, bool quit=false);
 void abort_connection_with_unexpected_error(const rdr::Exception &);
 
