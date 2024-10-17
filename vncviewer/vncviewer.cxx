@@ -144,8 +144,7 @@ static int mainloop(const char* vncserver, network::Socket* sock)
         QMessageBox* d = new QMessageBox(QMessageBox::Critical,
                                         _("Connection error"),
                                         exitError.c_str(),
-                                        QMessageBox::NoButton);
-        d->addButton(QMessageBox::Close);
+                                        QMessageBox::Close);
         AppManager::instance()->openDialog(d);
       }
       break;
