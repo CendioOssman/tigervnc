@@ -87,7 +87,7 @@ static rfb::LogWriter vlog("main");
 using namespace network;
 using namespace rfb;
 
-char vncServerName[VNCSERVERNAMELEN] = { '\0' };
+static std::string vncServerName;
 
 static const char *argv0 = nullptr;
 
@@ -455,12 +455,9 @@ potentiallyLoadConfigurationFile(const char *filename)
 #endif
 
     try {
-      const char* newServerName;
-      newServerName = loadViewerParameters(filename);
-      // This might be empty, but we still need to clear it so we
-      // don't try to connect to the filename
-      strncpy(vncServerName, newServerName, VNCSERVERNAMELEN-1);
-      vncServerName[VNCSERVERNAMELEN-1] = '\0';
+      // The server name might be empty, but we still need to clear it
+      // so we don't try to connect to the filename
+      vncServerName = loadViewerParameters(filename);
     } catch (rfb::Exception& e) {
       vlog.error("%s", e.str());
       abort_vncviewer(_("Unable to load the specified configuration "
@@ -562,9 +559,8 @@ static void mktunnel()
   int localPort = findFreeTcpPort();
   int remotePort;
 
-  getHostAndPort(vncServerName, &remoteHost, &remotePort);
-  snprintf(vncServerName, VNCSERVERNAMELEN, "localhost::%d", localPort);
-  vncServerName[VNCSERVERNAMELEN - 1] = '\0';
+  getHostAndPort(vncServerName.c_str(), &remoteHost, &remotePort);
+  vncServerName = format("localhost::%d", localPort);
   gatewayHost = (const char*)via;
   createTunnel(gatewayHost, remoteHost.c_str(), remotePort, localPort);
 }
@@ -595,14 +591,9 @@ int main(int argc, char** argv)
   Configuration::enableViewerParams();
 
   /* Load the default parameter settings */
-  char defaultServerName[VNCSERVERNAMELEN] = "";
+  std::string defaultServerName;
   try {
-    const char* configServerName;
-    configServerName = loadViewerParameters(nullptr);
-    if (configServerName != nullptr) {
-      strncpy(defaultServerName, configServerName, VNCSERVERNAMELEN-1);
-      defaultServerName[VNCSERVERNAMELEN-1] = '\0';
-    }
+    defaultServerName = loadViewerParameters(nullptr);
   } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
   }
@@ -644,8 +635,7 @@ int main(int argc, char** argv)
       usage(argv[0]);
     }
 
-    strncpy(vncServerName, argv[i], VNCSERVERNAMELEN);
-    vncServerName[VNCSERVERNAMELEN - 1] = '\0';
+    vncServerName = argv[i];
     i++;
   }
 
@@ -661,7 +651,7 @@ int main(int argc, char** argv)
   enable_touch();
 
   // Check if the server name in reality is a configuration file
-  potentiallyLoadConfigurationFile(vncServerName);
+  potentiallyLoadConfigurationFile(vncServerName.c_str());
 
   migrateDeprecatedOptions();
 
@@ -684,8 +674,8 @@ int main(int argc, char** argv)
     std::list<SocketListener*> listeners;
     try {
       int port = 5500;
-      if (isdigit(vncServerName[0]))
-        port = atoi(vncServerName);
+      if (!vncServerName.empty() && isdigit(vncServerName[0]))
+        port = atoi(vncServerName.c_str());
 
       createTcpListeners(&listeners, nullptr, port);
       if (listeners.empty())
@@ -729,9 +719,9 @@ int main(int argc, char** argv)
       listeners.pop_back();
     }
   } else {
-    if (vncServerName[0] == '\0') {
-      ServerDialog::run(defaultServerName, vncServerName);
-      if (vncServerName[0] == '\0')
+    if (vncServerName.empty()) {
+      vncServerName = ServerDialog::run(defaultServerName.c_str());
+      if (vncServerName.empty())
         return 1;
     }
 
@@ -748,7 +738,7 @@ int main(int argc, char** argv)
   }
 
   inMainloop = true;
-  mainloop(vncServerName, sock);
+  mainloop(vncServerName.c_str(), sock);
   inMainloop = false;
 
   return 0;
