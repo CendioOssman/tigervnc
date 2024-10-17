@@ -37,6 +37,7 @@ namespace rfb {
   // Formats according to printf(), with a dynamic allocation
   std::string format(const char *fmt, ...)
       __attribute__((__format__ (__printf__, 1, 2)));
+  std::string vformat(const char *fmt, va_list ap);
 
   // Splits a string with the specified delimiter
   std::vector<std::string> split(const char* src,
