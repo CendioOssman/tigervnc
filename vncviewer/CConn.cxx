@@ -274,7 +274,7 @@ void CConn::startProcessing()
       abort_connection(_("The connection was dropped by the server "
                          "before the session could be established."));
     } else {
-      qApp->quit();
+      ::disconnect();
     }
   } catch (rdr::Exception& e) {
     recursing = false;
