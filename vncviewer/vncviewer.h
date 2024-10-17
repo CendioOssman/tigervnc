@@ -19,8 +19,6 @@
 #ifndef __VNCVIEWER_H__
 #define __VNCVIEWER_H__
 
-#define VNCSERVERNAMELEN 256
-
 namespace rdr {
   struct Exception;
 };
