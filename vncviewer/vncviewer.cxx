@@ -266,6 +266,15 @@ static bool potentiallyLoadConfigurationFile(QString vncServerName)
   return true;
 }
 
+static void
+migrateDeprecatedOptions()
+{
+  if (::fullScreenAllMonitors) {
+    vlog.info(_("FullScreenAllMonitors is deprecated, set FullScreenMode to 'all' instead"));
+    ::fullScreenMode.setParam("all");
+  }
+}
+
 int main(int argc, char *argv[])
 {
   QString serverHost;
@@ -339,10 +348,7 @@ int main(int argc, char *argv[])
   rfb::Configuration::enableViewerParams();
   QString defaultServerName;
   defaultServerName = loadViewerParameters(nullptr);
-  if (::fullScreenAllMonitors) {
-    vlog.info(_("FullScreenAllMonitors is deprecated, set FullScreenMode to 'all' instead"));
-    ::fullScreenMode.setParam("all");
-  }
+  migrateDeprecatedOptions();
   for (int i = 1; i < argc;) {
     /* We need to resolve an ambiguity for booleans */
     if (argv[i][0] == '-' && i + 1 < argc) {
