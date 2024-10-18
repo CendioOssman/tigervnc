@@ -277,11 +277,6 @@ migrateDeprecatedOptions()
 
 int main(int argc, char *argv[])
 {
-  QString serverHost;
-  static const int SERVER_PORT_OFFSET = 5900; // ??? 5500;
-  int serverPort = SERVER_PORT_OFFSET;
-  int gatewayLocalPort = 0;
-
   if (qEnvironmentVariableIsEmpty("QTGLESSTREAM_DISPLAY")) {
     qputenv("QT_QPA_EGLFS_PHYSICAL_WIDTH", QByteArray("213"));
     qputenv("QT_QPA_EGLFS_PHYSICAL_HEIGHT", QByteArray("120"));
@@ -396,14 +391,6 @@ int main(int argc, char *argv[])
     QGuiApplication::exit(1);
   }
 
-  if (!QString(::via).isEmpty() && !gatewayLocalPort) {
-    network::initSockets();
-    gatewayLocalPort = network::findFreeTcpPort();
-  }
-  std::string shost;
-  rfb::getHostAndPort(serverName.toStdString().c_str(), &shost, &serverPort);
-  serverHost = shost.c_str();
-
   app.setQuitOnLastWindowClosed(false);
 
   QTimer rfbTimerProxy;
@@ -500,6 +487,17 @@ int main(int argc, char *argv[])
       serverName = dlg.getServerName();
     }
 
+    QString serverHost;
+    static const int SERVER_PORT_OFFSET = 5900; // ??? 5500;
+    int serverPort = SERVER_PORT_OFFSET;
+    int gatewayLocalPort = 0;
+
+    if (!QString(::via).isEmpty() && !gatewayLocalPort) {
+      network::initSockets();
+      gatewayLocalPort = network::findFreeTcpPort();
+    }
+
+    std::string shost;
     rfb::getHostAndPort(serverName.toStdString().c_str(), &shost, &serverPort);
     serverHost = shost.c_str();
 
@@ -513,18 +511,12 @@ int main(int argc, char *argv[])
   #else
       tunnelFactory->wait(QDeadlineTimer(20000));
   #endif
+      serverName = QString("localhost::%2").arg(gatewayLocalPort);
     }
   }
 
-  QString finalAddress;
-  if(!QString(::via).isEmpty()) {
-    finalAddress = QString("localhost::%2").arg(gatewayLocalPort);
-  } else {
-    finalAddress = QString("%1::%2").arg(serverHost).arg(serverPort);
-  }
-
   inMainloop = true;
-  int ret = mainloop(finalAddress.toStdString().c_str(), socket);
+  int ret = mainloop(serverName.toStdString().c_str(), socket);
   inMainloop = false;
 
   delete tunnelFactory;
