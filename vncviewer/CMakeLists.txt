@@ -71,8 +71,6 @@ set(PROJECT_SOURCES
         appmanager.h
         appmanager.cxx
         Keyboard.h
-        vncapplication.cxx
-        vncapplication.h
         DesktopWindow.cxx
         DesktopWindow.h
         UserDialog.cxx

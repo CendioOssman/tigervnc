@@ -52,7 +52,6 @@
 #include "parameters.h"
 #include "ServerDialog.h"
 #include "viewerconfig.h"
-#include "vncapplication.h"
 #include "vncviewer.h"
 #include "tunnelfactory.h"
 
@@ -394,7 +393,7 @@ int main(int argc, char** argv)
   qputenv("QT_QPA_PLATFORM", "xcb");
 #endif
 
-  QVNCApplication app(argc, argv);
+  QApplication app(argc, argv);
 
   app.setOrganizationName("TigerVNC Team");
   app.setOrganizationDomain("tigervnc.org");
