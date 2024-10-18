@@ -97,6 +97,11 @@ ServerDialog::ServerDialog(QWidget* parent)
   comboBox->setModel(model);
 }
 
+void ServerDialog::setServerName(const char* name)
+{
+  comboBox->setCurrentText(name);
+}
+
 QString ServerDialog::getServerName()
 {
   return comboBox->currentText();
