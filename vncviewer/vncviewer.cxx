@@ -393,6 +393,9 @@ int main(int argc, char** argv)
   qputenv("QT_QPA_PLATFORM", "xcb");
 #endif
 
+  // FIXME: Should we really let Qt respect command line args? We didn't
+  //        for FLTK. But we still need to respect -display. And
+  //        -geometry is currently caught by Qt with unknown effects.
   QApplication app(argc, argv);
 
   app.setOrganizationName("TigerVNC Team");
