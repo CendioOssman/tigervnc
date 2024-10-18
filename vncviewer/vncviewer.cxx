@@ -337,7 +337,8 @@ int main(int argc, char *argv[])
   signal(SIGTERM, CleanupSignalHandler);
 
   rfb::Configuration::enableViewerParams();
-  loadViewerParameters(nullptr);
+  QString defaultServerName;
+  defaultServerName = loadViewerParameters(nullptr);
   if (::fullScreenAllMonitors) {
     vlog.info(_("FullScreenAllMonitors is deprecated, set FullScreenMode to 'all' instead"));
     ::fullScreenMode.setParam("all");
@@ -478,6 +479,8 @@ int main(int argc, char *argv[])
   } else {
     if (serverName.isEmpty()) {
       ServerDialog dlg;
+
+      dlg.setServerName(defaultServerName.toStdString().c_str());
 
       QObject::connect(&dlg, &ServerDialog::finished, []() { qApp->quit(); });
       dlg.open();

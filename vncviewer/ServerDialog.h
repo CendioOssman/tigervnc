@@ -12,6 +12,7 @@ class ServerDialog : public QDialog
 public:
   ServerDialog(QWidget* parent = nullptr);
 
+  void setServerName(const char* name);
   QString getServerName();
 
   void connectTo();
