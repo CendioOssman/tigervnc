@@ -477,21 +477,18 @@ int main(int argc, char *argv[])
     }
   } else {
     if (serverName.isEmpty()) {
-      ServerDialog* dlg = new ServerDialog;
+      ServerDialog dlg;
 
-      QObject::connect(dlg, &ServerDialog::finished, []() { qApp->quit(); });
-      dlg->open();
+      QObject::connect(&dlg, &ServerDialog::finished, []() { qApp->quit(); });
+      dlg.open();
 
       qApp->exec();
 
-      if (dlg->result() != QDialog::Accepted) {
-        delete dlg;
+      if (dlg.result() != QDialog::Accepted) {
         return 1;
       }
 
-      serverName = dlg->getServerName();
-
-      delete dlg;
+      serverName = dlg.getServerName();
     }
 
     rfb::getHostAndPort(serverName.toStdString().c_str(), &shost, &serverPort);
