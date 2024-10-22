@@ -115,10 +115,6 @@ This can be accessed from the popup menu or from the "Connection details"
 dialog box.
 
 .TP
-.B \-display \fIXdisplay\fP
-Specifies the X display on which the VNC viewer window should appear.
-.
-.TP
 .B \-geometry \fIgeometry\fP
 Initial position of the main VNC viewer window. The format is
 .B \fIwidth\fPx\fIheight\fP+\fIxoffset\fP+\fIyoffset\fP
