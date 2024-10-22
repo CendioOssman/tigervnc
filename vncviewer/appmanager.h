@@ -21,8 +21,6 @@ public:
 
   static AppManager* instance();
 
-  void initialize();
-
 public slots:
   void openDialog(QDialog* d);
 
