@@ -34,6 +34,10 @@
 #include <QMessageBox>
 #include <QTimer>
 
+#if defined(__APPLE__)
+#include <QMenuBar>
+#endif
+
 #include <os/os.h>
 
 #include <network/TcpSocket.h>
@@ -226,6 +230,57 @@ static void CleanupSignalHandler(int sig)
   exit(1);
 }
 
+static void init_qt()
+{
+  qApp->setOrganizationName("TigerVNC Team");
+  qApp->setOrganizationDomain("tigervnc.org");
+  qApp->setApplicationName("vncviewer");
+  qApp->setApplicationDisplayName("TigerVNC Viewer");
+  QIcon icon;
+  icon.addFile(":/tigervnc_16.png", QSize(16, 16));
+  icon.addFile(":/tigervnc_22.png", QSize(22, 22));
+  icon.addFile(":/tigervnc_24.png", QSize(24, 24));
+  icon.addFile(":/tigervnc_32.png", QSize(32, 32));
+  icon.addFile(":/tigervnc_48.png", QSize(48, 48));
+  icon.addFile(":/tigervnc_64.png", QSize(64, 64));
+  icon.addFile(":/tigervnc_128.png", QSize(128, 128));
+  qApp->setWindowIcon(icon);
+
+  qApp->setQuitOnLastWindowClosed(false);
+
+  QTimer* rfbTimerProxy = new QTimer(qApp);
+  QObject::connect(rfbTimerProxy, &QTimer::timeout,
+                   []() { rfb::Timer::checkTimeouts(); });
+  QObject::connect(QApplication::eventDispatcher(),
+                   &QAbstractEventDispatcher::aboutToBlock,
+                   rfbTimerProxy,
+                   [rfbTimerProxy]() {
+                     int next = rfb::Timer::checkTimeouts();
+                       if (next != -1)
+                         rfbTimerProxy->start(next);
+                   });
+  rfbTimerProxy->setSingleShot(true);
+
+#ifdef __APPLE__
+  QMenuBar* menuBar = new QMenuBar(nullptr); // global menu bar for mac
+  QMenu* appMenu = new QMenu(nullptr);
+  QAction* aboutAction = new QAction(nullptr);
+  QObject::connect(aboutAction, &QAction::triggered, []() { about_vncviewer(nullptr); });
+  aboutAction->setText(_("About"));
+  aboutAction->setMenuRole(QAction::AboutRole);
+  appMenu->addAction(aboutAction);
+  menuBar->addMenu(appMenu);
+  QMenu *file = new QMenu(p_("SysMenu|", "&File"));
+  file->addAction(p_("SysMenu|File|", "&New Connection"), [=](){
+    QProcess process;
+    if (process.startDetached(qApp->arguments()[0], QStringList())) {
+      vlog.error(_("Error starting new TigerVNC Viewer: %s"), QVariant::fromValue(process.error()).toString().toStdString().c_str());
+    }
+  }, QKeySequence("Ctrl+N"));
+  menuBar->addMenu(file);
+#endif
+}
+
 static void usage(const char *programName)
 {
 #ifdef WIN32
@@ -386,19 +441,7 @@ int main(int argc, char** argv)
   //        unknown effects.
   QApplication app(argc, argv);
 
-  app.setOrganizationName("TigerVNC Team");
-  app.setOrganizationDomain("tigervnc.org");
-  app.setApplicationName("vncviewer");
-  app.setApplicationDisplayName("TigerVNC Viewer");
-  QIcon icon;
-  icon.addFile(":/tigervnc_16.png", QSize(16, 16));
-  icon.addFile(":/tigervnc_22.png", QSize(22, 22));
-  icon.addFile(":/tigervnc_24.png", QSize(24, 24));
-  icon.addFile(":/tigervnc_32.png", QSize(32, 32));
-  icon.addFile(":/tigervnc_48.png", QSize(48, 48));
-  icon.addFile(":/tigervnc_64.png", QSize(64, 64));
-  icon.addFile(":/tigervnc_128.png", QSize(128, 128));
-  app.setWindowIcon(icon);
+  init_qt();
 
   i18n_init();
 
@@ -497,22 +540,6 @@ int main(int argc, char** argv)
     abort_vncviewer(_("Parameters -listen and -via are incompatible"));
     return 1; /* Not reached */
   }
-
-  app.setQuitOnLastWindowClosed(false);
-
-  QTimer rfbTimerProxy;
-  QObject::connect(&rfbTimerProxy, &QTimer::timeout,
-                   []() { rfb::Timer::checkTimeouts(); });
-  QObject::connect(QApplication::eventDispatcher(),
-                   &QAbstractEventDispatcher::aboutToBlock,
-                   [&rfbTimerProxy]() {
-                     int next = rfb::Timer::checkTimeouts();
-                       if (next != -1)
-                         rfbTimerProxy.start(next);
-                   });
-  rfbTimerProxy.setSingleShot(true);
-
-  AppManager::instance()->initialize();
 
   TunnelFactory* tunnelFactory = nullptr;
 

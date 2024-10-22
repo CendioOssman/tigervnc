@@ -36,28 +36,6 @@ AppManager::AppManager()
 
 }
 
-void AppManager::initialize()
-{
-#ifdef __APPLE__
-  QMenuBar* menuBar = new QMenuBar(nullptr); // global menu bar for mac
-  QMenu* appMenu = new QMenu(nullptr);
-  QAction* aboutAction = new QAction(nullptr);
-  connect(aboutAction, &QAction::triggered, this, []() { about_vncviewer(nullptr); });
-  aboutAction->setText(_("About"));
-  aboutAction->setMenuRole(QAction::AboutRole);
-  appMenu->addAction(aboutAction);
-  menuBar->addMenu(appMenu);
-  QMenu *file = new QMenu(p_("SysMenu|", "&File"));
-  file->addAction(p_("SysMenu|File|", "&New Connection"), [=](){
-    QProcess process;
-    if (process.startDetached(qApp->arguments()[0], QStringList())) {
-      vlog.error(_("Error starting new TigerVNC Viewer: %s"), QVariant::fromValue(process.error()).toString().toStdString().c_str());
-    }
-  }, QKeySequence("Ctrl+N"));
-  menuBar->addMenu(file);
-#endif
-}
-
 AppManager::~AppManager()
 {
 }
