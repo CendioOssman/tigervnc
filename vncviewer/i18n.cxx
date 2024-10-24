@@ -147,7 +147,10 @@ void i18n_init()
   // be in GUI codeset as well.
   bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
   bind_textdomain_codeset("libc", "UTF-8");
+}
 
+void i18n_qt_init()
+{
 #ifdef Q_OS_LINUX
   load_catalogs(QLibraryInfo::location(QLibraryInfo::TranslationsPath));
 #else
