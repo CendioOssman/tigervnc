@@ -38,7 +38,6 @@
 #include "i18n.h"
 #include "network/TcpSocket.h"
 #include "rfb/Exception.h"
-#undef asprintf
 
 using namespace rfb;
 using namespace std;

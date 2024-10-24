@@ -16,13 +16,11 @@
 #include "rfb/LogWriter.h"
 
 #include <QApplication>
-#undef asprintf
 #include "Viewport.h"
 #include "DesktopWindow.h"
 #include "parameters.h"
 #include "vncviewer.h"
 #include "viewerconfig.h"
-#undef asprintf
 
 #ifdef __APPLE__
 #include "cocoa.h"

@@ -8,12 +8,12 @@
 #include "viewerconfig.h"
 #include "OptionsDialog.h"
 #include "i18n.h"
-#undef asprintf
 #include "parameters.h"
 #include "vncviewer.h"
 #include "os/os.h"
 #include "rfb/Exception.h"
 #include "rfb/LogWriter.h"
+#include "rfb/util.h"
 
 #include <QApplication>
 #include <QComboBox>
@@ -85,10 +85,11 @@ ServerDialog::ServerDialog(QWidget* parent)
     loadServerHistory();
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
+    std::string msg;
+    msg = rfb::format(_("Unable to load the server history:\n\n%s"), e.str());
     QMessageBox* dlg = new QMessageBox(QMessageBox::Critical,
                                        _("Error loading server history"),
-                                       QString::asprintf(_("Unable to load the server history:\n\n%s"), e.str()),
-                                       QMessageBox::Close);
+                                       msg.c_str(), QMessageBox::Close);
     AppManager::instance()->openDialog(dlg);
   }
 
@@ -115,10 +116,11 @@ void ServerDialog::connectTo()
     saveViewerParameters(nullptr, text.toStdString().c_str());
   } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
+    std::string msg;
+    msg = rfb::format(_("Unable to save the default configuration:\n\n%s"), e.str());
     QMessageBox* dlg = new QMessageBox(QMessageBox::Critical,
                                        _("Error saving configuration"),
-                                       QString::asprintf(_("Unable to save the default configuration:\n\n%s"), e.str()),
-                                       QMessageBox::Close);
+                                       msg.c_str(), QMessageBox::Close);
     AppManager::instance()->openDialog(dlg);
   }
 
@@ -129,10 +131,11 @@ void ServerDialog::connectTo()
     saveServerHistory();
   } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
+    std::string msg;
+    msg = rfb::format(_("Unable to save the server history:\n\n%s"), e.str());
     QMessageBox* dlg = new QMessageBox(QMessageBox::Critical,
                                        _("Error loading server history"),
-                                       QString::asprintf(_("Unable to save the server history:\n\n%s"), e.str()),
-                                       QMessageBox::Close);
+                                       msg.c_str(), QMessageBox::Close);
     AppManager::instance()->openDialog(dlg);
   }
 
@@ -161,14 +164,15 @@ void ServerDialog::openLoadConfigDialog()
       QString server = loadViewerParameters(filename.toStdString().c_str());
       comboBox->setCurrentText(server);
     } catch (rfb::Exception& e) {
+      std::string msg;
       QMessageBox* dlg;
 
       vlog.error("%s", e.str());
 
+      msg = rfb::format(_("Unable to load the specified configuration file:\n\n%s"), e.str());
       dlg = new QMessageBox(QMessageBox::Critical,
                             _("Unable to load configuration"),
-                            QString::asprintf(_("Unable to load the specified configuration file:\n\n%s"), e.str()),
-                            QMessageBox::Ok, this);
+                            msg.c_str(), QMessageBox::Ok, this);
       AppManager::instance()->openDialog(dlg);
     }
   }
@@ -189,11 +193,14 @@ void ServerDialog::openSaveConfigDialog()
       // The file already exists.
       f.close();
 
+      std::string msg;
       QMessageBox* question = new QMessageBox(this);
       question->setWindowTitle("");
       question->addButton(_("Overwrite"), QMessageBox::AcceptRole);
       question->addButton(_("No"), QMessageBox::RejectRole);
-      question->setText(QString::asprintf(_("%s already exists. Do you want to overwrite?"), filename.toStdString().c_str()));
+      msg = rfb::format(_("%s already exists. Do you want to overwrite?"),
+                        filename.toStdString().c_str());
+      question->setText(msg.c_str());
       if (question->exec() == QMessageBox::RejectRole) {
         // If the user doesn't want to overwrite:
         openSaveConfigDialog();
@@ -205,14 +212,15 @@ void ServerDialog::openSaveConfigDialog()
       saveViewerParameters(filename.toStdString().c_str(),
                            comboBox->currentText().toStdString().c_str());
     } catch (rfb::Exception& e) {
+      std::string msg;
       QMessageBox* dlg;
 
       vlog.error("%s", e.str());
 
+      msg = rfb::format(_("Unable to save the specified configuration file:\n\n%s"), e.str());
       dlg = new QMessageBox(QMessageBox::Critical,
                             _("Unable to save configuration"),
-                            QString::asprintf(_("Unable to save the specified configuration file:\n\n%s"), e.str()),
-                            QMessageBox::Ok, this);
+                            msg.c_str(), QMessageBox::Ok, this);
       AppManager::instance()->openDialog(dlg);
     }
   }

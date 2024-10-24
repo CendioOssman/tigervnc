@@ -51,8 +51,6 @@
 #include "appmanager.h"
 #include "CConn.h"
 #include "i18n.h"
-#undef asprintf
-#undef vasprintf
 #include "parameters.h"
 #include "ServerDialog.h"
 #include "viewerconfig.h"
@@ -193,12 +191,14 @@ static void mainloop(const char* vncserver, network::Socket* sock)
       break;
 
     if(reconnectOnError && (sock == nullptr)) {
-      QString text;
-      text = QString::asprintf(_("%s\n\nAttempt to reconnect?"), exitError.c_str());
+      std::string text;
+      text = format(_("%s\n\nAttempt to reconnect?"),
+                    exitError.c_str());
 
       QMessageBox* d = new QMessageBox(QMessageBox::Critical,
-                                        _("Connection error"), text,
-                                        QMessageBox::NoButton);
+                                       _("Connection error"),
+                                       text.c_str(),
+                                       QMessageBox::NoButton);
       d->addButton(_("Reconnect"), QMessageBox::AcceptRole);
       d->addButton(QMessageBox::Close);
 

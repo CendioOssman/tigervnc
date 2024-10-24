@@ -4,9 +4,10 @@
 #include <config.h>
 #endif
 
+#include <rfb/util.h>
+
 #include "parameters.h"
 #include "i18n.h"
-#undef asprintf
 
 #include <QTimer>
 #include <QPainter>
@@ -53,7 +54,7 @@ QFont Toast::toastFont() const
 
 QString Toast::toastText() const
 {
-  return QString::asprintf(_("Press %s to open the context menu"), ::menuKey.getValueStr().c_str());
+  return rfb::format(_("Press %s to open the context menu"), ::menuKey.getValueStr().c_str()).c_str();
 }
 
 QRect Toast::toastGeometry() const
