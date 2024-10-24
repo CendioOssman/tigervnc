@@ -21,6 +21,7 @@
 #define _I18N_H 1
 
 void i18n_init();
+void i18n_qt_init();
 
 /* Need to tell gcc that pgettext() doesn't screw up format strings */
 #ifdef __GNUC__

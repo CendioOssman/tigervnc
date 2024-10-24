@@ -232,10 +232,12 @@ static void CleanupSignalHandler(int sig)
 
 static void init_qt()
 {
+  i18n_qt_init();
+
   qApp->setOrganizationName("TigerVNC Team");
   qApp->setOrganizationDomain("tigervnc.org");
   qApp->setApplicationName("vncviewer");
-  qApp->setApplicationDisplayName("TigerVNC Viewer");
+  qApp->setApplicationDisplayName(_("TigerVNC Viewer"));
   QIcon icon;
   icon.addFile(":/tigervnc_16.png", QSize(16, 16));
   icon.addFile(":/tigervnc_22.png", QSize(22, 22));
@@ -432,17 +434,6 @@ create_base_dirs()
 
 int main(int argc, char** argv)
 {
-#ifdef Q_OS_LINUX
-  qputenv("QT_QPA_PLATFORM", "xcb");
-#endif
-
-  // FIXME: Should we really let Qt respect command line args? We didn't
-  //        for FLTK. And -geometry is currently caught by Qt with
-  //        unknown effects.
-  QApplication app(argc, argv);
-
-  init_qt();
-
   i18n_init();
 
   fprintf(stderr,"\n%s\n", about_text());
@@ -472,6 +463,17 @@ int main(int argc, char** argv)
 #endif
   signal(SIGINT, CleanupSignalHandler);
   signal(SIGTERM, CleanupSignalHandler);
+
+#ifdef Q_OS_LINUX
+  qputenv("QT_QPA_PLATFORM", "xcb");
+#endif
+
+  // FIXME: Should we really let Qt respect command line args? We didn't
+  //        for FLTK. And -geometry is currently caught by Qt with
+  //        unknown effects.
+  QApplication app(argc, argv);
+
+  init_qt();
 
   Configuration::enableViewerParams();
 
