@@ -238,15 +238,23 @@ static void init_qt()
   qApp->setOrganizationDomain("tigervnc.org");
   qApp->setApplicationName("vncviewer");
   qApp->setApplicationDisplayName(_("TigerVNC Viewer"));
-  QIcon icon;
-  icon.addFile(":/tigervnc_16.png", QSize(16, 16));
-  icon.addFile(":/tigervnc_22.png", QSize(22, 22));
-  icon.addFile(":/tigervnc_24.png", QSize(24, 24));
-  icon.addFile(":/tigervnc_32.png", QSize(32, 32));
-  icon.addFile(":/tigervnc_48.png", QSize(48, 48));
-  icon.addFile(":/tigervnc_64.png", QSize(64, 64));
-  icon.addFile(":/tigervnc_128.png", QSize(128, 128));
-  qApp->setWindowIcon(icon);
+
+#if !defined(WIN32) && !defined(__APPLE__)
+  const int icon_sizes[] = {128, 64, 48, 32, 24, 22, 16};
+
+  QIcon fallback;
+
+  for (int icon_size : icon_sizes) {
+      char icon_path[PATH_MAX];
+
+      sprintf(icon_path, "%s/icons/hicolor/%dx%d/apps/tigervnc.png",
+              CMAKE_INSTALL_FULL_DATADIR, icon_size, icon_size);
+
+      fallback.addFile(icon_path, QSize(icon_size, icon_size));
+  }
+
+  qApp->setWindowIcon(QIcon::fromTheme("tigersdvnc", fallback));
+#endif
 
   qApp->setQuitOnLastWindowClosed(false);
 
