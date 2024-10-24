@@ -21,7 +21,6 @@
 #include <config.h>
 #endif
 
-#include <assert.h>
 #include <string.h>
 
 #include <X11/extensions/XInput2.h>

@@ -26,8 +26,6 @@
 #include <X11/extensions/XShm.h>
 #endif
 
-#include <list>
-
 #include <os/Mutex.h>
 
 #include <rfb/PixelBuffer.h>

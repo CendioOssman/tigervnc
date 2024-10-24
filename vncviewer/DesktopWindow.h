@@ -20,11 +20,7 @@
 #ifndef __DESKTOPWINDOW_H__
 #define __DESKTOPWINDOW_H__
 
-#include <map>
-
 #include <sys/time.h>
-
-#include <rfb/Rect.h>
 
 #include <FL/Fl_Window.H>
 

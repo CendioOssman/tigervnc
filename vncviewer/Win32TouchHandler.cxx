@@ -20,8 +20,6 @@
 #include <config.h>
 #endif
 
-#include <math.h>
-
 #define XK_MISCELLANY
 #include <rfb/keysymdef.h>
 #include <rfb/Exception.h>

@@ -22,7 +22,6 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include <list>
 
 #include <rfb/encodings.h>
 

@@ -22,7 +22,6 @@
 #include <windows.h>
 
 #include "BaseTouchHandler.h"
-#include "GestureEvent.h"
 
 class Win32TouchHandler: public BaseTouchHandler {
   public:
