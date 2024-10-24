@@ -53,6 +53,7 @@ namespace rfb {
 
   private:
     gnutls_session_t session;
+    bool established;
     gnutls_anon_client_credentials_t anon_cred;
     gnutls_certificate_credentials_t cert_cred;
     bool anon;
