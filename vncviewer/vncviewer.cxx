@@ -1,5 +1,5 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
- * Copyright 2011 Pierre Ossman <ossman@cendio.se> for Cendio AB
+ * Copyright 2011-2024 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * Copyright (C) 2011 D. R. Commander.  All Rights Reserved.
  * 
  * This is free software; you can redistribute it and/or modify
@@ -22,38 +22,64 @@
 #include <config.h>
 #endif
 
-#include <fcntl.h>
+#include <assert.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 #include <signal.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+
+#ifdef __APPLE__
+#include <Carbon/Carbon.h>
+#endif
 
 #include <QAbstractEventDispatcher>
 #include <QApplication>
-#include <QDir>
-#include <QIcon>
-#include <QLibraryInfo>
 #include <QDeadlineTimer>
+#include <QFileInfo>
+#include <QIcon>
 #include <QMessageBox>
 #include <QTimer>
+
+#if !defined(WIN32) && !defined(__APPLE__)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QX11Info>
+#else
+#include <QGuiApplication>
+#endif
+#endif
 
 #if defined(__APPLE__)
 #include <QMenuBar>
 #endif
 
-#include <os/os.h>
+#if !defined(WIN32) && !defined(__APPLE__)
+#include <X11/XKBlib.h>
+// Qt breaks if this is defined
+#undef None
+#endif
+
+#include <rfb/Logger_stdio.h>
+#include <rfb/Hostname.h>
+#include <rfb/LogWriter.h>
+#include <rfb/Timer.h>
+#include <rfb/Exception.h>
+#include <rfb/util.h>
+
+#include <rdr/Exception.h>
 
 #include <network/TcpSocket.h>
 
-#include <rfb/Exception.h>
-#include <rfb/Hostname.h>
-#include <rfb/LogWriter.h>
-#include <rfb/Logger_stdio.h>
-#include <rfb/Timer.h>
+#include <os/os.h>
 
 #include "appmanager.h"
-#include "CConn.h"
 #include "i18n.h"
 #include "parameters.h"
+#include "CConn.h"
 #include "ServerDialog.h"
-#include "viewerconfig.h"
 #include "vncviewer.h"
 #include "tunnelfactory.h"
 
@@ -63,6 +89,8 @@ using namespace network;
 using namespace rfb;
 
 static std::string vncServerName;
+
+static const char *argv0 = nullptr;
 
 static bool inMainloop = false;
 static bool exitMainloop = false;
@@ -238,6 +266,11 @@ static void init_qt()
   qApp->setOrganizationDomain("tigervnc.org");
   qApp->setApplicationName("vncviewer");
   qApp->setApplicationDisplayName(_("TigerVNC Viewer"));
+  qApp->setApplicationVersion(PACKAGE_VERSION);
+
+  // Proper Gnome Shell integration requires that we set a sensible
+  // WM_CLASS for the window.
+  qApp->setDesktopFileName("vncviewer");
 
 #if !defined(WIN32) && !defined(__APPLE__)
   const int icon_sizes[] = {128, 64, 48, 32, 24, 22, 16};
@@ -273,20 +306,25 @@ static void init_qt()
 
 #ifdef __APPLE__
   QMenuBar* menuBar = new QMenuBar(nullptr); // global menu bar for mac
-  QMenu* appMenu = new QMenu(nullptr);
-  QAction* aboutAction = new QAction(nullptr);
-  QObject::connect(aboutAction, &QAction::triggered, []() { about_vncviewer(nullptr); });
+  QMenu* appMenu = new QMenu(menuBar);
+
+  QAction* aboutAction = new QAction(appMenu);
+  QObject::connect(aboutAction, &QAction::triggered,
+                   []() { about_vncviewer(nullptr); });
   aboutAction->setText(_("About"));
   aboutAction->setMenuRole(QAction::AboutRole);
   appMenu->addAction(aboutAction);
   menuBar->addMenu(appMenu);
-  QMenu *file = new QMenu(p_("SysMenu|", "&File"));
-  file->addAction(p_("SysMenu|File|", "&New Connection"), [=](){
-    QProcess process;
-    if (process.startDetached(qApp->arguments()[0], QStringList())) {
-      vlog.error(_("Error starting new TigerVNC Viewer: %s"), QVariant::fromValue(process.error()).toString().toStdString().c_str());
-    }
-  }, QKeySequence("Ctrl+N"));
+
+  QMenu *file = new QMenu(p_("SysMenu|", "&File"), menuBar);
+  file->addAction(p_("SysMenu|File|", "&New Connection"),
+                  [=]() {
+                    QProcess process;
+                    if (process.startDetached(argv0, QStringList())) {
+                      vlog.error(_("Error starting new TigerVNC Viewer: %s"),
+                                 QVariant::fromValue(process.error()).toString().toStdString().c_str());
+                    }
+                  }, QKeySequence("Ctrl+N"));
   menuBar->addMenu(file);
 #endif
 }
@@ -442,29 +480,32 @@ create_base_dirs()
 
 int main(int argc, char** argv)
 {
+  argv0 = argv[0];
+
   i18n_init();
 
   fprintf(stderr,"\n%s\n", about_text());
 
   rfb::initStdIOLoggers();
 #ifdef WIN32
-  QString tmp = "C:\\temp";
-  if (!QFileInfo::exists(tmp)) {
-    tmp = QString(qgetenv("TMP"));
-    if (!QFileInfo::exists(tmp)) {
-      tmp = QString(qgetenv("TEMP"));
-    }
-  }
-  QString log = tmp + "\\vncviewer.log";
-  rfb::initFileLogger(log.toStdString().c_str());
+  const char* tmp;
+  struct stat st;
+  std::string logfn;
+
+  tmp = getenv("TMP");
+  if ((tmp == nullptr) || (stat(tmp, &st) != 0))
+    tmp = getenv("TEMP");
+  if ((tmp == nullptr) || (stat(tmp, &st) != 0))
+    tmp = getenv("USERPROFILE");
+  if ((tmp == nullptr) || (stat(tmp, &st) != 0))
+    tmp = "C:\\temp";
+
+  logfn = format("%s\\vncviewer.log", tmp);
+  rfb::initFileLogger(logfn.c_str());
 #else
   rfb::initFileLogger("/tmp/vncviewer.log");
 #endif
-#ifdef QT_DEBUG
-  rfb::LogWriter::setLogParams("*:stderr:100");
-#else
   rfb::LogWriter::setLogParams("*:stderr:30");
-#endif
 
 #ifdef SIGHUP
   signal(SIGHUP, CleanupSignalHandler);
@@ -533,6 +574,19 @@ int main(int argc, char** argv)
     vncServerName = argv[i];
     i++;
   }
+
+#if !defined(WIN32) && !defined(__APPLE__)
+  Display* dpy;
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  dpy = QX11Info::display();
+#else
+  dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+
+  XkbSetDetectableAutoRepeat(dpy, True, nullptr);
+#endif
+
   // Check if the server name in reality is a configuration file
   potentiallyLoadConfigurationFile(vncServerName.c_str());
 
