@@ -68,8 +68,9 @@ StringParameter SSecurityTLS::X509_KeyFile
 static LogWriter vlog("TLS");
 
 SSecurityTLS::SSecurityTLS(SConnection* sc_, bool _anon)
-  : SSecurity(sc_), session(nullptr), anon_cred(nullptr),
-    cert_cred(nullptr), anon(_anon), tlsis(nullptr), tlsos(nullptr),
+  : SSecurity(sc_), session(nullptr), established(false),
+    anon_cred(nullptr), cert_cred(nullptr),
+    anon(_anon), tlsis(nullptr), tlsos(nullptr),
     rawis(nullptr), rawos(nullptr)
 {
   int ret;
@@ -85,11 +86,12 @@ SSecurityTLS::SSecurityTLS(SConnection* sc_, bool _anon)
 
 void SSecurityTLS::shutdown()
 {
-  if (session) {
+  if (established) {
     int ret;
     // FIXME: We can't currently wait for the response, so we only send
     //        our close and hope for the best
     ret = gnutls_bye(session, GNUTLS_SHUT_WR);
+    established = false;
     if ((ret != GNUTLS_E_SUCCESS) && (ret != GNUTLS_E_INVALID_SESSION))
       vlog.error("TLS shutdown failed: %s", gnutls_strerror(ret));
   }
@@ -191,6 +193,8 @@ bool SSecurityTLS::processMsg()
 
   vlog.debug("TLS handshake completed with %s",
              gnutls_session_get_desc(session));
+
+  established = true;
 
   sc->setStreams(tlsis, tlsos);
 

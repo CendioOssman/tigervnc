@@ -58,6 +58,7 @@ namespace rfb {
 
   private:
     gnutls_session_t session;
+    bool established;
 #if defined (SSECURITYTLS__USE_DEPRECATED_DH)
     gnutls_dh_params_t dh_params;
 #endif
