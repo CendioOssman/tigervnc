@@ -32,11 +32,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#ifdef WIN32
-#include <os/winerrno.h>
-#include <direct.h>
-#endif
-
 #ifdef __APPLE__
 #include <Carbon/Carbon.h>
 #endif
@@ -47,9 +42,6 @@
 #endif
 
 #include <rfb/Logger_stdio.h>
-#ifdef HAVE_GNUTLS
-#include <rfb/CSecurityTLS.h>
-#endif
 #include <rfb/Hostname.h>
 #include <rfb/LogWriter.h>
 #include <rfb/Timer.h>
@@ -73,13 +65,11 @@
 #include "parameters.h"
 #include "CConn.h"
 #include "ServerDialog.h"
-#include "UserDialog.h"
 #include "touch.h"
 #include "vncviewer.h"
 
 #ifdef WIN32
 #include "resource.h"
-#include "win32.h"
 #endif
 
 static rfb::LogWriter vlog("main");
