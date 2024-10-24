@@ -53,10 +53,8 @@
 #include <QMimeData>
 #include <QGestureRecognizer>
 #include <QGesture>
-#undef asprintf
 #include "parameters.h"
 #include "DesktopWindow.h"
-#undef asprintf
 #include "OptionsDialog.h"
 
 #define XK_LATIN1
@@ -370,7 +368,10 @@ void Viewport::createContextMenu()
               sendContextMenuKey();
             });
     connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      action->setText(QString::asprintf(p_("ContextMenu|", "Send %s"), ::menuKey.getValueStr().c_str()));
+      std::string text;
+      text = rfb::format(p_("ContextMenu|", "Send %s"),
+                         ::menuKey.getValueStr().c_str());
+      action->setText(text.c_str());
     });
     contextMenu->addAction(action);
 

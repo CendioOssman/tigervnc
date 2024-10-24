@@ -55,7 +55,6 @@
 #include "UserDialog.h"
 #include "CConn.h"
 #include "vncviewer.h"
-#undef asprintf
 
 #if !defined(Q_OS_WIN)
 #include "network/UnixSocket.h"
@@ -180,26 +179,70 @@ CConn::~CConn()
 
 QString CConn::connectionInfo()
 {
-  QString infoText;
+  static char infoText[1024] = "";
+
+  char scratch[100];
   char pfStr[100];
 
-  infoText += QString::asprintf(_("Desktop name: %.80s"), server.name()) + "\n";
-  infoText += QString::asprintf(_("Host: %.80s port: %d"), serverHost.toStdString().c_str(), serverPort) + "\n";
-  infoText += QString::asprintf(_("Size: %d x %d"), server.width(), server.height()) + "\n";
+  // Crude way of avoiding constant overflow checks
+  assert((sizeof(scratch) + 1) * 10 < sizeof(infoText));
+
+  infoText[0] = '\0';
+
+  snprintf(scratch, sizeof(scratch),
+           _("Desktop name: %.80s"), server.name());
+  strcat(infoText, scratch);
+  strcat(infoText, "\n");
+
+  snprintf(scratch, sizeof(scratch),
+           _("Host: %.80s port: %d"), serverHost.toStdString().c_str(), serverPort);
+  strcat(infoText, scratch);
+  strcat(infoText, "\n");
+
+  snprintf(scratch, sizeof(scratch),
+           _("Size: %d x %d"), server.width(), server.height());
+  strcat(infoText, scratch);
+  strcat(infoText, "\n");
 
   // TRANSLATORS: Will be filled in with a string describing the
   // protocol pixel format in a fairly language neutral way
   server.pf().print(pfStr, 100);
-  infoText += QString::asprintf(_("Pixel format: %s"), pfStr) + "\n";
+  snprintf(scratch, sizeof(scratch),
+           _("Pixel format: %s"), pfStr);
+  strcat(infoText, scratch);
+  strcat(infoText, "\n");
 
   // TRANSLATORS: Similar to the earlier "Pixel format" string
   serverPF->print(pfStr, 100);
-  infoText += QString::asprintf(_("(server default %s)"), pfStr) + "\n";
-  infoText += QString::asprintf(_("Requested encoding: %s"), encodingName(getPreferredEncoding())) + "\n";
-  infoText += QString::asprintf(_("Last used encoding: %s"), encodingName(lastServerEncoding)) + "\n";
-  infoText += QString::asprintf(_("Line speed estimate: %d kbit/s"), (int)(bpsEstimate/1000)) + "\n";
-  infoText += QString::asprintf(_("Protocol version: %d.%d"), server.majorVersion, server.minorVersion) + "\n";
-  infoText += QString::asprintf(_("Security method: %s"), secTypeName(securityType())) + "\n";
+  snprintf(scratch, sizeof(scratch),
+           _("(server default %s)"), pfStr);
+  strcat(infoText, scratch);
+  strcat(infoText, "\n");
+
+  snprintf(scratch, sizeof(scratch),
+           _("Requested encoding: %s"), encodingName(getPreferredEncoding()));
+  strcat(infoText, scratch);
+  strcat(infoText, "\n");
+
+  snprintf(scratch, sizeof(scratch),
+           _("Last used encoding: %s"), encodingName(lastServerEncoding));
+  strcat(infoText, scratch);
+  strcat(infoText, "\n");
+
+  snprintf(scratch, sizeof(scratch),
+           _("Line speed estimate: %d kbit/s"), (int)(bpsEstimate/1000));
+  strcat(infoText, scratch);
+  strcat(infoText, "\n");
+
+  snprintf(scratch, sizeof(scratch),
+           _("Protocol version: %d.%d"), server.majorVersion, server.minorVersion);
+  strcat(infoText, scratch);
+  strcat(infoText, "\n");
+
+  snprintf(scratch, sizeof(scratch),
+           _("Security method: %s"), secTypeName(csecurity->getType()));
+  strcat(infoText, scratch);
+  strcat(infoText, "\n");
 
   return infoText;
 }

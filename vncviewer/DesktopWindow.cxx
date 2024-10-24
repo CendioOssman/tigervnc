@@ -29,7 +29,6 @@
 #include <QTimer>
 #include <QWindow>
 #include <QProxyStyle>
-#undef asprintf
 #if defined(WIN32)
 #include <windows.h>
 #endif
@@ -264,7 +263,11 @@ void DesktopWindow::updateMonitorsFullscreen()
 
 void DesktopWindow::setName(const char *name)
 {
-  setWindowTitle(QString::asprintf("%s - TigerVNC", name));
+  char windowNameStr[256];
+
+  snprintf(windowNameStr, 256, "%.240s - TigerVNC", name);
+
+  setWindowTitle(windowNameStr);
 }
 
 QList<int> DesktopWindow::fullscreenScreens() const
