@@ -21,7 +21,6 @@
 #include <config.h>
 #endif
 
-#include <stdlib.h>
 #include <math.h>
 
 #include <core/time.h>

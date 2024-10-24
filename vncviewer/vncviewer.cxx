@@ -33,20 +33,11 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#ifdef WIN32
-#include <core/winerrno.h>
-#include <direct.h>
-#endif
-
 #include <core/Exception.h>
 #include <core/Logger_stdio.h>
 #include <core/LogWriter.h>
 #include <core/Timer.h>
 #include <core/string.h>
-
-#ifdef HAVE_GNUTLS
-#include <rfb/CSecurityTLS.h>
-#endif
 
 #include <core/i18n.h>
 #include <core/xdgdirs.h>
@@ -68,7 +59,6 @@
 
 #ifdef WIN32
 #include "resource.h"
-#include "win32.h"
 #endif
 
 static core::LogWriter vlog("main");

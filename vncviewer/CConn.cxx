@@ -66,7 +66,6 @@
 #include "CConn.h"
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"
-#include "PlatformPixelBuffer.h"
 #include "parameters.h"
 #include "vncviewer.h"
 

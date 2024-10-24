@@ -26,7 +26,6 @@
 #include <X11/extensions/XShm.h>
 #endif
 
-#include <list>
 #include <mutex>
 
 #include <core/Region.h>

@@ -22,7 +22,6 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include <list>
 
 #include <core/i18n.h>
 #include <core/string.h>

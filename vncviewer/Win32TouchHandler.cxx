@@ -20,8 +20,6 @@
 #include <config.h>
 #endif
 
-#include <math.h>
-
 #include <stdexcept>
 
 #include <core/LogWriter.h>
