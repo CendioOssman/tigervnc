@@ -23,6 +23,8 @@
 #include <FL/Fl.H>
 
 #include <rfb/CConnection.h>
+#include <rfb/Timer.h>
+
 #include "UserDialog.h"
 
 namespace network { class Socket; }
@@ -41,11 +43,14 @@ public:
   unsigned getPixelCount();
   unsigned getPosition();
 
+  // Forget any saved password
+  void resetPassword();
+
+protected:
   // Callback when socket is ready (or broken)
   static void socketEvent(FL_SOCKET fd, void *data);
 
-  // Forget any saved password
-  void resetPassword();
+  void processNextMsg(rfb::Timer*);
 
   // CConnection callback methods
 
@@ -100,6 +105,7 @@ private:
   std::string serverHost;
   int serverPort;
   network::Socket* sock;
+  rfb::MethodTimer<CConn> msgTimer;
 
   DesktopWindow *desktop;
 
