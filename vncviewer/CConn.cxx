@@ -135,6 +135,8 @@ CConn::~CConn()
   if (desktop)
     delete desktop;
 
+  Fl::remove_idle(processNextMsg, this);
+
   if (sock)
     Fl::remove_fd(sock->getFd());
   delete sock;
@@ -225,10 +227,32 @@ unsigned CConn::getPosition()
   return sock->inStream().pos();
 }
 
+void CConn::resetPassword()
+{
+    dlg.resetPassword();
+}
+
 void CConn::socketEvent(FL_SOCKET fd, void *data)
 {
   CConn *cc;
+
+  assert(data);
+  cc = (CConn*)data;
+
+  // Stop monitoring the socket for now and start processing incoming
+  // data asynchronously
+  Fl::remove_fd(fd);
+  Fl::add_idle(cc->processNextMsg, cc);
+
+  // Coalesce data until we're fully done processing things
+  cc->getOutStream()->cork(true);
+}
+
+void CConn::processNextMsg(void *data)
+{
+  CConn *cc;
   static bool recursing = false;
+  bool again;
   int when;
 
   assert(data);
@@ -238,29 +262,13 @@ void CConn::socketEvent(FL_SOCKET fd, void *data)
   assert(!recursing);
 
   recursing = true;
-  Fl::remove_fd(fd);
 
+  again = false;
   try {
     // We might have been called to flush unwritten socket data
     cc->sock->outStream().flush();
 
-    cc->getOutStream()->cork(true);
-
-    // processMsg() only processes one message, so we need to loop
-    // until the buffers are empty or things will stall.
-    while (cc->processMsg()) {
-
-      // Make sure that the FLTK handling and the timers gets some CPU
-      // time in case of back to back messages
-      Fl::check();
-      Timer::checkTimeouts();
-
-      // Also check if we need to stop reading and terminate
-      if (should_disconnect())
-        break;
-    }
-
-    cc->getOutStream()->cork(false);
+    again = cc->processMsg();
   } catch (rdr::EndOfStream& e) {
     vlog.info("%s", e.str());
     if (!cc->desktop) {
@@ -284,17 +292,22 @@ void CConn::socketEvent(FL_SOCKET fd, void *data)
     abort_connection_with_unexpected_error(e);
   }
 
+  recursing = false;
+
+  if (again)
+    return;
+
+  // Out of data, go back to waiting
+
+  cc->getOutStream()->cork(false);
+
+  Fl::remove_idle(cc->processNextMsg, cc);
+
   when = FL_READ | FL_EXCEPT;
   if (cc->sock->outStream().hasBufferedData())
     when |= FL_WRITE;
 
-  Fl::add_fd(fd, when, socketEvent, data);
-  recursing = false;
-}
-
-void CConn::resetPassword()
-{
-    dlg.resetPassword();
+  Fl::add_fd(cc->sock->getFd(), when, socketEvent, data);
 }
 
 ////////////////////// CConnection callback methods //////////////////////
