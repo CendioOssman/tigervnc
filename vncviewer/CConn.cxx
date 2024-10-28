@@ -89,6 +89,7 @@ CConn::CConn(const char* vncserver, network::Socket* socket_)
  , socket(socket_)
  , socketReadNotifier(nullptr)
  , socketWriteNotifier(nullptr)
+ , processTimer(nullptr)
  , desktop(nullptr)
  , updateCount(0)
  , pixelCount(0)
@@ -146,6 +147,12 @@ CConn::CConn(const char* vncserver, network::Socket* socket_)
     flushSocket();
   });
 
+  processTimer = new QTimer();
+  QObject::connect(processTimer, &QTimer::timeout, [this]() {
+    processNextMsg();
+  });
+  processTimer->setInterval(0);
+
   initialiseProtocol();
 
   credential = new UserDialog;
@@ -171,6 +178,8 @@ CConn::~CConn()
 
   delete serverPF;
   delete fullColourPF;
+
+  delete processTimer;
 
   delete socketReadNotifier;
   delete socketWriteNotifier;
@@ -289,25 +298,36 @@ void CConn::resetConnection()
 
 void CConn::startProcessing()
 {
+  // Stop monitoring the socket for now and start processing incoming
+  // data asynchronously
+  socketReadNotifier->setEnabled(false);
+  socketWriteNotifier->setEnabled(false);
+  processTimer->start();
+
+  // Coalesce data until we're fully done processing things
+  getOutStream()->cork(true);
+}
+
+void CConn::flushSocket()
+{
+  socket->outStream().flush();
+
+  socketWriteNotifier->setEnabled(socket->outStream().hasBufferedData());
+}
+
+void CConn::processNextMsg()
+{
   static bool recursing = false;
+  bool again;
 
   // I don't think processMsg() is recursion safe, so add this check
   assert(!recursing);
 
   recursing = true;
-  socketReadNotifier->setEnabled(false);
-  socketWriteNotifier->setEnabled(false);
 
+  again = false;
   try {
-    getOutStream()->cork(true);
-
-    while (processMsg()) {
-      qApp->processEvents();
-      if (should_disconnect())
-        break;
-    }
-
-    getOutStream()->cork(false);
+    again = processMsg();
   } catch (rdr::EndOfStream& e) {
     recursing = false;
     vlog.info("%s", e.str());
@@ -324,16 +344,18 @@ void CConn::startProcessing()
     abort_connection_with_unexpected_error(e);
   }
 
-  socketReadNotifier->setEnabled(true);
-  socketWriteNotifier->setEnabled(socket->outStream().hasBufferedData());
-
   recursing = false;
-}
 
-void CConn::flushSocket()
-{
-  socket->outStream().flush();
+  if (again)
+    return;
 
+  // Out of data, go back to waiting
+
+  getOutStream()->cork(false);
+
+  processTimer->stop();
+
+  socketReadNotifier->setEnabled(true);
   socketWriteNotifier->setEnabled(socket->outStream().hasBufferedData());
 }
 

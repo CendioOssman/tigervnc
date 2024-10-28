@@ -37,8 +37,6 @@ void abort_connection_with_unexpected_error(const rdr::Exception &);
 
 // Cleanly terminate the connection
 void disconnect();
-// Are we waiting for the main loop to terminate?
-bool should_disconnect();
 
 void about_vncviewer(QWidget* parent);
 
