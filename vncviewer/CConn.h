@@ -31,6 +31,7 @@
 
 class QCursor;
 class QSocketNotifier;
+class QTimer;
 class UserDialog;
 
 namespace rfb
@@ -111,6 +112,7 @@ public:
 private:
   void startProcessing();
   void flushSocket();
+  void processNextMsg();
 
   void autoSelectFormatAndEncoding();
   int securityType();
@@ -125,6 +127,7 @@ private:
   network::Socket* socket;
   QSocketNotifier* socketReadNotifier;
   QSocketNotifier* socketWriteNotifier;
+  QTimer* processTimer;
 
   DesktopWindow *desktop;
 

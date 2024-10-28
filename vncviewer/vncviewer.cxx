@@ -174,11 +174,6 @@ void disconnect()
   qApp->quit();
 }
 
-bool should_disconnect()
-{
-  return exitMainloop;
-}
-
 void about_vncviewer(QWidget* parent)
 {
   QMessageBox* dlg;
