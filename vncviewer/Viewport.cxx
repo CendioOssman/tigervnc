@@ -37,6 +37,7 @@
 #include <rfb/keysymdef.h>
 #endif
 
+#include "fltk/Fl_Message_Box.h"
 #include "fltk/layout.h"
 #include "fltk/util.h"
 #include "Viewport.h"
@@ -789,8 +790,14 @@ void Viewport::popupContextMenu()
     break;
   case ID_INFO:
     if (fltk_escape(cc->connectionInfo(), buffer, sizeof(buffer)) < sizeof(buffer)) {
-      fl_message_title(_("VNC connection info"));
-      fl_message("%s", buffer);
+      Fl_Message_Box* dlg;
+
+      dlg = new Fl_Message_Box(_("VNC connection info"), "%s", buffer);
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      delete dlg;
     }
     break;
   case ID_ABOUT:

@@ -39,6 +39,7 @@
 #include <rfb/Exception.h>
 #include <rfb/obfuscate.h>
 
+#include "fltk/Fl_Message_Box.h"
 #include "fltk/layout.h"
 #include "fltk/util.h"
 #include "i18n.h"
@@ -271,8 +272,16 @@ bool UserDialog::showMsgBox(MsgBoxFlags flags, const char* title, const char* te
     if (((flags & 0xf0) == M_ICONERROR) ||
         ((flags & 0xf0) == M_ICONWARNING))
       fl_alert("%s", buffer);
-    else
-      fl_message("%s", buffer);
+    else {
+      Fl_Message_Box* dlg;
+
+      dlg = new Fl_Message_Box(title, "%s", buffer);
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      delete dlg;
+    }
     return true;
   }
 
