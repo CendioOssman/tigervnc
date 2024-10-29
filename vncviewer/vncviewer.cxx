@@ -48,6 +48,7 @@
 #include <FL/Fl_Sys_Menu_Bar.H>
 #include <FL/fl_ask.H>
 
+#include "fltk/Fl_Message_Box.h"
 #include "fltk/theme.h"
 #include "fltk/util.h"
 #include "parameters.h"
@@ -143,8 +144,26 @@ void disconnect()
 
 void about_vncviewer()
 {
-  fl_message_title(_("About TigerVNC"));
-  fl_message("%s", about_text());
+  static bool recursing = false;
+
+  Fl_Message_Box* dlg;
+
+  // We can end up here again on macOS because the about dialog is
+  // always available on the system menu
+  if (recursing)
+    return;
+
+  recursing = true;
+
+  dlg = new Fl_Message_Box(_("About TigerVNC"),
+                           "%s", about_text());
+  dlg->set_modal();
+  dlg->show();
+  while (dlg->shown())
+    Fl::wait();
+  delete dlg;
+
+  recursing = false;
 }
 
 static void mainloop(const char* vncserver, network::Socket* sock)

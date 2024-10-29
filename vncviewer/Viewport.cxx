@@ -47,6 +47,7 @@
 #define NoSymbol 0
 #endif
 
+#include "fltk/Fl_Message_Box.h"
 #include "fltk/layout.h"
 #include "fltk/util.h"
 #include "Viewport.h"
@@ -59,7 +60,6 @@
 #include "PlatformPixelBuffer.h"
 
 #include <FL/fl_draw.H>
-#include <FL/fl_ask.H>
 
 #include <FL/Fl_Menu.H>
 #include <FL/Fl_Menu_Button.H>
@@ -1055,8 +1055,15 @@ void Viewport::popupContextMenu()
     OptionsDialog::showDialog();
     break;
   case ID_INFO:
-    fl_message_title(_("VNC connection info"));
-    fl_message("%s", fltk_escape(cc->connectionInfo().c_str()).c_str());
+    Fl_Message_Box* dlg;
+
+    dlg = new Fl_Message_Box(_("VNC connection info"), "%s",
+                             fltk_escape(cc->connectionInfo().c_str()).c_str());
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    delete dlg;
     break;
   case ID_ABOUT:
     about_vncviewer();
