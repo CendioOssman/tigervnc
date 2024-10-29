@@ -25,6 +25,7 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
 #include <stdarg.h>
 
 #include <FL/Fl_Box.H>
@@ -34,14 +35,13 @@
 #include "Fl_Message_Box.h"
 #include "layout.h"
 
-static void button_cb(Fl_Widget *w, long) {
-  w->window()->hide();
-}
-
-Fl_Message_Box_::Fl_Message_Box_(const char* title, const char* icon)
-  : Fl_Window(0, 0, title)
+Fl_Message_Box_::Fl_Message_Box_(const char* title, const char* icon,
+                                 const char* b0, const char* b1,
+                                 const char* b2)
+  : Fl_Window(0, 0, title), result_(0)
 {
   int x, y;
+  int bw, bh;
 
   Fl_Box* box;
   Fl_Button* button;
@@ -70,9 +70,43 @@ Fl_Message_Box_::Fl_Message_Box_(const char* title, const char* icon)
                          x - OUTER_MARGIN, BUTTON_HEIGHT);
   buttons->add_resizable(*(new Fl_Box(0, 0, 0, 0)));
 
-  button = new Fl_Return_Button(x - BUTTON_WIDTH, y,
-                                BUTTON_WIDTH, BUTTON_HEIGHT, fl_close);
-  button->callback(button_cb, 0);
+  fl_font(FL_HELVETICA, FL_NORMAL_SIZE);
+
+  if (b0 != nullptr) {
+    bw = bh = 0;
+    fl_measure(b0, bw, bh);
+    bw += 30;
+    if (bw < BUTTON_WIDTH)
+      bw = BUTTON_WIDTH;
+    button = new Fl_Button(x - bw, y, bw, BUTTON_HEIGHT);
+    button->copy_label(b0);
+    button->callback(button_cb, 0);
+    x -= bw + INNER_MARGIN;
+  }
+  if (b1 != nullptr) {
+    bw = bh = 0;
+    fl_measure(b1, bw, bh);
+    bw += 30;
+    // For the return marker
+    bw += 20;
+    if (bw < BUTTON_WIDTH)
+      bw = BUTTON_WIDTH;
+    button = new Fl_Return_Button(x - bw, y, bw, BUTTON_HEIGHT);
+    button->copy_label(b1);
+    button->callback(button_cb, 1);
+    x -= bw + INNER_MARGIN;
+  }
+  if (b2 != nullptr) {
+    bw = bh = 0;
+    fl_measure(b2, bw, bh);
+    bw += 30;
+    if (bw < BUTTON_WIDTH)
+      bw = BUTTON_WIDTH;
+    button = new Fl_Button(x - bw, y, bw, BUTTON_HEIGHT);
+    button->copy_label(b2);
+    button->callback(button_cb, 2);
+    x -= bw + INNER_MARGIN;
+  }
 
   buttons->end();
 
@@ -112,8 +146,19 @@ void Fl_Message_Box_::set_message(const char* fmt, va_list ap)
        OUTER_MARGIN * 2 + msg_h + INNER_MARGIN + BUTTON_HEIGHT);
 }
 
+void Fl_Message_Box_::button_cb(Fl_Widget *w, long val)
+{
+  Fl_Message_Box_* self;
+
+  self = dynamic_cast<Fl_Message_Box_*>(w->window());
+  assert(self != nullptr);
+
+  self->result_ = val;
+  self->hide();
+}
+
 Fl_Message_Box::Fl_Message_Box(const char* title, const char* fmt, ...)
-  : Fl_Message_Box_(title, "i")
+  : Fl_Message_Box_(title, "i", nullptr, fl_close, nullptr)
 {
   va_list ap;
 
@@ -127,7 +172,7 @@ Fl_Message_Box::~Fl_Message_Box()
 }
 
 Fl_Alert_Box::Fl_Alert_Box(const char* title, const char* fmt, ...)
-  : Fl_Message_Box_(title, "!")
+  : Fl_Message_Box_(title, "!", nullptr, fl_close, nullptr)
 {
   va_list ap;
 
@@ -138,4 +183,25 @@ Fl_Alert_Box::Fl_Alert_Box(const char* title, const char* fmt, ...)
 
 Fl_Alert_Box::~Fl_Alert_Box()
 {
+}
+
+Fl_Choice_Box::Fl_Choice_Box(const char* title, const char* fmt,
+                             const char* b0, const char* b1,
+                             const char* b2, ...)
+  : Fl_Message_Box_(title, "?", b0, b1, b2)
+{
+  va_list ap;
+
+  va_start(ap, b2);
+  set_message(fmt, ap);
+  va_end(ap);
+}
+
+Fl_Choice_Box::~Fl_Choice_Box()
+{
+}
+
+int Fl_Choice_Box::result()
+{
+  return result_;
 }

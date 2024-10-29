@@ -59,6 +59,7 @@
 #include <FL/Fl.H>
 #include <FL/fl_ask.H>
 
+#include "fltk/Fl_Message_Box.h"
 #include "fltk/layout.h"
 #include "fltk/util.h"
 #include "AudioOutput.h"
@@ -574,9 +575,20 @@ bool CConn::verifyCertificate(unsigned int status,
           "should not continue."),
         _("Do you want to make an exception for this server?"));
 
-      fl_message_title(_("Unknown certificate issuer"));
-      if (fl_choice("%s", nullptr, fl_cancel, _("Add exception"),
-                    fltk_escape(text).c_str()) != 2)
+      Fl_Choice_Box* dlg;
+
+      dlg = new Fl_Choice_Box(_("Unknown certificate issuer"),
+                              "%s", nullptr, fl_cancel,
+                              _("Add exception"),
+                              fltk_escape(text).c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      int choice = dlg->result();
+      delete dlg;
+
+      if (choice != 2)
         return false;
 
       status &= ~(GNUTLS_CERT_INVALID |
@@ -593,9 +605,20 @@ bool CConn::verifyCertificate(unsigned int status,
           "should not continue."),
         _("Do you want to make an exception for this server?"));
 
-      fl_message_title(_("Certificate is not yet valid"));
-      if (fl_choice("%s", nullptr, fl_cancel, _("Add exception"),
-                    fltk_escape(text).c_str()) != 2)
+      Fl_Choice_Box* dlg;
+
+      dlg = new Fl_Choice_Box(_("Certificate is not yet valid"),
+                              "%s", nullptr, fl_cancel,
+                              _("Add exception"),
+                              fltk_escape(text).c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      int choice = dlg->result();
+      delete dlg;
+
+      if (choice != 2)
         return false;
 
       status &= ~GNUTLS_CERT_NOT_ACTIVATED;
@@ -610,9 +633,20 @@ bool CConn::verifyCertificate(unsigned int status,
           "should not continue."),
         _("Do you want to make an exception for this server?"));
 
-      fl_message_title(_("Expired certificate"));
-      if (fl_choice("%s", nullptr, fl_cancel, _("Add exception"),
-                    fltk_escape(text).c_str()) != 2)
+      Fl_Choice_Box* dlg;
+
+      dlg = new Fl_Choice_Box(_("Expired certificate"),
+                              "%s", nullptr, fl_cancel,
+                              _("Add exception"),
+                              fltk_escape(text).c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      int choice = dlg->result();
+      delete dlg;
+
+      if (choice != 2)
         return false;
 
       status &= ~GNUTLS_CERT_EXPIRED;
@@ -627,9 +661,20 @@ bool CConn::verifyCertificate(unsigned int status,
           "should not continue."),
         _("Do you want to make an exception for this server?"));
 
-      fl_message_title(_("Insecure certificate algorithm"));
-      if (fl_choice("%s", nullptr, fl_cancel, _("Add exception"),
-                    fltk_escape(text).c_str()) != 2)
+      Fl_Choice_Box* dlg;
+
+      dlg = new Fl_Choice_Box(_("Insecure certificate algorithm"),
+                              "%s", nullptr, fl_cancel,
+                              _("Add exception"),
+                              fltk_escape(text).c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      int choice = dlg->result();
+      delete dlg;
+
+      if (choice != 2)
         return false;
 
       status &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
@@ -647,9 +692,20 @@ bool CConn::verifyCertificate(unsigned int status,
           "should not continue."),
         _("Do you want to make an exception for this server?"));
 
-      fl_message_title(_("Certificate hostname mismatch"));
-      if (fl_choice("%s", nullptr, fl_cancel, _("Add exception"),
-                    fltk_escape(text).c_str()) != 2)
+      Fl_Choice_Box* dlg;
+
+      dlg = new Fl_Choice_Box(_("Certificate hostname mismatch"),
+                              "%s", nullptr, fl_cancel,
+                              _("Add exception"),
+                              fltk_escape(text).c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      int choice = dlg->result();
+      delete dlg;
+
+      if (choice != 2)
         return false;
 
       status &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
@@ -679,9 +735,20 @@ bool CConn::verifyCertificate(unsigned int status,
           "should not continue."),
         _("Do you want to make an exception for this server?"));
 
-      fl_message_title(_("Unexpected server certificate"));
-      if (fl_choice("%s", nullptr, fl_cancel, _("Add exception"),
-                    fltk_escape(text).c_str()) != 2)
+      Fl_Choice_Box* dlg;
+
+      dlg = new Fl_Choice_Box(_("Unexpected server certificate"),
+                              "%s", nullptr, fl_cancel,
+                              _("Add exception"),
+                              fltk_escape(text).c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      int choice = dlg->result();
+      delete dlg;
+
+      if (choice != 2)
         return false;
 
       status &= ~(GNUTLS_CERT_INVALID |
@@ -699,9 +766,20 @@ bool CConn::verifyCertificate(unsigned int status,
           "should not continue."),
         _("Do you want to make an exception for this server?"));
 
-      fl_message_title(_("Unexpected server certificate"));
-      if (fl_choice("%s", nullptr, fl_cancel, _("Add exception"),
-                    fltk_escape(text).c_str()) != 2)
+      Fl_Choice_Box* dlg;
+
+      dlg = new Fl_Choice_Box(_("Unexpected server certificate"),
+                              "%s", nullptr, fl_cancel,
+                              _("Add exception"),
+                              fltk_escape(text).c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      int choice = dlg->result();
+      delete dlg;
+
+      if (choice != 2)
         return false;
 
       status &= ~GNUTLS_CERT_NOT_ACTIVATED;
@@ -717,9 +795,20 @@ bool CConn::verifyCertificate(unsigned int status,
           "should not continue."),
         _("Do you want to make an exception for this server?"));
 
-      fl_message_title(_("Unexpected server certificate"));
-      if (fl_choice("%s", nullptr, fl_cancel, _("Add exception"),
-                    fltk_escape(text).c_str()) != 2)
+      Fl_Choice_Box* dlg;
+
+      dlg = new Fl_Choice_Box(_("Unexpected server certificate"),
+                              "%s", nullptr, fl_cancel,
+                              _("Add exception"),
+                              fltk_escape(text).c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      int choice = dlg->result();
+      delete dlg;
+
+      if (choice != 2)
         return false;
 
       status &= ~GNUTLS_CERT_EXPIRED;
@@ -735,9 +824,20 @@ bool CConn::verifyCertificate(unsigned int status,
           "should not continue."),
         _("Do you want to make an exception for this server?"));
 
-      fl_message_title(_("Unexpected server certificate"));
-      if (fl_choice("%s", nullptr, fl_cancel, _("Add exception"),
-                    fltk_escape(text).c_str()) != 2)
+      Fl_Choice_Box* dlg;
+
+      dlg = new Fl_Choice_Box(_("Unexpected server certificate"),
+                              "%s", nullptr, fl_cancel,
+                              _("Add exception"),
+                              fltk_escape(text).c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      int choice = dlg->result();
+      delete dlg;
+
+      if (choice != 2)
         return false;
 
       status &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
@@ -756,9 +856,20 @@ bool CConn::verifyCertificate(unsigned int status,
           "should not continue."),
         _("Do you want to make an exception for this server?"));
 
-      fl_message_title(_("Unexpected server certificate"));
-      if (fl_choice("%s", nullptr, fl_cancel, _("Add exception"),
-                    fltk_escape(text).c_str()) != 2)
+      Fl_Choice_Box* dlg;
+
+      dlg = new Fl_Choice_Box(_("Unexpected server certificate"),
+                              "%s", nullptr, fl_cancel,
+                              _("Add exception"),
+                              fltk_escape(text).c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      int choice = dlg->result();
+      delete dlg;
+
+      if (choice != 2)
         return false;
 
       status &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
@@ -793,9 +904,20 @@ bool CConn::verifyHostKey(const uint8_t* key, size_t length,
       "\n"
       "Do you want to continue connecting to this server?"),
     fingerprint);
-  fl_message_title(_("Verify server key"));
-  if (fl_choice("%s", nullptr, fl_cancel, _("Continue"),
-                fltk_escape(text).c_str()) != 2)
+
+  Fl_Choice_Box* dlg;
+
+  dlg = new Fl_Choice_Box(_("Verify server key"),
+                          "%s", nullptr, fl_cancel, _("Continue"),
+                          fltk_escape(text).c_str());
+  dlg->set_modal();
+  dlg->show();
+  while (dlg->shown())
+    Fl::wait();
+  int choice = dlg->result();
+  delete dlg;
+
+  if (choice != 2)
     return false;
 
   // FIXME: Should save this for TOFU
