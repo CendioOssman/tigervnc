@@ -31,7 +31,6 @@
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Return_Button.H>
 #include <FL/fl_draw.H>
-#include <FL/fl_ask.H>
 #include <FL/Fl_Box.H>
 #include <FL/Fl_File_Chooser.H>
 
@@ -41,6 +40,7 @@
 #include <rfb/LogWriter.h>
 #include <rfb/util.h>
 
+#include "fltk/Fl_Message_Box.h"
 #include "fltk/layout.h"
 #include "fltk/util.h"
 #include "ServerDialog.h"
@@ -137,9 +137,18 @@ std::string ServerDialog::run(const char* servername)
       fltk_menu_add(dialog.serverName->menubutton(),
                     entry.c_str(), 0, nullptr);
   } catch (rfb::Exception& e) {
+    Fl_Alert_Box* dlg;
+
     vlog.error("%s", e.str());
-    fl_alert(_("Unable to load the server history:\n\n%s"),
-             e.str());
+
+    dlg = new Fl_Alert_Box(_("Error"),
+                           _("Unable to load the server history:\n\n"
+                             "%s"), e.str());
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    delete dlg;
   }
 
   while (dialog.shown()) Fl::wait();
@@ -187,9 +196,19 @@ void ServerDialog::handleLoad(Fl_Widget* /*widget*/, void* data)
   try {
     dialog->serverName->value(loadViewerParameters(filename).c_str());
   } catch (rdr::Exception& e) {
+    Fl_Alert_Box* dlg;
+
     vlog.error("%s", e.str());
-    fl_alert(_("Unable to load the specified configuration file:\n\n%s"),
-             e.str());
+
+    dlg = new Fl_Alert_Box(_("Error"),
+                           _("Unable to load the specified "
+                             "configuration file:\n\n"
+                             "%s"), e.str());
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    delete dlg;
   }
 
   delete(file_chooser);
@@ -248,9 +267,19 @@ void ServerDialog::handleSaveAs(Fl_Widget* /*widget*/, void* data)
   try {
     saveViewerParameters(filename, servername);
   } catch (rfb::Exception& e) {
+    Fl_Alert_Box* dlg;
+
     vlog.error("%s", e.str());
-    fl_alert(_("Unable to save the specified configuration "
-               "file:\n\n%s"), e.str());
+
+    dlg = new Fl_Alert_Box(_("Error"),
+                           _("Unable to save the specified "
+                             "configuration file:\n\n"
+                             "%s"), e.str());
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    delete dlg;
   }
   
   delete(file_chooser);
@@ -282,9 +311,19 @@ void ServerDialog::handleConnect(Fl_Widget* /*widget*/, void *data)
   try {
     saveViewerParameters(nullptr, servername);
   } catch (rfb::Exception& e) {
+    Fl_Alert_Box* dlg;
+
     vlog.error("%s", e.str());
-    fl_alert(_("Unable to save the default configuration:\n\n%s"),
-             e.str());
+
+    dlg = new Fl_Alert_Box(_("Error"),
+                           _("Unable to save the default "
+                             "configuration:\n\n"
+                             "%s"), e.str());
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    delete dlg;
   }
 
   // avoid duplicates in the history
@@ -294,9 +333,18 @@ void ServerDialog::handleConnect(Fl_Widget* /*widget*/, void *data)
   try {
     dialog->saveServerHistory();
   } catch (rfb::Exception& e) {
+    Fl_Alert_Box* dlg;
+
     vlog.error("%s", e.str());
-    fl_alert(_("Unable to save the server history:\n\n%s"),
-             e.str());
+
+    dlg = new Fl_Alert_Box(_("Error"),
+                           _("Unable to save the server history:\n\n"
+                             "%s"), e.str());
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    delete dlg;
   }
 }
 
