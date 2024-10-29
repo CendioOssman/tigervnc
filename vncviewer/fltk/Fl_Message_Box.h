@@ -34,10 +34,17 @@ class Fl_Group;
 class Fl_Message_Box_ : public Fl_Window
 {
 protected:
-  Fl_Message_Box_(const char* title, const char* icon);
+  Fl_Message_Box_(const char* title, const char* icon,
+                  const char* b0, const char* b1, const char* b2);
   virtual ~Fl_Message_Box_();
 
   void set_message(const char* fmt, va_list ap);
+
+protected:
+  int result_;
+
+private:
+  static void button_cb(Fl_Widget *w, long val);
 
 private:
   Fl_Box* message;
@@ -56,6 +63,16 @@ class Fl_Alert_Box : public Fl_Message_Box_
 public:
   Fl_Alert_Box(const char* title, const char* fmt, ...);
   virtual ~Fl_Alert_Box();
+};
+
+class Fl_Choice_Box : public Fl_Message_Box_
+{
+public:
+  Fl_Choice_Box(const char* title, const char* fmt,
+                const char* b0, const char* b1, const char* b2, ...);
+  virtual ~Fl_Choice_Box();
+
+  int result();
 };
 
 #endif

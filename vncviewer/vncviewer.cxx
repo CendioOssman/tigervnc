@@ -232,10 +232,20 @@ static void mainloop(const char* vncserver, network::Socket* sock)
       break;
 
     if(reconnectOnError && (sock == nullptr)) {
+      Fl_Choice_Box* dlg;
       int ret;
-      ret = fl_choice(_("%s\n\n"
-                        "Attempt to reconnect?"),
-                      nullptr, fl_yes, fl_no, exitError.c_str());
+
+      dlg = new Fl_Choice_Box(_("Connection error"),
+                              _("%s\n\nAttempt to reconnect?"),
+                              nullptr, fl_yes, fl_no,
+                              exitError.c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      ret = dlg->result();
+      delete dlg;
+
       exitError.clear();
       if (ret == 1)
         continue;

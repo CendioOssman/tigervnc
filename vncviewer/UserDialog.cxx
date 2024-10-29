@@ -260,15 +260,35 @@ bool UserDialog::showMsgBox(MsgBoxFlags flags, const char* title, const char* te
   // FLTK doesn't give us a flexible choice of the icon, so we ignore those
   // bits for now.
 
-  fl_message_title(title);
+  if ((flags & 0xf) == M_OKCANCEL) {
+    Fl_Choice_Box* dlg;
+    int ret;
 
-  switch (flags & 0xf) {
-  case M_OKCANCEL:
-    return fl_choice("%s", nullptr, fl_ok, fl_cancel, buffer) == 1;
-  case M_YESNO:
-    return fl_choice("%s", nullptr, fl_yes, fl_no, buffer) == 1;
-  case M_OK:
-  default:
+    dlg = new Fl_Choice_Box(title, "%s",
+                            nullptr, fl_ok, fl_cancel, buffer);
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    ret = dlg->result();
+    delete dlg;
+
+    return ret == 1;
+  } else if ((flags & 0xf) == M_YESNO) {
+    Fl_Choice_Box* dlg;
+    int ret;
+
+    dlg = new Fl_Choice_Box(title, "%s",
+                            nullptr, fl_yes, fl_no, buffer);
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    ret = dlg->result();
+    delete dlg;
+
+    return ret == 1;
+  } else {
     Fl_Window* dlg;
 
     if (((flags & 0xf0) == M_ICONERROR) ||
