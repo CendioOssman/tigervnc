@@ -248,13 +248,23 @@ void ServerDialog::handleSaveAs(Fl_Widget* /*widget*/, void* data)
     
     FILE* f = fopen(filename, "r");
     if (f) {
-
       // The file already exists.
       fclose(f);
-      int overwrite_choice = fl_choice(_("%s already exists. Do you want to overwrite?"), 
-                                       _("Overwrite"), _("No"), nullptr, filename);
-      if (overwrite_choice == 1) {
 
+      Fl_Choice_Box* dlg;
+
+      dlg = new Fl_Choice_Box(_("File already exists"),
+                              _("%s already exists. Do you want to "
+                                "overwrite?"), _("Overwrite"), _("No"),
+                              nullptr, filename);
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      int overwrite_choice = dlg->result();
+      delete dlg;
+
+      if (overwrite_choice == 1) {
         // If the user doesn't want to overwrite:
         file_chooser->show();
         continue;
