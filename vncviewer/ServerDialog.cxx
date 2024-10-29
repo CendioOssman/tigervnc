@@ -36,7 +36,6 @@
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Return_Button.H>
 #include <FL/fl_draw.H>
-#include <FL/fl_ask.H>
 #include <FL/Fl_Box.H>
 #include <FL/Fl_File_Chooser.H>
 
@@ -48,6 +47,7 @@
 
 #include <network/TcpSocket.h>
 
+#include "fltk/Fl_Message_Box.h"
 #include "fltk/layout.h"
 #include "fltk/util.h"
 #include "fltk/Fl_Suggestion_Input.h"
@@ -190,9 +190,19 @@ void ServerDialog::handleLoad(Fl_Widget* /*widget*/, void* data)
   try {
     dialog->serverName->value(loadViewerParameters(filename).c_str());
   } catch (std::exception& e) {
+    Fl_Alert_Box* dlg;
+
     vlog.error("%s", e.what());
-    fl_alert(_("Unable to load the specified configuration file:\n\n%s"),
-             e.what());
+
+    dlg = new Fl_Alert_Box(_("Error"),
+                           _("Unable to load the specified "
+                             "configuration file:\n\n"
+                             "%s"), e.what());
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    delete dlg;
   }
 
   delete(file_chooser);
@@ -251,9 +261,19 @@ void ServerDialog::handleSaveAs(Fl_Widget* /*widget*/, void* data)
   try {
     saveViewerParameters(filename, servername);
   } catch (std::exception& e) {
+    Fl_Alert_Box* dlg;
+
     vlog.error("%s", e.what());
-    fl_alert(_("Unable to save the specified configuration "
-               "file:\n\n%s"), e.what());
+
+    dlg = new Fl_Alert_Box(_("Error"),
+                           _("Unable to save the specified "
+                             "configuration file:\n\n"
+                             "%s"), e.what());
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    delete dlg;
   }
   
   delete(file_chooser);
