@@ -269,19 +269,20 @@ bool UserDialog::showMsgBox(MsgBoxFlags flags, const char* title, const char* te
     return fl_choice("%s", nullptr, fl_yes, fl_no, buffer) == 1;
   case M_OK:
   default:
+    Fl_Window* dlg;
+
     if (((flags & 0xf0) == M_ICONERROR) ||
         ((flags & 0xf0) == M_ICONWARNING))
-      fl_alert("%s", buffer);
-    else {
-      Fl_Message_Box* dlg;
-
+      dlg = new Fl_Alert_Box(title, "%s", buffer);
+    else
       dlg = new Fl_Message_Box(title, "%s", buffer);
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      delete dlg;
-    }
+
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    delete dlg;
+
     return true;
   }
 

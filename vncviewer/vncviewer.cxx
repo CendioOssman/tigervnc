@@ -123,8 +123,16 @@ void abort_vncviewer(const char *error, ...)
     exitMainloop = true;
   else {
     // We're early in the startup. Assume we can just exit().
-    if (alertOnFatalError)
-      fl_alert("%s", exitError.c_str());
+    if (alertOnFatalError) {
+      Fl_Alert_Box* dlg;
+
+      dlg = new Fl_Alert_Box(_("Error"), "%s", exitError.c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      delete dlg;
+    }
     exit(EXIT_FAILURE);
   }
 }
@@ -206,8 +214,17 @@ static void mainloop(const char* vncserver, network::Socket* sock)
 
     if (fatalError) {
       assert(!exitError.empty());
-      if (alertOnFatalError)
-        fl_alert("%s", exitError.c_str());
+      if (alertOnFatalError) {
+        Fl_Alert_Box* dlg;
+
+        dlg = new Fl_Alert_Box(_("Connection error"),
+                               "%s", exitError.c_str());
+        dlg->set_modal();
+        dlg->show();
+        while (dlg->shown())
+          Fl::wait();
+        delete dlg;
+      }
       break;
     }
 
@@ -226,8 +243,17 @@ static void mainloop(const char* vncserver, network::Socket* sock)
         break;
     }
 
-    if (alertOnFatalError)
-      fl_alert("%s", exitError.c_str());
+    if (alertOnFatalError) {
+      Fl_Alert_Box* dlg;
+
+      dlg = new Fl_Alert_Box(_("Connection error"),
+                              "%s", exitError.c_str());
+      dlg->set_modal();
+      dlg->show();
+      while (dlg->shown())
+        Fl::wait();
+      delete dlg;
+    }
 
     break;
   }

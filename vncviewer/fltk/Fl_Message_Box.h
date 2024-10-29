@@ -24,13 +24,38 @@
 #ifndef __FL_MESSAGE_BOX_H__
 #define __FL_MESSAGE_BOX_H__
 
+#include <stdarg.h>
+
 #include <FL/Fl_Window.H>
 
-class Fl_Message_Box : public Fl_Window
+class Fl_Box;
+class Fl_Group;
+
+class Fl_Message_Box_ : public Fl_Window
+{
+protected:
+  Fl_Message_Box_(const char* title, const char* icon);
+  virtual ~Fl_Message_Box_();
+
+  void set_message(const char* fmt, va_list ap);
+
+private:
+  Fl_Box* message;
+  Fl_Group* buttons;
+};
+
+class Fl_Message_Box : public Fl_Message_Box_
 {
 public:
   Fl_Message_Box(const char* title, const char* fmt, ...);
   virtual ~Fl_Message_Box();
+};
+
+class Fl_Alert_Box : public Fl_Message_Box_
+{
+public:
+  Fl_Alert_Box(const char* title, const char* fmt, ...);
+  virtual ~Fl_Alert_Box();
 };
 
 #endif
