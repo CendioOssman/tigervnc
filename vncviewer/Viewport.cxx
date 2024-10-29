@@ -1060,10 +1060,8 @@ void Viewport::popupContextMenu()
     dlg = new Fl_Message_Box(_("VNC connection info"), "%s",
                              fltk_escape(cc->connectionInfo().c_str()).c_str());
     dlg->set_modal();
+    dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
     dlg->show();
-    while (dlg->shown())
-      Fl::wait();
-    delete dlg;
     break;
   case ID_ABOUT:
     about_vncviewer();
