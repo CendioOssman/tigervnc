@@ -93,6 +93,7 @@ Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc
     lastPointerPos(0, 0), lastButtonMask(0),
     keyboard(nullptr),
     firstLEDState(true), pendingClientClipboard(false),
+    infoDialog(nullptr),
     menuCtrlKey(false), menuAltKey(false), cursor(nullptr)
 {
 #if defined(WIN32)
@@ -151,6 +152,8 @@ Viewport::~Viewport()
   }
 
   delete keyboard;
+
+  delete infoDialog;
 
   // FLTK automatically deletes all child widgets, so we shouldn't touch
   // them ourselves here
@@ -790,14 +793,13 @@ void Viewport::popupContextMenu()
     break;
   case ID_INFO:
     if (fltk_escape(cc->connectionInfo(), buffer, sizeof(buffer)) < sizeof(buffer)) {
-      Fl_Message_Box* dlg;
+      delete infoDialog;
+      infoDialog = nullptr;
 
-      dlg = new Fl_Message_Box(_("VNC connection info"), "%s", buffer);
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      delete dlg;
+      infoDialog = new Fl_Message_Box(_("VNC connection info"),
+                                      "%s", buffer);
+      infoDialog->set_modal();
+      infoDialog->show();
     }
     break;
   case ID_ABOUT:

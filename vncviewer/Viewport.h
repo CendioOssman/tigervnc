@@ -119,6 +119,7 @@ private:
   uint32_t menuKeySym;
   int menuKeyCode, menuKeyFLTK;
   Fl_Menu_Button *contextMenu;
+  Fl_Window* infoDialog;
 
   bool menuCtrlKey;
   bool menuAltKey;
