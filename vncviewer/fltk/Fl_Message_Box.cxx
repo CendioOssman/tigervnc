@@ -38,7 +38,8 @@
 Fl_Message_Box_::Fl_Message_Box_(const char* title, const char* icon,
                                  const char* b0, const char* b1,
                                  const char* b2)
-  : Fl_Window(0, 0, title), result_(0)
+  : Fl_Window(0, 0, title), result_(0),
+    callback_(nullptr), user_data_(nullptr)
 {
   int x, y;
 
@@ -98,6 +99,19 @@ Fl_Message_Box_::Fl_Message_Box_(const char* title, const char* icon,
 
 Fl_Message_Box_::~Fl_Message_Box_()
 {
+}
+
+void Fl_Message_Box_::finished(Fl_Callback* cb, void* p)
+{
+  callback_ = cb;
+  user_data_ = p;
+}
+
+void Fl_Message_Box_::hide()
+{
+  if (callback_ != nullptr)
+    callback_(this, user_data_);
+  Fl_Window::hide();
 }
 
 void Fl_Message_Box_::set_message(const char* fmt, va_list ap)

@@ -181,11 +181,10 @@ void about_vncviewer()
                            "%s", about_text());
   dlg->set_modal();
   dlg->show();
-  while (dlg->shown())
-    Fl::wait();
-  delete dlg;
-
-  recursing = false;
+  dlg->finished([](Fl_Widget* w, void*) {
+    delete w;
+    recursing = false;
+  });
 }
 
 static void mainloop(const char* vncserver, network::Socket* sock)
