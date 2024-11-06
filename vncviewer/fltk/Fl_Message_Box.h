@@ -33,6 +33,11 @@ class Fl_Group;
 
 class Fl_Message_Box_ : public Fl_Window
 {
+public:
+  void finished(Fl_Callback* cb, void* p=nullptr);
+
+  void hide() override;
+
 protected:
   Fl_Message_Box_(const char* title, const char* icon,
                   const char* b0, const char* b1, const char* b2);
@@ -49,6 +54,9 @@ private:
 private:
   Fl_Box* message;
   Fl_Group* buttons;
+
+  Fl_Callback* callback_;
+  void* user_data_;
 };
 
 class Fl_Message_Box : public Fl_Message_Box_
