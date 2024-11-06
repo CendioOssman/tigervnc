@@ -162,27 +162,20 @@ void disconnect()
 
 void about_vncviewer()
 {
-  static bool recursing = false;
-
   static Fl_Message_Box* dlg = nullptr;
-
-  // We can end up here again on macOS because the about dialog is
-  // always available on the system menu
-  if (recursing)
-    return;
-
-  recursing = true;
 
   if (dlg == nullptr) {
     dlg = new Fl_Message_Box(_("About TigerVNC Viewer"),
                              "%s", about_text());
+#ifndef __APPLE__
     dlg->set_modal();
+#endif
   }
+
   if (!dlg->shown()) {
     dlg->show();
-    dlg->finished([](Fl_Widget*, void*) {
-      recursing = false;
-    });
+  } else {
+    dlg->take_focus();
   }
 }
 
