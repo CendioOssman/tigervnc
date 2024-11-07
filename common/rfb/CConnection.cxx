@@ -141,15 +141,30 @@ void CConnection::initialiseProtocol()
 
 bool CConnection::processMsg()
 {
+  bool again;
   switch (state_) {
 
-  case RFBSTATE_PROTOCOL_VERSION: return processVersionMsg();        break;
-  case RFBSTATE_SECURITY_TYPES:   return processSecurityTypesMsg();  break;
-  case RFBSTATE_SECURITY:         return processSecurityMsg();       break;
-  case RFBSTATE_SECURITY_RESULT:  return processSecurityResultMsg(); break;
-  case RFBSTATE_SECURITY_REASON:  return processSecurityReasonMsg(); break;
-  case RFBSTATE_INITIALISATION:   return processInitMsg();           break;
-  case RFBSTATE_NORMAL:           return reader_->readMsg();         break;
+  case RFBSTATE_PROTOCOL_VERSION:
+    again = processVersionMsg();
+    break;
+  case RFBSTATE_SECURITY_TYPES:
+    again = processSecurityTypesMsg();
+    break;
+  case RFBSTATE_SECURITY:
+    again = processSecurityMsg();
+    break;
+  case RFBSTATE_SECURITY_RESULT:
+    again = processSecurityResultMsg();
+    break;
+  case RFBSTATE_SECURITY_REASON:
+    again = processSecurityReasonMsg();
+    break;
+  case RFBSTATE_INITIALISATION:
+    again = processInitMsg();
+    break;
+  case RFBSTATE_NORMAL:
+    again = reader_->readMsg();
+    break;
   case RFBSTATE_CLOSING:
     throw Exception("CConnection::processMsg: called while closing");
   case RFBSTATE_UNINITIALISED:
@@ -157,6 +172,7 @@ bool CConnection::processMsg()
   default:
     throw Exception("CConnection::processMsg: invalid state");
   }
+  return again;
 }
 
 bool CConnection::processVersionMsg()
