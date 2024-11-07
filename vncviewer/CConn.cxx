@@ -306,16 +306,16 @@ void CConn::processNextMsg(Timer*)
 
 ////////////////////// CConnection callback methods //////////////////////
 
-bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
-                       const char *text)
-{
-    return dlg.showMsgBox(flags, title, text);
-}
-
 void CConn::getUserPasswd(bool secure, std::string *user,
                           std::string *password)
 {
     dlg.getUserPasswd(secure, user, password);
+}
+
+bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
+                       const char *text)
+{
+    return dlg.showMsgBox(flags, title, text);
 }
 
 // initDone() is called when the serverInit message has been received.  At
