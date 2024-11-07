@@ -30,6 +30,7 @@ namespace network { class Socket; }
 
 class AudioOutput;
 class DesktopWindow;
+class AuthDialog;
 
 class CConn : public rfb::CConnection
 {
@@ -103,6 +104,8 @@ private:
 
   static void handleUpdateTimeout(void *data);
 
+  void handleAuthFinished();
+
   void resumeProcessing();
 
 private:
@@ -110,6 +113,8 @@ private:
   int serverPort;
   network::Socket* sock;
   core::MethodTimer<CConn> msgTimer;
+
+  AuthDialog* authDialog;
 
   DesktopWindow *desktop;
 
