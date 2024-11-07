@@ -54,6 +54,7 @@ enum {
   ReadRandom,
   ReadHash,
   ReadSubtype,
+  WriteCredentials,
 };
 
 const int MinKeyLength = 1024;
@@ -145,6 +146,12 @@ bool CSecurityRSAAES::processMsg()
       /* fall through */
     case ReadSubtype:
       if (!readSubtype())
+        return false;
+      state = WriteCredentials;
+      /* fall through */
+    case WriteCredentials:
+      if (!cc->requestCredentials((subtype == secTypeRA2UserPass),
+                                  true))
         return false;
       writeCredentials();
       return true;
@@ -511,9 +518,8 @@ void CSecurityRSAAES::writeCredentials()
   std::string password;
 
   if (subtype == secTypeRA2UserPass)
-    cc->getUserPasswd(isSecure(), &username, &password);
-  else
-    cc->getUserPasswd(isSecure(), nullptr, &password);
+    username = cc->getUsername();
+  password = cc->getPassword();
 
   if (subtype == secTypeRA2UserPass) {
     if (username.size() > 255)

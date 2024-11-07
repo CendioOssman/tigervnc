@@ -28,6 +28,7 @@
 #include <string>
 
 #include <core/Configuration.h>
+#include <core/Timer.h>
 
 #include <rfb/CMsgHandler.h>
 #include <rfb/DecodeManager.h>
@@ -98,6 +99,11 @@ namespace rfb {
     // should be called before terminating the underlying network
     // connection
     void close();
+
+    // setCredentials() is called when the server requires authenication
+    // and the client has credentials available.
+    void setCredentials(const std::string& user,
+                        const std::string& password);
 
     // requestClipboard() will result in a request to the server to
     // transfer its clipboard data. A call to handleClipboardData()
@@ -173,13 +179,19 @@ namespace rfb {
 
     stateEnum state() { return state_; }
 
-    // Methods used by SSecurity classes
+    // Methods used by CSecurity classes
 
-    // getUserPasswd() gets the username and password.  This might
-    // involve a dialog, getpass(), etc.  The user buffer pointer can be
-    // null, in which case no user name will be retrieved.
-    virtual void getUserPasswd(bool secure, std::string* user,
-                               std::string* password) = 0;
+    // requestCredentials() is a non-blocking function that is called
+    // when the server requires authentication. It immediately returns
+    // true if credentials are available, and false otherwise.
+    bool requestCredentials(bool needsUser, bool needsPassword);
+
+    // Note: getUsername() should only be used if requestCredentials()
+    // returned true.
+    std::string getUsername();
+    // Note: getPassword() should only be used if requestCredentials()
+    //returned true.
+    std::string getPassword();
 
     // verifyCertificate() is called when a certificate is received from
     // the server. Return true if the certificate should be accepted,
@@ -253,6 +265,12 @@ namespace rfb {
 
 
     // Methods to be overridden in a derived class
+
+    // credentialsRequested() is called when credentials are required.
+    // This method should be non-blocking and call setCredentials()
+    // when credentials are available.
+    virtual void credentialsRequested(bool secure, bool needsUser,
+                                      bool needsPassword) = 0;
 
     // initDone() is called when the connection is fully established
     // and standard messages can be sent. This is called before the
@@ -328,7 +346,10 @@ namespace rfb {
     void throwAuthError();
     void securityCompleted();
 
+    void handleCredentialsTimer(core::Timer*);
+
     void requestAudio();
+
     void requestNewUpdate();
     void updateEncodings();
 
@@ -339,6 +360,16 @@ namespace rfb {
     bool deleteStreamsWhenDone;
     bool shared;
     stateEnum state_;
+
+    struct Credentials {
+      std::string username;
+      std::string password;
+    };
+
+    Credentials credentials;
+    core::MethodTimer<CConnection> credentialsTimer;
+    bool requestedUser;
+    bool requestedPassword;
 
     std::string serverName;
 

@@ -73,11 +73,17 @@ CSecurityDH::~CSecurityDH()
 
 bool CSecurityDH::processMsg()
 {
-  if (readKey()) {
-    writeCredentials();
-    return true;
+  if (keyLength == 0) {
+    if (!readKey())
+      return false;
   }
-  return false;
+
+  if (!cc->requestCredentials(true, true))
+    return false;
+
+  writeCredentials();
+
+  return true;
 }
 
 bool CSecurityDH::readKey()
@@ -114,7 +120,8 @@ void CSecurityDH::writeCredentials()
   std::string password;
   rdr::RandomStream rs;
 
-  cc->getUserPasswd(isSecure(), &username, &password);
+  username = cc->getUsername();
+  password = cc->getPassword();
 
   std::vector<uint8_t> bBytes(keyLength);
   if (!rs.hasData(keyLength))
