@@ -28,6 +28,7 @@
 namespace network { class Socket; }
 
 class DesktopWindow;
+class AuthDialog;
 
 class CConn : public rfb::CConnection
 {
@@ -96,6 +97,8 @@ private:
 
   static void handleUpdateTimeout(void *data);
 
+  void handleAuthFinished();
+
   void resumeProcessing();
 
 private:
@@ -103,6 +106,8 @@ private:
   int serverPort;
   network::Socket* sock;
   rfb::MethodTimer<CConn> msgTimer;
+
+  AuthDialog* authDialog;
 
   DesktopWindow *desktop;
 

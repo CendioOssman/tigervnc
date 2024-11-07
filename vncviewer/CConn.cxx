@@ -82,7 +82,8 @@ static const unsigned bpsEstimateWindow = 1000;
 
 CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
   : serverPort(0), msgTimer(this, &CConn::processNextMsg),
-    desktop(nullptr), updateCount(0), pixelCount(0),
+    authDialog(nullptr), desktop(nullptr),
+    updateCount(0), pixelCount(0),
     lastServerEncoding((unsigned int)-1), bpsEstimate(20000000)
 {
   setShared(::shared);
@@ -139,6 +140,8 @@ CConn::~CConn()
 
   OptionsDialog::removeCallback(handleOptions);
   Fl::remove_timeout(handleUpdateTimeout, this);
+
+  delete authDialog;
 
   if (desktop)
     delete desktop;
@@ -267,6 +270,8 @@ void CConn::processNextMsg(Timer*)
 
     again = processMsg();
   } catch (rdr::EndOfStream& e) {
+    if (authDialog)
+      authDialog->hide();
     vlog.info("%s", e.str());
     if (!desktop) {
       vlog.error(_("The connection was dropped by the server before "
@@ -280,6 +285,8 @@ void CConn::processNextMsg(Timer*)
     vlog.info("%s", e.str());
     disconnect();
   } catch (rfb::AuthFailureException& e) {
+    if (authDialog)
+      authDialog->hide();
     savedUsername.clear();
     savedPassword.clear();
     vlog.error(_("Authentication failed: %s"), e.str());
@@ -287,6 +294,8 @@ void CConn::processNextMsg(Timer*)
                        "given by the server:\n\n%s"), e.str());
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
+    if (authDialog)
+      authDialog->hide();
     abort_connection_unexpected(e);
   }
 
@@ -314,7 +323,6 @@ void CConn::credentialsRequested(bool secure, bool needsUser,
                                  bool needsPassword)
 {
   const char *passwordFileName(passwordFile);
-  int ret_val;
 
   assert(needsPassword);
   char *envUsername = getenv("VNC_USERNAME");
@@ -363,39 +371,14 @@ void CConn::credentialsRequested(bool secure, bool needsUser,
     return;
   }
 
-  AuthDialog d(secure, needsUser, needsPassword);
-  d.show();
-  while (d.shown())
-    Fl::wait();
-  ret_val = d.result();
-
-  if (ret_val == 0) {
-    bool keepPasswd;
-    std::string user;
-    std::string password;
-
-    if (reconnectOnError)
-      keepPasswd = d.getKeepPassword();
-    else
-      keepPasswd = false;
-
-    if (needsUser) {
-      user = d.getUser();
-      if (keepPasswd)
-        savedUsername = d.getUser();
-    }
-    password = d.getPassword();
-    if (keepPasswd)
-      savedPassword = d.getPassword();
-
-    setCredentials(user, password);
-    resumeProcessing();
-  }
-
-  if (ret_val != 0) {
-    vlog.info(_("Authentication cancelled"));
-    disconnect();
-  }
+  assert(authDialog == nullptr);
+  authDialog = new AuthDialog(secure, needsUser, needsPassword);
+  authDialog->finished(
+    [](Fl_Widget*, void* data) {
+      ((CConn*)data)->handleAuthFinished();
+    },
+    this);
+  authDialog->show();
 }
 
 bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
@@ -769,6 +752,42 @@ void CConn::handleUpdateTimeout(void *data)
   self->desktop->updateWindow();
 
   Fl::repeat_timeout(1.0, handleUpdateTimeout, data);
+}
+
+void CConn::handleAuthFinished()
+{
+  bool keepPasswd;
+  std::string user;
+  std::string password;
+
+  if (!authDialog->result()) {
+    Fl::delete_widget(authDialog);
+    authDialog = nullptr;
+
+    vlog.info(_("Authentication cancelled"));
+    disconnect();
+    return;
+  }
+
+  if (reconnectOnError)
+    keepPasswd = authDialog->getKeepPassword();
+  else
+    keepPasswd = false;
+
+  if (!authDialog->getUser().empty()) {
+    user = authDialog->getUser();
+    if (keepPasswd)
+      savedUsername = authDialog->getUser();
+  }
+  password = authDialog->getPassword();
+  if (keepPasswd)
+    savedPassword = authDialog->getPassword();
+
+  Fl::delete_widget(authDialog);
+  authDialog = nullptr;
+
+  setCredentials(user, password);
+  resumeProcessing();
 }
 
 void CConn::resumeProcessing()
