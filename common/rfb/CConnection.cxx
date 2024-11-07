@@ -60,6 +60,8 @@ CConnection::CConnection()
     is(nullptr), os(nullptr), reader_(nullptr), writer_(nullptr),
     shared(false),
     state_(RFBSTATE_UNINITIALISED),
+    credentialsTimer(this, &CConnection::handleCredentialsTimer),
+    requestedUser(false), requestedPassword(false),
     pendingPFChange(false), preferredEncoding(encodingTight),
     compressLevel(2), qualityLevel(-1),
     formatChange(false), encodingChange(false),
@@ -172,6 +174,12 @@ bool CConnection::processMsg()
   default:
     throw Exception("CConnection::processMsg: invalid state");
   }
+
+  // Check for more data just to get the exception if something is wrong with
+  // the socket. This to make sure we don't end up in an infinite recursion.
+  if (!again)
+    is->hasData(is->avail() + 1);
+
   return again;
 }
 
@@ -654,6 +662,15 @@ void CConnection::handleClipboardData(const char* /*data*/)
 {
 }
 
+void CConnection::setCredentials(const std::string& user,
+                                 const std::string& password)
+{
+  credentials.username = user;
+  credentials.password = password;
+  requestedUser = false;
+  requestedPassword = false;
+}
+
 void CConnection::requestClipboard()
 {
   if (hasRemoteClipboard) {
@@ -847,6 +864,43 @@ void CConnection::setPF(const PixelFormat& pf)
   formatChange = true;
 }
 
+bool CConnection::requestCredentials(bool needsUser, bool needsPassword)
+{
+  // Anything needed?
+  if (!needsUser && !needsPassword)
+    return true;
+
+  // Have what we need?
+  if ((!needsUser || !credentials.username.empty()) &&
+      (!needsPassword || !credentials.password.empty()))
+    return true;
+
+  // Already requested what's needed?
+  if ((requestedUser || !needsUser) &&
+      (requestedPassword || !needsPassword))
+    return false;
+
+  requestedUser = needsUser;
+  requestedPassword = needsPassword;
+
+  // Postpone request to the next event loop iteration to avoid
+  // recursive behaviour and prevent potential conflicts with ongoing
+  // event handling
+  credentialsTimer.start(0);
+
+  return false;
+}
+
+std::string CConnection::getUsername()
+{
+  return credentials.username;
+}
+
+std::string CConnection::getPassword()
+{
+  return credentials.password;
+}
+
 void CConnection::fence(uint32_t flags, unsigned len, const uint8_t data[])
 {
   CMsgHandler::fence(flags, len, data);
@@ -858,6 +912,11 @@ void CConnection::fence(uint32_t flags, unsigned len, const uint8_t data[])
   flags = 0;
 
   writer()->writeFence(flags, len, data);
+}
+
+void CConnection::handleCredentialsTimer(Timer*)
+{
+  credentialsRequested(isSecure(), requestedUser, requestedPassword);
 }
 
 // requestNewUpdate() requests an update from the server, having set the

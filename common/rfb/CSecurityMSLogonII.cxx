@@ -45,7 +45,7 @@
 using namespace rfb;
 
 CSecurityMSLogonII::CSecurityMSLogonII(CConnection* cc_)
-  : CSecurity(cc_)
+  : CSecurity(cc_), hasKey(false)
 {
   mpz_init(g);
   mpz_init(p);
@@ -67,11 +67,17 @@ CSecurityMSLogonII::~CSecurityMSLogonII()
 
 bool CSecurityMSLogonII::processMsg()
 {
-  if (readKey()) {
-    writeCredentials();
-    return true;
+  if (!hasKey) {
+    if (!readKey())
+      return false;
   }
-  return false;
+
+  if (!cc->requestCredentials(true, true))
+    return false;
+
+  writeCredentials();
+
+  return true;
 }
 
 bool CSecurityMSLogonII::readKey()
@@ -88,6 +94,7 @@ bool CSecurityMSLogonII::readKey()
   nettle_mpz_set_str_256_u(g, 8, gBytes);
   nettle_mpz_set_str_256_u(p, 8, pBytes);
   nettle_mpz_set_str_256_u(A, 8, ABytes);
+  hasKey = true;
   return true;
 }
 
@@ -97,7 +104,8 @@ void CSecurityMSLogonII::writeCredentials()
   std::string password;
   rdr::RandomStream rs;
 
-  cc->getUserPasswd(isSecure(), &username, &password);
+  username = cc->getUsername();
+  password = cc->getPassword();
 
   std::vector<uint8_t> bBytes(8);
   if (!rs.hasData(8))

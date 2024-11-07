@@ -49,8 +49,8 @@ protected:
 
   // CConnection callback methods
 
-  void getUserPasswd(bool secure, std::string *user,
-                     std::string *password) override;
+  void credentialsRequested(bool secure, bool needsUser,
+                            bool needsPassword) override;
   bool showMsgBox(rfb::MsgBoxFlags flags, const char *title,
                   const char *text) override;
 
@@ -95,6 +95,8 @@ private:
   static void handleOptions(void *data);
 
   static void handleUpdateTimeout(void *data);
+
+  void resumeProcessing();
 
 private:
   std::string serverHost;

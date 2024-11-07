@@ -169,7 +169,9 @@ int AuthDialog::result()
 
 std::string AuthDialog::getUser()
 {
-  return username->value();
+  if (username)
+    return username->value();
+  return "";
 }
 
 std::string AuthDialog::getPassword()

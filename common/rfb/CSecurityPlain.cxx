@@ -30,12 +30,15 @@ using namespace rfb;
 
 bool CSecurityPlain::processMsg()
 {
-   rdr::OutStream* os = cc->getOutStream();
+  if (!cc->requestCredentials(true, true))
+    return false;
+
+  rdr::OutStream* os = cc->getOutStream();
 
   std::string username;
   std::string password;
-
-  cc->getUserPasswd(cc->isSecure(), &username, &password);
+  username = cc->getUsername();
+  password = cc->getPassword();
 
   // Return the response to the server
   os->writeU32(username.size());

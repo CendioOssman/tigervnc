@@ -310,55 +310,60 @@ void CConn::processNextMsg(Timer*)
 
 ////////////////////// CConnection callback methods //////////////////////
 
-void CConn::getUserPasswd(bool secure, std::string *user,
-                          std::string *password)
+void CConn::credentialsRequested(bool secure, bool needsUser,
+                                 bool needsPassword)
 {
   const char *passwordFileName(passwordFile);
   int ret_val;
 
-  assert(password);
+  assert(needsPassword);
   char *envUsername = getenv("VNC_USERNAME");
   char *envPassword = getenv("VNC_PASSWORD");
 
-  if(user && envUsername && envPassword) {
-    *user = envUsername;
-    *password = envPassword;
+  if (needsUser && envUsername && envPassword) {
+    setCredentials(envUsername, envPassword);
+    resumeProcessing();
     return;
   }
 
-  if (!user && envPassword) {
-    *password = envPassword;
+  if (!needsUser && envPassword) {
+    setCredentials("", envPassword);
+    resumeProcessing();
     return;
   }
 
-  if (user && !savedUsername.empty() && !savedPassword.empty()) {
-    *user = savedUsername;
-    *password = savedPassword;
+  if (needsUser && !savedUsername.empty() && !savedPassword.empty()) {
+    setCredentials(savedUsername, savedPassword);
+    resumeProcessing();
     return;
   }
 
-  if (!user && !savedPassword.empty()) {
-    *password = savedPassword;
+  if (!needsUser && !savedPassword.empty()) {
+    setCredentials("", savedPassword);
+    resumeProcessing();
     return;
   }
 
-  if (!user && passwordFileName[0]) {
+  if (!needsUser && passwordFileName[0]) {
     std::vector<uint8_t> obfPwd(8);
     FILE* fp;
 
     fp = fopen(passwordFileName, "rb");
-    if (!fp)
-      throw rdr::SystemException(_("Opening password file failed"), errno);
+    if (!fp) {
+      abort_connection_unexpected(_("Opening password file failed: %s"),
+                                  strerror(errno));
+      return;
+    }
 
     obfPwd.resize(fread(obfPwd.data(), 1, obfPwd.size(), fp));
     fclose(fp);
 
-    *password = deobfuscate(obfPwd.data(), obfPwd.size());
-
+    setCredentials("", deobfuscate(obfPwd.data(), obfPwd.size()));
+    resumeProcessing();
     return;
   }
 
-  AuthDialog d(secure, user != nullptr, password != nullptr);
+  AuthDialog d(secure, needsUser, needsPassword);
   d.show();
   while (d.shown())
     Fl::wait();
@@ -366,24 +371,31 @@ void CConn::getUserPasswd(bool secure, std::string *user,
 
   if (ret_val == 0) {
     bool keepPasswd;
+    std::string user;
+    std::string password;
 
     if (reconnectOnError)
       keepPasswd = d.getKeepPassword();
     else
       keepPasswd = false;
 
-    if (user) {
-      *user = d.getUser();
+    if (needsUser) {
+      user = d.getUser();
       if (keepPasswd)
         savedUsername = d.getUser();
     }
-    *password = d.getPassword();
+    password = d.getPassword();
     if (keepPasswd)
       savedPassword = d.getPassword();
+
+    setCredentials(user, password);
+    resumeProcessing();
   }
 
-  if (ret_val != 0)
-    throw rfb::AuthCancelledException();
+  if (ret_val != 0) {
+    vlog.info(_("Authentication cancelled"));
+    disconnect();
+  }
 }
 
 bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
@@ -757,4 +769,9 @@ void CConn::handleUpdateTimeout(void *data)
   self->desktop->updateWindow();
 
   Fl::repeat_timeout(1.0, handleUpdateTimeout, data);
+}
+
+void CConn::resumeProcessing()
+{
+  socketEvent(sock->getFd(), this);
 }
