@@ -96,6 +96,10 @@ VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
 {
   slog.debug("Creating single-threaded server %s", name.c_str());
 
+  registerSignal<KeyEvent>("keydown");
+  registerSignal<KeyEvent>("keyup");
+  registerSignal<PointerEvent>("pointer");
+
   registerSignal("clipboardrequest");
   registerSignal<bool>("clipboardannounce");
   registerSignal<const char*>("clipboarddata");
@@ -193,6 +197,10 @@ void VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
 
   clients.push_front(client);
 
+  client->connectSignal("keydown", this, &VNCServerST::keyEvent);
+  client->connectSignal("keyup", this, &VNCServerST::keyEvent);
+  client->connectSignal("pointer", this, &VNCServerST::pointerEvent);
+
   client->connectSignal("clipboardrequest", this,
                         &VNCServerST::handleClipboardRequest);
   client->connectSignal("clipboardannounce", this,
@@ -211,7 +219,7 @@ void VNCServerST::removeSocket(network::Socket* sock) {
       // - Remove any references to it
       if (pointerClient == *ci) {
         // Release the mouse buttons the client have pressed
-        desktop->pointerEvent(cursorPos, 0);
+        emitSignal("pointer", PointerEvent{cursorPos, 0});
         pointerClient = nullptr;
       }
       if (clipboardClient == *ci)
@@ -509,7 +517,8 @@ void VNCServerST::setLEDState(unsigned int state)
 
 // Event handlers
 
-void VNCServerST::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
+void VNCServerST::keyEvent(VNCSConnectionST*, const char* evname,
+                           KeyEvent event)
 {
   if (!rfb::Server::acceptKeyEvents)
     return;
@@ -520,20 +529,20 @@ void VNCServerST::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
   // Remap the key if required
   if (keyRemapper) {
     uint32_t newkey;
-    newkey = keyRemapper->remapKey(keysym);
-    if (newkey != keysym) {
+    newkey = keyRemapper->remapKey(event.keysym);
+    if (newkey != event.keysym) {
       slog.debug("Key remapped to XK_%s (0x%x)",
                  KeySymName(newkey), newkey);
-      keysym = newkey;
+      event.keysym = newkey;
     }
   }
 
-  desktop->keyEvent(keysym, keycode, down);
+  emitSignal(evname, event);
 }
 
 void VNCServerST::pointerEvent(VNCSConnectionST* client,
-                               const core::Point& pos,
-                               uint16_t buttonMask)
+                               const char* evname,
+                               PointerEvent event)
 {
   time_t now = time(nullptr);
 
@@ -551,12 +560,12 @@ void VNCServerST::pointerEvent(VNCSConnectionST* client,
     return;
 
   pointerClientTime = now;
-  if (buttonMask)
+  if (event.buttonMask)
     pointerClient = client;
   else
     pointerClient = nullptr;
 
-  desktop->pointerEvent(pos, buttonMask);
+  emitSignal(evname, event);
 }
 
 unsigned int VNCServerST::setDesktopSize(VNCSConnectionST* requester,

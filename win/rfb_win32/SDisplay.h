@@ -41,6 +41,9 @@
 
 namespace rfb {
 
+  struct KeyEvent;
+  struct PointerEvent;
+
   namespace win32 {
 
     //
@@ -79,9 +82,6 @@ namespace rfb {
       void terminate() override;
       void queryConnection(network::Socket* sock,
                            const char* userName) override;
-      void pointerEvent(const core::Point& pos,
-                        uint16_t buttonmask) override;
-      void keyEvent(uint32_t keysym, uint32_t keycode, bool down) override;
 
       // -=- Clipboard events
       
@@ -125,6 +125,9 @@ namespace rfb {
       void recreatePixelBuffer(bool force=false);
       bool flushChangeTracker();  // true if flushed, false if empty
       bool checkLedState();
+
+      void pointerEvent(PointerEvent event);
+      void keyEvent(VNCServer*, const char* name, KeyEvent event);
 
       void handleClipboardRequest();
       void handleClipboardAnnounce(bool available);

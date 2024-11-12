@@ -43,6 +43,16 @@ namespace rfb {
   class SMsgWriter;
   class SSecurity;
 
+  struct KeyEvent {
+    uint32_t keysym;
+    uint32_t keycode;
+  };
+
+  struct PointerEvent {
+    core::Point pos;
+    uint16_t buttonMask;
+  };
+
   class SConnection : public core::Object, public SMsgHandler {
   public:
 
@@ -141,6 +151,18 @@ namespace rfb {
 
     // Signals
 
+    // "keydown" is emitted whenever the client sends a key press
+    // message. A KeyEvent structure is included with the KeySym and key
+    // code.
+
+    // "keyup" is emitted whenever the client sends a key release
+    // message. A KeyEvent structure is included with the KeySym and key
+    // code.
+
+    // "pointer" is emitted whenever the client sends a pointer message.
+    // A PointerEvent structure is included with the cursor position and
+    // button state.
+
     // "clipboardrequest" is emitted whenever the client requests
     // the server to send over its clipboard data. It will only be
     // sent after the server has first announced a clipboard change
@@ -163,6 +185,11 @@ namespace rfb {
     // Overridden from SMsgHandler
 
     void setEncodings(int nEncodings, const int32_t* encodings) override;
+
+    void keyEvent(uint32_t keysym, uint32_t keycode,
+                  bool down) override;
+    void pointerEvent(const core::Point& pos,
+                      uint16_t buttonMask) override;
 
     void clientCutText(const char* str) override;
 

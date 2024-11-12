@@ -32,6 +32,7 @@
 
 #include <network/Socket.h>
 
+#include <rfb/SConnection.h>
 #include <rfb/ScreenSet.h>
 
 #include <x0vncserver/XDesktop.h>
@@ -247,6 +248,10 @@ void XDesktop::init(rfb::VNCServer* vs)
 {
   server = vs;
 
+  server->connectSignal("keydown", this, &XDesktop::keyEvent);
+  server->connectSignal("keyup", this, &XDesktop::keyEvent);
+  server->connectSignal("pointer", this, &XDesktop::pointerEvent);
+
   server->connectSignal("clipboardrequest", this,
                         [this]() { selection.requestSelectionData(); });
   server->connectSignal<bool>("clipboardannounce", this,
@@ -373,19 +378,18 @@ void XDesktop::queryConnection(network::Socket* sock,
   queryConnectDialog->map();
 }
 
-void XDesktop::pointerEvent(const core::Point& pos,
-                            uint16_t buttonMask)
+void XDesktop::pointerEvent(rfb::PointerEvent event)
 {
 #ifdef HAVE_XTEST
   if (!haveXtest) return;
   XTestFakeMotionEvent(dpy, DefaultScreen(dpy),
-                       geometry->offsetLeft() + pos.x,
-                       geometry->offsetTop() + pos.y,
+                       geometry->offsetLeft() + event.pos.x,
+                       geometry->offsetTop() + event.pos.y,
                        CurrentTime);
-  if (buttonMask != oldButtonMask) {
+  if (event.buttonMask != oldButtonMask) {
     for (int i = 0; i < maxButtons; i++) {
-      if ((buttonMask ^ oldButtonMask) & (1<<i)) {
-        if (buttonMask & (1<<i)) {
+      if ((event.buttonMask ^ oldButtonMask) & (1<<i)) {
+        if (event.buttonMask & (1<<i)) {
           XTestFakeButtonEvent(dpy, i+1, True, CurrentTime);
         } else {
           XTestFakeButtonEvent(dpy, i+1, False, CurrentTime);
@@ -393,10 +397,7 @@ void XDesktop::pointerEvent(const core::Point& pos,
       }
     }
   }
-  oldButtonMask = buttonMask;
-#else
-  (void)pos;
-  (void)buttonMask;
+  oldButtonMask = event.buttonMask;
 #endif
 }
 
@@ -591,22 +592,25 @@ KeyCode XDesktop::keysymToKeycode(KeySym keysym) {
 #endif
 
 
-void XDesktop::keyEvent(uint32_t keysym, uint32_t xtcode, bool down) {
+void XDesktop::keyEvent(rfb::VNCServer*, const char* name,
+                        rfb::KeyEvent event)
+{
 #ifdef HAVE_XTEST
   int keycode = 0;
+  bool down;
 
   if (!haveXtest)
     return;
 
   // Use scan code if provided and mapping exists
-  if (codeMap && rawKeyboard && xtcode < codeMapLen)
-      keycode = codeMap[xtcode];
+  if (codeMap && rawKeyboard && event.keycode < codeMapLen)
+      keycode = codeMap[event.keycode];
 
   if (!keycode) {
-    if (pressedKeys.find(keysym) != pressedKeys.end())
-      keycode = pressedKeys[keysym];
+    if (pressedKeys.find(event.keysym) != pressedKeys.end())
+      keycode = pressedKeys[event.keysym];
     else {
-      keycode = keysymToKeycode(keysym);
+      keycode = keysymToKeycode(event.keysym);
     }
   }
 
@@ -615,10 +619,12 @@ void XDesktop::keyEvent(uint32_t keysym, uint32_t xtcode, bool down) {
     return;
   }
 
+  down = strcmp(name, "keydown") == 0;
+
   if (down)
-    pressedKeys[keysym] = keycode;
+    pressedKeys[event.keysym] = keycode;
   else
-    pressedKeys.erase(keysym);
+    pressedKeys.erase(event.keysym);
 
   if (down)
     onKeyUsed(addedKeysyms, keycode);
