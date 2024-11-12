@@ -44,6 +44,7 @@
 
 #include <network/Socket.h>
 
+#include <rfb/SConnection.h>
 #include <rfb/VNCServerST.h>
 #include <rfb/ServerCore.h>
 
@@ -88,6 +89,11 @@ XserverDesktop::XserverDesktop(int screenIndex_,
   format = pf;
 
   server = new rfb::VNCServerST(name, this);
+
+  server->connectSignal(&rfb::VNCServer::key, this,
+                        &XserverDesktop::keyEvent);
+  server->connectSignal(&rfb::VNCServer::pointer, this,
+                        &XserverDesktop::pointerEvent);
 
   server->connectSignal(&rfb::VNCServer::clipboardRequested,
                         []() { vncHandleClipboardRequest(); });
@@ -495,8 +501,7 @@ void XserverDesktop::terminate()
   kill(getpid(), SIGTERM);
 }
 
-void XserverDesktop::pointerEvent(const core::Point& pos,
-                                  uint16_t buttonMask)
+void XserverDesktop::pointerEvent(core::Point pos, uint16_t buttonMask)
 {
   vncPointerMove(pos.x + vncGetScreenX(screenIndex),
                  pos.y + vncGetScreenY(screenIndex));
@@ -553,12 +558,10 @@ void XserverDesktop::grabRegion(const core::Region& region)
   }
 }
 
-void XserverDesktop::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
+void XserverDesktop::keyEvent(uint32_t keysym, uint32_t keycode,
+                              bool down)
 {
-  if (!rawKeyboard)
-    keycode = 0;
-
-  vncKeyboardEvent(keysym, keycode, down);
+  vncKeyboardEvent(keysym, rawKeyboard ? keycode : 0, down);
 }
 
 void XserverDesktop::queryTimeout()

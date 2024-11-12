@@ -32,6 +32,7 @@
 #include <core/LogWriter.h>
 #include <core/i18n.h>
 
+#include <rfb/SConnection.h>
 #include <rfb/VNCServerST.h>
 
 #include "../w0vncserver.h"
@@ -77,6 +78,11 @@ WaylandDesktop::~WaylandDesktop()
 void WaylandDesktop::init(rfb::VNCServer* vs)
 {
   server = vs;
+
+  server->connectSignal(&rfb::VNCServer::key, this,
+                        &WaylandDesktop::keyEvent);
+  server->connectSignal(&rfb::VNCServer::pointer, this,
+                        &WaylandDesktop::pointerEvent);
 
   server->connectSignal(&rfb::VNCServer::clipboardRequested, this,
                         &WaylandDesktop::handleClipboardRequest);
@@ -157,7 +163,7 @@ void WaylandDesktop::stop()
   dataControl = nullptr;
 }
 
-void WaylandDesktop::pointerEvent(const core::Point& pos, uint16_t buttonMask)
+void WaylandDesktop::pointerEvent(core::Point pos, uint16_t buttonMask)
 {
   if (!virtualPointer)
     return;
@@ -179,7 +185,8 @@ void WaylandDesktop::pointerEvent(const core::Point& pos, uint16_t buttonMask)
   oldButtonMask = buttonMask;
 }
 
-void WaylandDesktop::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
+void WaylandDesktop::keyEvent(uint32_t keysym, uint32_t keycode,
+                              bool down)
 {
   if (!virtualKeyboard)
     return;

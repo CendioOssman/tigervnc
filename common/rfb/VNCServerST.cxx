@@ -181,6 +181,14 @@ bool VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
 
   clients.push_front(client);
 
+  client->connectSignal(&SConnection::key, this,
+                        &VNCServerST::keyEvent);
+  client->connectSignal(
+    &SConnection::pointer, this,
+    [client, this](core::Point pos, uint16_t buttonMask) {
+      pointerEvent(client, pos, buttonMask);
+    });
+
   client->connectSignal(&SConnection::clipboardRequested, this,
                         [client, this]() {
                           handleClipboardRequest(client);
@@ -207,7 +215,7 @@ void VNCServerST::removeSocket(network::Socket* sock) {
       // - Remove any references to it
       if (pointerClient == *ci) {
         // Release the mouse buttons the client have pressed
-        desktop->pointerEvent(cursorPos, 0);
+        emitSignal(&VNCServer::pointer, cursorPos, 0);
         pointerClient = nullptr;
       }
       if (clipboardClient == *ci)
@@ -569,12 +577,11 @@ void VNCServerST::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
     }
   }
 
-  desktop->keyEvent(keysym, keycode, down);
+  emitSignal(&VNCServer::key, keysym, keycode, down);
 }
 
 void VNCServerST::pointerEvent(VNCSConnectionST* client,
-                               const core::Point& pos,
-                               uint16_t buttonMask)
+                               core::Point pos, uint16_t buttonMask)
 {
   time_t now = time(nullptr);
 
@@ -597,7 +604,7 @@ void VNCServerST::pointerEvent(VNCSConnectionST* client,
   else
     pointerClient = nullptr;
 
-  desktop->pointerEvent(pos, buttonMask);
+  emitSignal(&VNCServer::pointer, pos, buttonMask);
 }
 
 unsigned int VNCServerST::setDesktopSize(VNCSConnectionST* requester,

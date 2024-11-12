@@ -25,7 +25,9 @@
 #include <gio/gio.h>
 
 #include <rfb/ScreenSet.h>
+#include <rfb/SConnection.h>
 #include <rfb/VNCServerST.h>
+
 #include <core/LogWriter.h>
 #include <core/i18n.h>
 #include <core/xdgdirs.h>
@@ -59,6 +61,11 @@ PortalDesktop::~PortalDesktop()
 void PortalDesktop::init(rfb::VNCServer* vs)
 {
   server = vs;
+
+  server->connectSignal(&rfb::VNCServer::key, this,
+                        &PortalDesktop::keyEvent);
+  server->connectSignal(&rfb::VNCServer::pointer, this,
+                        &PortalDesktop::pointerEvent);
 
   server->connectSignal(&rfb::VNCServer::clipboardRequested, this,
                         &PortalDesktop::handleClipboardRequest);
@@ -177,7 +184,8 @@ unsigned int PortalDesktop::setScreenLayout(int /* fb_width */,
   return rfb::resultProhibited;
 }
 
-void PortalDesktop::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
+void PortalDesktop::keyEvent(uint32_t keysym, uint32_t keycode,
+                             bool down)
 {
   // FIXME: The RemoteDesktop API does currently not specify this, but
   //        the keyboard methods expect evdev keycodes and
@@ -196,8 +204,7 @@ void PortalDesktop::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
   remoteDesktop->notifyKeyboardKeysym(keysym, down);
 }
 
-void PortalDesktop::pointerEvent(const core::Point& pos,
-                            uint16_t buttonMask)
+void PortalDesktop::pointerEvent(core::Point pos, uint16_t buttonMask)
 {
   remoteDesktop->notifyPointerMotionAbsolute(pos.x, pos.y, buttonMask);
 }

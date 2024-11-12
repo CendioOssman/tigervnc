@@ -24,7 +24,9 @@
 
 #include <rfb/SDesktop.h>
 
-namespace rfb { class VNCServer; }
+namespace rfb {
+  class VNCServer;
+}
 
 namespace wayland {
   class Output;
@@ -47,10 +49,6 @@ public:
   void init(rfb::VNCServer* vs) override;
   void start() override;
   virtual void stop() override;
-  virtual void keyEvent(uint32_t keysym, uint32_t keycode,
-                        bool down) override;
-  virtual void pointerEvent(const core::Point& pos,
-                            uint16_t buttonMask) override;
   void queryConnection(network::Socket* sock,
                         const char* userName) override;
   void terminate() override;
@@ -60,6 +58,10 @@ public:
 
 protected:
   // Signal handlers
+
+  void pointerEvent(core::Point pos, uint16_t buttonMask);
+  void keyEvent(uint32_t keysym, uint32_t keycode, bool down);
+
   void handleClipboardRequest();
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* data);

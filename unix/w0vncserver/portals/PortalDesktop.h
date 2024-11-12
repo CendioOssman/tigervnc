@@ -28,7 +28,9 @@
 class PipeWirePixelBuffer;
 class Clipboard;
 
-namespace rfb { class VNCServer; }
+namespace rfb {
+  class VNCServer;
+}
 
 class RemoteDesktop;
 
@@ -47,19 +49,19 @@ public:
   void terminate() override;
   unsigned int setScreenLayout(int fb_width, int fb_height,
                                const rfb::ScreenSet& layout) override;
-  void keyEvent(uint32_t keysym, uint32_t keycode, bool down) override;
-  void pointerEvent(const core::Point& pos,
-                    uint16_t buttonMask) override;
 
   // Check if portals implementations are available
   static bool available();
 
 protected:
   // Signal handlers
+
+  void keyEvent(uint32_t keysym, uint32_t keycode, bool down);
+  void pointerEvent(core::Point pos, uint16_t buttonMask);
+
   void handleClipboardRequest();
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* data);
-
 
 protected:
   rfb::VNCServer* server;
