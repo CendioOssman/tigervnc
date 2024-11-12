@@ -25,7 +25,9 @@
 #include <gio/gio.h>
 
 #include <rfb/ScreenSet.h>
+#include <rfb/SConnection.h>
 #include <rfb/VNCServerST.h>
+
 #include <core/LogWriter.h>
 #include <core/xdgdirs.h>
 
@@ -55,6 +57,10 @@ PortalDesktop::~PortalDesktop()
 void PortalDesktop::init(rfb::VNCServer* vs)
 {
   server = vs;
+
+  server->connectSignal("keydown", this, &PortalDesktop::keyEvent);
+  server->connectSignal("keyup", this, &PortalDesktop::keyEvent);
+  server->connectSignal("pointer", this, &PortalDesktop::pointerEvent);
 }
 
 void PortalDesktop::start()
@@ -112,8 +118,13 @@ unsigned int PortalDesktop::setScreenLayout(int /* fb_width */,
   return rfb::resultProhibited;
 }
 
-void PortalDesktop::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
+void PortalDesktop::keyEvent(rfb::VNCServer*, const char* name,
+                             rfb::KeyEvent event)
 {
+  bool down;
+
+  down = strcmp(name, "keydown") == 0;
+
   // FIXME: The RemoteDesktop API does currently not specify this, but
   //        the keyboard methods expect evdev keycodes and
   //        xkbcommon keysyms.
@@ -122,22 +133,23 @@ void PortalDesktop::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
   if (rawKeyboard) {
     int evdevKeycode;
 
-    if (keycode >= code_map_qnum_to_xorgevdev_len) {
-      vlog.error("Could not map keycode %d to evdev key code", keycode);
+    if (event.keycode >= code_map_qnum_to_xorgevdev_len) {
+      vlog.error("Could not map keycode %d to evdev key code",
+                 event.keycode);
       return;
     }
 
-    evdevKeycode = code_map_qnum_to_xorgevdev[keycode];
+    evdevKeycode = code_map_qnum_to_xorgevdev[event.keycode];
     remoteDesktop->notifyKeyboardKeycode(evdevKeycode, down);
   } else {
-    remoteDesktop->notifyKeyboardKeysym(keysym, down);
+    remoteDesktop->notifyKeyboardKeysym(event.keysym, down);
   }
 }
 
-void PortalDesktop::pointerEvent(const core::Point& pos,
-                            uint16_t buttonMask)
+void PortalDesktop::pointerEvent(rfb::PointerEvent event)
 {
-  remoteDesktop->notifyPointerMotionAbsolute(pos.x, pos.y, buttonMask);
+  remoteDesktop->notifyPointerMotionAbsolute(event.pos.x, event.pos.y,
+                                             event.buttonMask);
 }
 
 bool PortalDesktop::available()

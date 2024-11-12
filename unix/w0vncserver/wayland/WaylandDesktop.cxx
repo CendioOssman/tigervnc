@@ -30,6 +30,8 @@
 #include <wayland-client-protocol.h>
 
 #include <core/LogWriter.h>
+
+#include <rfb/SConnection.h>
 #include <rfb/VNCServerST.h>
 
 #include "../w0vncserver.h"
@@ -73,6 +75,10 @@ WaylandDesktop::~WaylandDesktop()
 void WaylandDesktop::init(rfb::VNCServer* vs)
 {
   server = vs;
+
+  server->connectSignal("keydown", this, &WaylandDesktop::keyEvent);
+  server->connectSignal("keyup", this, &WaylandDesktop::keyEvent);
+  server->connectSignal("pointer", this, &WaylandDesktop::pointerEvent);
 }
 
 void WaylandDesktop::start()
@@ -108,28 +114,31 @@ void WaylandDesktop::stop()
   pb = nullptr;
 }
 
-void WaylandDesktop::pointerEvent(const core::Point& pos, uint16_t buttonMask)
+void WaylandDesktop::pointerEvent(rfb::PointerEvent event)
 {
-  virtualPointer->motionAbsolute(pos.x, pos.y, pb->width(), pb->height());
+  virtualPointer->motionAbsolute(event.pos.x, event.pos.y,
+                                 pb->width(), pb->height());
 
-  if (buttonMask == oldButtonMask)
+  if (event.buttonMask == oldButtonMask)
     return;
 
   for (int32_t i = 0; i < BUTTONS; i++) {
-    if ((buttonMask ^ oldButtonMask) & (1 << i)) {
+    if ((event.buttonMask ^ oldButtonMask) & (1 << i)) {
       if (i > 2 && i < 7)
         virtualPointer->axisDiscrete(i);
       else
-        virtualPointer->button(i, buttonMask & (1 << i));
+        virtualPointer->button(i, event.buttonMask & (1 << i));
     }
   }
 
-  oldButtonMask = buttonMask;
+  oldButtonMask = event.buttonMask;
 }
 
-void WaylandDesktop::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
+void WaylandDesktop::keyEvent(rfb::VNCServer*, const char* name,
+                              rfb::KeyEvent event)
 {
-  virtualKeyboard->key(keysym, keycode, down);
+  virtualKeyboard->key(event.keysym, event.keycode,
+                       strcmp(name, "keydown") == 0);
 }
 
 void WaylandDesktop::queryConnection(network::Socket* sock,

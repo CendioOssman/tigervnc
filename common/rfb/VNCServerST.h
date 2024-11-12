@@ -37,8 +37,10 @@ namespace rfb {
 
   class VNCSConnectionST;
   class ComparingUpdateTracker;
+  struct KeyEvent;
   class ListConnInfo;
   class PixelBuffer;
+  struct PointerEvent;
   class KeyRemapper;
   class SDesktop;
 
@@ -118,10 +120,6 @@ namespace rfb {
     bool isDesktopReady() const { return desktopStarted; }
 
     // Event handlers
-    void keyEvent(uint32_t keysym, uint32_t keycode, bool down);
-    void pointerEvent(VNCSConnectionST* client,
-                      const core::Point& pos, uint16_t buttonMask);
-
     unsigned int setDesktopSize(VNCSConnectionST* requester,
                                 int fb_width, int fb_height,
                                 const ScreenSet& layout);
@@ -154,6 +152,11 @@ namespace rfb {
   protected:
 
     // Signal handlers
+    void keyEvent(VNCSConnectionST* client, const char* name,
+                  KeyEvent event);
+    void pointerEvent(VNCSConnectionST* client, const char* name,
+                      PointerEvent event);
+
     void handleClipboardRequest(VNCSConnectionST* client,
                                 const char*);
     void handleClipboardAnnounce(VNCSConnectionST* client,

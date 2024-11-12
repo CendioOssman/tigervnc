@@ -27,7 +27,11 @@
 
 class PipeWirePixelBuffer;
 
-namespace rfb { class VNCServer; }
+namespace rfb {
+  struct KeyEvent;
+  struct PointerEvent;
+  class VNCServer;
+}
 
 class RemoteDesktop;
 
@@ -46,12 +50,15 @@ public:
   void terminate() override;
   unsigned int setScreenLayout(int fb_width, int fb_height,
                                const rfb::ScreenSet& layout) override;
-  void keyEvent(uint32_t keysym, uint32_t keycode, bool down) override;
-  void pointerEvent(const core::Point& pos,
-                    uint16_t buttonMask) override;
 
   // Check if portals implementations are available
   static bool available();
+
+protected:
+  // Signal handlers
+  void keyEvent(rfb::VNCServer*, const char* name,
+                rfb::KeyEvent event);
+  void pointerEvent(rfb::PointerEvent event);
 
 protected:
   rfb::VNCServer* server;
