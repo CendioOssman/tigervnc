@@ -98,9 +98,6 @@ public:
   void terminate() override;
   void queryConnection(network::Socket* sock,
                        const char* userName) override;
-  void pointerEvent(const core::Point& pos,
-                    uint16_t buttonMask) override;
-  void keyEvent(uint32_t keysym, uint32_t keycode, bool down) override;
   unsigned int setScreenLayout(int fb_width, int fb_height,
                                const rfb::ScreenSet& layout) override;
   void frameTick(uint64_t msc) override;
@@ -109,6 +106,9 @@ public:
   void grabRegion(const core::Region& r) override;
 
 protected:
+  void pointerEvent(core::Point pos, uint16_t buttonMask);
+  void keyEvent(uint32_t keysym, uint32_t keycode, bool down);
+
   bool handleListenerEvent(int fd,
                            std::list<network::SocketListener*>* sockets,
                            rfb::VNCServer* sockserv);

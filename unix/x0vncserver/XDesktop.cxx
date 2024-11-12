@@ -32,6 +32,7 @@
 
 #include <network/Socket.h>
 
+#include <rfb/SConnection.h>
 #include <rfb/ScreenSet.h>
 
 #include <x0vncserver/XDesktop.h>
@@ -247,6 +248,10 @@ void XDesktop::init(rfb::VNCServer* vs)
 {
   server = vs;
 
+  server->connectSignal(&server->key, this, &XDesktop::keyEvent);
+  server->connectSignal(&server->pointer, this,
+                        &XDesktop::pointerEvent);
+
   server->connectSignal(&server->clipboardrequest, this,
                         [this]() { selection.requestSelectionData(); });
   server->connectSignal(&server->clipboardannounce, this,
@@ -373,8 +378,7 @@ void XDesktop::queryConnection(network::Socket* sock,
   queryConnectDialog->map();
 }
 
-void XDesktop::pointerEvent(const core::Point& pos,
-                            uint16_t buttonMask)
+void XDesktop::pointerEvent(core::Point pos, uint16_t buttonMask)
 {
 #ifdef HAVE_XTEST
   if (!haveXtest) return;
@@ -394,9 +398,6 @@ void XDesktop::pointerEvent(const core::Point& pos,
     }
   }
   oldButtonMask = buttonMask;
-#else
-  (void)pos;
-  (void)buttonMask;
 #endif
 }
 
@@ -591,7 +592,8 @@ KeyCode XDesktop::keysymToKeycode(KeySym keysym) {
 #endif
 
 
-void XDesktop::keyEvent(uint32_t keysym, uint32_t xtcode, bool down) {
+void XDesktop::keyEvent(uint32_t keysym, uint32_t xtcode, bool down)
+{
 #ifdef HAVE_XTEST
   int keycode = 0;
 

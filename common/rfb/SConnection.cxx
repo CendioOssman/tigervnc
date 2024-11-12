@@ -412,6 +412,22 @@ void SConnection::setEncodings(int nEncodings, const int32_t* encodings)
   }
 }
 
+void SConnection::keyEvent(uint32_t keysym, uint32_t keycode,
+                           bool down)
+{
+  if (!accessCheck(AccessKeyEvents))
+    return;
+  emitSignal(&key, keysym, keycode, down);
+}
+
+void SConnection::pointerEvent(const core::Point& pos,
+                               uint16_t buttonMask)
+{
+  if (!accessCheck(AccessPtrEvents))
+    return;
+  emitSignal(&pointer, pos, buttonMask);
+}
+
 void SConnection::clientCutText(const char* str)
 {
   hasLocalClipboard = false;

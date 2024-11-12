@@ -147,6 +147,15 @@ namespace rfb {
 
     // Signals
 
+    // key is emitted whenever the client sends a key press or release
+    // message. The KeySym, key code, and a boolean if it is a press,
+    // are included.
+    core::signal<uint32_t, uint32_t, bool> key;
+
+    // pointer is emitted whenever the client sends a pointer message. A
+    // The cursor position and button state is included.
+    core::signal<core::Point, uint16_t> pointer;
+
     // clipboardrequest is emitted whenever the client requests the
     // server to send over its clipboard data. It will only be sent
     // after the server has first announced a clipboard change via
@@ -174,6 +183,11 @@ namespace rfb {
     void clientInit(bool shared) override;
 
     void setEncodings(int nEncodings, const int32_t* encodings) override;
+
+    void keyEvent(uint32_t keysym, uint32_t keycode,
+                  bool down) override;
+    void pointerEvent(const core::Point& pos,
+                      uint16_t buttonMask) override;
 
     void clientCutText(const char* str) override;
 

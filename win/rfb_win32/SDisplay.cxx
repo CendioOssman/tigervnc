@@ -37,6 +37,7 @@
 #include <rfb_win32/MonitorInfo.h>
 #include <rfb_win32/SDisplayCorePolling.h>
 #include <rfb_win32/SDisplayCoreWMHooks.h>
+#include <rfb/SConnection.h>
 #include <rfb/VNCServer.h>
 #include <rfb/ledStates.h>
 
@@ -115,6 +116,10 @@ void SDisplay::start()
 
   // Start the SDisplay core
   startCore();
+
+  server->connectSignal(&server->key, this, &SDisplay::keyEvent);
+  server->connectSignal(&server->pointer, this,
+                        &SDisplay::pointerEvent);
 
   server->connectSignal(&server->clipboardrequest, this,
                         &SDisplay::handleClipboardRequest);
@@ -324,14 +329,14 @@ void SDisplay::handleClipboardData(const char* data) {
 }
 
 
-void SDisplay::pointerEvent(const Point& pos, uint16_t buttonmask) {
+void SDisplay::pointerEvent(core::Point pos, uint16_t buttonMask) {
   if (pb->getRect().contains(pos)) {
     Point screenPos = pos.translate(screenRect.tl);
     // - Check that the SDesktop doesn't need restarting
     if (isRestartRequired())
       restartCore();
     if (ptr)
-      ptr->pointerEvent(screenPos, buttonmask);
+      ptr->pointerEvent(screenPos, buttonMask);
   }
 }
 
