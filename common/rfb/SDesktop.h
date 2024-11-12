@@ -44,8 +44,6 @@
 
 #include <rfb/screenTypes.h>
 
-namespace core { struct Point; }
-
 namespace network { class Socket; }
 
 namespace rfb {
@@ -96,16 +94,6 @@ namespace rfb {
     // frameTick() is called whenever a frame update has been processed,
     // signalling that a good time to render new data
     virtual void frameTick(uint64_t msc) { (void)msc; }
-
-    // keyEvent() is called whenever a client sends an event that a
-    // key was pressed or released.
-    virtual void keyEvent(uint32_t /*keysym*/, uint32_t /*keycode*/,
-                          bool /*down*/) {};
-
-    // pointerEvent() is called whenever a client sends an event that
-    // the pointer moved, or a button was pressed or released.
-    virtual void pointerEvent(const core::Point& /*pos*/,
-                              uint16_t /*buttonMask*/) {};
 
   protected:
     virtual ~SDesktop() {}
