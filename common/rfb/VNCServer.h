@@ -150,6 +150,18 @@ namespace rfb {
 
     // Signals
 
+    // "keydown" is emitted whenever the client sends a key press
+    // message. A KeyEvent structure is included with the KeySym and key
+    // code.
+
+    // "keyup" is emitted whenever the client sends a key release
+    // message. A KeyEvent structure is included with the KeySym and key
+    // code.
+
+    // "pointer" is emitted whenever the client sends a pointer message.
+    // A PointerEvent structure is included with the cursor position and
+    // button state.
+
     // "clipboardrequest" is emitted whenever the client requests
     // the server to send over its clipboard data. It will only be
     // sent after the server has first announced a clipboard change
