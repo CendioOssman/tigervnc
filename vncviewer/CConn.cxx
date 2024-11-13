@@ -29,6 +29,7 @@
 #include <QClipboard>
 #include <QPixmap>
 #include <QSocketNotifier>
+#include <QMessageBox>
 
 #if !defined(__APPLE__) && !defined(WIN32)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -44,6 +45,8 @@
 #include "rfb/Hostname.h"
 #include "rfb/LogWriter.h"
 #include "rfb/fenceTypes.h"
+#include "rfb/Exception.h"
+#include "rfb/obfuscate.h"
 #include "rfb/CMsgWriter.h"
 #include "network/TcpSocket.h"
 #include "parameters.h"
@@ -52,7 +55,7 @@
 #include "appmanager.h"
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"
-#include "UserDialog.h"
+#include "authdialog.h"
 #include "CConn.h"
 #include "vncviewer.h"
 
@@ -155,7 +158,6 @@ CConn::CConn(const char* vncserver, network::Socket* socket_)
 
   initialiseProtocol();
 
-  credential = new UserDialog;
   if (::customCompressLevel) {
     setCompressLevel(::compressLevel);
   }
@@ -564,13 +566,86 @@ void CConn::handleClipboardData(const char* data)
 void CConn::getUserPasswd(bool secure, std::string* user,
                           std::string* password)
 {
-  credential->getUserPasswd(secure, user, password);
+  const char *passwordFileName(::passwordFile);
+  bool userNeeded = user != nullptr;
+  bool passwordNeeded = password != nullptr;
+  QString envUsername = QString(qgetenv("VNC_USERNAME"));
+  QString envPassword = QString(qgetenv("VNC_PASSWORD"));
+  if (user && !envUsername.isEmpty() && !envPassword.isEmpty()) {
+    user->assign(envUsername.toStdString());
+    password->assign(envPassword.toStdString());
+    return;
+  }
+  if (!user && !envPassword.isEmpty()) {
+    password->assign(envPassword.toStdString());
+    return;
+  }
+  if (!user && passwordFileName[0]) {
+    std::vector<uint8_t> obfPwd(256);
+    FILE* fp;
+
+    fp = fopen(passwordFileName, "rb");
+    if (!fp)
+      throw rfb::Exception(_("Opening password file failed"));
+
+    obfPwd.resize(fread(obfPwd.data(), 1, obfPwd.size(), fp));
+    fclose(fp);
+
+    password->assign(rfb::deobfuscate(obfPwd.data(), obfPwd.size()));
+    return;
+  }
+
+  AuthDialog d(secure, userNeeded, passwordNeeded);
+  d.exec();
+  if (d.result() != QDialog::Accepted) {
+    throw rfb::Exception(_("Authentication cancelled"));
+  }
+
+  if (userNeeded) {
+    user->assign(d.getUser().toStdString());
+  }
+  if (passwordNeeded) {
+    password->assign(d.getPassword().toStdString());
+  }
 }
 
 bool CConn::showMsgBox(rfb::MsgBoxFlags flags, const char *title,
                        const char *text)
 {
-  return credential->showMsgBox(flags, title, text);
+  QMessageBox* dlg;
+  QMessageBox::StandardButtons buttons;
+  QMessageBox::Icon icon;
+
+  switch (flags & 0xf) {
+  case rfb::M_OKCANCEL:
+    buttons = QMessageBox::Ok | QMessageBox::Cancel;
+    break;
+  case rfb::M_YESNO:
+    buttons = QMessageBox::Yes | QMessageBox::No;
+    break;
+  case rfb::M_OK:
+    buttons = QMessageBox::Ok;
+    break;
+  default:
+    buttons = QMessageBox::Close;
+  }
+
+  switch (flags & 0xf0) {
+  case rfb::M_ICONERROR:
+    icon = QMessageBox::Critical;
+    break;
+  case rfb::M_ICONWARNING:
+    icon = QMessageBox::Warning;
+    break;
+  default:
+    icon = QMessageBox::Information;
+  }
+
+  dlg = new QMessageBox(icon, title, text, buttons);
+  AppManager::instance()->openDialog(dlg);
+
+  return (dlg->result() == QMessageBox::Ok) ||
+         (dlg->result() == QMessageBox::Yes);
 }
 
 ////////////////////// Internal methods //////////////////////

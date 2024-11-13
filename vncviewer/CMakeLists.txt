@@ -73,8 +73,6 @@ set(PROJECT_SOURCES
         Keyboard.h
         DesktopWindow.cxx
         DesktopWindow.h
-        UserDialog.cxx
-        UserDialog.h
         Viewport.h
         Viewport.cxx
         keysym2ucs.c

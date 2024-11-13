@@ -32,7 +32,6 @@
 class QCursor;
 class QSocketNotifier;
 class QTimer;
-class UserDialog;
 
 namespace rfb
 {
@@ -130,8 +129,6 @@ private:
   QTimer* processTimer;
 
   DesktopWindow *desktop;
-
-  UserDialog* credential;
 
   unsigned updateCount;
   unsigned pixelCount;
