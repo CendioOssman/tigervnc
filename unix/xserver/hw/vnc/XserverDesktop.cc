@@ -82,9 +82,11 @@ XserverDesktop::XserverDesktop(int screenIndex_,
   : screenIndex(screenIndex_),
     server(0), listeners(listeners_),
     shadowFramebuffer(nullptr),
-    queryConnectId(0)
+    queryConnectId(0), ledState(0)
 {
   format = pf;
+
+  registerSignal("ledstate");
 
   server = new rfb::VNCServerST(name, this);
 
@@ -237,7 +239,8 @@ void XserverDesktop::bell()
 
 void XserverDesktop::setLEDState(unsigned int state)
 {
-  server->setLEDState(state);
+  ledState = state;
+  emitSignal("ledstate");
 }
 
 void XserverDesktop::setDesktopName(const char* name)
@@ -499,6 +502,11 @@ unsigned int XserverDesktop::setScreenLayout(int fb_width, int fb_height,
   refreshScreenLayout();
 
   return result;
+}
+
+unsigned int XserverDesktop::getLEDState()
+{
+  return ledState;
 }
 
 void XserverDesktop::frameTick(rfb::VNCServerST*, const char*)
