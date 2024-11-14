@@ -41,9 +41,6 @@ public:
   unsigned getPixelCount();
   unsigned getPosition();
 
-  // Forget any saved password
-  void resetPassword();
-
 protected:
   // Callback when socket is ready (or broken)
   static void socketEvent(FL_SOCKET fd, void *data);

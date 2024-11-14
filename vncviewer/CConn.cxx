@@ -233,12 +233,6 @@ unsigned CConn::getPosition()
   return sock->inStream().pos();
 }
 
-void CConn::resetPassword()
-{
-  savedUsername.clear();
-  savedPassword.clear();
-}
-
 void CConn::socketEvent(FL_SOCKET fd, void *data)
 {
   CConn *cc;
@@ -286,7 +280,8 @@ void CConn::processNextMsg(Timer*)
     vlog.info("%s", e.str());
     disconnect();
   } catch (rfb::AuthFailureException& e) {
-    resetPassword();
+    savedUsername.clear();
+    savedPassword.clear();
     vlog.error(_("Authentication failed: %s"), e.str());
     abort_connection(_("Failed to authenticate with the server. Reason "
                        "given by the server:\n\n%s"), e.str());
