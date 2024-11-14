@@ -19,10 +19,10 @@
 #ifndef __WAYLAND_KEYBOARD_H__
 #define __WAYLAND_KEYBOARD_H__
 
-#include <functional>
-
 #include <wayland-client-protocol.h>
 #include <xkbcommon/xkbcommon.h>
+
+#include <core/Object.h>
 
 struct XkbContext;
 
@@ -30,9 +30,9 @@ namespace wayland {
   class Display;
   class Seat;
 
-  class Keyboard {
+  class Keyboard : public core::Object {
   public:
-    Keyboard(Display* display, Seat *seat, std::function<void(unsigned int)> setLEDstate);
+    Keyboard(Display* display, Seat *seat);
     ~Keyboard();
 
     uint32_t getFormat() const { return keyboardFormat; }
@@ -66,8 +66,6 @@ namespace wayland {
     char* keyMap;
     static const wl_keyboard_listener listener;
     XkbContext* context;
-    // Called when the LED state has changed
-    std::function<void(unsigned int)> setLEDstate;
     uint32_t codeMapQnumToKeyCode[256];
   };
 };

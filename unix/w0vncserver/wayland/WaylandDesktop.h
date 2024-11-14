@@ -51,6 +51,7 @@ public:
   void queryConnection(network::Socket* sock,
                         const char* userName) override;
   void terminate() override;
+  unsigned int getLEDState() override;
 
   // Check if necessary wayland protocols are available
   static bool available();
@@ -62,9 +63,7 @@ protected:
   void pointerEvent(rfb::PointerEvent event);
   void keyEvent(rfb::VNCServer*, const char* name,
                 rfb::KeyEvent event);
-
-private:
-  void setLEDState(unsigned int state);
+  void ledState();
 
 protected:
   rfb::VNCServer* server;

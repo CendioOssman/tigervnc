@@ -48,6 +48,7 @@ public:
   void terminate() override;
   unsigned int setScreenLayout(int fb_width, int fb_height,
                                const rfb::ScreenSet& layout) override;
+  unsigned int getLEDState() override;
 
   // Check if portals implementations are available
   static bool available();

@@ -102,6 +102,7 @@ public:
                        const char* userName) override;
   unsigned int setScreenLayout(int fb_width, int fb_height,
                                const rfb::ScreenSet& layout) override;
+  unsigned int getLEDState() override;
 
   // rfb::PixelBuffer callbacks
   void grabRegion(const core::Region& r) override;
@@ -136,6 +137,8 @@ private:
   core::Timer queryConnectTimer;
 
   OutputIdMap outputIdMap;
+
+  unsigned int ledState;
 
   std::map<uint64_t, uint64_t> pendingMsc;
 
