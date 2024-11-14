@@ -21,13 +21,15 @@
 
 #include <stdint.h>
 
+#include <core/Object.h>
+
 struct wl_interface;
 struct wl_proxy;
 
 namespace wayland {
   class Display;
 
-  class Object {
+  class Object : public core::Object {
   protected:
     Object(Display* display, const char* name,
            const wl_interface* interface);

@@ -209,6 +209,9 @@ namespace rfb {
     // handler.
     core::signal<> ready;
 
+    // ledstate is emitted when the current lock keys LED state changes.
+    core::signal<> ledstate;
+
     // clipboardrequest is emitted whenever the server requests the
     // client to send over its clipboard data. It will only be sent
     // after the client has first announced a clipboard change via

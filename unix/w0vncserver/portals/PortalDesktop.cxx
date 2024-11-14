@@ -114,6 +114,11 @@ void PortalDesktop::terminate()
   kill(getpid(), SIGTERM);
 }
 
+unsigned int PortalDesktop::getLEDState()
+{
+  return 0;
+}
+
 unsigned int PortalDesktop::setScreenLayout(int /* fb_width */,
                                             int /* fb_height */,
                                             const rfb::ScreenSet& /*  layout */)
