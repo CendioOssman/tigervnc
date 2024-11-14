@@ -586,12 +586,6 @@ void DesktopWindow::draw()
 }
 
 
-void DesktopWindow::setLEDState(unsigned int state)
-{
-  viewport->setLEDState(state);
-}
-
-
 void DesktopWindow::resize(int x, int y, int w, int h)
 {
   bool resizing;
