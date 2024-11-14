@@ -75,11 +75,9 @@ struct XkbContext {
   xkb_keymap* keymap;
 };
 
-Keyboard::Keyboard(Display* display, Seat* seat,
-                   std::function<void(unsigned int)> setLEDstate_)
+Keyboard::Keyboard(Display* display, Seat* seat)
   : keyboardFormat(0), keyboardFd(0), keyboardSize(0),
-    keyboard(nullptr), keyMap(nullptr), context(nullptr),
-    setLEDstate(setLEDstate_)
+    keyboard(nullptr), keyMap(nullptr), context(nullptr)
 {
   xkb_context* ctx;
 
@@ -124,7 +122,7 @@ bool Keyboard::updateState(uint32_t keycode, bool down,
   *group = xkb_state_serialize_mods(context->state, XKB_STATE_LAYOUT_EFFECTIVE);
 
   if (changed)
-    setLEDstate(getLEDState());
+    emitSignal(&Keyboard::ledStateChanged);
 
   return changed != 0;
 }
@@ -246,7 +244,7 @@ void Keyboard::handleModifiers(uint32_t /* serial */,
                         modsLocked, group, 0, 0);
 
   if (changed & XKB_STATE_LEDS)
-    setLEDstate(getLEDState());
+    emitSignal(&Keyboard::ledStateChanged);
 }
 
 unsigned int Keyboard::getLEDState()

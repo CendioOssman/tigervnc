@@ -50,6 +50,7 @@ public:
   void queryConnection(network::Socket* sock,
                         const char* userName) override;
   void terminate() override;
+  unsigned int getLEDState() override;
 
   // Check if necessary wayland protocols are available
   static bool available();
@@ -63,12 +64,11 @@ protected:
   void pointerEvent(core::Point pos, uint16_t buttonMask);
   void keyEvent(uint32_t keysym, uint32_t keycode, bool down);
 
+  void ledState();
+
   void handleClipboardRequest();
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* data);
-
-private:
-  void setLEDState(unsigned int state);
 
 protected:
   rfb::VNCServer* server;

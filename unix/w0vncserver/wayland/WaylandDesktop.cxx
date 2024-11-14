@@ -60,8 +60,9 @@ WaylandDesktop::WaylandDesktop(GMainLoop* loop_)
 
   display = new wayland::Display();
   output = new wayland::Output(display);
-  seat = new wayland::Seat(display, std::bind(&WaylandDesktop::setLEDState,
-                                              this, std::placeholders::_1));
+  seat = new wayland::Seat(display);
+  seat->connectSignal(&wayland::Seat::ledStateChanged, this,
+                      [this]() { emitSignal(&SDesktop::ledStateChanged); });
 }
 
 WaylandDesktop::~WaylandDesktop()
@@ -133,7 +134,7 @@ void WaylandDesktop::start()
     }
 
     server->setPixelBuffer(pb);
-    server->setLEDState(virtualKeyboard->getLEDState());
+    emitSignal(&SDesktop::ledStateChanged);
   };
 
   try {
@@ -213,6 +214,13 @@ void WaylandDesktop::terminate()
   kill(getpid(), SIGTERM);
 }
 
+unsigned int WaylandDesktop::getLEDState()
+{
+  if (!virtualKeyboard)
+    return 0;
+  return virtualKeyboard->getLEDState();
+}
+
 void WaylandDesktop::handleClipboardRequest()
 {
   if (!dataControl)
@@ -257,10 +265,4 @@ bool WaylandDesktop::available()
          )) &&
          display.interfaceAvailable("zwlr_virtual_pointer_manager_v1") &&
          display.interfaceAvailable("zwp_virtual_keyboard_manager_v1");
-}
-
-void WaylandDesktop::setLEDState(unsigned int state)
-{
-  if (server)
-    server->setLEDState(state);
 }

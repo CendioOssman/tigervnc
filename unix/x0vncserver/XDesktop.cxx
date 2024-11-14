@@ -318,7 +318,7 @@ void XDesktop::start()
 
 #endif
 
-  server->setLEDState(ledState);
+  emitSignal(&SDesktop::ledStateChanged);
 
   running = true;
 }
@@ -880,6 +880,10 @@ unsigned int XDesktop::setScreenLayout(int fb_width, int fb_height,
 #endif /* HAVE_XRANDR */
 }
 
+unsigned int XDesktop::getLEDState()
+{
+  return ledState;
+}
 
 bool XDesktop::handleGlobalEvent(XEvent* ev) {
   if (ev->type == xkbEventBase + XkbEventCode) {
@@ -897,7 +901,7 @@ bool XDesktop::handleGlobalEvent(XEvent* ev) {
     }
 
     if (running)
-      server->setLEDState(ledState);
+      emitSignal(&SDesktop::ledStateChanged);
 
     return true;
 #ifdef HAVE_XDAMAGE
