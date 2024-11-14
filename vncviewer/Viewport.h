@@ -52,9 +52,6 @@ public:
   // New image for the locally rendered cursor
   void setCursor();
 
-  // Change client LED state
-  void setLEDState(unsigned int state);
-
   void draw(Surface* dst);
 
   // Fl_Widget callback methods
@@ -93,6 +90,7 @@ private:
 
   static int handleSystemEvent(void *event, void *data);
 
+  void handleLEDState();
   void pushLEDState();
 
   void initContextMenu();

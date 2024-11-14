@@ -61,9 +61,6 @@ public:
   // Server-provided cursor position
   void setCursorPos(const core::Point& pos);
 
-  // Change client LED state
-  void setLEDState(unsigned int state);
-
   // Fl_Window callback methods
   void show() override;
   void draw() override;

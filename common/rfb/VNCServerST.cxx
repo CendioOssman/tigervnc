@@ -118,7 +118,10 @@ VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
   frameTimer.connectSignal("timer", this,
                            &VNCServerST::frameTimeout);
 
-  desktop_->init(this);
+  desktop->init(this);
+
+  desktop->connectSignal("ledstate", this, &VNCServerST::handleLEDState);
+  ledState = desktop->getLEDState();
 
   // FIXME: Do we really want to kick off these right away?
   if (rfb::Server::maxIdleTime)
@@ -509,9 +512,14 @@ void VNCServerST::setCursorPos(const core::Point& pos, bool warped)
   }
 }
 
-void VNCServerST::setLEDState(unsigned int state)
+// Event handlers
+
+void VNCServerST::handleLEDState(SDesktop*, const char*)
 {
   std::list<VNCSConnectionST*>::iterator ci;
+  unsigned int state;
+
+  state = desktop->getLEDState();
 
   if (state == ledState)
     return;
@@ -521,8 +529,6 @@ void VNCServerST::setLEDState(unsigned int state)
   for (ci = clients.begin(); ci != clients.end(); ++ci)
     (*ci)->setLEDStateOrClose(state);
 }
-
-// Event handlers
 
 void VNCServerST::clientReady(VNCSConnectionST* client, const char*,
                               bool shared)

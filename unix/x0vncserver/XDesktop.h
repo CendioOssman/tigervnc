@@ -67,6 +67,7 @@ public:
                        const char* userName) override;
   unsigned int setScreenLayout(int fb_width, int fb_height,
                                const rfb::ScreenSet& layout) override;
+  unsigned int getLEDState() override;
 
   // -=- TXGlobalEventHandler interface
   bool handleGlobalEvent(XEvent* ev) override;
