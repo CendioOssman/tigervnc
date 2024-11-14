@@ -13,7 +13,6 @@ add_executable(vncviewer
   CConn.cxx
   DesktopWindow.cxx
   EmulateMB.cxx
-  UserDialog.cxx
   ServerDialog.cxx
   Surface.cxx
   OptionsDialog.cxx

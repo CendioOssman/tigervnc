@@ -25,8 +25,6 @@
 #include <rfb/CConnection.h>
 #include <rfb/Timer.h>
 
-#include "UserDialog.h"
-
 namespace network { class Socket; }
 
 class DesktopWindow;
@@ -121,7 +119,8 @@ private:
   size_t updateStartPos;
   unsigned long long bpsEstimate;
 
-  UserDialog dlg;
+  static std::string savedUsername;
+  static std::string savedPassword;
 };
 
 #endif

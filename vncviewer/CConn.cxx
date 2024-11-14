@@ -36,6 +36,7 @@
 #include <rfb/screenTypes.h>
 #include <rfb/fenceTypes.h>
 #include <rfb/Timer.h>
+#include <rfb/obfuscate.h>
 #include <network/TcpSocket.h>
 #ifndef WIN32
 #include <network/UnixSocket.h>
@@ -44,12 +45,19 @@
 #include <FL/Fl.H>
 #include <FL/fl_ask.H>
 
+#include "fltk/Fl_Message_Box.h"
+#include "fltk/layout.h"
+#include "fltk/util.h"
+#include "AuthDialog.h"
 #include "CConn.h"
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"
 #include "i18n.h"
 #include "mainloop.h"
 #include "parameters.h"
+
+std::string CConn::savedUsername;
+std::string CConn::savedPassword;
 
 #ifdef WIN32
 #include "win32.h"
@@ -227,7 +235,8 @@ unsigned CConn::getPosition()
 
 void CConn::resetPassword()
 {
-    dlg.resetPassword();
+  savedUsername.clear();
+  savedPassword.clear();
 }
 
 void CConn::socketEvent(FL_SOCKET fd, void *data)
@@ -309,13 +318,137 @@ void CConn::processNextMsg(Timer*)
 void CConn::getUserPasswd(bool secure, std::string *user,
                           std::string *password)
 {
-    dlg.getUserPasswd(secure, user, password);
+  const char *passwordFileName(passwordFile);
+  int ret_val;
+
+  assert(password);
+  char *envUsername = getenv("VNC_USERNAME");
+  char *envPassword = getenv("VNC_PASSWORD");
+
+  if(user && envUsername && envPassword) {
+    *user = envUsername;
+    *password = envPassword;
+    return;
+  }
+
+  if (!user && envPassword) {
+    *password = envPassword;
+    return;
+  }
+
+  if (user && !savedUsername.empty() && !savedPassword.empty()) {
+    *user = savedUsername;
+    *password = savedPassword;
+    return;
+  }
+
+  if (!user && !savedPassword.empty()) {
+    *password = savedPassword;
+    return;
+  }
+
+  if (!user && passwordFileName[0]) {
+    std::vector<uint8_t> obfPwd(8);
+    FILE* fp;
+
+    fp = fopen(passwordFileName, "rb");
+    if (!fp)
+      throw rdr::SystemException(_("Opening password file failed"), errno);
+
+    obfPwd.resize(fread(obfPwd.data(), 1, obfPwd.size(), fp));
+    fclose(fp);
+
+    *password = deobfuscate(obfPwd.data(), obfPwd.size());
+
+    return;
+  }
+
+  AuthDialog d(secure, user != nullptr, password != nullptr);
+  d.show();
+  while (d.shown())
+    Fl::wait();
+  ret_val = d.result();
+
+  if (ret_val == 0) {
+    bool keepPasswd;
+
+    if (reconnectOnError)
+      keepPasswd = d.getKeepPassword();
+    else
+      keepPasswd = false;
+
+    if (user) {
+      *user = d.getUser();
+      if (keepPasswd)
+        savedUsername = d.getUser();
+    }
+    *password = d.getPassword();
+    if (keepPasswd)
+      savedPassword = d.getPassword();
+  }
+
+  if (ret_val != 0)
+    throw rfb::AuthCancelledException();
 }
 
 bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
                        const char *text)
 {
-    return dlg.showMsgBox(flags, title, text);
+  char buffer[1024];
+
+  if (fltk_escape(text, buffer, sizeof(buffer)) >= sizeof(buffer))
+    return 0;
+
+  // FLTK doesn't give us a flexible choice of the icon, so we ignore those
+  // bits for now.
+
+  if ((flags & 0xf) == M_OKCANCEL) {
+    Fl_Choice_Box* dlg;
+    int ret;
+
+    dlg = new Fl_Choice_Box(title, "%s",
+                            nullptr, fl_ok, fl_cancel, buffer);
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    ret = dlg->result();
+    delete dlg;
+
+    return ret == 1;
+  } else if ((flags & 0xf) == M_YESNO) {
+    Fl_Choice_Box* dlg;
+    int ret;
+
+    dlg = new Fl_Choice_Box(title, "%s",
+                            nullptr, fl_yes, fl_no, buffer);
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    ret = dlg->result();
+    delete dlg;
+
+    return ret == 1;
+  } else {
+    Fl_Window* dlg;
+
+    if (((flags & 0xf0) == M_ICONERROR) ||
+        ((flags & 0xf0) == M_ICONWARNING))
+      dlg = new Fl_Alert_Box(title, "%s", buffer);
+    else
+      dlg = new Fl_Message_Box(title, "%s", buffer);
+
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    delete dlg;
+
+    return true;
+  }
+
+  return false;
 }
 
 // initDone() is called when the serverInit message has been received.  At
