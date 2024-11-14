@@ -111,6 +111,8 @@ Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc
   assert(frameBuffer);
   cc->setFramebuffer(frameBuffer);
 
+  cc->connectSignal("ledstate", this, &Viewport::handleLEDState);
+
   cc->connectSignal("clipboardrequest", this,
                     &Viewport::handleClipboardRequest);
   cc->connectSignal("clipboardannounce", this,
@@ -272,8 +274,12 @@ void Viewport::handleClipboardData(const char* data)
   Fl::copy(data, len, 1);
 }
 
-void Viewport::setLEDState(unsigned int ledState)
+void Viewport::handleLEDState()
 {
+  unsigned int ledState;
+
+  ledState = cc->server.ledState();
+
   vlog.debug("Got server LED state: 0x%08x", ledState);
 
   // The first message is just considered to be the server announcing
