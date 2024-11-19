@@ -8,6 +8,7 @@ add_executable(vncviewer
   fltk/Fl_Navigation.cxx
   fltk/theme.cxx
   menukey.cxx
+  AuthDialog.cxx
   BaseTouchHandler.cxx
   CConn.cxx
   DesktopWindow.cxx
