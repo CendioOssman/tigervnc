@@ -28,13 +28,15 @@ class Fl_Check_Button;
 class Fl_Input;
 class Fl_Password_Input;
 
-class CConn;
-
 class AuthDialog : public Fl_Window
 {
 public:
   AuthDialog(bool secure, bool needsUser, bool needsPassword);
   ~AuthDialog();
+
+  void finished(Fl_Callback* cb, void* p=nullptr);
+
+  void hide() override;
 
   int result();
 
@@ -51,6 +53,9 @@ private:
   Fl_Password_Input* passwd;
 
   int result_;
+
+  Fl_Callback* finishedCallback;
+  void* finishedUserData;
 };
 
 #endif

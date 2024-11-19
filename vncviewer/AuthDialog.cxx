@@ -50,7 +50,8 @@ static Fl_Pixmap secure_icon(secure);
 static Fl_Pixmap insecure_icon(insecure);
 
 AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword)
-  : Fl_Window(410, 0, _("VNC authentication"))
+  : Fl_Window(410, 0, _("VNC authentication")),
+    finishedCallback(nullptr), finishedUserData(nullptr)
 {
   int x, y;
 
@@ -146,6 +147,20 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword)
 
 AuthDialog::~AuthDialog()
 {
+}
+
+void AuthDialog::finished(Fl_Callback* cb, void* p)
+{
+  finishedCallback = cb;
+  finishedUserData = p;
+}
+
+void AuthDialog::hide()
+{
+  Fl_Window::hide();
+
+  if (finishedCallback != nullptr)
+    finishedCallback(this, finishedUserData);
 }
 
 int AuthDialog::result()
