@@ -10,7 +10,7 @@ class AuthDialog : public QDialog
   Q_OBJECT
 
 public:
-  AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidget* parent = nullptr);
+  AuthDialog(bool secure_, bool userNeeded, bool passwordNeeded, QWidget* parent = nullptr);
 
   QString getUser() const;
   QString getPassword() const;

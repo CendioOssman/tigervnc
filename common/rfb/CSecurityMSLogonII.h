@@ -42,6 +42,7 @@ namespace rfb {
     void writeCredentials();
 
     mpz_t g, p, A, b, B, k;
+    bool hasKey;
   };
 }
 

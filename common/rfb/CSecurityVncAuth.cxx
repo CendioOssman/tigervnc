@@ -49,13 +49,13 @@ bool CSecurityVncAuth::processMsg()
 
   if (!is->hasData(vncAuthChallengeSize))
     return false;
+  if (!cc->requestCredentials(false, true))
+    return false;
 
   // Read the challenge & obtain the user's password
   uint8_t challenge[vncAuthChallengeSize];
   is->readBytes(challenge, vncAuthChallengeSize);
-  std::string passwd;
-  cc->getUserPasswd(cc->isSecure(), nullptr, &passwd);
-
+  std::string passwd = cc->getPassword();
   // Calculate the correct response
   uint8_t key[8];
   for (size_t i=0; i<8; i++)

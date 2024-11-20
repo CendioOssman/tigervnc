@@ -60,6 +60,7 @@ CConnection::CConnection()
     is(nullptr), os(nullptr), reader_(nullptr), writer_(nullptr),
     shared(false),
     state_(RFBSTATE_UNINITIALISED),
+    credentialsTimer(this, &CConnection::handleCredentialsTimer),
     pendingPFChange(false), preferredEncoding(encodingTight),
     compressLevel(2), qualityLevel(-1),
     formatChange(false), encodingChange(false),
@@ -172,6 +173,12 @@ bool CConnection::processMsg()
   default:
     throw Exception("CConnection::processMsg: invalid state");
   }
+
+  // Check for more data just to get the exception if something is wrong with
+  // the socket. This to make sure we don't end up in an infinite recursion.
+  if (!again)
+    is->hasData(is->avail() + 1);
+
   return again;
 }
 
@@ -395,6 +402,11 @@ void CConnection::securityCompleted()
   vlog.debug("Authentication success!");
   authSuccess();
   writer_->writeClientInit(shared);
+}
+
+void CConnection::handleCredentialsTimer(Timer*)
+{
+  credentialsRequested(isSecure(), requestedUser, requestedPassword);
 }
 
 void CConnection::close()
@@ -652,6 +664,35 @@ void CConnection::handleClipboardAnnounce(bool /*available*/)
 
 void CConnection::handleClipboardData(const char* /*data*/)
 {
+}
+
+void CConnection::setCredentials(const std::string& user,
+                                 const std::string& password)
+{
+  credentials.username = user;
+  credentials.password = password;
+}
+
+bool CConnection::requestCredentials(bool needsUser, bool needsPassword)
+{
+  if ((needsUser && credentials.username.empty()) ||
+      (needsPassword && credentials.password.empty())) {
+    requestedUser = needsUser;
+    requestedPassword = needsPassword;
+    credentialsTimer.start(0);
+    return false;
+  }
+  return true;
+}
+
+std::string CConnection::getUsername()
+{
+  return credentials.username;
+}
+
+std::string CConnection::getPassword()
+{
+  return credentials.password;
 }
 
 void CConnection::requestClipboard()

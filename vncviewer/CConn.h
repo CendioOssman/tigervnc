@@ -29,6 +29,8 @@
 #include "rfb/CConnection.h"
 #include "rfb/Timer.h"
 
+#include "authdialog.h"
+
 class QCursor;
 class QSocketNotifier;
 class QTimer;
@@ -89,8 +91,8 @@ public:
   void handleClipboardAnnounce(bool available) override;
   void handleClipboardData(const char* data) override;
 
-  void getUserPasswd(bool secure, std::string* user,
-                     std::string* password) override;
+  void credentialsRequested(bool secure, bool needsUser,
+                            bool needsPassword) override;
   bool showMsgBox(rfb::MsgBoxFlags flags, const char *title,
                   const char *text) override;
 
@@ -120,6 +122,9 @@ private:
 
   void handleUpdateTimeout(rfb::Timer*);
 
+  void handleAuthOK();
+  void handleAuthCancel();
+
 private:
   QString serverHost;
   int serverPort;
@@ -141,6 +146,11 @@ private:
   struct timeval updateStartTime;
   size_t updateStartPos;
   unsigned long long bpsEstimate;
+
+  static std::string savedUsername;
+  static std::string savedPassword;
+
+  AuthDialog* authDialog;
 
   rfb::MethodTimer<CConn> updateTimer;
 };

@@ -67,6 +67,10 @@
 #include "cocoa.h"
 #endif
 
+std::string CConn::savedUsername;
+std::string CConn::savedPassword;
+
+
 using namespace rdr;
 using namespace rfb;
 
@@ -101,10 +105,11 @@ CConn::CConn(const char* vncserver, network::Socket* socket_)
  , lastServerEncoding((unsigned int)-1)
  , updateStartPos(0)
  , bpsEstimate(20000000)
+ , authDialog(nullptr)
  , updateTimer(this, &CConn::handleUpdateTimeout)
 {
   setShared(::shared);
-  
+
   supportsLocalCursor = true;
   supportsCursorPosition = true;
   supportsDesktopResize = true;
@@ -563,50 +568,62 @@ void CConn::handleClipboardData(const char* data)
   desktop->handleClipboardData(data);
 }
 
-void CConn::getUserPasswd(bool secure, std::string* user,
-                          std::string* password)
+void CConn::credentialsRequested(bool secure, bool needsUser,
+                                 bool needsPassword)
 {
   const char *passwordFileName(::passwordFile);
-  bool userNeeded = user != nullptr;
-  bool passwordNeeded = password != nullptr;
-  QString envUsername = QString(qgetenv("VNC_USERNAME"));
-  QString envPassword = QString(qgetenv("VNC_PASSWORD"));
-  if (user && !envUsername.isEmpty() && !envPassword.isEmpty()) {
-    user->assign(envUsername.toStdString());
-    password->assign(envPassword.toStdString());
+
+  assert(needsPassword);
+  char* envUsername = getenv("VNC_USERNAME");
+  char* envPassword = getenv("VNC_PASSWORD");
+
+  if (needsUser && envUsername && envPassword) {
+    setCredentials(envUsername, envPassword);
+    startProcessing();
     return;
   }
-  if (!user && !envPassword.isEmpty()) {
-    password->assign(envPassword.toStdString());
+
+  if (!needsUser && envPassword) {
+    setCredentials("", envPassword);
+    startProcessing();
     return;
   }
-  if (!user && passwordFileName[0]) {
+
+  if (needsUser && !savedUsername.empty() && !savedPassword.empty()) {
+    setCredentials(savedUsername, savedPassword);
+    startProcessing();
+    return;
+  }
+
+  if (!needsUser && !savedPassword.empty()) {
+    setCredentials("", savedPassword);
+    startProcessing();
+    return;
+  }
+
+  if (!needsUser && passwordFileName[0]) {
     std::vector<uint8_t> obfPwd(256);
     FILE* fp;
 
     fp = fopen(passwordFileName, "rb");
     if (!fp)
-      throw rfb::Exception(_("Opening password file failed"));
+      throw rdr::SystemException(_("Opening password file failed"), errno);
 
     obfPwd.resize(fread(obfPwd.data(), 1, obfPwd.size(), fp));
     fclose(fp);
 
-    password->assign(rfb::deobfuscate(obfPwd.data(), obfPwd.size()));
+    setCredentials("", rfb::deobfuscate(obfPwd.data(), obfPwd.size()));
+    startProcessing();
     return;
   }
 
-  AuthDialog d(secure, userNeeded, passwordNeeded);
-  d.exec();
-  if (d.result() != QDialog::Accepted) {
-    throw rfb::Exception(_("Authentication cancelled"));
-  }
+  authDialog = new AuthDialog(secure, needsUser, needsPassword);
+  QObject::connect(authDialog, &QDialog::accepted,
+                   [this]() { this->handleAuthOK(); });
+  QObject::connect(authDialog, &QDialog::rejected,
+                   [this]() { this->handleAuthCancel(); });
 
-  if (userNeeded) {
-    user->assign(d.getUser().toStdString());
-  }
-  if (passwordNeeded) {
-    password->assign(d.getPassword().toStdString());
-  }
+  authDialog->open();
 }
 
 bool CConn::showMsgBox(rfb::MsgBoxFlags flags, const char *title,
@@ -780,4 +797,32 @@ void CConn::handleUpdateTimeout(rfb::Timer*)
   } catch (rdr::Exception& e) {
     abort_connection("%s", e.str());
   }
+}
+
+void CConn::handleAuthOK()
+{
+  std::string user;
+  std::string password;
+
+  if (!authDialog->getUser().isEmpty()) {
+    user = authDialog->getUser().toStdString();
+  }
+
+  password = authDialog->getPassword().toStdString();
+
+  authDialog->deleteLater();
+  authDialog = nullptr;
+
+  setCredentials(user, password);
+
+  startProcessing();
+}
+
+void CConn::handleAuthCancel()
+{
+  authDialog->deleteLater();
+  authDialog = nullptr;
+
+  vlog.info(_("Authentication cancelled"));
+  disconnect();
 }

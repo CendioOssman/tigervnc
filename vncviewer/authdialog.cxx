@@ -1,4 +1,6 @@
 #include "authdialog.h"
+#include <qboxlayout.h>
+#include <qlayout.h>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -13,7 +15,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-AuthDialog::AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidget* parent)
+AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword, QWidget* parent)
   : QDialog{parent}
 {
   setWindowTitle(_("VNC authentication"));
@@ -27,24 +29,24 @@ AuthDialog::AuthDialog(bool secured, bool userNeeded, bool passwordNeeded, QWidg
   QVBoxLayout* layout = new QVBoxLayout;
   layout->setContentsMargins(0, 0, 0, 0);
 
-  QLabel* securedLabel = new QLabel;
-  securedLabel->setAlignment(Qt::AlignCenter);
-  if (secured) {
-    securedLabel->setText(QString("<img src=':/secure.svg' style='vertical-align: middle;' />") + _("This connection is secure"));
-    securedLabel->setStyleSheet("QLabel { background-color: '#ff00ff00'; color: 'black'; font-size: 14px; }");
+  QLabel* banner = new QLabel;
+  banner->setAlignment(Qt::AlignCenter);
+  if (secure_) {
+    banner->setText(QString("<img src=':/secure.svg' style='vertical-align: middle;' />") + _("This connection is secure"));
+    banner->setStyleSheet("QLabel { background-color: '#ff00ff00'; color: 'black'; font-size: 14px; }");
   } else {
-    securedLabel->setText(QString("<img src=':/insecure.svg' style='vertical-align: middle;' />") + _("This connection is not secure"));
-    securedLabel->setStyleSheet("QLabel { background-color: '#ffff0000'; color: 'black'; font-size: 14px; }");
+    banner->setText(QString("<img src=':/insecure.svg' style='vertical-align: middle;' />") + _("This connection is not secure"));
+    banner->setStyleSheet("QLabel { background-color: '#ffff0000'; color: 'black'; font-size: 14px; }");
   }
-  layout->addWidget(securedLabel, 1);
+  layout->addWidget(banner, 1);
 
   QFormLayout* formLayout = new QFormLayout;
   formLayout->setContentsMargins(5, 5, 5, 5);
-  if (userNeeded) {
+  if (needsUser) {
     userText = new QLineEdit;
     userText->setFocus();
     formLayout->addRow(_("Username:"), userText);
-  } else if (passwordNeeded) {
+  } else if (needsPassword) {
     passwordText = new QLineEdit;
     passwordText->setEchoMode(QLineEdit::Password);
     passwordText->setFocus();

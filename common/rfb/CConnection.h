@@ -30,6 +30,7 @@
 #include <rfb/CMsgHandler.h>
 #include <rfb/DecodeManager.h>
 #include <rfb/SecurityClient.h>
+#include <rfb/Timer.h>
 
 namespace rfb {
 
@@ -134,11 +135,11 @@ namespace rfb {
 
     // Methods to be overridden in a derived class
 
-    // getUserPasswd() gets the username and password.  This might
+    // credentialsRequested() gets the username and password. This might
     // involve a dialog, getpass(), etc.  The user buffer pointer can be
     // null, in which case no user name will be retrieved.
-    virtual void getUserPasswd(bool secure, std::string* user,
-                               std::string* password) = 0;
+    virtual void credentialsRequested(bool secure, bool needsUser,
+                                      bool needsPassword) = 0;
 
     // showMsgBox() displays a message box with the specified style and
     // contents.  The return value is true if the user clicked OK/Yes.
@@ -181,6 +182,13 @@ namespace rfb {
 
 
     // Other methods
+
+    void setCredentials(const std::string& user,
+                        const std::string& password);
+    bool requestCredentials(bool needsUser, bool needsPassword);
+
+    std::string getUsername();
+    std::string getPassword();
 
     // requestClipboard() will result in a request to the server to
     // transfer its clipboard data. A call to handleClipboardData()
@@ -289,6 +297,8 @@ namespace rfb {
     void throwAuthFailureException();
     void securityCompleted();
 
+    void handleCredentialsTimer(Timer*);
+
     void requestNewUpdate();
     void updateEncodings();
 
@@ -299,6 +309,16 @@ namespace rfb {
     bool deleteStreamsWhenDone;
     bool shared;
     stateEnum state_;
+
+    struct Credentials {
+      std::string username;
+      std::string password;
+    };
+
+    Credentials credentials;
+    MethodTimer<CConnection> credentialsTimer;
+    bool requestedUser;
+    bool requestedPassword;
 
     std::string serverName;
 
