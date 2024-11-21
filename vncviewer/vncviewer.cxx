@@ -181,7 +181,8 @@ void about_vncviewer(QWidget* parent)
   dlg = new QMessageBox(QMessageBox::Information,
                         _("About TigerVNC Viewer"),
                         about_text(), QMessageBox::Close, parent);
-  AppManager::instance()->openDialog(dlg);
+  dlg->setAttribute(Qt::WA_DeleteOnClose);
+  dlg->open();
 }
 
 static void mainloop(const char* vncserver, network::Socket* sock)
