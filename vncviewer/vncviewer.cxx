@@ -206,7 +206,8 @@ static void mainloop(const char* vncserver, network::Socket* sock)
                                         _("Connection error"),
                                         exitError.c_str(),
                                         QMessageBox::Close);
-        AppManager::instance()->openDialog(d);
+        d->exec();
+        delete d;
       }
       break;
     }
@@ -226,7 +227,8 @@ static void mainloop(const char* vncserver, network::Socket* sock)
       d->addButton(_("Reconnect"), QMessageBox::AcceptRole);
       d->addButton(QMessageBox::Close);
 
-      AppManager::instance()->openDialog(d);
+      d->exec();
+      delete d;
       exitError.clear();
       if (d->buttonRole(d->clickedButton()) == QMessageBox::AcceptRole)
         continue;
@@ -239,7 +241,8 @@ static void mainloop(const char* vncserver, network::Socket* sock)
                                       _("Connection error"),
                                       exitError.c_str(),
                                       QMessageBox::Close);
-      AppManager::instance()->openDialog(d);
+      d->exec();
+      delete d;
     }
 
     break;
