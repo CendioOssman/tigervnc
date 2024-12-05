@@ -114,6 +114,13 @@ void SDisplay::start()
   // Start the SDisplay core
   startCore();
 
+  server->connectSignal("clipboardrequest", this,
+                        &SDisplay::handleClipboardRequest);
+  server->connectSignal("clipboardannounce", this,
+                        &SDisplay::handleClipboardAnnounce);
+  server->connectSignal("clipboarddata", this,
+                        &SDisplay::handleClipboardData);
+
   vlog.debug("Started");
 
   if (statusLocation) *statusLocation = true;
@@ -142,6 +149,7 @@ void SDisplay::stop()
 
   // Stop the SDisplayCore
   server->setPixelBuffer(nullptr);
+  server->disconnectSignals(this);
   stopCore();
 
   vlog.debug("Stopped");
@@ -299,17 +307,19 @@ void SDisplay::restartCore() {
 }
 
 
-void SDisplay::handleClipboardRequest() {
+void SDisplay::handleClipboardRequest(VNCServer*, const char*) {
   server->sendClipboardData(clipboard->getClipText().c_str());
 }
 
-void SDisplay::handleClipboardAnnounce(bool available) {
+void SDisplay::handleClipboardAnnounce(VNCServer*, const char*,
+                                       bool available) {
   // FIXME: Wait for an application to actually request it
   if (available)
     server->requestClipboard();
 }
 
-void SDisplay::handleClipboardData(const char* data) {
+void SDisplay::handleClipboardData(VNCServer*, const char*,
+                                   const char* data) {
   clipboard->setClipText(data);
 }
 
