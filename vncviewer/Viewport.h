@@ -35,7 +35,8 @@ class Keyboard;
 class PlatformPixelBuffer;
 class Surface;
 
-class Viewport : public Fl_Widget, protected EmulateMB,
+class Viewport : public Fl_Widget,
+                 protected EmulateMBHandler,
                  protected KeyboardHandler {
 public:
 
@@ -112,6 +113,8 @@ private:
   uint16_t lastButtonMask;
 
   Keyboard* keyboard;
+
+  EmulateMB emulateMB;
 
   bool firstLEDState;
 
