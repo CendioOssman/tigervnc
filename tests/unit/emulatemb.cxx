@@ -43,15 +43,28 @@ static const int middleAndRight = 0x06;
 
 core::BoolParameter emulateMiddleButton("dummy_name", "dummy_desc", true);
 
-class TestClass : public EmulateMB
+class TestClass : public EmulateMBHandler
 {
 public:
+  TestClass();
+
+  void filterPointerEvent(const core::Point& pos, uint16_t buttonMask);
   void sendPointerEvent(const core::Point& pos, uint16_t buttonMask) override;
 
   struct PointerEventParams {core::Point pos; uint16_t mask; };
 
+  EmulateMB emulateMB;
   std::vector<PointerEventParams> results;
 };
+
+TestClass::TestClass() : emulateMB(this)
+{
+}
+
+void TestClass::filterPointerEvent(const core::Point& pos, uint16_t buttonMask)
+{
+  emulateMB.filterPointerEvent(pos, buttonMask);
+}
 
 void TestClass::sendPointerEvent(const core::Point& pos, uint16_t buttonMask)
 {

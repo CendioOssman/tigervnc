@@ -36,7 +36,8 @@ class Keyboard;
 class PlatformPixelBuffer;
 class Surface;
 
-class Viewport : public Fl_Widget, protected EmulateMB,
+class Viewport : public Fl_Widget,
+                 protected EmulateMBHandler,
                  protected KeyboardHandler {
 public:
 
@@ -118,6 +119,8 @@ private:
   bool shortcutBypass;
   bool shortcutActive;
   std::set<int> pressedKeys;
+
+  EmulateMB emulateMB;
 
   bool firstLEDState;
 
