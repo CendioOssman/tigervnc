@@ -35,14 +35,17 @@ core::BoolParameter
 
 static core::LogWriter vlog("XSelection");
 
-XSelection::XSelection(Display* dpy_, XSelectionHandler* handler_)
-    : TXWindow(dpy_, 1, 1, nullptr), handler(handler_), announcedSelection(None)
+XSelection::XSelection(Display* dpy_)
+    : TXWindow(dpy_, 1, 1, nullptr), announcedSelection(None)
 {
   probeProperty = XInternAtom(dpy, "TigerVNC_ProbeProperty", False);
   transferProperty = XInternAtom(dpy, "TigerVNC_TransferProperty", False);
   timestampProperty = XInternAtom(dpy, "TigerVNC_TimestampProperty", False);
   toplevel("TigerVNC Clipboard (x0vncserver)");
   addEventMask(PropertyChangeMask); // Required for PropertyNotify events
+
+  registerSignal<bool>("announce");
+  registerSignal<const char*>("data");
 }
 
 static Bool PropertyEventMatcher(Display* /* dpy */, XEvent* ev, XPointer prop)
@@ -131,7 +134,7 @@ void XSelection::handleSelectionOwnerChange(Window owner, Atom selection, Time t
 void XSelection::announceSelection(Atom selection)
 {
   announcedSelection = selection;
-  handler->handleXSelectionAnnounce(selection != None);
+  emitSignal("announce", selection != None);
 }
 
 void XSelection::requestSelectionData()
@@ -189,11 +192,11 @@ void XSelection::selectionNotify(XSelectionEvent* ev, Atom type, int format,
 
     if (type == xaUTF8_STRING) {
       std::string result = core::convertLF((char*)data, nitems);
-      handler->handleXSelectionData(result.c_str());
+      emitSignal("data", result.c_str());
     } else if (type == XA_STRING) {
       std::string result = core::convertLF((char*)data, nitems);
       result = core::latin1ToUTF8(result.data(), result.length());
-      handler->handleXSelectionData(result.c_str());
+      emitSignal("data", result.c_str());
     }
   }
 }

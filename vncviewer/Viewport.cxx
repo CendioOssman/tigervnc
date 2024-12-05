@@ -124,6 +124,13 @@ Viewport::Viewport(int w, int h, CConn* cc_)
   assert(frameBuffer);
   cc->setFramebuffer(frameBuffer);
 
+  cc->connectSignal("clipboardrequest", this,
+                    &Viewport::handleClipboardRequest);
+  cc->connectSignal("clipboardannounce", this,
+                    &Viewport::handleClipboardAnnounce);
+  cc->connectSignal("clipboarddata", this,
+                    &Viewport::handleClipboardData);
+
   contextMenu = new Fl_Menu_Button(0, 0, 0, 0);
   // Setting box type to FL_NO_BOX prevents it from trying to draw the
   // button component (which we don't want)

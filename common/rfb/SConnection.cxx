@@ -61,6 +61,10 @@ SConnection::SConnection(AccessRights accessRights_)
   authFailureTimer.connectSignal("timer", this,
                                  &SConnection::authFailureTimeout);
 
+  registerSignal("clipboardrequest");
+  registerSignal<bool>("clipboardannounce");
+  registerSignal<const char*>("clipboarddata");
+
   defaultMajorVersion = 3;
   defaultMinorVersion = 8;
   if (rfb::Server::protocol3_3)
@@ -422,7 +426,7 @@ void SConnection::clientCutText(const char* str)
   if (!accessCheck(AccessCutText))
     return;
 
-  handleClipboardAnnounce(true);
+  emitSignal("clipboardannounce", true);
 }
 
 void SConnection::handleClipboardCaps(uint32_t flags, const uint32_t* lengths)
@@ -479,7 +483,7 @@ void SConnection::handleClipboardRequest(uint32_t flags)
   }
   if (!accessCheck(AccessCutText))
     return;
-  handleClipboardRequest();
+  emitSignal("clipboardrequest");
 }
 
 void SConnection::handleClipboardPeek()
@@ -496,13 +500,12 @@ void SConnection::handleClipboardNotify(uint32_t flags)
     hasLocalClipboard = false;
     if (!accessCheck(AccessCutText))
       return;
-    handleClipboardAnnounce(true);
+    emitSignal("clipboardannounce", true);
   } else {
     if (!accessCheck(AccessCutText))
       return;
-    handleClipboardAnnounce(false);
+    emitSignal("clipboardannounce", false);
   }
-
 }
 
 void SConnection::handleClipboardProvide(uint32_t flags,
@@ -526,7 +529,7 @@ void SConnection::handleClipboardProvide(uint32_t flags,
     return;
 
   // FIXME: Should probably verify that this data was actually requested
-  handleClipboardData(clientClipboard.c_str());
+  emitSignal("clipboarddata", clientClipboard.c_str());
 }
 
 void SConnection::supportsLocalCursor()
@@ -645,25 +648,13 @@ void SConnection::enableContinuousUpdates(bool /*enable*/,
 {
 }
 
-void SConnection::handleClipboardRequest()
-{
-}
-
-void SConnection::handleClipboardAnnounce(bool /*available*/)
-{
-}
-
-void SConnection::handleClipboardData(const char* /*data*/)
-{
-}
-
 void SConnection::requestClipboard()
 {
   if (!accessCheck(AccessCutText))
     return;
 
   if (hasRemoteClipboard) {
-    handleClipboardData(clientClipboard.c_str());
+    emitSignal("clipboarddata", clientClipboard.c_str());
     return;
   }
 
@@ -687,7 +678,7 @@ void SConnection::announceClipboard(bool available)
         (client.clipboardFlags() & rfb::clipboardProvide)) {
       vlog.debug("Attempting unsolicited clipboard transfer...");
       unsolicitedClipboardAttempt = true;
-      handleClipboardRequest();
+      emitSignal("clipboardrequest");
       return;
     }
 
@@ -698,7 +689,7 @@ void SConnection::announceClipboard(bool available)
   }
 
   if (available)
-    handleClipboardRequest();
+    emitSignal("clipboardrequest");
 }
 
 void SConnection::sendClipboardData(const char* data)

@@ -87,7 +87,7 @@ static const char * ledNames[XDESKTOP_N_LEDS] = {
 
 XDesktop::XDesktop(Display* dpy_, Geometry *geometry_)
   : dpy(dpy_), geometry(geometry_), pb(nullptr), server(nullptr),
-    queryConnectDialog(nullptr), queryConnectSock(nullptr), selection(dpy_, this),
+    queryConnectDialog(nullptr), queryConnectSock(nullptr), selection(dpy_),
     oldButtonMask(0), haveXtest(false), haveDamage(false),
     maxButtons(0), running(false), ledMasks(), ledState(0),
     codeMap(nullptr), codeMapLen(0)
@@ -246,6 +246,28 @@ void XDesktop::poll() {
 void XDesktop::init(rfb::VNCServer* vs)
 {
   server = vs;
+
+  server->connectSignal("clipboardrequest", this,
+                        [this]() { selection.requestSelectionData(); });
+  server->connectSignal<bool>("clipboardannounce", this,
+                              [this](bool available) {
+                                if(available)
+                                  server->requestClipboard();
+                              });
+  server->connectSignal<const char*>("clipboarddata", this,
+                                     [this](const char* data) {
+                                       if (data)
+                                         selection.handleClientClipboardData(data);
+                                     });
+
+  selection.connectSignal<bool>("announce", this,
+                                [this](bool available) {
+                                  server->announceClipboard(available);
+                                });
+  selection.connectSignal<const char*>("data", this,
+                                       [this](const char* data) {
+                                         server->sendClipboardData(data);
+                                       });
 }
 
 void XDesktop::start()
@@ -1063,28 +1085,3 @@ bool XDesktop::setCursor()
   return true;
 }
 #endif
-
-// X selection availability changed, let VNC clients know
-void XDesktop::handleXSelectionAnnounce(bool available) {
-  server->announceClipboard(available);
-}
-
-// A VNC client wants data, send request to selection owner
-void XDesktop::handleClipboardRequest() { 
-  selection.requestSelectionData(); 
-}
-
-// Data is available, send it to clients
-void XDesktop::handleXSelectionData(const char* data) {
-  server->sendClipboardData(data);
-}
-
-// When a client says it has clipboard data, request it 
-void XDesktop::handleClipboardAnnounce(bool available) {
-   if(available) server->requestClipboard();
-}
-
-// Client has sent the data
-void XDesktop::handleClipboardData(const char* data) {
-  if (data) selection.handleClientClipboardData(data);
-}
