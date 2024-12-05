@@ -140,9 +140,6 @@ namespace rfb {
                const uint8_t data[]) override;
     void enableContinuousUpdates(bool enable,
                                  int x, int y, int w, int h) override;
-    void handleClipboardRequest() override;
-    void handleClipboardAnnounce(bool available) override;
-    void handleClipboardData(const char* data) override;
     void supportsLocalCursor() override;
 
     // Timer callbacks

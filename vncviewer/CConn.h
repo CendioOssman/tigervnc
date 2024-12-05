@@ -77,10 +77,6 @@ protected:
 
   void setLEDState(unsigned int state) override;
 
-  void handleClipboardRequest() override;
-  void handleClipboardAnnounce(bool available) override;
-  void handleClipboardData(const char* data) override;
-
 private:
 
   void resizeFramebuffer() override;

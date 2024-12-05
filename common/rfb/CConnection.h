@@ -1,5 +1,5 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
- * Copyright 2011-2019 Pierre Ossman for Cendio AB
+ * Copyright 2011-2023 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -193,6 +193,25 @@ namespace rfb {
     virtual bool showMsgBox(MsgBoxFlags flags, const char *title,
                             const char *text) = 0;
 
+    // Signals
+
+    // "clipboardrequest" is emitted whenever the server requests
+    // the client to send over its clipboard data. It will only be
+    // sent after the client has first announced a clipboard change
+    // via announceClipboard().
+
+    // "clipboardannounce" is emitted to indicate a change in the
+    // clipboard on the server. Call requestClipboard() to access the
+    // actual data. A boolean is included to indicate if the clipboard
+    // is available or not.
+
+    // "clipboardData" is emitted when the server has sent over
+    // the clipboard data as a result of a previous call to
+    // requestClipboard(). Note that this function might never be
+    // called if the clipboard data was no longer available when the
+    // server received the request. A const char* string is included
+    // that contains the actual clipboard contents.
+
   protected:
 
     // Methods overridden from CMsgHandler
@@ -258,24 +277,6 @@ namespace rfb {
     // dimensions or the screen layout changes. A subclass must make
     // sure the pixel buffer has been updated once this call returns.
     virtual void resizeFramebuffer();
-
-    // handleClipboardRequest() is called whenever the server requests
-    // the client to send over its clipboard data. It will only be
-    // called after the client has first announced a clipboard change
-    // via announceClipboard().
-    virtual void handleClipboardRequest();
-
-    // handleClipboardAnnounce() is called to indicate a change in the
-    // clipboard on the server. Call requestClipboard() to access the
-    // actual data.
-    virtual void handleClipboardAnnounce(bool available);
-
-    // handleClipboardData() is called when the server has sent over
-    // the clipboard data as a result of a previous call to
-    // requestClipboard(). Note that this function might never be
-    // called if the clipboard data was no longer available when the
-    // server received the request.
-    virtual void handleClipboardData(const char* data);
 
   protected:
     CSecurity *csecurity;

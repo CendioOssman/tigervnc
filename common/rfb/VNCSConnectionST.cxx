@@ -757,21 +757,6 @@ void VNCSConnectionST::enableContinuousUpdates(bool enable,
   }
 }
 
-void VNCSConnectionST::handleClipboardRequest()
-{
-  server->handleClipboardRequest(this);
-}
-
-void VNCSConnectionST::handleClipboardAnnounce(bool available)
-{
-  server->handleClipboardAnnounce(this, available);
-}
-
-void VNCSConnectionST::handleClipboardData(const char* data)
-{
-  server->handleClipboardData(this, data);
-}
-
 // supportsLocalCursor() is called whenever the status of
 // client.supportsLocalCursor() has changed.  If the client does now support local
 // cursor, we make sure that the old server-side rendered cursor is cleaned up

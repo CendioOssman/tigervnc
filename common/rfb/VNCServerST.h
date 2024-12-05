@@ -121,10 +121,6 @@ namespace rfb {
     void pointerEvent(VNCSConnectionST* client,
                       const core::Point& pos, uint16_t buttonMask);
 
-    void handleClipboardRequest(VNCSConnectionST* client);
-    void handleClipboardAnnounce(VNCSConnectionST* client, bool available);
-    void handleClipboardData(VNCSConnectionST* client, const char* data);
-
     unsigned int setDesktopSize(VNCSConnectionST* requester,
                                 int fb_width, int fb_height,
                                 const ScreenSet& layout);
@@ -155,6 +151,14 @@ namespace rfb {
     const RenderedCursor* getRenderedCursor();
 
   protected:
+
+    // Signal handlers
+    void handleClipboardRequest(VNCSConnectionST* client,
+                                const char*);
+    void handleClipboardAnnounce(VNCSConnectionST* client,
+                                 const char*, bool available);
+    void handleClipboardData(VNCSConnectionST* client,
+                             const char*, const char* data);
 
     // Timer callbacks
     void frameTimeout();

@@ -22,24 +22,16 @@
 #include <string>
 #include <tx/TXWindow.h>
 
-class XSelectionHandler
+class XSelection : public TXWindow
 {
 public:
-  virtual void handleXSelectionAnnounce(bool available) = 0;
-  virtual void handleXSelectionData(const char* data) = 0;
-};
-
-class XSelection : TXWindow
-{
-public:
-  XSelection(Display* dpy_, XSelectionHandler* handler_);
+  XSelection(Display* dpy_);
 
   void handleSelectionOwnerChange(Window owner, Atom selection, Time time);
   void requestSelectionData();
   void handleClientClipboardData(const char* data);
 
 private:
-  XSelectionHandler* handler;
   Atom probeProperty;
   Atom transferProperty;
   Atom timestampProperty;

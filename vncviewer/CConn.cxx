@@ -439,21 +439,6 @@ void CConn::setLEDState(unsigned int state)
   desktop->setLEDState(state);
 }
 
-void CConn::handleClipboardRequest()
-{
-  desktop->handleClipboardRequest();
-}
-
-void CConn::handleClipboardAnnounce(bool available)
-{
-  desktop->handleClipboardAnnounce(available);
-}
-
-void CConn::handleClipboardData(const char* data)
-{
-  desktop->handleClipboardData(data);
-}
-
 
 ////////////////////// Internal methods //////////////////////
 

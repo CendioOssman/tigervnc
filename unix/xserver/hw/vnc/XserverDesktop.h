@@ -104,9 +104,6 @@ public:
   unsigned int setScreenLayout(int fb_width, int fb_height,
                                const rfb::ScreenSet& layout) override;
   void frameTick(uint64_t msc) override;
-  void handleClipboardRequest() override;
-  void handleClipboardAnnounce(bool available) override;
-  void handleClipboardData(const char* data) override;
 
   // rfb::PixelBuffer callbacks
   void grabRegion(const core::Region& r) override;

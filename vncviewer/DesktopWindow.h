@@ -64,11 +64,6 @@ public:
   // Change client LED state
   void setLEDState(unsigned int state);
 
-  // Clipboard events
-  void handleClipboardRequest();
-  void handleClipboardAnnounce(bool available);
-  void handleClipboardData(const char* data);
-
   // Fl_Window callback methods
   void show() override;
   void draw() override;

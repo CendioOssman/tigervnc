@@ -623,22 +623,6 @@ void DesktopWindow::setLEDState(unsigned int state)
 }
 
 
-void DesktopWindow::handleClipboardRequest()
-{
-  viewport->handleClipboardRequest();
-}
-
-void DesktopWindow::handleClipboardAnnounce(bool available)
-{
-  viewport->handleClipboardAnnounce(available);
-}
-
-void DesktopWindow::handleClipboardData(const char* data)
-{
-  viewport->handleClipboardData(data);
-}
-
-
 void DesktopWindow::resize(int x, int y, int w, int h)
 {
   bool resizing;
