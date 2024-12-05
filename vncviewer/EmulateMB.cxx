@@ -194,8 +194,8 @@ static const signed char stateTab[11][5][3] = {
   },
 };
 
-EmulateMB::EmulateMB()
-  : state(0), emulatedButtonMask(0)
+EmulateMB::EmulateMB(EmulateMBHandler* handler_)
+  : handler(handler_), state(0), emulatedButtonMask(0)
 {
   timer.connectSignal("timer", this, &EmulateMB::handleTimeout);
 }
@@ -209,7 +209,7 @@ void EmulateMB::filterPointerEvent(const core::Point& pos,
 
   // Just pass through events if the emulate setting is disabled
   if (!emulateMiddleButton) {
-     sendPointerEvent(pos, buttonMask);
+     handler->sendPointerEvent(pos, buttonMask);
      return;
   }
 
@@ -261,7 +261,7 @@ void EmulateMB::filterPointerEvent(const core::Point& pos,
   // sent once the timer fires or is abandoned.
   if ((action1 == 0) && (action2 == 0) && !timer.isStarted()) {
     buttonMask = createButtonMask(buttonMask);
-    sendPointerEvent(pos, buttonMask);
+    handler->sendPointerEvent(pos, buttonMask);
   }
 
   lastState = state;
@@ -305,7 +305,7 @@ void EmulateMB::handleTimeout(core::Timer*, const char*)
   // the pointer has moved we have to send the latest position here.
   if (origPos != lastPos) {
     buttonMask = createButtonMask(buttonMask);
-    sendPointerEvent(lastPos, buttonMask);
+    handler->sendPointerEvent(lastPos, buttonMask);
   }
 
   state = stateTab[state][4][2];
@@ -322,7 +322,7 @@ void EmulateMB::sendAction(const core::Point& pos,
     emulatedButtonMask |= (1 << (action - 1));
 
   buttonMask = createButtonMask(buttonMask);
-  sendPointerEvent(pos, buttonMask);
+  handler->sendPointerEvent(pos, buttonMask);
 }
 
 int EmulateMB::createButtonMask(uint16_t buttonMask)
