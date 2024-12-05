@@ -96,6 +96,10 @@ VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
 {
   slog.debug("Creating single-threaded server %s", name.c_str());
 
+  registerSignal("clipboardrequest");
+  registerSignal<bool>("clipboardannounce");
+  registerSignal<const char*>("clipboarddata");
+
   idleTimer.connectSignal("timer", this,
                           &VNCServerST::idleTimeout);
   disconnectTimer.connectSignal("timer", this,
@@ -147,6 +151,8 @@ VNCServerST::~VNCServerST()
 
 void VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights accessRights)
 {
+  VNCSConnectionST* client;
+
   // - Check the connection isn't black-marked
   // *** do this in getSecurity instead?
   const char *address = sock->getPeerAddress();
@@ -177,14 +183,24 @@ void VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
   disconnectTimer.stop();
 
   try {
-    VNCSConnectionST* client = new VNCSConnectionST(this, sock, outgoing, accessRights);
-    clients.push_front(client);
-    client->init();
+    client = new VNCSConnectionST(this, sock, outgoing, accessRights);
   } catch (std::exception& e) {
     connectionsLog.error("Error accepting client: %s", e.what());
     sock->shutdown();
     closingSockets.push_back(sock);
+    return;
   }
+
+  clients.push_front(client);
+
+  client->connectSignal("clipboardrequest", this,
+                        &VNCServerST::handleClipboardRequest);
+  client->connectSignal("clipboardannounce", this,
+                        &VNCServerST::handleClipboardAnnounce);
+  client->connectSignal("clipboarddata", this,
+                        &VNCServerST::handleClipboardData);
+
+  client->init();
 }
 
 void VNCServerST::removeSocket(network::Socket* sock) {
@@ -199,7 +215,7 @@ void VNCServerST::removeSocket(network::Socket* sock) {
         pointerClient = nullptr;
       }
       if (clipboardClient == *ci)
-        handleClipboardAnnounce(*ci, false);
+        handleClipboardAnnounce(*ci, "", false);
       clipboardRequestors.remove(*ci);
 
       std::string peer((*ci)->getPeerEndpoint());
@@ -543,40 +559,6 @@ void VNCServerST::pointerEvent(VNCSConnectionST* client,
   desktop->pointerEvent(pos, buttonMask);
 }
 
-void VNCServerST::handleClipboardRequest(VNCSConnectionST* client)
-{
-  clipboardRequestors.push_back(client);
-  if (clipboardRequestors.size() == 1)
-    desktop->handleClipboardRequest();
-}
-
-void VNCServerST::handleClipboardAnnounce(VNCSConnectionST* client,
-                                          bool available)
-{
-  if (available) {
-    if (!rfb::Server::acceptCutText)
-      return;
-    clipboardClient = client;
-  } else {
-    if (client != clipboardClient)
-      return;
-    clipboardClient = nullptr;
-  }
-  desktop->handleClipboardAnnounce(available);
-}
-
-void VNCServerST::handleClipboardData(VNCSConnectionST* client,
-                                      const char* data)
-{
-  if (!rfb::Server::acceptCutText)
-    return;
-  if (client != clipboardClient) {
-    slog.debug("Ignoring unexpected clipboard data");
-    return;
-  }
-  desktop->handleClipboardData(data);
-}
-
 unsigned int VNCServerST::setDesktopSize(VNCSConnectionST* requester,
                                          int fb_width, int fb_height,
                                          const ScreenSet& layout)
@@ -666,6 +648,46 @@ SConnection* VNCServerST::getConnection(network::Socket* sock) {
       return (SConnection*)*ci;
   }
   return nullptr;
+}
+
+void VNCServerST::handleClipboardRequest(VNCSConnectionST* client,
+                                         const char*)
+{
+  clipboardRequestors.push_back(client);
+  if (clipboardRequestors.size() == 1)
+    emitSignal("clipboardrequest");
+}
+
+void VNCServerST::handleClipboardAnnounce(VNCSConnectionST* client,
+                                          const char*, bool available)
+{
+  if (!available) {
+    if (client != clipboardClient)
+      return;
+    clipboardClient = nullptr;
+  } else {
+    if (!rfb::Server::acceptCutText)
+      return;
+
+    clipboardClient = client;
+  }
+
+  emitSignal("clipboardannounce", available);
+}
+
+void VNCServerST::handleClipboardData(VNCSConnectionST* client,
+                                      const char*,
+                                      const char* data)
+{
+  if (!rfb::Server::acceptCutText)
+    return;
+
+  if (client != clipboardClient) {
+    slog.debug("Ignoring unexpected clipboard data");
+    return;
+  }
+
+  emitSignal("clipboarddata", data);
 }
 
 void VNCServerST::frameTimeout()
