@@ -90,7 +90,7 @@ static const int FAKE_KEY_CODE = 0xffff;
 Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc_)
   : Fl_Widget(0, 0, w, h), cc(cc_), frameBuffer(nullptr),
     lastPointerPos(0, 0), lastButtonMask(0),
-    keyboard(nullptr),
+    keyboard(nullptr), emulateMB(this),
     firstLEDState(true), pendingClientClipboard(false),
     menuCtrlKey(false), menuAltKey(false), cursor(nullptr),
     cursorIsBlank(false)
@@ -594,7 +594,7 @@ void Viewport::flushPendingClipboard()
 void Viewport::handlePointerEvent(const core::Point& pos,
                                   uint16_t buttonMask)
 {
-  filterPointerEvent(pos, buttonMask);
+  emulateMB.filterPointerEvent(pos, buttonMask);
 }
 
 
