@@ -148,6 +148,25 @@ namespace rfb {
     // setLEDState() tells the server what the current lock keys LED
     // state is
     virtual void setLEDState(unsigned int state) = 0;
+
+    // Signals
+
+    // "clipboardrequest" is emitted whenever the client requests
+    // the server to send over its clipboard data. It will only be
+    // sent after the server has first announced a clipboard change
+    // via announceClipboard().
+
+    // "clipboardannounce" is emitted to indicate a change in the
+    // clipboard on the client. Call requestClipboard() to access the
+    // actual data. A boolean is included to indicate if the clipboard
+    // is available or not.
+
+    // "clipboarddata" is emitted when the client has sent over
+    // the clipboard data as a result of a previous call to
+    // requestClipboard(). Note that this function might never be
+    // called if the clipboard data was no longer available when the
+    // client received the request. A const char* string is included
+    // that contains the actual clipboard contents.
   };
 }
 #endif
