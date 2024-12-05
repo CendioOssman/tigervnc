@@ -23,16 +23,19 @@
 #include <core/Rect.h>
 #include <core/Timer.h>
 
+class EmulateMBHandler {
+public:
+  virtual void sendPointerEvent(const core::Point& pos,
+                                uint16_t buttonMask)=0;
+};
+
 class EmulateMB : public core::Object {
 public:
-  EmulateMB();
+  EmulateMB(EmulateMBHandler* handler);
 
   void filterPointerEvent(const core::Point& pos, uint16_t buttonMask);
 
 protected:
-  virtual void sendPointerEvent(const core::Point& pos,
-                                uint16_t buttonMask)=0;
-
   void handleTimeout(core::Timer*, const char*);
 
 private:
@@ -42,6 +45,8 @@ private:
   int createButtonMask(uint16_t buttonMask);
 
 private:
+  EmulateMBHandler* handler;
+
   int state;
   uint16_t emulatedButtonMask;
   uint16_t lastButtonMask;
