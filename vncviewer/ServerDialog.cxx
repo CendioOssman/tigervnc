@@ -74,8 +74,8 @@ ServerDialog::ServerDialog(QWidget* parent)
   connect(comboBox->lineEdit(), &QLineEdit::returnPressed, this, &ServerDialog::connectTo);
 
   connect(optionsBtn, &QPushButton::clicked, this, &ServerDialog::openOptionDialog);
-  connect(loadBtn, &QPushButton::clicked, this, &ServerDialog::openLoadConfigDialog);
-  connect(saveAsBtn, &QPushButton::clicked, this, &ServerDialog::openSaveConfigDialog);
+  connect(loadBtn, &QPushButton::clicked, this, &ServerDialog::initLoad);
+  connect(saveAsBtn, &QPushButton::clicked, this, &ServerDialog::initSaveAs);
 
   connect(aboutBtn, &QPushButton::clicked, this, &ServerDialog::openAboutDialog);
   connect(cancelBtn, &QPushButton::clicked, this, &ServerDialog::reject);
@@ -153,76 +153,97 @@ void ServerDialog::openAboutDialog()
   about_vncviewer(this);
 }
 
-void ServerDialog::openLoadConfigDialog()
+void ServerDialog::initLoad()
 {
-  QString filename = QFileDialog::getOpenFileName(this,
-                                                  _("Select a TigerVNC configuration file"),
-                                                  {},
-                                                  _("TigerVNC configuration (*.tigervnc);;All files (*)"));
-  if (!filename.isEmpty()) {
-    try {
-      QString server = loadViewerParameters(filename.toStdString().c_str());
-      comboBox->setCurrentText(server);
-    } catch (rfb::Exception& e) {
-      std::string msg;
-      QMessageBox* dlg;
+  usedDir = QDir::home();
+  QFileDialog* file_chooser = new QFileDialog(this,
+                                        _("Select a TigerVNC configuration file"),
+                                        usedDir.path(),
+                                        _("TigerVNC configuration (*.tigervnc);;All files (*)"));
+  file_chooser->setFileMode(QFileDialog::ExistingFile);
+  file_chooser->setOption(QFileDialog::DontUseNativeDialog);
+  file_chooser->setLabelText(QFileDialog::Accept, _("Load"));
+  file_chooser->setModal(true);
 
-      vlog.error("%s", e.str());
+  connect(file_chooser, &QFileDialog::fileSelected, this, &ServerDialog::handleLoad);
 
-      msg = rfb::format(_("Unable to load the specified configuration file:\n\n%s"), e.str());
-      dlg = new QMessageBox(QMessageBox::Critical,
-                            _("Unable to load configuration"),
-                            msg.c_str(), QMessageBox::Ok, this);
-      AppManager::instance()->openDialog(dlg);
-    }
+  file_chooser->setAttribute(Qt::WA_DeleteOnClose);
+  file_chooser->show();
+}
+
+void ServerDialog::handleLoad(const QString& filename)
+{
+  try {
+    QString server = loadViewerParameters(filename.toStdString().c_str());
+    comboBox->setCurrentText(server);
+  } catch (rfb::Exception& e) {
+    std::string msg;
+    QMessageBox* dlg;
+
+    vlog.error("%s", e.str());
+
+    msg = rfb::format(_("Unable to load the specified configuration file:\n\n%s"), e.str());
+    dlg = new QMessageBox(QMessageBox::Critical,
+                          _("Unable to load configuration"),
+                          msg.c_str(), QMessageBox::Ok, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->show();
   }
 }
 
-void ServerDialog::openSaveConfigDialog()
+void ServerDialog::initSaveAs()
 {
-  QString filename = QFileDialog::getSaveFileName(this,
-                                                  _("Save the TigerVNC configuration to file"),
-                                                  {},
-                                                  _("TigerVNC configuration (*.tigervnc);;All files (*)"),
-                                                  nullptr,
-                                                  QFileDialog::DontConfirmOverwrite);
-  if (!filename.isEmpty()) {
-    QFile f(filename);
+  usedDir = QDir::home();
+  QFileDialog* file_chooser = new QFileDialog(this,
+                                        _("Save the TigerVNC configuration to file"),
+                                        usedDir.path(),
+                                        _("TigerVNC configuration (*.tigervnc);;All files (*)"));
+  file_chooser->setFileMode(QFileDialog::AnyFile);
+  file_chooser->setOption(QFileDialog::DontUseNativeDialog);
+  file_chooser->setLabelText(QFileDialog::Accept, _("Save"));
+  file_chooser->setModal(true);
 
-    if (f.open(QIODevice::ReadOnly)) {
-      // The file already exists.
-      f.close();
+  connect(file_chooser, &QFileDialog::fileSelected, this, &ServerDialog::handleSaveAs);
 
-      std::string msg;
-      QMessageBox* question = new QMessageBox(this);
-      question->setWindowTitle("");
-      question->addButton(_("Overwrite"), QMessageBox::AcceptRole);
-      question->addButton(_("No"), QMessageBox::RejectRole);
-      msg = rfb::format(_("%s already exists. Do you want to overwrite?"),
-                        filename.toStdString().c_str());
-      question->setText(msg.c_str());
-      if (question->exec() == QMessageBox::RejectRole) {
-        // If the user doesn't want to overwrite:
-        openSaveConfigDialog();
-        return;
-      }
+  file_chooser->setAttribute(Qt::WA_DeleteOnClose);
+  file_chooser->show();
+}
+
+void ServerDialog::handleSaveAs(const QString& filename)
+{
+  if (QFile::exists(filename)) {
+    // The file already exists.
+    std::string msg;
+    QMessageBox* question = new QMessageBox(this);
+    question->setWindowTitle("");
+    question->addButton(_("Overwrite"), QMessageBox::AcceptRole);
+    question->addButton(_("No"), QMessageBox::RejectRole);
+    msg = rfb::format(_("%s already exists. Do you want to overwrite?"),
+                      filename.toStdString().c_str());
+    question->setText(msg.c_str());
+    int overwriteChoice = question->exec();
+    if (overwriteChoice != QMessageBox::AcceptRole) {
+       // The user doesn't want to overwrite
+      initSaveAs();
+      return;
     }
+  }
 
-    try {
-      saveViewerParameters(filename.toStdString().c_str(),
-                           comboBox->currentText().toStdString().c_str());
-    } catch (rfb::Exception& e) {
-      std::string msg;
-      QMessageBox* dlg;
-
-      vlog.error("%s", e.str());
-
-      msg = rfb::format(_("Unable to save the specified configuration file:\n\n%s"), e.str());
-      dlg = new QMessageBox(QMessageBox::Critical,
-                            _("Unable to save configuration"),
-                            msg.c_str(), QMessageBox::Ok, this);
-      AppManager::instance()->openDialog(dlg);
-    }
+  try {
+    saveViewerParameters(filename.toStdString().c_str(),
+                         comboBox->currentText().toStdString().c_str());
+  } catch (rfb::Exception& e) {
+    std::string msg;
+    QMessageBox* dlg;
+    vlog.error("%s", e.str());
+    msg = rfb::format(_("Unable to save the specified configuration file:\n\n%s"), e.str());
+    dlg = new QMessageBox(QMessageBox::Critical,
+                          _("Unable to save configuration"),
+                          msg.c_str(),
+                          QMessageBox::Ok,
+                          this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->show();
   }
 }
 
