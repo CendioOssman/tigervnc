@@ -125,7 +125,7 @@ namespace rfb {
     // These methods are invoked as callbacks from processMsg(
     void clientInit(bool shared) override;
     void authSuccess() override;
-    void queryConnection(const char* userName) override;
+    void queryConnection() override;
     void clientReady() override;
     void setPixelFormat(const PixelFormat& pf) override;
     void setEncodings(int nEncodings,
