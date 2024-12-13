@@ -371,7 +371,7 @@ void XDesktop::queryConnection(network::Socket* sock,
     }
   }
 
-  if (!userName)
+  if (userName[0] == '\0')
     userName = "(anonymous)";
 
   queryConnectSock = sock;
