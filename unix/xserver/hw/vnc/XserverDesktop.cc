@@ -209,7 +209,7 @@ void XserverDesktop::queryConnection(network::Socket* sock,
   }
 
   queryConnectAddress = sock->getPeerAddress();
-  if (!userName)
+  if (userName[0] == '\0')
     userName = "(anonymous)";
   queryConnectUsername = userName;
   queryConnectId = (uint32_t)(intptr_t)sock;
