@@ -265,7 +265,9 @@ bool SConnection::processSecurityMsg()
 
   state_ = RFBSTATE_QUERYING;
   setAccessRights(accessRights & ssecurity->getAccessRights());
-  queryConnection(ssecurity->getUserName());
+  userName = ssecurity->getUserName();
+
+  queryConnection();
 
   // If the connection got approved right away then we can continue
   if (state_ == RFBSTATE_INITIALISATION)
@@ -373,6 +375,11 @@ void SConnection::clientInit(bool shared)
   shared_ = shared;
   state_ = RFBSTATE_CLIENT_READY;
   clientReady();
+}
+
+const char* SConnection::getUserName() const
+{
+  return userName.c_str();
 }
 
 void SConnection::setEncodings(int nEncodings, const int32_t* encodings)
@@ -589,7 +596,7 @@ void SConnection::authSuccess()
 {
 }
 
-void SConnection::queryConnection(const char* /*userName*/)
+void SConnection::queryConnection()
 {
   approveConnection(true);
 }
