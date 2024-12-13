@@ -55,14 +55,12 @@ protected:
 private:
   void loadServerHistory();
   void saveServerHistory();
-  void updateUsedDir(const char* filename);
 
 protected:
   Fl_Input_Choice *serverName;
   Fl_File_Chooser* fileChooser;
   Fl_Choice_Box* saveConflictDialog;
   std::list<std::string> serverHistory;
-  std::string usedDir;
 
 private:
   int result_;

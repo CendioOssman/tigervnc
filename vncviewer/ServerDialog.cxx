@@ -23,7 +23,6 @@
 
 #include <errno.h>
 #include <algorithm>
-#include <libgen.h>
 
 #include <FL/Fl.H>
 #include <FL/Fl_Input.H>
@@ -193,12 +192,9 @@ void ServerDialog::setServerName(const char* servername)
 
 void ServerDialog::handleLoad()
 {
-  if (usedDir.empty())
-    usedDir = os::getuserhomedir();
-
   delete fileChooser;
 
-  fileChooser = new Fl_File_Chooser(usedDir.c_str(),
+  fileChooser = new Fl_File_Chooser(os::getuserhomedir(),
                                     _("TigerVNC configuration (*.tigervnc)"),
                                     Fl_File_Chooser::SINGLE,
                                     _("Select a TigerVNC configuration file"));
@@ -224,7 +220,6 @@ void ServerDialog::handleLoad()
 void ServerDialog::handleLoadSelected()
 {
   const char* filename = fileChooser->value();
-  updateUsedDir(filename);
 
   try {
     serverName->value(loadViewerParameters(filename).c_str());
@@ -246,12 +241,9 @@ void ServerDialog::handleLoadSelected()
 
 void ServerDialog::handleSaveAs()
 { 
-  if (usedDir.empty())
-    usedDir = os::getuserhomedir();
-
   delete fileChooser;
 
-  fileChooser = new Fl_File_Chooser(usedDir.c_str(),
+  fileChooser = new Fl_File_Chooser(os::getuserhomedir(),
                                     _("TigerVNC configuration (*.tigervnc)"),
                                     Fl_File_Chooser::CREATE,
                                     _("Save the TigerVNC configuration to file"));
@@ -278,7 +270,6 @@ void ServerDialog::handleSaveAs()
 void ServerDialog::handleSaveAsSelected()
 {
   const char* filename = fileChooser->value();
-  updateUsedDir(filename);
 
   FILE* f = fopen(filename, "r");
   if (f) {
@@ -510,11 +501,4 @@ void ServerDialog::saveServerHistory()
   }
 
   fclose(f);
-}
-
-void ServerDialog::updateUsedDir(const char* filename)
-{
-  char * name = strdup(filename);
-  usedDir = dirname(name);
-  free(name);
 }
