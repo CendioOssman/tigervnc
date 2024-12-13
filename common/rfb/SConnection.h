@@ -132,6 +132,11 @@ namespace rfb {
     bool authenticated() { return (state_ == RFBSTATE_INITIALISATION ||
                                    state_ == RFBSTATE_NORMAL); }
 
+    // getUserName() gets the name of the user attempting
+    // authentication. The storage is owned by the SConnection object,
+    // so a copy must be taken if necessary.
+    virtual const char* getUserName() const;
+
     SMsgReader* reader() { return reader_; }
     SMsgWriter* writer() { return writer_; }
 
@@ -228,14 +233,13 @@ namespace rfb {
     // authSuccess() is called when authentication has succeeded.
     virtual void authSuccess();
 
-    // queryConnection() is called when authentication has succeeded, but
-    // before informing the client.  It can be overridden to query a local user
-    // to accept the incoming connection, for example.  The userName argument
-    // is the name of the user making the connection (note that the
-    // storage for userName is owned by the caller).  The connection must be
-    // accepted or rejected by calling approveConnection(), either directly
-    // from queryConnection() or some time later.
-    virtual void queryConnection(const char* userName);
+    // queryConnection() is called when authentication has succeeded,
+    // but before informing the client.  It can be overridden to query a
+    // local user to accept the incoming connection, for example. The
+    // connection must be accepted or rejected by calling
+    // approveConnection(), either directly from queryConnection() or
+    // some time later.
+    virtual void queryConnection();
 
     // clientInit() is called when the ClientInit message is received.  The
     // derived class must call on to SConnection::clientInit().
@@ -304,6 +308,7 @@ namespace rfb {
     stateEnum state_;
     int32_t preferredEncoding;
     AccessRights accessRights;
+    std::string userName;
 
     std::string clientClipboard;
     bool hasRemoteClipboard;
