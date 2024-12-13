@@ -57,7 +57,6 @@ protected:
 private:
   void loadServerHistory();
   void saveServerHistory();
-  void updateUsedDir(const char* filename);
 
   void onServerHistoryRemove(std::string s);
   static std::string serverHistoryNormalize(const std::string s);
@@ -67,7 +66,6 @@ protected:
   Fl_File_Chooser* fileChooser;
   Fl_Choice_Box* saveConflictDialog;
   std::list<std::string> serverHistory;
-  std::string usedDir;
 
 private:
   int result_;
