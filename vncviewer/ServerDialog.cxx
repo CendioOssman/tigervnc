@@ -200,7 +200,8 @@ void ServerDialog::handleLoad()
 
   fileChooser = new Fl_File_Chooser(usedDir.c_str(),
                                     _("TigerVNC configuration (*.tigervnc)"),
-                                    0, _("Select a TigerVNC configuration file"));
+                                    Fl_File_Chooser::SINGLE,
+                                    _("Select a TigerVNC configuration file"));
   fileChooser->preview(0);
   fileChooser->previewButton->hide();
   // Fl_File_Chooser is buggy and calls the callback before hiding
@@ -252,7 +253,8 @@ void ServerDialog::handleSaveAs()
 
   fileChooser = new Fl_File_Chooser(usedDir.c_str(),
                                     _("TigerVNC configuration (*.tigervnc)"),
-                                    2, _("Save the TigerVNC configuration to file"));
+                                    Fl_File_Chooser::CREATE,
+                                    _("Save the TigerVNC configuration to file"));
   
   fileChooser->preview(0);
   fileChooser->previewButton->hide();
