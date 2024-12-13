@@ -505,9 +505,9 @@ void VNCSConnectionST::authSuccess()
     idleTimer.start(core::secsToMillis(rfb::Server::idleTimeout));
 }
 
-void VNCSConnectionST::queryConnection(const char* userName)
+void VNCSConnectionST::queryConnection()
 {
-  server->queryConnection(this, userName);
+  server->queryConnection(this);
 }
 
 void VNCSConnectionST::clientReady()
