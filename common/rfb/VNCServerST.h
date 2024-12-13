@@ -128,7 +128,7 @@ namespace rfb {
 
     // queryConnection() does some basic checks and then passes on the
     // request to the desktop.
-    void queryConnection(VNCSConnectionST* client, const char* userName);
+    void queryConnection(VNCSConnectionST* client);
 
     // Estimated time until the next time new updates will be pushed
     // to clients

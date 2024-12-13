@@ -819,8 +819,7 @@ void VNCServerST::connectTimeout()
   emitSignal("terminate");
 }
 
-void VNCServerST::queryConnection(VNCSConnectionST* client,
-                                  const char* userName)
+void VNCServerST::queryConnection(VNCSConnectionST* client)
 {
   // - Authentication succeeded - clear from blacklist
   blHosts->clearBlackmark(client->getSock()->getPeerAddress());
@@ -852,7 +851,7 @@ void VNCServerST::queryConnection(VNCSConnectionST* client,
     return;
   }
 
-  desktop->queryConnection(client->getSock(), userName);
+  desktop->queryConnection(client->getSock(), client->getUserName());
 }
 
 // -=- Internal methods
