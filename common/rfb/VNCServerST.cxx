@@ -689,16 +689,18 @@ void VNCServerST::handleLayoutRequest(VNCSConnectionST* requester,
 
 // Other public methods
 
-void VNCServerST::approveConnection(network::Socket* sock, bool accept,
+void VNCServerST::approveConnection(SConnection* conn, bool accept,
                                     const char* reason)
 {
-  std::list<VNCSConnectionST*>::iterator ci;
-  for (ci = clients.begin(); ci != clients.end(); ci++) {
-    if ((*ci)->getSock() == sock) {
-      (*ci)->approveConnectionOrClose(accept, reason);
-      return;
-    }
-  }
+  VNCSConnectionST* client;
+
+  // Might be a stale pointer
+  if (std::find(clients.begin(), clients.end(), conn) == clients.end())
+    return;
+
+  client = dynamic_cast<VNCSConnectionST*>(conn);
+  assert(client);
+  client->approveConnectionOrClose(accept, reason);
 }
 
 void VNCServerST::closeClients(const char* reason, network::Socket* except)
@@ -833,26 +835,25 @@ void VNCServerST::queryConnection(VNCSConnectionST* client)
   if (rfb::Server::neverShared &&
       !rfb::Server::disconnectClients &&
       authClientCount() > 0) {
-    approveConnection(client->getSock(), false,
-                      "The server is already in use");
+    approveConnection(client, false, "The server is already in use");
     return;
   }
 
   // - Are we configured to do queries?
   if (!rfb::Server::queryConnect &&
       !client->getSock()->requiresQuery()) {
-    approveConnection(client->getSock(), true, nullptr);
+    approveConnection(client, true, nullptr);
     return;
   }
 
   // - Does the client have the right to bypass the query?
   if (client->accessCheck(AccessNoQuery))
   {
-    approveConnection(client->getSock(), true, nullptr);
+    approveConnection(client, true, nullptr);
     return;
   }
 
-  desktop->queryConnection(client->getSock(), client->getUserName());
+  desktop->queryConnection(client);
 }
 
 // -=- Internal methods

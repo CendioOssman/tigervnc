@@ -40,10 +40,9 @@
 
 #include <core/Object.h>
 
-namespace network { class Socket; }
-
 namespace rfb {
 
+  class SConnection;
   struct ScreenSet;
   class VNCServer;
 
@@ -54,12 +53,10 @@ namespace rfb {
     virtual void init(rfb::VNCServer* vs) = 0;
 
     // queryConnection() is called when a connection has been
-    // successfully authenticated.  The sock and userName arguments
-    // identify the socket and the name of the authenticated user, if
-    // any. At some point later VNCServer::approveConnection() should
-    // be called to either accept or reject the client.
-    virtual void queryConnection(network::Socket* sock,
-                                 const char* userName) = 0;
+    // successfully authenticated. At some point later
+    // VNCServer::approveConnection() should be called to either accept
+    // or reject the client.
+    virtual void queryConnection(rfb::SConnection* conn) = 0;
 
   protected:
     virtual ~SDesktop() {}
