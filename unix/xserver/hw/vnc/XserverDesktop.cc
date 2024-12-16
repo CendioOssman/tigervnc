@@ -83,7 +83,7 @@ XserverDesktop::XserverDesktop(int screenIndex_,
   : screenIndex(screenIndex_),
     server(0), listeners(listeners_),
     shadowFramebuffer(nullptr),
-    queryConnectId(0)
+    pendingQuery(nullptr)
 {
   format = pf;
 
@@ -192,28 +192,22 @@ void XserverDesktop::init(rfb::VNCServer* vs)
   // ready state
 }
 
-void XserverDesktop::queryConnection(network::Socket* sock,
-                                     const char* userName)
+void XserverDesktop::queryConnection(rfb::SConnection* conn)
 {
   int count;
 
   if (queryConnectTimer.isStarted()) {
-    server->approveConnection(sock, false, "Another connection is currently being queried.");
+    server->approveConnection(conn, false, "Another connection is currently being queried.");
     return;
   }
 
   count = vncNotifyQueryConnect();
   if (count == 0) {
-    server->approveConnection(sock, false, "Unable to query the local user to accept the connection.");
+    server->approveConnection(conn, false, "Unable to query the local user to accept the connection.");
     return;
   }
 
-  queryConnectAddress = sock->getPeerAddress();
-  if (userName[0] == '\0')
-    userName = "(anonymous)";
-  queryConnectUsername = userName;
-  queryConnectId = (uint32_t)(intptr_t)sock;
-  queryConnectSocket = sock;
+  pendingQuery = conn;
 
   queryConnectTimer.start(queryConnectTimeout * 1000);
 }
@@ -460,15 +454,29 @@ void XserverDesktop::getQueryConnect(uint32_t* opaqueId,
                                      const char** username,
                                      int *timeout)
 {
-  *opaqueId = queryConnectId;
+  std::list<network::Socket*> sockets;
+
+  // Check if this connection is still valid
+  server->getSockets(&sockets);
+  if (std::find_if(sockets.begin(), sockets.end(),
+                   [this](network::Socket* sock) {
+                     return server->getConnection(sock) == pendingQuery;
+                   }) == sockets.end()) {
+    pendingQuery = nullptr;
+    queryConnectTimer.stop();
+  }
+
+  *opaqueId = (uint32_t)(intptr_t)pendingQuery;
 
   if (!queryConnectTimer.isStarted()) {
     *address = "";
     *username = "";
     *timeout = 0;
   } else {
-    *address = queryConnectAddress.c_str();
-    *username = queryConnectUsername.c_str();
+    *address = pendingQuery->getSock()->getPeerAddress();
+    *username = pendingQuery->getUserName();
+    if ((*username)[0] == '\0')
+      *username = "(anonymous)";
     *timeout = queryConnectTimeout;
   }
 }
@@ -476,9 +484,9 @@ void XserverDesktop::getQueryConnect(uint32_t* opaqueId,
 void XserverDesktop::approveConnection(uint32_t opaqueId, bool accept,
                                        const char* rejectMsg)
 {
-  if (queryConnectId == opaqueId) {
-    server->approveConnection(queryConnectSocket, accept, rejectMsg);
-    queryConnectId = 0;
+  if ((uint32_t)(intptr_t)pendingQuery == opaqueId) {
+    server->approveConnection(pendingQuery, accept, rejectMsg);
+    pendingQuery = nullptr;
     queryConnectTimer.stop();
   }
 }
@@ -561,7 +569,7 @@ void XserverDesktop::keyEvent(rfb::VNCServerST*, const char* name,
 
 void XserverDesktop::queryTimeout()
 {
-  server->approveConnection(queryConnectSocket, false,
+  server->approveConnection(pendingQuery, false,
                             "The attempt to prompt the user to "
                             "accept the connection failed");
 }

@@ -253,18 +253,17 @@ bool VNCServerWin32::setClientsStatus(ListConnInfo* LCInfo) {
   return queueCommand(SetClientsStatus, LCInfo, 0);
 }
 
-void VNCServerWin32::queryConnection(network::Socket* sock,
-                                     const char* userName)
+void VNCServerWin32::queryConnection(rfb::SConnection* conn)
 {
   if (queryOnlyIfLoggedOn && CurrentUserToken().noUserLoggedOn()) {
-    vncServer.approveConnection(sock, true, nullptr);
+    vncServer.approveConnection(conn, true, nullptr);
     return;
   }
   if (queryConnectDialog) {
-    vncServer.approveConnection(sock, false, "Another connection is currently being queried.");
+    vncServer.approveConnection(conn, false, "Another connection is currently being queried.");
     return;
   }
-  queryConnectDialog = new QueryConnectDialog(sock, userName, this);
+  queryConnectDialog = new QueryConnectDialog(conn, this);
   queryConnectDialog->startDialog();
 }
 
@@ -322,7 +321,7 @@ void VNCServerWin32::processEvent(HANDLE event_) {
     case QueryConnectionComplete:
       // The Accept/Reject dialog has completed
       // Get the result, then clean it up
-      vncServer.approveConnection(queryConnectDialog->getSock(),
+      vncServer.approveConnection(queryConnectDialog->getConn(),
                                   queryConnectDialog->isAccepted(),
                                   "Connection rejected by user");
       queryConnectDialog->wait();

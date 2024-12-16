@@ -62,8 +62,7 @@ public:
   // -=- SDesktop interface
   void init(rfb::VNCServer* vs) override;
   bool isRunning();
-  void queryConnection(network::Socket* sock,
-                       const char* userName) override;
+  void queryConnection(rfb::SConnection* conn) override;
 
   // -=- TXGlobalEventHandler interface
   bool handleGlobalEvent(XEvent* ev) override;
@@ -87,7 +86,7 @@ protected:
   XPixelBuffer* pb;
   rfb::VNCServer* server;
   QueryConnectDialog* queryConnectDialog;
-  network::Socket* queryConnectSock;
+  rfb::SConnection* pendingQuery;
   XSelection selection;
   uint16_t oldButtonMask;
   bool haveXtest;
