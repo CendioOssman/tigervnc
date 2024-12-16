@@ -4,7 +4,7 @@
 #include <QDialog>
 // Conflict with /usr/include/X11/X.h
 #undef Unsorted
-#include <QDir>
+#include <QFileDialog>
 
 class QComboBox;
 
@@ -23,9 +23,9 @@ public:
   void openOptionDialog();
   void openAboutDialog();
   void initLoad();
-  void handleLoad(const QString& filename);
+  void handleLoad(const QFileDialog* filechooser);
   void initSaveAs();
-  void handleSaveAs(const QString& filename);
+  void handleSaveAs(const QFileDialog* filechooser);
 
 private:
   void loadServerHistory();
@@ -36,7 +36,7 @@ private:
   QStringList serverHistory;
 
 protected:
-  QDir usedDir;
+  QFileDialog *fileChooser;
 };
 
 #endif // SERVERDIALOG_H

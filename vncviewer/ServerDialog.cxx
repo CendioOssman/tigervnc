@@ -155,24 +155,27 @@ void ServerDialog::openAboutDialog()
 
 void ServerDialog::initLoad()
 {
-  usedDir = QDir::home();
-  QFileDialog* file_chooser = new QFileDialog(this,
-                                        _("Select a TigerVNC configuration file"),
-                                        usedDir.path(),
-                                        _("TigerVNC configuration (*.tigervnc);;All files (*)"));
-  file_chooser->setFileMode(QFileDialog::ExistingFile);
-  file_chooser->setOption(QFileDialog::DontUseNativeDialog);
-  file_chooser->setLabelText(QFileDialog::Accept, _("Load"));
-  file_chooser->setModal(true);
+  fileChooser = new QFileDialog(this,
+                                _("Select a TigerVNC configuration file"),
+                                QDir::home().path(),
+                                _("TigerVNC configuration (*.tigervnc);;All files (*)"));
 
-  connect(file_chooser, &QFileDialog::fileSelected, this, &ServerDialog::handleLoad);
+  fileChooser->setFileMode(QFileDialog::ExistingFile);
+  fileChooser->setOption(QFileDialog::DontUseNativeDialog);
+  fileChooser->setLabelText(QFileDialog::Accept, _("Load"));
+  fileChooser->setModal(true);
 
-  file_chooser->setAttribute(Qt::WA_DeleteOnClose);
-  file_chooser->show();
+  connect(fileChooser, &QFileDialog::fileSelected, this, [this]() {
+    handleLoad(this->fileChooser);
+  });
+
+  fileChooser->setAttribute(Qt::WA_DeleteOnClose);
+  fileChooser->show();
 }
 
-void ServerDialog::handleLoad(const QString& filename)
+void ServerDialog::handleLoad(const QFileDialog* filechooser)
 {
+  const QString filename = filechooser->selectedFiles().first();
   try {
     QString server = loadViewerParameters(filename.toStdString().c_str());
     comboBox->setCurrentText(server);
@@ -193,24 +196,26 @@ void ServerDialog::handleLoad(const QString& filename)
 
 void ServerDialog::initSaveAs()
 {
-  usedDir = QDir::home();
-  QFileDialog* file_chooser = new QFileDialog(this,
-                                        _("Save the TigerVNC configuration to file"),
-                                        usedDir.path(),
-                                        _("TigerVNC configuration (*.tigervnc);;All files (*)"));
-  file_chooser->setFileMode(QFileDialog::AnyFile);
-  file_chooser->setOption(QFileDialog::DontUseNativeDialog);
-  file_chooser->setLabelText(QFileDialog::Accept, _("Save"));
-  file_chooser->setModal(true);
+  fileChooser = new QFileDialog(this,
+                                _("Save the TigerVNC configuration to file"),
+                                QDir::home().path(),
+                                _("TigerVNC configuration (*.tigervnc);;All files (*)"));
+  fileChooser->setFileMode(QFileDialog::AnyFile);
+  fileChooser->setOption(QFileDialog::DontUseNativeDialog);
+  fileChooser->setLabelText(QFileDialog::Accept, _("Save"));
+  fileChooser->setModal(true);
 
-  connect(file_chooser, &QFileDialog::fileSelected, this, &ServerDialog::handleSaveAs);
+  connect(fileChooser, &QFileDialog::fileSelected, this, [this]() {
+    handleSaveAs(this->fileChooser);
+  });
 
-  file_chooser->setAttribute(Qt::WA_DeleteOnClose);
-  file_chooser->show();
+  fileChooser->setAttribute(Qt::WA_DeleteOnClose);
+  fileChooser->show();
 }
 
-void ServerDialog::handleSaveAs(const QString& filename)
+void ServerDialog::handleSaveAs(const QFileDialog* filechooser)
 {
+  const QString filename = filechooser->selectedFiles().first();
   if (QFile::exists(filename)) {
     // The file already exists.
     std::string msg;
