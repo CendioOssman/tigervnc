@@ -170,8 +170,8 @@ namespace rfb {
     void setSize(int w, int h) override;
 
   private:
-    uint8_t* data;
-    int stride;
+    uint8_t* pixelbuffer;
+    int pixelstride;
   };
 
   // -=- Managed pixel buffer class

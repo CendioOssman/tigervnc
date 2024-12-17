@@ -334,11 +334,11 @@ void ModifiablePixelBuffer::imageRect(const PixelFormat& pf,
 
 FullFramePixelBuffer::FullFramePixelBuffer(const PixelFormat& pf, int w, int h,
                                            uint8_t* data_, int stride_)
-  : ModifiablePixelBuffer(pf, w, h), data(data_), stride(stride_)
+  : ModifiablePixelBuffer(pf, w, h), pixelbuffer(data_), pixelstride(stride_)
 {
 }
 
-FullFramePixelBuffer::FullFramePixelBuffer() : data(nullptr) {}
+FullFramePixelBuffer::FullFramePixelBuffer() : pixelbuffer(nullptr) {}
 
 FullFramePixelBuffer::~FullFramePixelBuffer() {}
 
@@ -350,8 +350,8 @@ uint8_t* FullFramePixelBuffer::getBufferRW(const core::Rect& r,
       "Pixel buffer request %dx%d at %d,%d exceeds framebuffer %dx%d",
       r.width(), r.height(), r.tl.x, r.tl.y, width(), height()));
 
-  *stride_ = stride;
-  return &data[(r.tl.x + (r.tl.y * stride)) * (format.bpp/8)];
+  *stride_ = pixelstride;
+  return &pixelbuffer[(r.tl.x + (r.tl.y * pixelstride)) * (format.bpp/8)];
 }
 
 void FullFramePixelBuffer::commitBufferRW(const core::Rect& /*r*/)
@@ -366,8 +366,8 @@ const uint8_t* FullFramePixelBuffer::getBuffer(const core::Rect& r,
       "Pixel buffer request %dx%d at %d,%d exceeds framebuffer %dx%d",
       r.width(), r.height(), r.tl.x, r.tl.y, width(), height()));
 
-  *stride_ = stride;
-  return &data[(r.tl.x + (r.tl.y * stride)) * (format.bpp/8)];
+  *stride_ = pixelstride;
+  return &pixelbuffer[(r.tl.x + (r.tl.y * pixelstride)) * (format.bpp/8)];
 }
 
 void FullFramePixelBuffer::setBuffer(int width, int height,
@@ -387,8 +387,8 @@ void FullFramePixelBuffer::setBuffer(int width, int height,
       "PixelBuffer requested without a valid memory area"));
 
   ModifiablePixelBuffer::setSize(width, height);
-  stride = stride_;
-  data = data_;
+  pixelstride = stride_;
+  pixelbuffer = data_;
 }
 
 void FullFramePixelBuffer::setSize(int /*w*/, int /*h*/)
