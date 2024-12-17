@@ -77,7 +77,6 @@ namespace rfb {
       // -=- SDesktop interface
 
       void init(VNCServer* vs) override;
-      void queryConnection(rfb::SConnection* conn) override;
 
       // -=- Clipboard events
       
@@ -124,6 +123,8 @@ namespace rfb {
 
       void start();
       void stop();
+
+      void queryConnection(SConnection* conn);
 
       void pointerEvent(PointerEvent event);
       void keyEvent(VNCServer*, const char* name, KeyEvent event);

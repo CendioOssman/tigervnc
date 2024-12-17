@@ -62,7 +62,6 @@ public:
   // -=- SDesktop interface
   void init(rfb::VNCServer* vs) override;
   bool isRunning();
-  void queryConnection(rfb::SConnection* conn) override;
 
   // -=- TXGlobalEventHandler interface
   bool handleGlobalEvent(XEvent* ev) override;
@@ -75,6 +74,7 @@ protected:
   // -=- Signal handlers
   void start();
   void stop();
+  void queryConnection(rfb::SConnection* conn);
   void pointerEvent(rfb::PointerEvent event);
   void keyEvent(rfb::VNCServer*, const char* name,
                 rfb::KeyEvent event);
