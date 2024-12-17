@@ -58,8 +58,8 @@ static Cursor emptyCursor(0, 0, {0, 0}, nullptr);
 
 VNCSConnectionST::VNCSConnectionST(VNCServerST* server_, network::Socket *s,
                                    bool reverse, AccessRights ar)
-  : SConnection(ar),
-    sock(s), reverseConnection(reverse),
+  : SConnection(s, ar),
+    reverseConnection(reverse),
     inProcessMessages(false),
     pendingSyncFence(false), syncFence(false), fenceFlags(0),
     fenceDataLen(0), fenceData(nullptr), server(server_),
@@ -67,8 +67,7 @@ VNCSConnectionST::VNCSConnectionST(VNCServerST* server_, network::Socket *s,
     continuousUpdates(false), encodeManager(this),
     pointerEventTime(0), clientHasCursor(false)
 {
-  setStreams(&sock->inStream(), &sock->outStream());
-  peerEndpoint = sock->getPeerEndpoint();
+  peerEndpoint = getSock()->getPeerEndpoint();
 
   congestionTimer.connectSignal("timer", this,
                                 &VNCSConnectionST::updateTimeout);
@@ -126,6 +125,9 @@ bool VNCSConnectionST::accessCheck(AccessRights ar) const
 
 void VNCSConnectionST::close(const char* reason)
 {
+  // Just shutdown the socket and mark our state as closing.  Eventually the
+  // calling code will call VNCServerST's removeSocket() method causing us to
+  // be deleted.
   SConnection::close(reason);
 
   // Log the reason for the close
@@ -133,11 +135,6 @@ void VNCSConnectionST::close(const char* reason)
     closeReason = reason;
   else
     vlog.debug("Second close: %s (%s)", peerEndpoint.c_str(), reason);
-
-  // Just shutdown the socket and mark our state as closing.  Eventually the
-  // calling code will call VNCServerST's removeSocket() method causing us to
-  // be deleted.
-  sock->shutdown();
 }
 
 
@@ -199,10 +196,10 @@ void VNCSConnectionST::flushSocket()
 {
   if (state() == RFBSTATE_CLOSING) return;
   try {
-    sock->outStream().flush();
+    getSock()->outStream().flush();
     // Flushing the socket might release an update that was previously
     // delayed because of congestion.
-    if (!sock->outStream().hasBufferedData())
+    if (!getSock()->outStream().hasBufferedData())
       writeFramebufferUpdate();
   } catch (std::exception& e) {
     close(e.what());
@@ -779,7 +776,7 @@ void VNCSConnectionST::writeRTTPing()
   if (!client.supportsFence())
     return;
 
-  congestion.updatePosition(sock->outStream().length());
+  congestion.updatePosition(getSock()->outStream().length());
 
   // We need to make sure any old update are already processed by the
   // time we get the response back. This allows us to reliably throttle
@@ -798,15 +795,15 @@ bool VNCSConnectionST::isCongested()
   congestionTimer.stop();
 
   // Stuff still waiting in the send buffer?
-  sock->outStream().flush();
-  congestion.debugTrace("congestion-trace.csv", sock->getFd());
-  if (sock->outStream().hasBufferedData())
+  getSock()->outStream().flush();
+  congestion.debugTrace("congestion-trace.csv", getSock()->getFd());
+  if (getSock()->outStream().hasBufferedData())
     return true;
 
   if (!client.supportsFence())
     return false;
 
-  congestion.updatePosition(sock->outStream().length());
+  congestion.updatePosition(getSock()->outStream().length());
   if (!congestion.isCongested())
     return false;
 
@@ -820,7 +817,7 @@ bool VNCSConnectionST::isCongested()
 
 void VNCSConnectionST::writeFramebufferUpdate()
 {
-  congestion.updatePosition(sock->outStream().length());
+  congestion.updatePosition(getSock()->outStream().length());
 
   // We're in the middle of processing a command that's supposed to be
   // synchronised. Allowing an update to slip out right now might violate
@@ -859,7 +856,7 @@ void VNCSConnectionST::writeFramebufferUpdate()
 
   getOutStream()->cork(false);
 
-  congestion.updatePosition(sock->outStream().length());
+  congestion.updatePosition(getSock()->outStream().length());
 }
 
 void VNCSConnectionST::writeNoDataUpdate()
