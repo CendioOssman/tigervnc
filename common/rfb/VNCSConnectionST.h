@@ -103,8 +103,6 @@ namespace rfb {
     // or because the current cursor position has not been set by this client.
     bool needRenderedCursor();
 
-    network::Socket* getSock() { return sock; }
-
     // Change tracking
 
     void add_changed(const core::Region& region) { updates.add_changed(region); }
@@ -169,7 +167,6 @@ namespace rfb {
     void setLEDState(unsigned int state);
 
   private:
-    network::Socket* sock;
     std::string peerEndpoint;
     bool reverseConnection;
 
