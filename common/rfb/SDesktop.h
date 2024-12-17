@@ -52,12 +52,6 @@ namespace rfb {
     // to the SDesktop, so that a reverse reference can be set up.
     virtual void init(rfb::VNCServer* vs) = 0;
 
-    // queryConnection() is called when a connection has been
-    // successfully authenticated. At some point later
-    // VNCServer::approveConnection() should be called to either accept
-    // or reject the client.
-    virtual void queryConnection(rfb::SConnection* conn) = 0;
-
   protected:
     virtual ~SDesktop() {}
   };
