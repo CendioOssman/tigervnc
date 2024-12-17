@@ -908,7 +908,7 @@ vncRandRCreateScreenOutputs(int scrIdx, int extraOutputs)
 /* Creating and modifying modes, used by XserverDesktop and init here */
 
 int
-vncRandRCanCreateModes()
+vncRandRCanCreateModes(void)
 {
     return 1;
 }
