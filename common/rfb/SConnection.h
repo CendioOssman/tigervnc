@@ -38,6 +38,10 @@ namespace rdr {
   class OutStream;
 }
 
+namespace network {
+  class Socket;
+}
+
 namespace rfb {
 
   class SMsgReader;
@@ -62,17 +66,17 @@ namespace rfb {
   class SConnection : public core::Object, public SMsgHandler {
   public:
 
-    SConnection(AccessRights accessRights);
+    SConnection(network::Socket* s, AccessRights accessRights);
     virtual ~SConnection();
 
     // Methods to initialise the connection
 
-    // setStreams() sets the streams to be used for the connection.  These must
-    // be set before initialiseProtocol() and processMsg() are called.  The
-    // SSecurity object may call setStreams() again to provide alternative
-    // streams over which the RFB protocol is sent (i.e. encrypting/decrypting
-    // streams).  Ownership of the streams remains with the caller
-    // (i.e. SConnection will not delete them).
+    // setStreams() sets the streams to be used for the connection.
+    // These default to using the socket input and output stream. The
+    // SSecurity object may call setStreams() again to provide
+    // alternative streams over which the RFB protocol is sent (i.e.
+    // encrypting/decrypting streams).  Ownership of the streams remains
+    // with the caller (i.e. SConnection will not delete them).
     void setStreams(rdr::InStream* is, rdr::OutStream* os);
 
     // initialiseProtocol() should be called once the streams and security
@@ -136,6 +140,8 @@ namespace rfb {
     // authentication. The storage is owned by the SConnection object,
     // so a copy must be taken if necessary.
     virtual const char* getUserName() const;
+
+    network::Socket* getSock() { return sock; }
 
     SMsgReader* reader() { return reader_; }
     SMsgWriter* writer() { return writer_; }
@@ -292,6 +298,8 @@ namespace rfb {
     void authFailureTimeout();
 
     int defaultMajorVersion, defaultMinorVersion;
+
+    network::Socket* sock;
 
     rdr::InStream* is;
     rdr::OutStream* os;

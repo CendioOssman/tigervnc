@@ -29,7 +29,10 @@
 #include <core/LogWriter.h>
 #include <core/string.h>
 
-#include <rdr/OutStream.h>
+#include <rdr/FdInStream.h>
+#include <rdr/FdOutStream.h>
+
+#include <network/Socket.h>
 
 #include <rfb/Exception.h>
 #include <rfb/Security.h>
@@ -50,8 +53,9 @@ using namespace rfb;
 
 static core::LogWriter vlog("SConnection");
 
-SConnection::SConnection(AccessRights accessRights_)
-  : readyForSetColourMapEntries(false), is(nullptr), os(nullptr),
+SConnection::SConnection(network::Socket* s, AccessRights accessRights_)
+  : readyForSetColourMapEntries(false), sock(s),
+    is(&s->inStream()), os(&s->outStream()),
     reader_(nullptr), writer_(nullptr), ssecurity(nullptr),
     state_(RFBSTATE_UNINITIALISED), preferredEncoding(encodingRaw),
     accessRights(accessRights_), hasRemoteClipboard(false),
@@ -630,6 +634,7 @@ void SConnection::close(const char* /*reason*/)
 {
   state_ = RFBSTATE_CLOSING;
   cleanup();
+  sock->shutdown();
 }
 
 void SConnection::setPixelFormat(const PixelFormat& pf)
