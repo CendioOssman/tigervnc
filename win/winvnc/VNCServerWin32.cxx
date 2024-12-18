@@ -68,7 +68,7 @@ VNCServerWin32::VNCServerWin32()
     commandEvent(CreateEvent(nullptr, TRUE, FALSE, nullptr)),
     sessionEvent(isServiceProcess() ?
       CreateEvent(nullptr, FALSE, FALSE, "Global\\SessionEventTigerVNC") : nullptr),
-    vncServer(ComputerName().buf, &desktop),
+    vncServer(ComputerName().buf), desktop(&vncServer),
     thread_id(-1), runServer(false), isDesktopStarted(false),
     config(&sockMgr), rfbSock(&sockMgr), trayIcon(nullptr),
     queryConnectDialog(nullptr)

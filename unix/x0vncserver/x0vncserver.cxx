@@ -355,9 +355,9 @@ int main(int argc, char** argv)
       vlog.error("Exiting with error");
       return 1;
     }
-    XDesktop desktop(dpy, &geo);
 
-    rfb::VNCServerST server(desktopName, &desktop);
+    rfb::VNCServerST server(desktopName);
+    XDesktop desktop(&server, dpy, &geo);
 
     if (createSystemdListeners(&listeners) > 0) {
       // When systemd is in charge of listeners, do not listen to anything else

@@ -43,14 +43,13 @@ namespace rfb {
   class PixelBuffer;
   struct PointerEvent;
   class KeyRemapper;
-  class SDesktop;
 
   class VNCServerST : public VNCServer {
   public:
     // -=- Constructors
 
     //   Create a server exporting the supplied desktop.
-    VNCServerST(const char* name_, SDesktop* desktop_);
+    VNCServerST(const char* name_);
     virtual ~VNCServerST();
 
 
@@ -190,7 +189,6 @@ namespace rfb {
     Blacklist blacklist;
     Blacklist* blHosts;
 
-    SDesktop* desktop;
     bool desktopStarted;
     int blockCounter;
     PixelBuffer* pb;
