@@ -116,6 +116,9 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
 
   updateCaption();
 
+  cc->connectSignal(&cc->resize, this,
+                    &DesktopWindow::resizeFramebuffer);
+
   fullScreen.connectSignal(&fullScreen.config, this,
                            &DesktopWindow::handleFullScreenConfig);
   fullScreenMode.connectSignal(&fullScreenMode.config, this,
@@ -362,11 +365,12 @@ void DesktopWindow::updateWindow()
 }
 
 
-void DesktopWindow::resizeFramebuffer(int new_w, int new_h)
+void DesktopWindow::resizeFramebuffer()
 {
   bool maximized;
 
-  if ((new_w == viewport->w()) && (new_h == viewport->h()))
+  if ((cc->server.width() == viewport->w()) &&
+      (cc->server.height() == viewport->h()))
     return;
 
   maximized = false;
@@ -409,10 +413,10 @@ void DesktopWindow::resizeFramebuffer(int new_w, int new_h)
   // like they are.
   if (!fullscreen_active() && !maximized) {
     if ((w() == viewport->w()) && (h() == viewport->h()))
-      size(new_w, new_h);
+      size(cc->server.width(), cc->server.height());
   }
 
-  viewport->size(new_w, new_h);
+  viewport->size(cc->server.width(), cc->server.height());
 
   repositionWidgets();
 }
