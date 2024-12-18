@@ -77,8 +77,6 @@ private:
 
   void connectionReady();
 
-  void resizeFramebuffer() override;
-
   void updateEncoding();
   void updateCompressLevel();
   void updateQualityLevel();

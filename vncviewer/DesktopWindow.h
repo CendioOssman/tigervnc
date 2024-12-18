@@ -49,9 +49,6 @@ public:
   // Updated session title
   void setName();
 
-  // Resize the current framebuffer, but retain the contents
-  void resizeFramebuffer(int new_w, int new_h);
-
   // A previous call to writeSetDesktopSize() has completed
   void setDesktopSizeDone(unsigned result);
 
@@ -71,6 +68,8 @@ public:
   void fullscreen_on();
 
 private:
+  void resizeFramebuffer();
+
   static void menuOverlay(void *data);
 
   void setOverlay(const char *text, ...)

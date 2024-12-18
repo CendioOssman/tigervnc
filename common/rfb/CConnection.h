@@ -202,6 +202,10 @@ namespace rfb {
     // to provided a valid framebuffer before returning from the signal
     // handler.
 
+    // "resize" is emitted whenever the framebuffer dimensions or the
+    // screen layout changes. Listeners must make sure to provided a
+    // valid framebuffer before returning from the signal handler.
+
     // "ledstate" is emitted when the current lock keys LED state
     // changes.
 
@@ -271,14 +275,6 @@ namespace rfb {
     void handleClipboardNotify(uint32_t flags) override;
     void handleClipboardProvide(uint32_t flags, const size_t* lengths,
                                 const uint8_t* const* data) override;
-
-
-    // Methods to be overridden in a derived class
-
-    // resizeFramebuffer() is called whenever the framebuffer
-    // dimensions or the screen layout changes. A subclass must make
-    // sure the pixel buffer has been updated once this call returns.
-    virtual void resizeFramebuffer();
 
   protected:
     CSecurity *csecurity;
