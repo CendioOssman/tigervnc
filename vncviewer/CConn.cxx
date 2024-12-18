@@ -457,11 +457,6 @@ void CConn::setCursorPos(const core::Point& pos)
 
 ////////////////////// Internal methods //////////////////////
 
-void CConn::resizeFramebuffer()
-{
-  desktop->resizeFramebuffer(server.width(), server.height());
-}
-
 void CConn::updateEncoding()
 {
   int encNum;

@@ -98,7 +98,6 @@ public:
   void getStats(double& ratio, unsigned long long& bytes,
                 unsigned long long& rawEquivalent);
 
-  void resizeFramebuffer() override;
   void framebufferUpdateStart() override;
   void framebufferUpdateEnd() override;
   bool dataRect(const core::Rect&, int) override;
@@ -180,6 +179,14 @@ CConn::CConn(const char *filename)
   out = new DummyOutStream;
   setStreams(in, out);
 
+  connectSignal("resize", this, [this]() {
+    rfb::ModifiablePixelBuffer *pb;
+
+    pb = new rfb::ManagedPixelBuffer((bool)translate ? fbPF : server.pf(),
+                                     server.width(), server.height());
+    setFramebuffer(pb);
+  });
+
   // Need to skip the initial handshake and ServerInit
   setState(RFBSTATE_NORMAL);
   // That also means that the reader and writer weren't setup
@@ -207,15 +214,6 @@ void CConn::getStats(double& ratio, unsigned long long& bytes,
                      unsigned long long& rawEquivalent)
 {
   sc->getStats(ratio, bytes, rawEquivalent);
-}
-
-void CConn::resizeFramebuffer()
-{
-  rfb::ModifiablePixelBuffer *pb;
-
-  pb = new rfb::ManagedPixelBuffer((bool)translate ? fbPF : server.pf(),
-                                   server.width(), server.height());
-  setFramebuffer(pb);
 }
 
 void CConn::framebufferUpdateStart()
