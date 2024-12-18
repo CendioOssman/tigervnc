@@ -87,8 +87,9 @@ static const char * ledNames[XDESKTOP_N_LEDS] = {
   "Scroll Lock", "Num Lock", "Caps Lock"
 };
 
-XDesktop::XDesktop(Display* dpy_, Geometry *geometry_)
-  : dpy(dpy_), geometry(geometry_), pb(nullptr), server(nullptr),
+XDesktop::XDesktop(rfb::VNCServer* server_, Display* dpy_,
+                   Geometry* geometry_)
+  : dpy(dpy_), geometry(geometry_), pb(nullptr), server(server_),
     queryConnectDialog(nullptr), pendingQuery(nullptr), selection(dpy_),
     oldButtonMask(0), haveXtest(false), haveDamage(false),
     maxButtons(0), running(false), ledMasks(), ledState(0),
@@ -220,34 +221,6 @@ XDesktop::XDesktop(Display* dpy_, Geometry *geometry_)
 #endif
 
   TXWindow::setGlobalEventHandler(this);
-}
-
-XDesktop::~XDesktop() {
-  if (running)
-    stop();
-}
-
-
-void XDesktop::poll() {
-  if (pb and not haveDamage)
-    pb->poll(server);
-  if (running) {
-    Window root, child;
-    int x, y, wx, wy;
-    unsigned int mask;
-
-    if (XQueryPointer(dpy, DefaultRootWindow(dpy), &root, &child,
-                      &x, &y, &wx, &wy, &mask)) {
-      x -= geometry->offsetLeft();
-      y -= geometry->offsetTop();
-      server->setCursorPos({x, y}, false);
-    }
-  }
-}
-
-void XDesktop::init(rfb::VNCServer* vs)
-{
-  server = vs;
 
   server->connectSignal("start", this, &XDesktop::start);
   server->connectSignal("stop", this, &XDesktop::stop);
@@ -286,6 +259,29 @@ void XDesktop::init(rfb::VNCServer* vs)
 
   server->connectSignal("layoutrequest", this,
                         &XDesktop::layoutRequest);
+}
+
+XDesktop::~XDesktop() {
+  if (running)
+    stop();
+}
+
+
+void XDesktop::poll() {
+  if (pb and not haveDamage)
+    pb->poll(server);
+  if (running) {
+    Window root, child;
+    int x, y, wx, wy;
+    unsigned int mask;
+
+    if (XQueryPointer(dpy, DefaultRootWindow(dpy), &root, &child,
+                      &x, &y, &wx, &wy, &mask)) {
+      x -= geometry->offsetLeft();
+      y -= geometry->offsetTop();
+      server->setCursorPos({x, y}, false);
+    }
+  }
 }
 
 void XDesktop::start()
