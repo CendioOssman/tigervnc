@@ -75,36 +75,14 @@ BoolParameter rfb::win32::SDisplay::disableEffects("DisableEffects",
 
 // -=- Constructor/Destructor
 
-SDisplay::SDisplay()
-  : server(nullptr), pb(nullptr), device(nullptr),
+SDisplay::SDisplay(rfb::VNCServer* server_)
+  : server(server_), pb(nullptr), device(nullptr),
     core(nullptr), ptr(nullptr), kbd(nullptr), clipboard(nullptr),
     inputs(nullptr), monitor(nullptr), cleanDesktop(nullptr), cursor(nullptr),
     statusLocation(nullptr), queryConnectionHandler(nullptr), ledState(0)
 {
   updateEvent.h = CreateEvent(nullptr, TRUE, FALSE, nullptr);
   terminateEvent.h = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-}
-
-SDisplay::~SDisplay()
-{
-  // XXX when the VNCServer has been deleted with clients active, stop()
-  // doesn't get called - this ought to be fixed in VNCServerST.  In any event,
-  // we should never call any methods on VNCServer once we're being deleted.
-  // This is because it is supposed to be guaranteed that the SDesktop exists
-  // throughout the lifetime of the VNCServer.  So if we're being deleted, then
-  // the VNCServer ought not to exist and therefore we shouldn't invoke any
-  // methods on it.  Setting server to zero here ensures that stop() doesn't
-  // call setPixelBuffer(0) on the server.
-  server = nullptr;
-  if (core) stop();
-}
-
-
-// -=- SDesktop interface
-
-void SDisplay::init(VNCServer* vs)
-{
-  server = vs;
 
   server->connectSignal("start", this, &SDisplay::start);
   server->connectSignal("stop", this, &SDisplay::stop);
@@ -128,6 +106,11 @@ void SDisplay::init(VNCServer* vs)
 
   server->connectSignal("layoutrequest", this,
                         &SDisplay::layoutRequest);
+}
+
+SDisplay::~SDisplay()
+{
+  if (core) stop();
 }
 
 void SDisplay::start()
@@ -279,7 +262,7 @@ void SDisplay::stopCore() {
 
 
 bool SDisplay::isRestartRequired() {
-  // - We must restart the SDesktop if:
+  // - We must restart the desktop if:
   // 1. We are no longer in the input desktop.
   // 2. The any setting has changed.
 
@@ -320,7 +303,7 @@ void SDisplay::restartCore() {
   } catch (std::exception& e) {
     // If startCore() fails then we MUST disconnect all clients,
     // to cause the server to stop() the desktop.
-    // Otherwise, the SDesktop is in an inconsistent state
+    // Otherwise, the desktop is in an inconsistent state
     // and the server will crash.
     server->closeClients(e.what());
   }
@@ -345,7 +328,7 @@ void SDisplay::handleClipboardData(const char* data) {
 void SDisplay::pointerEvent(PointerEvent event) {
   if (pb->getRect().contains(event.pos)) {
     Point screenPos = event.pos.translate(screenRect.tl);
-    // - Check that the SDesktop doesn't need restarting
+    // - Check that the desktop doesn't need restarting
     if (isRestartRequired())
       restartCore();
     if (ptr)
@@ -355,7 +338,7 @@ void SDisplay::pointerEvent(PointerEvent event) {
 
 void SDisplay::keyEvent(VNCServer*, const char* name,
                         KeyEvent event) {
-  // - Check that the SDesktop doesn't need restarting
+  // - Check that the desktop doesn't need restarting
   if (isRestartRequired())
     restartCore();
   if (kbd)
@@ -422,7 +405,7 @@ SDisplay::processEvent(HANDLE event) {
 
     // - Only process updates if the server is ready
     if (server) {
-      // - Check that the SDesktop doesn't need restarting
+      // - Check that the desktop doesn't need restarting
       if (isRestartRequired()) {
         restartCore();
         return;
