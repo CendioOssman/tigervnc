@@ -72,6 +72,8 @@ CConnection::CConnection()
 {
   registerSignal("ready");
 
+  registerSignal("resize");
+
   registerSignal("ledstate");
 
   registerSignal("clipboardrequest");
@@ -423,7 +425,7 @@ void CConnection::setDesktopSize(int w, int h)
                                            server.width(),
                                            server.height());
 
-  resizeFramebuffer();
+  emitSignal("resize");
   assert(framebuffer != nullptr);
   assert(framebuffer->width() == server.width());
   assert(framebuffer->height() == server.height());
@@ -451,7 +453,7 @@ void CConnection::setExtendedDesktopSize(unsigned reason,
                                            server.width(),
                                            server.height());
 
-  resizeFramebuffer();
+  emitSignal("resize");
   assert(framebuffer != nullptr);
   assert(framebuffer->width() == server.width());
   assert(framebuffer->height() == server.height());
@@ -698,11 +700,6 @@ void CConnection::handleClipboardProvide(uint32_t flags,
 
   // FIXME: Should probably verify that this data was actually requested
   emitSignal("clipboarddata", serverClipboard.c_str());
-}
-
-void CConnection::resizeFramebuffer()
-{
-  assert(false);
 }
 
 void CConnection::requestClipboard()
