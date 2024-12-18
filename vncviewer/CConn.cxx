@@ -334,28 +334,6 @@ void CConn::connectionReady()
   updatePixelFormat();
 }
 
-// setDesktopSize() is called when the desktop size changes (including when
-// it is set initially).
-void CConn::setDesktopSize(int w, int h)
-{
-  CConnection::setDesktopSize(w,h);
-  resizeFramebuffer();
-}
-
-// setExtendedDesktopSize() is a more advanced version of setDesktopSize()
-void CConn::setExtendedDesktopSize(unsigned reason, unsigned result,
-                                   int w, int h, const rfb::ScreenSet& layout)
-{
-  CConnection::setExtendedDesktopSize(reason, result, w, h, layout);
-
-  if ((reason == rfb::reasonClient) && (result != rfb::resultSuccess)) {
-    vlog.error(_("SetDesktopSize failed: %d"), result);
-    return;
-  }
-
-  resizeFramebuffer();
-}
-
 // setName() is called when the desktop name changes
 void CConn::setName(const char* name)
 {
