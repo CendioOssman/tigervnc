@@ -50,9 +50,6 @@ public:
   // Updated session title
   void setName(const char *name);
 
-  // Resize the current framebuffer, but retain the contents
-  void resizeFramebuffer(int new_w, int new_h);
-
   // New image for the locally rendered cursor
   void setCursor(int width, int height, const core::Point& hotspot,
                  const uint8_t* data);
@@ -70,6 +67,8 @@ public:
   void fullscreen_on();
 
 private:
+  void resizeFramebuffer();
+
   static void menuOverlay(void *data);
 
   void setOverlay(const char *text, ...)
