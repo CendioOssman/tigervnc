@@ -438,8 +438,12 @@ void CConnection::setExtendedDesktopSize(unsigned reason,
 
   server.supportsSetDesktopSize = true;
 
-  if ((reason != reasonClient) || (result == resultSuccess))
-    server.setDimensions(w, h, layout);
+  if ((reason == rfb::reasonClient) && (result != rfb::resultSuccess)) {
+    vlog.error("SetDesktopSize failed: %d", result);
+    return;
+  }
+
+  server.setDimensions(w, h, layout);
 
   if (continuousUpdates)
     writer()->writeEnableContinuousUpdates(true, 0, 0,
