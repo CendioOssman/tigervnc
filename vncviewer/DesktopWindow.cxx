@@ -79,7 +79,7 @@ static core::LogWriter vlog("DesktopWindow");
 // issue for Fl::event_dispatch.
 static std::set<DesktopWindow *> instances;
 
-DesktopWindow::DesktopWindow(int w, int h, const char *name,
+DesktopWindow::DesktopWindow(int w, int h,
                              const rfb::PixelFormat& serverPF,
                              CConn* cc_)
   : Fl_Window(w, h), cc(cc_), offscreen(nullptr), overlay(nullptr),
@@ -109,9 +109,10 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
 
   callback(handleClose, this);
 
-  setName(name);
+  setName();
 
   cc->connectSignal("resize", this, &DesktopWindow::resizeFramebuffer);
+  cc->connectSignal("name", this, &DesktopWindow::setName);
 
   fullscreenSystemKeys.connectSignal("config", this,
                                      &DesktopWindow::handleGrabConfig);
@@ -299,11 +300,11 @@ const rfb::PixelFormat &DesktopWindow::getPreferredPF()
 }
 
 
-void DesktopWindow::setName(const char *name)
+void DesktopWindow::setName()
 {
   char windowNameStr[256];
 
-  snprintf(windowNameStr, 256, "%.240s - TigerVNC", name);
+  snprintf(windowNameStr, 256, "%.240s - TigerVNC", cc->server.name());
 
   copy_label(windowNameStr);
 }

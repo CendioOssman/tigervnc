@@ -57,8 +57,6 @@ protected:
   void getUserPasswd(bool secure, std::string *user,
                      std::string *password) override;
 
-  void setName(const char* name) override;
-
   void setColourMapEntries(int firstColour, int nColours,
                            uint16_t* rgbs) override;
 
