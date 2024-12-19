@@ -66,7 +66,6 @@ public:
   CConn(const char *filename);
   ~CConn();
 
-  void setCursor(int, int, const core::Point&, const uint8_t*) override;
   void setCursorPos(const core::Point&) override;
   void framebufferUpdateStart() override;
   void framebufferUpdateEnd() override;
@@ -142,10 +141,6 @@ void CConn::connectionReady()
   setFramebuffer(new rfb::ManagedPixelBuffer(filePF,
                                              server.width(),
                                              server.height()));
-}
-
-void CConn::setCursor(int, int, const core::Point&, const uint8_t*)
-{
 }
 
 void CConn::setCursorPos(const core::Point&)

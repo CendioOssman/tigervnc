@@ -47,8 +47,7 @@ public:
   const rfb::PixelFormat &getPreferredPF();
 
   // New image for the locally rendered cursor
-  void setCursor(int width, int height, const core::Point& hotspot,
-                 const uint8_t* data);
+  void setCursor();
 
   void draw(Surface* dst);
 
