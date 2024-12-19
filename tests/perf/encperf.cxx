@@ -98,7 +98,6 @@ public:
   void getStats(double& ratio, unsigned long long& bytes,
                 unsigned long long& rawEquivalent);
 
-  void setCursorPos(const core::Point&) override;
   void framebufferUpdateStart() override;
   void framebufferUpdateEnd() override;
   bool dataRect(const core::Rect&, int) override;
@@ -215,10 +214,6 @@ void CConn::getStats(double& ratio, unsigned long long& bytes,
                      unsigned long long& rawEquivalent)
 {
   sc->getStats(ratio, bytes, rawEquivalent);
-}
-
-void CConn::setCursorPos(const core::Point&)
-{
 }
 
 void CConn::framebufferUpdateStart()
