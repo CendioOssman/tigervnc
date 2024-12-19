@@ -75,6 +75,9 @@ CConnection::CConnection()
 
   registerSignal("resize");
 
+  registerSignal("cursor");
+  registerSignal<core::Point>("cursorposition");
+
   registerSignal("name");
 
   registerSignal("updatestart");
@@ -471,10 +474,12 @@ void CConnection::setCursor(int width, int height,
 {
   Cursor cursor(width, height, hotspot, data);
   server.setCursor(cursor);
+  emitSignal("cursor");
 }
 
-void CConnection::setCursorPos(const core::Point& /*pos*/)
+void CConnection::setCursorPos(const core::Point& pos)
 {
+  emitSignal("cursorposition", pos);
 }
 
 void CConnection::setName(const char* name)
