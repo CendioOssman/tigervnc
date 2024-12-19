@@ -112,6 +112,19 @@ Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc
   assert(frameBuffer);
   cc->setFramebuffer(frameBuffer);
 
+  cc->connectSignal("updatestart", this, [this]() {
+    // Update the screen prematurely for very slow updates
+    updateTimer.start(1000);
+  });
+  cc->connectSignal("updateend", this, [this] {
+    updateTimer.stop();
+    updateWindow();
+  });
+  updateTimer.connectSignal("timer", this, [this]() {
+    updateWindow();
+    updateTimer.repeat();
+  });
+
   cc->connectSignal("ledstate", this, &Viewport::handleLEDState);
 
   cc->connectSignal("clipboardrequest", this,
@@ -169,17 +182,6 @@ const rfb::PixelFormat &Viewport::getPreferredPF()
   return frameBuffer->getPF();
 }
 
-
-// Copy the areas of the framebuffer that have been changed (damaged)
-// to the displayed window.
-
-void Viewport::updateWindow()
-{
-  core::Rect r;
-
-  r = frameBuffer->getDamage();
-  damage(FL_DAMAGE_USER1, r.tl.x + x(), r.tl.y + y(), r.width(), r.height());
-}
 
 static const char * dotcursor_xpm[] = {
   "5 5 2 1",
@@ -242,6 +244,17 @@ void Viewport::showCursor()
   } else {
     window()->cursor(cursor, cursorHotspot.x, cursorHotspot.y);
   }
+}
+
+// Copy the areas of the framebuffer that have been changed (damaged)
+// to the displayed window.
+
+void Viewport::updateWindow()
+{
+  core::Rect r;
+
+  r = frameBuffer->getDamage();
+  damage(FL_DAMAGE_USER1, r.tl.x + x(), r.tl.y + y(), r.width(), r.height());
 }
 
 void Viewport::handleClipboardRequest()
