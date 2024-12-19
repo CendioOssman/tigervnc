@@ -473,6 +473,10 @@ void CConnection::setCursor(int width, int height,
   server.setCursor(cursor);
 }
 
+void CConnection::setCursorPos(const core::Point& /*pos*/)
+{
+}
+
 void CConnection::setName(const char* name)
 {
   server.setName(name);
