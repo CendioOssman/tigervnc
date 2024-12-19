@@ -44,12 +44,6 @@ public:
   // Most efficient format (from DesktopWindow's point of view)
   const rfb::PixelFormat &getPreferredPF();
 
-  // New image for the locally rendered cursor
-  void setCursor();
-
-  // Server-provided cursor position
-  void setCursorPos(const core::Point& pos);
-
   // Fl_Window callback methods
   void show() override;
   void draw() override;
@@ -61,6 +55,9 @@ public:
 
 private:
   void resizeFramebuffer();
+
+  void setCursorPos(core::Point pos);
+
   void setName();
 
   void handleFirstUpdate();
