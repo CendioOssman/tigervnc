@@ -407,19 +407,6 @@ bool CConn::dataRect(const core::Rect& r, int encoding)
   return ret;
 }
 
-void CConn::setCursor(int width, int height, const core::Point& hotspot,
-                      const uint8_t* data)
-{
-  CConnection::setCursor(width, height, hotspot, data);
-
-  desktop->setCursor();
-}
-
-void CConn::setCursorPos(const core::Point& pos)
-{
-  desktop->setCursorPos(pos);
-}
-
 
 ////////////////////// Internal methods //////////////////////
 

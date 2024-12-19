@@ -206,6 +206,12 @@ namespace rfb {
     // screen layout changes. Listeners must make sure to provided a
     // valid framebuffer before returning from the signal handler.
 
+    // "cursor" is emitted whenever the server cursor sprited changes.
+
+    // "cursorposition" is emitted whenever the server wants to "warp"
+    // the cursor to a new position. A core::Point is included with the
+    // new desired coordinates.
+
     // "name" is emitted whenever the desktop name changes.
 
     // "updatestart" is emitted when a new update of the framebuffer
