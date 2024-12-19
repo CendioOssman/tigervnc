@@ -208,6 +208,12 @@ namespace rfb {
 
     // "name" is emitted whenever the desktop name changes.
 
+    // "updatestart" is emitted when a new update of the framebuffer
+    // is about to be start, before any pixels have been decoded.
+
+    // "updateend" is emitted when all pixels of a framebuffer update
+    // have been decoded and updated.
+
     // "ledstate" is emitted when the current lock keys LED state
     // changes.
 

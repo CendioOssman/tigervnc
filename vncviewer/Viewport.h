@@ -46,9 +46,6 @@ public:
   // Most efficient format (from Viewport's point of view)
   const rfb::PixelFormat &getPreferredPF();
 
-  // Flush updates to screen
-  void updateWindow();
-
   // New image for the locally rendered cursor
   void setCursor();
 
@@ -71,6 +68,8 @@ private:
 
   // Show the currently set (or system) cursor
   void showCursor();
+
+  void updateWindow();
 
   static void handleClipboardChange(int source, void *data);
   void handleClipboardRequest();
@@ -102,6 +101,8 @@ private:
   CConn* cc;
 
   PlatformPixelBuffer* frameBuffer;
+
+  core::Timer updateTimer;
 
   core::Point lastPointerPos;
   uint16_t lastButtonMask;

@@ -80,8 +80,6 @@ private:
   void updateQualityLevel();
   void updatePixelFormat();
 
-  static void handleUpdateTimeout(void *data);
-
 private:
   std::string serverHost;
   int serverPort;
