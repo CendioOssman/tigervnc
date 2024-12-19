@@ -46,9 +46,6 @@ public:
   // Most efficient format (from Viewport's point of view)
   const rfb::PixelFormat &getPreferredPF();
 
-  // New image for the locally rendered cursor
-  void setCursor();
-
   void draw(Surface* dst);
 
   // Fl_Widget callback methods
@@ -65,6 +62,8 @@ protected:
 
 private:
   bool hasFocus();
+
+  void setCursor();
 
   void updateWindow();
 

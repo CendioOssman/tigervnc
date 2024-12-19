@@ -125,6 +125,10 @@ Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc
     updateTimer.repeat();
   });
 
+  cc->connectSignal("cursor", this, &Viewport::setCursor);
+  // Make sure we have an initial blank cursor set
+  setCursor();
+
   cc->connectSignal("ledstate", this, &Viewport::handleLEDState);
 
   cc->connectSignal("clipboardrequest", this,
@@ -147,9 +151,6 @@ Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc
 
   setMenuKey();
   menuKey.connectSignal("config", this, &Viewport::setMenuKey);
-
-  // Make sure we have an initial blank cursor set
-  setCursor();
 }
 
 
