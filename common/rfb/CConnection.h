@@ -214,6 +214,14 @@ namespace rfb {
     // nameChanged is emitted whenever the desktop name changes.
     core::signal<> nameChanged;
 
+    // updateStarted is emitted when a new update of the framebuffer is
+    // about to be start, before any pixels have been decoded.
+    core::signal<> updateStarted;
+
+    // updateEnded is emitted when all pixels of a framebuffer update
+    // have been decoded and updated.
+    core::signal<> updateEnded;
+
     // ledStateChanged is emitted when the current lock keys LED state
     // changes.
     core::signal<> ledStateChanged;

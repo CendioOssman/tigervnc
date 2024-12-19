@@ -120,6 +120,9 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
   cc->connectSignal(&rfb::CConnection::nameChanged, this,
                     &DesktopWindow::updateCaption);
 
+  cc->connectSignal(&rfb::CConnection::updateEnded, this,
+                    &DesktopWindow::handleFirstUpdate);
+
   fullScreen.connectSignal(&core::Parameter::valueChanged, this,
                            &DesktopWindow::handleFullScreenConfig);
   fullScreenMode.connectSignal(&core::Parameter::valueChanged, this,
@@ -352,17 +355,12 @@ void DesktopWindow::updateCaption()
 }
 
 
-// Copy the areas of the framebuffer that have been changed (damaged)
-// to the displayed window.
-
-void DesktopWindow::updateWindow()
+void DesktopWindow::handleFirstUpdate()
 {
   if (firstUpdate) {
     firstUpdate = false;
     remoteResize();
   }
-
-  viewport->updateWindow();
 }
 
 

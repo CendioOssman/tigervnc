@@ -118,8 +118,6 @@ CConn::~CConn()
 {
   close();
 
-  Fl::remove_timeout(handleUpdateTimeout, this);
-
   if (desktop)
     delete desktop;
 
@@ -815,9 +813,6 @@ void CConn::framebufferUpdateStart()
   // For bandwidth estimate
   gettimeofday(&updateStartTime, nullptr);
   updateStartPos = sock->inStream().pos();
-
-  // Update the screen prematurely for very slow updates
-  Fl::add_timeout(1.0, handleUpdateTimeout, this);
 }
 
 // framebufferUpdateEnd() is called at the end of an update.
@@ -849,9 +844,6 @@ void CConn::framebufferUpdateEnd()
     weight = 200000;
   bpsEstimate = ((bpsEstimate * (1000000 - weight)) +
                  (bps * weight)) / 1000000;
-
-  Fl::remove_timeout(handleUpdateTimeout, this);
-  desktop->updateWindow();
 
   // Compute new settings based on updated bandwidth values
   if (autoSelect) {
@@ -993,15 +985,4 @@ void CConn::updatePixelFormat()
     vlog.info(_("Using pixel format %s"),str);
     setPF(pf);
   }
-}
-
-void CConn::handleUpdateTimeout(void *data)
-{
-  CConn *self = (CConn *)data;
-
-  assert(self);
-
-  self->desktop->updateWindow();
-
-  Fl::repeat_timeout(1.0, handleUpdateTimeout, data);
 }
