@@ -326,7 +326,7 @@ void CConn::connectionReady()
   serverPF = server.pf();
 
   desktop = new DesktopWindow(server.width(), server.height(),
-                              server.name(), serverPF, this);
+                              serverPF, this);
   fullColourPF = desktop->getPreferredPF();
 
   // Force a switch to the format and encoding we'd like
@@ -342,13 +342,6 @@ void CConn::setExtendedDesktopSize(unsigned reason, unsigned result,
 
   if (reason == rfb::reasonClient)
     desktop->setDesktopSizeDone(result);
-}
-
-// setName() is called when the desktop name changes
-void CConn::setName(const char* name)
-{
-  CConnection::setName(name);
-  desktop->setName(name);
 }
 
 // framebufferUpdateStart() is called at the beginning of an update.
