@@ -48,9 +48,6 @@ public:
   // Flush updates to screen
   void updateWindow();
 
-  // Updated session title
-  void updateCaption();
-
   // A previous call to writeSetDesktopSize() has completed
   void setDesktopSizeDone(unsigned result);
 
@@ -75,6 +72,7 @@ public:
 
 private:
   void resizeFramebuffer();
+  void updateCaption();
 
   void addOverlayTip(const char *text, ...)
     __attribute__((__format__ (__printf__, 2, 3)));

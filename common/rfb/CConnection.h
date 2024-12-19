@@ -211,6 +211,9 @@ namespace rfb {
     // handler.
     core::signal<> screenLayoutChanged;
 
+    // nameChanged is emitted whenever the desktop name changes.
+    core::signal<> nameChanged;
+
     // ledStateChanged is emitted when the current lock keys LED state
     // changes.
     core::signal<> ledStateChanged;
