@@ -44,9 +44,6 @@ public:
   // Most efficient format (from DesktopWindow's point of view)
   const rfb::PixelFormat &getPreferredPF();
 
-  // Flush updates to screen
-  void updateWindow();
-
   // New image for the locally rendered cursor
   void setCursor(int width, int height, const core::Point& hotspot,
                  const uint8_t* data);
@@ -66,6 +63,8 @@ public:
 private:
   void resizeFramebuffer();
   void setName();
+
+  void handleFirstUpdate();
 
   static void menuOverlay(void *data);
 

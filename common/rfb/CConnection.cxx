@@ -76,6 +76,9 @@ CConnection::CConnection()
 
   registerSignal("name");
 
+  registerSignal("updatestart");
+  registerSignal("updateend");
+
   registerSignal("ledstate");
 
   registerSignal("clipboardrequest");
@@ -553,6 +556,8 @@ void CConnection::framebufferUpdateStart()
   pendingUpdate = false;
 
   requestNewUpdate();
+
+  emitSignal("updatestart");
 }
 
 void CConnection::framebufferUpdateEnd()
@@ -577,6 +582,8 @@ void CConnection::framebufferUpdateEnd()
 
     firstUpdate = false;
   }
+
+  emitSignal("updateend");
 }
 
 bool CConnection::dataRect(const core::Rect& r, int encoding)
