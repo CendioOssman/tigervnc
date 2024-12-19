@@ -61,8 +61,6 @@ protected:
                               int w, int h,
                               const rfb::ScreenSet& layout) override;
 
-  void setName(const char* name) override;
-
   void bell() override;
 
   void framebufferUpdateStart() override;

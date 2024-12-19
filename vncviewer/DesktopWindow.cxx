@@ -111,6 +111,7 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
   setName();
 
   cc->connectSignal("resize", this, &DesktopWindow::resizeFramebuffer);
+  cc->connectSignal("name", this, &DesktopWindow::setName);
 
   fullscreenSystemKeys.connectSignal("config", this,
                                      &DesktopWindow::handleGrabConfig);

@@ -206,6 +206,8 @@ namespace rfb {
     // screen layout changes. Listeners must make sure to provided a
     // valid framebuffer before returning from the signal handler.
 
+    // "name" is emitted whenever the desktop name changes.
+
     // "ledstate" is emitted when the current lock keys LED state
     // changes.
 

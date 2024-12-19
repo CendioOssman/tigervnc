@@ -46,9 +46,6 @@ public:
   // Flush updates to screen
   void updateWindow();
 
-  // Updated session title
-  void setName();
-
   // A previous call to writeSetDesktopSize() has completed
   void setDesktopSizeDone(unsigned result);
 
@@ -69,6 +66,7 @@ public:
 
 private:
   void resizeFramebuffer();
+  void setName();
 
   static void menuOverlay(void *data);
 

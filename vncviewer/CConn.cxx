@@ -336,13 +336,6 @@ void CConn::setExtendedDesktopSize(unsigned reason, unsigned result,
     desktop->setDesktopSizeDone(result);
 }
 
-// setName() is called when the desktop name changes
-void CConn::setName(const char* name)
-{
-  CConnection::setName(name);
-  desktop->setName();
-}
-
 // framebufferUpdateStart() is called at the beginning of an update.
 // Here we try to send out a new framebuffer update request so that the
 // next update can be sent out in parallel with us decoding the current

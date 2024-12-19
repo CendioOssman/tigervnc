@@ -75,6 +75,8 @@ CConnection::CConnection()
 
   registerSignal("resize");
 
+  registerSignal("name");
+
   registerSignal("ledstate");
 
   registerSignal("clipboardrequest");
