@@ -214,6 +214,14 @@ namespace rfb {
     // valid framebuffer before returning from the signal handler.
     core::signal<> resize;
 
+    // cursor is emitted whenever the server cursor sprited changes.
+    core::signal<> cursorchange;
+
+    // cursorposition is emitted whenever the server wants to "warp" the
+    // cursor to a new position. A core::Point is included with the new
+    // desired coordinates.
+    core::signal<core::Point> cursorposition;
+
     // name is emitted whenever the desktop name changes.
     core::signal<> namechange;
 

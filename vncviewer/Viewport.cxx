@@ -137,6 +137,18 @@ Viewport::Viewport(int w, int h, CConn* cc_)
     updateTimer.repeat();
   });
 
+  cc->connectSignal(&cc->cursorchange, this, &Viewport::setCursor);
+  // Make sure we have an initial blank cursor set
+  setCursor();
+
+  auto cursorCallback = [this]() {
+    if (Fl::belowmouse() == this)
+      showCursor();
+  };
+  viewOnly.connectSignal(&viewOnly.config, this, cursorCallback);
+  alwaysCursor.connectSignal(&alwaysCursor.config, this, cursorCallback);
+  cursorType.connectSignal(&cursorType.config, this, cursorCallback);
+
   cc->connectSignal(&cc->ledstate, this, &Viewport::handleLEDState);
 
   cc->connectSignal(&cc->clipboardrequest, this,
@@ -160,16 +172,6 @@ Viewport::Viewport(int w, int h, CConn* cc_)
   setShortcutModifiers();
   shortcutModifiers.connectSignal(&shortcutModifiers.config, this,
                                   &Viewport::setShortcutModifiers);
-
-  // Make sure we have an initial blank cursor set
-  setCursor();
-  auto cursorCallback = [this]() {
-    if (Fl::belowmouse() == this)
-      showCursor();
-  };
-  viewOnly.connectSignal(&viewOnly.config, this, cursorCallback);
-  alwaysCursor.connectSignal(&alwaysCursor.config, this, cursorCallback);
-  cursorType.connectSignal(&cursorType.config, this, cursorCallback);
 }
 
 

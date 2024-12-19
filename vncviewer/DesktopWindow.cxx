@@ -120,6 +120,9 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
                     &DesktopWindow::resizeFramebuffer);
   cc->connectSignal(&cc->namechange, this, &DesktopWindow::updateCaption);
 
+  cc->connectSignal(&cc->cursorposition, this,
+                    &DesktopWindow::setCursorPos);
+
   cc->connectSignal(&cc->updateend, this,
                     &DesktopWindow::handleFirstUpdate);
 
@@ -434,13 +437,7 @@ void DesktopWindow::setDesktopSizeDone(unsigned result)
 }
 
 
-void DesktopWindow::setCursor()
-{
-  viewport->setCursor();
-}
-
-
-void DesktopWindow::setCursorPos(const core::Point& pos)
+void DesktopWindow::setCursorPos(core::Point pos)
 {
   if (!mouseGrabbed) {
     // Do nothing if we do not have the mouse captured.
