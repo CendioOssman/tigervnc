@@ -31,6 +31,7 @@
 #include <core/string.h>
 
 #include <rfb/CMsgWriter.h>
+#include <rfb/Cursor.h>
 #include <rfb/ledStates.h>
 
 // FLTK can pull in the X11 headers on some systems
@@ -149,7 +150,7 @@ Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc
   menuKey.connectSignal("config", this, &Viewport::setMenuKey);
 
   // Make sure we have an initial blank cursor set
-  setCursor(0, 0, {0, 0}, nullptr);
+  setCursor();
   auto cursorCallback = [this]() {
     if (Fl::belowmouse() == this)
       this->showCursor();
@@ -199,10 +200,12 @@ static const char * dotcursor_xpm[] = {
   " ... ",
   "     "};
 
-void Viewport::setCursor(int width, int height,
-                         const core::Point& hotspot,
-                         const uint8_t* data)
+void Viewport::setCursor()
 {
+  int width, height;
+  core::Point hotspot;
+  const uint8_t* data;
+
   int i;
 
   if (cursor) {
@@ -210,6 +213,11 @@ void Viewport::setCursor(int width, int height,
       delete [] cursor->array;
     delete cursor;
   }
+
+  width = cc->server.cursor().width();
+  height = cc->server.cursor().height();
+  hotspot = cc->server.cursor().hotspot();
+  data = cc->server.cursor().getBuffer();
 
   for (i = 0; i < width*height; i++)
     if (data[i*4 + 3] != 0) break;
