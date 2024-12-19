@@ -70,10 +70,6 @@ protected:
   void framebufferUpdateEnd() override;
   bool dataRect(const core::Rect& r, int encoding) override;
 
-  void setCursor(int width, int height, const core::Point& hotspot,
-                 const uint8_t* data) override;
-  void setCursorPos(const core::Point& pos) override;
-
 private:
 
   void connectionReady();
