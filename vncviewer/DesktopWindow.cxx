@@ -118,6 +118,7 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
 
   cc->connectSignal(&cc->resize, this,
                     &DesktopWindow::resizeFramebuffer);
+  cc->connectSignal(&cc->namechange, this, &DesktopWindow::updateCaption);
 
   fullScreen.connectSignal(&fullScreen.config, this,
                            &DesktopWindow::handleFullScreenConfig);

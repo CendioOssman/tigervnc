@@ -214,6 +214,9 @@ namespace rfb {
     // valid framebuffer before returning from the signal handler.
     core::signal<> resize;
 
+    // name is emitted whenever the desktop name changes.
+    core::signal<> namechange;
+
     // ledstate is emitted when the current lock keys LED state changes.
     core::signal<> ledstate;
 
