@@ -45,9 +45,6 @@ public:
   // Most efficient format (from DesktopWindow's point of view)
   const rfb::PixelFormat &getPreferredPF();
 
-  // Flush updates to screen
-  void updateWindow();
-
   // A previous call to writeSetDesktopSize() has completed
   void setDesktopSizeDone(unsigned result);
 
@@ -73,6 +70,8 @@ public:
 private:
   void resizeFramebuffer();
   void updateCaption();
+
+  void handleFirstUpdate();
 
   void addOverlayTip(const char *text, ...)
     __attribute__((__format__ (__printf__, 2, 3)));
