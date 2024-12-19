@@ -37,7 +37,7 @@ class Fl_Scrollbar;
 class DesktopWindow : public core::Object, public Fl_Window {
 public:
 
-  DesktopWindow(int w, int h, const char *name,
+  DesktopWindow(int w, int h,
                 const rfb::PixelFormat& serverPF, CConn* cc_);
   ~DesktopWindow();
 
@@ -46,9 +46,6 @@ public:
 
   // Flush updates to screen
   void updateWindow();
-
-  // Updated session title
-  void setName(const char *name);
 
   // A previous call to writeSetDesktopSize() has completed
   void setDesktopSizeDone(unsigned result);
@@ -71,6 +68,7 @@ public:
 
 private:
   void resizeFramebuffer();
+  void setName();
 
   static void menuOverlay(void *data);
 
