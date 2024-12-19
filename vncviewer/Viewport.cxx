@@ -132,6 +132,18 @@ Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc
     updateTimer.repeat();
   });
 
+  cc->connectSignal("cursor", this, &Viewport::setCursor);
+  // Make sure we have an initial blank cursor set
+  setCursor();
+
+  auto cursorCallback = [this]() {
+    if (Fl::belowmouse() == this)
+      this->showCursor();
+  };
+  viewOnly.connectSignal("config", this, cursorCallback);
+  alwaysCursor.connectSignal("config", this, cursorCallback);
+  cursorType.connectSignal("config", this, cursorCallback);
+
   cc->connectSignal("ledstate", this, &Viewport::handleLEDState);
 
   cc->connectSignal("clipboardrequest", this,
@@ -154,16 +166,6 @@ Viewport::Viewport(int w, int h, const rfb::PixelFormat& /*serverPF*/, CConn* cc
 
   setMenuKey();
   menuKey.connectSignal("config", this, &Viewport::setMenuKey);
-
-  // Make sure we have an initial blank cursor set
-  setCursor();
-  auto cursorCallback = [this]() {
-    if (Fl::belowmouse() == this)
-      this->showCursor();
-  };
-  viewOnly.connectSignal("config", this, cursorCallback);
-  alwaysCursor.connectSignal("config", this, cursorCallback);
-  cursorType.connectSignal("config", this, cursorCallback);
 }
 
 
