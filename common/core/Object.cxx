@@ -88,6 +88,12 @@ Connection Object::connectSignal(const char* name, Object* obj,
 
   connection = {name, this, obj, callback};
 
+  for (iter = signalReceivers[name].begin();
+       iter != signalReceivers[name].end(); ++iter) {
+    if (iter->connection == connection)
+      throw std::logic_error(format("Signal %s is already connected", name));
+  }
+
   signalReceivers[name].push_back({connection, emitter});
 
   return connection;
