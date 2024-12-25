@@ -53,6 +53,12 @@ namespace core {
     // registered using connectSignal().
     void disconnectSignal(const Connection connection);
 
+    // Methods can be disconneced by reference, rather than tracking
+    // the connection object.
+    template<class T>
+    void disconnectSignal(const char* name, T* obj,
+                          void (T::*callback)(Object*, const char*));
+
   protected:
     // registerSignal() registers a new signal type with the specified
     // name. This must always be done before connectSignal() or
@@ -112,6 +118,14 @@ namespace core {
       (obj->*callback)(this, name);
     };
     return connectSignal(name, obj, callback, emitter);
+  }
+
+  template<class T>
+  void Object::disconnectSignal(const char* name, T* obj,
+                                void (T::*callback)(Object*,
+                                                    const char*))
+  {
+    disconnectSignal({name, this, obj, callback});
   }
 
 }
