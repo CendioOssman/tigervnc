@@ -82,6 +82,22 @@ TEST(Signals, connectBadSignal)
   }, std::logic_error);
 }
 
+TEST(Signals, doubleConnect)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal dblsignal;
+  };
+
+  Sender s;
+  Receiver r;
+
+  s.connectSignal(&Sender::dblsignal, &r, &Receiver::handler);
+  EXPECT_THROW({
+    s.connectSignal(&Sender::dblsignal, &r, &Receiver::handler);
+  }, std::logic_error);
+}
+
 TEST(Signals, disconnectSignal)
 {
   class Sender : public SenderBase {
