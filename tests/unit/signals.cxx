@@ -46,6 +46,15 @@ public:
 
   void genericHandler(Object*, const char*) { count++; }
   void otherGenericHandler(Object*, const char*) { count++; }
+
+  void registerHandler(Object* s, const char* signal)
+  {
+    s->connectSignal(signal, this, &Receiver::genericHandler);
+  }
+  void unregisterHandler(Object* s, const char* signal)
+  {
+    s->disconnectSignal(signal, this, &Receiver::genericHandler);
+  }
 };
 
 #define ASSERT_EQ(expr, val) if ((expr) != (val)) { \
@@ -221,6 +230,33 @@ static void testDisconnectHelper()
   printf("OK\n");
 }
 
+static void testChangesWhileEmitting()
+{
+  Sender s;
+  Receiver r;
+
+  printf("%s: ", __func__);
+
+  /* Receivers getting added */
+  count = 0;
+  s.registerSignal("asignal");
+  s.connectSignal("asignal", &r, &Receiver::registerHandler);
+  s.connectSignal("asignal", &r, &Receiver::otherGenericHandler);
+  s.emitSignal("asignal");
+  ASSERT_EQ(count, 1);
+
+  /* Receivers getting removed */
+  count = 0;
+  s.registerSignal("rsignal");
+  s.connectSignal("rsignal", &r, &Receiver::unregisterHandler);
+  s.connectSignal("rsignal", &r, &Receiver::genericHandler);
+  s.connectSignal("rsignal", &r, &Receiver::otherGenericHandler);
+  s.emitSignal("rsignal");
+  ASSERT_EQ(count, 1);
+
+  printf("OK\n");
+}
+
 int main(int /*argc*/, char** /*argv*/)
 {
   testRegister();
@@ -228,6 +264,7 @@ int main(int /*argc*/, char** /*argv*/)
   testConnect();
   testDisconnect();
   testDisconnectHelper();
+  testChangesWhileEmitting();
 
   return 0;
 }
