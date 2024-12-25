@@ -116,6 +116,15 @@ static void testConnect()
   }
   ASSERT_EQ(ok, true);
 
+  /* Double connect */
+  ok = false;
+  try {
+    s.connectSignal("gsignal", &r, &Receiver::genericHandler);
+  } catch (std::exception&) {
+    ok = true;
+  }
+  ASSERT_EQ(ok, true);
+
   printf("OK\n");
 }
 
