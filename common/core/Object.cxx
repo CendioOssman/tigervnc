@@ -78,6 +78,12 @@ Connection Object::connectSignalImpl(const void* signal, Object* obj,
 
   connection = {signal, this, obj, callback, comparer};
 
+  for (iter = signalReceivers[signal].begin();
+       iter != signalReceivers[signal].end(); ++iter) {
+    if (iter->connection == connection)
+      throw std::logic_error("Signal is already connected");
+  }
+
   signalReceivers[signal].push_back({connection, emitter});
 
   return connection;
