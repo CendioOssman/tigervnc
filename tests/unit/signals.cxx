@@ -58,6 +58,17 @@ TEST(Signals, connectSignal)
   EXPECT_EQ(callCount, 1);
 }
 
+TEST(Signals, doubleConnect)
+{
+  Sender s;
+  Receiver r;
+
+  s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  EXPECT_THROW({
+    s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  }, std::logic_error);
+}
+
 TEST(Signals, disconnectSignal)
 {
   Sender s;

@@ -43,12 +43,18 @@ Connection signal::connect(Object* src, Object* dst,
                            const comp_any& callback,
                            const emitter_t& emitter)
 {
+  ReceiverList::iterator iter;
   Connection connection;
 
   assert(src);
   assert(dst);
 
   connection = {this, src, dst, callback};
+
+  for (iter = receivers.begin(); iter != receivers.end(); ++iter) {
+    if (iter->connection == connection)
+      throw std::logic_error("Signal is already connected");
+  }
 
   receivers.push_back({connection, emitter});
 
