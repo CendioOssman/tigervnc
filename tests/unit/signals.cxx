@@ -45,6 +45,7 @@ public:
   Receiver() {}
 
   void genericHandler(Object*, const char*) { count++; }
+  void otherGenericHandler(Object*, const char*) { count++; }
 };
 
 #define ASSERT_EQ(expr, val) if ((expr) != (val)) { \
@@ -174,12 +175,50 @@ static void testDisconnect()
   printf("OK\n");
 }
 
+static void testDisconnectHelper()
+{
+  Sender s;
+  Receiver r;
+  bool ok;
+
+  printf("%s: ", __func__);
+
+  /* Generic handler */
+  count = 0;
+  s.registerSignal("gsignal");
+  s.connectSignal("gsignal", &r, &Receiver::genericHandler);
+  s.disconnectSignal("gsignal", &r, &Receiver::genericHandler);
+  s.emitSignal("gsignal");
+  ASSERT_EQ(count, 0);
+
+  /* Similar handlers */
+  count = 0;
+  s.registerSignal("osignal");
+  s.connectSignal("osignal", &r, &Receiver::genericHandler);
+  s.connectSignal("osignal", &r, &Receiver::otherGenericHandler);
+  s.disconnectSignal("osignal", &r, &Receiver::genericHandler);
+  s.emitSignal("osignal");
+  ASSERT_EQ(count, 1);
+
+  /* Unknown signal */
+  ok = false;
+  try {
+    s.disconnectSignal("nosignal", &r, &Receiver::genericHandler);
+  } catch (std::exception&) {
+    ok = true;
+  }
+  ASSERT_EQ(ok, true);
+
+  printf("OK\n");
+}
+
 int main(int /*argc*/, char** /*argv*/)
 {
   testRegister();
   testEmit();
   testConnect();
   testDisconnect();
+  testDisconnectHelper();
 
   return 0;
 }
