@@ -90,6 +90,18 @@ TEST(Signals, connectUnknown)
   }, std::logic_error);
 }
 
+TEST(Signals, doubleConnect)
+{
+  Sender s;
+  Receiver r;
+
+  s.registerSignal("dblsignal");
+  s.connectSignal("dblsignal", &r, &Receiver::genericHandler);
+  EXPECT_THROW({
+    s.connectSignal("dblsignal", &r, &Receiver::genericHandler);
+  }, std::logic_error);
+}
+
 TEST(Signals, disconnectSignal)
 {
   Sender s;
