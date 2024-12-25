@@ -43,6 +43,7 @@ public:
   Receiver() {}
 
   void genericHandler(Object*) { callCount++; }
+  void otherGenericHandler(Object*) { callCount++; }
 };
 
 TEST(Signals, connectSignal)
@@ -95,6 +96,32 @@ TEST(Signals, disconnectWrongObject)
   EXPECT_THROW({
     s2.disconnectSignal(c);
   }, std::logic_error);
+}
+
+TEST(Signals, disconnectHelper)
+{
+  Sender s;
+  Receiver r;
+
+  /* Generic handler */
+  callCount = 0;
+  s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  s.disconnectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  s.emitSignal(s.gsignal);
+  EXPECT_EQ(callCount, 0);
+}
+
+TEST(Signals, disconnectSimilar)
+{
+  Sender s;
+  Receiver r;
+
+  callCount = 0;
+  s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  s.connectSignal(s.gsignal, &r, &Receiver::otherGenericHandler);
+  s.disconnectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  s.emitSignal(s.gsignal);
+  EXPECT_EQ(callCount, 1);
 }
 
 int main(int argc, char** argv)
