@@ -54,9 +54,15 @@ namespace core {
     // emitted, or an exception will be thrown. Any method registered
     // will automatically be unregistered when the method's object is
     // destroyed.
+    template<class T>
+    Connection connectSignal(const char* name, T* obj,
+                             void (T::*callback)());
     template<class T, class S>
     Connection connectSignal(const char* name, T* obj,
                              void (T::*callback)(S*, const char*));
+    template<class T, typename I>
+    Connection connectSignal(const char* name, T* obj,
+                             void (T::*callback)(I));
     template<class T, class S, typename I>
     Connection connectSignal(const char* name, T* obj,
                              void (T::*callback)(S*, const char*, I));
@@ -67,9 +73,15 @@ namespace core {
 
     // Methods can be disconneced by reference, rather than tracking
     // the connection object.
+    template<class T>
+    void disconnectSignal(const char* name, T* obj,
+                          void (T::*callback)());
     template<class T, class S>
     void disconnectSignal(const char* name, T* obj,
                           void (T::*callback)(S*, const char*));
+    template<class T, typename I>
+    void disconnectSignal(const char* name, T* obj,
+                          void (T::*callback)(I));
     template<class T, class S, typename I>
     void disconnectSignal(const char* name, T* obj,
                           void (T::*callback)(S*, const char*, I));
@@ -146,6 +158,19 @@ namespace core {
   // Inline methods definitions
   //
 
+  template<class T>
+  Connection Object::connectSignal(const char* name, T* obj,
+                                   void (T::*callback)())
+  {
+    emitter_t emitter = [obj, callback](const any& info) {
+      assert(!info.has_value());
+      (obj->*callback)();
+    };
+    assert(obj);
+    return connectSignal(name, obj, callback, emitter,
+                         typeid(void).hash_code());
+  }
+
   template<class T, class S>
   Connection Object::connectSignal(const char* name, T* obj,
                                    void (T::*callback)(S*, const char*))
@@ -159,6 +184,20 @@ namespace core {
     };
     return connectSignal(name, obj, callback, emitter,
                          typeid(void).hash_code());
+  }
+
+  template<class T, typename I>
+  Connection Object::connectSignal(const char* name, T* obj,
+                                   void (T::*callback)(I))
+  {
+    emitter_t emitter = [obj, callback](const any& info) {
+      assert(info.has_value());
+      using I_d = typename std::decay<I>::type;
+      (obj->*callback)(any_cast<I_d>(info));
+    };
+    assert(obj);
+    return connectSignal(name, obj, callback, emitter,
+                         typeid(I).hash_code());
   }
 
   template<class T, class S, typename I>
@@ -177,9 +216,23 @@ namespace core {
                          typeid(I).hash_code());
   }
 
+  template<class T>
+  void Object::disconnectSignal(const char* name, T* obj,
+                                void (T::*callback)())
+  {
+    disconnectSignal({name, this, obj, callback});
+  }
+
   template<class T, class S>
   void Object::disconnectSignal(const char* name, T* obj,
                                 void (T::*callback)(S*, const char*))
+  {
+    disconnectSignal({name, this, obj, callback});
+  }
+
+  template<class T, typename I>
+  void Object::disconnectSignal(const char* name, T* obj,
+                                void (T::*callback)(I))
   {
     disconnectSignal({name, this, obj, callback});
   }
