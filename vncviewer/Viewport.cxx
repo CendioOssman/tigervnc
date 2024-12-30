@@ -53,6 +53,7 @@
 #include <QMimeData>
 #include <QGestureRecognizer>
 #include <QGesture>
+#include <QWidgetAction>
 #include "parameters.h"
 #include "DesktopWindow.h"
 #include "OptionsDialog.h"
@@ -70,6 +71,12 @@
 
 static rfb::LogWriter vlog("VNCView");
 
+// Menu constants
+
+enum { ID_DISCONNECT, ID_FULLSCREEN, ID_MINIMIZE, ID_RESIZE,
+       ID_CTRL, ID_ALT, ID_MENUKEY, ID_CTRLALTDEL,
+       ID_REFRESH, ID_OPTIONS, ID_INFO, ID_ABOUT };
+
 // Used for fake key presses from the menu
 static const int FAKE_CTRL_KEY_CODE = 0x10001;
 static const int FAKE_ALT_KEY_CODE = 0x10002;
@@ -85,8 +92,10 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
   : QWidget(parent, f)
   , mousePointerTimer(new QTimer(this))
   , cursor(nullptr)
+  , contextMenu(new QMenu(this))
   , cc(cc_)
   , delayedInitializeTimer(new QTimer(this))
+  , infoDialog(nullptr)
 #ifdef QT_DEBUG
   , fpsTimer(this)
 #endif
@@ -279,16 +288,21 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
       Qt::QueuedConnection);
 
   setMouseTracking(true);
+
+  initContextMenu();
 }
 
 Viewport::~Viewport()
 {
   removeKeyboardHandler();
-  delete contextMenu;
   delete cursor;
   for (auto gr : gestureRecognizers.keys()) {
     QGestureRecognizer::unregisterRecognizer(gr);
   }
+
+  // Qt automatically deletes all child widgets, so we shouldn't touch
+  // them ourselves here
+
 }
 
 // Copy the areas of the framebuffer that have been changed (damaged)
@@ -655,15 +669,13 @@ void Viewport::handleKeyPress(int systemKeyCode,
                               uint32_t keyCode, uint32_t keySym)
 {
   static bool menuRecursion = false;
-  int menuKeyCode;
-  quint32 menuKeySym;
   ::getMenuKey(&menuKeyCode, &menuKeySym);
 
   // Prevent recursion if the menu wants to send its own
   // activation key.
   if (menuKeySym && keySym == menuKeySym && !menuRecursion) {
     menuRecursion = true;
-    toggleContextMenu();
+    popupContextMenu();
     menuRecursion = false;
     return;
   }
@@ -682,125 +694,156 @@ void Viewport::handleKeyRelease(int systemKeyCode)
   cc->sendKeyRelease(systemKeyCode);
 }
 
-void Viewport::createContextMenu()
+void Viewport::initContextMenu()
 {
-  if (!contextMenu) {
-    QAction* action;
+  contextMenu->clear();
 
-    contextMenu = new QMenu(this);
+  QAction* action;
 
-    action = new QAction(p_("ContextMenu|", "Dis&connect"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            []() {
-              QApplication::quit();
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "Dis&connect"), contextMenu);
+  action->setData(ID_DISCONNECT);
+  contextMenu->addAction(action);
 
-    contextMenu->addSeparator();
+  contextMenu->addSeparator();
 
-    action = new QAction(p_("ContextMenu|", "&Full screen"), contextMenu);
-    action->setCheckable(true);
-    connect(action, &QAction::triggered, this,
-            [this](bool checked) {
-              ((DesktopWindow*)window())->fullscreen(checked);
-            });
-    action->setChecked(::fullScreen);
-    connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      action->setChecked(((DesktopWindow*)window())->isFullscreenEnabled());
-    });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "&Full screen"), contextMenu);
+  action->setData(ID_FULLSCREEN);
+  action->setCheckable(true);
+  action->setChecked(::fullScreen);
+  contextMenu->addAction(action);
 
-    action = new QAction(p_("ContextMenu|", "Minimi&ze"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              window()->showMinimized();
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "Minimi&ze"), contextMenu);
+  action->setData(ID_MINIMIZE);
+  contextMenu->addAction(action);
 
-    action = new QAction(p_("ContextMenu|", "Resize &window to session"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              window()->resize(pixmapSize().width(), pixmapSize().height());
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "Resize &window to session"), contextMenu);
+  action->setData(ID_RESIZE);
+  contextMenu->addAction(action);
 
-    contextMenu->addSeparator();
+  contextMenu->addSeparator();
 
-    action = new QAction(p_("ContextMenu|", "&Ctrl"), contextMenu);
-    action->setCheckable(true);
-    connect(action, &QAction::triggered, this,
-            [this](bool checked) {
-              toggleKey(checked, FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "&Ctrl"), contextMenu);
+  action->setData(ID_CTRL);
+  action->setCheckable(true);
+  contextMenu->addAction(action);
 
-    action = new QAction(p_("ContextMenu|", "&Alt"), contextMenu);
-    action->setCheckable(true);
-    connect(action, &QAction::triggered, this,
-            [this](bool checked) {
-              toggleKey(checked, FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "&Alt"), contextMenu);
+  action->setData(ID_ALT);
+  action->setCheckable(true);
+  contextMenu->addAction(action);
 
-    action = new QAction(contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              sendContextMenuKey();
-            });
-    connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      std::string text;
-      text = rfb::format(p_("ContextMenu|", "Send %s"),
-                         ::menuKey.getValueStr().c_str());
-      action->setText(text.c_str());
-    });
-    contextMenu->addAction(action);
+  action = new QAction(contextMenu);
+  action->setData(ID_MENUKEY);
+  std::string text;
+  text = rfb::format(p_("ContextMenu|", "Send %s"),
+                      ::menuKey.getValueStr().c_str());
+  action->setText(text.c_str());
+  contextMenu->addAction(action);
 
-    action = new QAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              sendCtrlAltDel();
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"), contextMenu);
+  action->setData(ID_CTRLALTDEL);
+  contextMenu->addAction(action);
 
-    contextMenu->addSeparator();
+  contextMenu->addSeparator();
 
-    action = new QAction(p_("ContextMenu|", "&Refresh screen"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              cc->refreshFramebuffer();
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "&Refresh screen"), contextMenu);
+  action->setData(ID_REFRESH);
+  contextMenu->addAction(action);
 
-    contextMenu->addSeparator();
+  contextMenu->addSeparator();
 
-    action = new QAction(p_("ContextMenu|", "&Options..."), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              OptionsDialog* dlg = new OptionsDialog(isFullScreen(), this);
-              AppManager::instance()->openDialog(dlg);
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "&Options..."), contextMenu);
+  action->setData(ID_OPTIONS);
+  contextMenu->addAction(action);
 
-    action = new QAction(p_("ContextMenu|", "Connection &info..."), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              QMessageBox* dlg;
-              dlg = new QMessageBox(QMessageBox::Information,
-                                    _("VNC connection info"),
-                                    cc->connectionInfo(),
-                                    QMessageBox::Close, this);
-              AppManager::instance()->openDialog(dlg);
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "Connection &info..."), contextMenu);
+  action->setData(ID_INFO);
+  contextMenu->addAction(action);
 
-    action = new QAction(p_("ContextMenu|", "About &TigerVNC viewer..."), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              about_vncviewer(this);
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "About &TigerVNC viewer..."), contextMenu);
+  action->setData(ID_ABOUT);
+  contextMenu->addAction(action);
 
-    contextMenu->installEventFilter(this);
+  contextMenu->installEventFilter(this);
+}
+
+void Viewport::popupContextMenu()
+{
+  QAction* m;
+
+  m = contextMenu->exec(QCursor::pos());
+
+  if (m == nullptr)
+    return;
+
+  switch (m->data().toInt()) {
+    case ID_DISCONNECT:
+      QApplication::quit();
+      break;
+    case ID_FULLSCREEN:
+      if ((DesktopWindow*)window()->isFullScreen())
+        ((DesktopWindow*)window())->fullscreen(false);
+      else
+        ((DesktopWindow*)window())->fullscreen(true);
+      break;
+    case ID_MINIMIZE:
+      window()->showMinimized();
+      break;
+    case ID_RESIZE:
+      if (((DesktopWindow*)window())->isFullScreen())
+        break;
+      window()->resize(pixmapSize().width(), pixmapSize().height());
+      break;
+    case ID_CTRL:
+      if (m->isChecked())
+        handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+      else
+        handleKeyRelease(FAKE_CTRL_KEY_CODE);
+      menuCtrlKey = !menuCtrlKey;
+      break;
+    case ID_ALT:
+      if (m->isChecked())
+        handleKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+      else
+        handleKeyRelease(FAKE_ALT_KEY_CODE);
+      menuAltKey = !menuAltKey;
+      break;
+
+    case ID_MENUKEY:
+        handleKeyPress(FAKE_KEY_CODE, menuKeyCode, menuKeySym);
+        handleKeyRelease(FAKE_KEY_CODE);
+        break;
+    case ID_CTRLALTDEL:
+        handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+        handleKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+        handleKeyPress(FAKE_DEL_KEY_CODE, 0xd3, XK_Delete);
+
+        handleKeyRelease(FAKE_DEL_KEY_CODE);
+        handleKeyRelease(FAKE_ALT_KEY_CODE);
+        handleKeyRelease(FAKE_CTRL_KEY_CODE);
+      break;
+    case ID_REFRESH:
+      cc->refreshFramebuffer();
+      break;
+    case ID_OPTIONS:
+      {
+        // TODO: Make this async
+        OptionsDialog* dlg = new OptionsDialog(isFullScreen(), this);
+        AppManager::instance()->openDialog(dlg);
+        break;
+      }
+    case ID_INFO:
+      // TODO: Make this async
+      delete infoDialog;
+      infoDialog = new QMessageBox(QMessageBox::Information,
+                            _("VNC connection info"),
+                            cc->connectionInfo(),
+                            QMessageBox::Close, this);
+      AppManager::instance()->openDialog(infoDialog);
+      break;
+    case ID_ABOUT:
+      about_vncviewer(this);
+      break;
   }
 }
 
@@ -821,27 +864,6 @@ void Viewport::sendContextMenuKey()
   handleKeyPress(FAKE_KEY_CODE, keyCode, keySym);
   handleKeyRelease(FAKE_KEY_CODE);
   contextMenu->hide();
-}
-
-void Viewport::toggleContextMenu()
-{
-  if (isVisibleContextMenu()) {
-    contextMenu->hide();
-  } else {
-    createContextMenu();
-    contextMenu->exec(QCursor::pos());
-    contextMenu->setFocus();
-  }
-}
-
-void Viewport::sendCtrlAltDel()
-{
-  handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-  handleKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-  handleKeyPress(FAKE_DEL_KEY_CODE, 0xd3, XK_Delete);
-  handleKeyRelease(FAKE_DEL_KEY_CODE);
-  handleKeyRelease(FAKE_ALT_KEY_CODE);
-  handleKeyRelease(FAKE_CTRL_KEY_CODE);
 }
 
 void Viewport::toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint32 keySym)
