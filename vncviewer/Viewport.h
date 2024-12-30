@@ -45,7 +45,7 @@ public:
   virtual ~Viewport();
   void toggleContextMenu();
 
-  bool hasFocus() const { return QWidget::hasFocus() || isActiveWindow(); }
+  bool hasFocus();
 
   bool isVisibleContextMenu() const;
   void sendContextMenuKey();

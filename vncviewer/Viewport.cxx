@@ -291,15 +291,395 @@ Viewport::~Viewport()
   }
 }
 
-void Viewport::toggleContextMenu()
+// Copy the areas of the framebuffer that have been changed (damaged)
+// to the displayed window.
+void Viewport::updateWindow()
 {
-  if (isVisibleContextMenu()) {
-    contextMenu->hide();
-  } else {
-    createContextMenu();
-    contextMenu->exec(QCursor::pos());
-    contextMenu->setFocus();
+  // copied from DesktopWindow.cxx.
+  if (firstUpdate) {
+    if (cc->server.supportsSetDesktopSize) {
+      emit remoteResizeRequest();
+    }
+    firstUpdate = false;
   }
+
+  PlatformPixelBuffer* framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
+  rfb::Rect rect = framebuffer->getDamage();
+  int x = rect.tl.x;
+  int y = rect.tl.y;
+  int w = rect.br.x - x;
+  int h = rect.br.y - y;
+  if (!rect.is_empty()) {
+    damage += QRect(x, y, w, h);
+    update(localRectAdjust(QRect(x, y, w, h)));
+  }
+}
+
+void Viewport::setCursor(int width, int height,
+                         const rfb::Point& hotspot,
+                         const uint8_t* pixels)
+{
+  bool emptyCursor = true;
+  for (int i = 0; i < width * height; i++) {
+    if (pixels[i*4 + 3] != 0) {
+      emptyCursor = false;
+      break;
+    }
+  }
+  if (emptyCursor) {
+    if (::dotWhenNoCursor) {
+      static const char * dotcursor_xpm[] = {
+        "5 5 2 1",
+        ".	c #000000",
+        " 	c #FFFFFF",
+        "     ",
+        " ... ",
+        " ... ",
+        " ... ",
+        "     "};
+      delete cursor;
+      cursor = new QCursor(QPixmap(dotcursor_xpm), 2, 2);
+    }
+    else {
+      static const char * emptycursor_xpm[] = {
+        "2 2 1 1",
+        ".	c None",
+        "..",
+        ".."};
+      delete cursor;
+      cursor = new QCursor(QPixmap(emptycursor_xpm), 0, 0);
+    }
+  }
+  else {
+    QImage image(pixels, width, height, QImage::Format_RGBA8888);
+    delete cursor;
+    cursor = new QCursor(QPixmap::fromImage(image), hotspot.x, hotspot.y);
+  }
+  QWidget::setCursor(*cursor);
+}
+
+void Viewport::handleClipboardRequest()
+{
+  vlog.debug("Viewport::handleClipboardRequest: %s", pendingClientData.toStdString().c_str());
+  vlog.debug("Sending clipboard data (%d bytes)", (int)pendingClientData.size());
+  cc->sendClipboardData(pendingClientData.toStdString().c_str());
+  pendingClientData = "";
+}
+
+void Viewport::handleClipboardAnnounce(bool available)
+{
+  vlog.debug("Viewport::handleClipboardAnnounce: available=%d", available);
+
+  if (!::acceptClipboard)
+    return;
+
+  if (!available) {
+    vlog.debug("Clipboard is no longer available on server");
+    pendingServerClipboard = false;
+    return;
+  }
+
+  pendingClientClipboard = false;
+  pendingClientData = "";
+
+  if (!hasFocus()) {
+    vlog.debug("Got notification of new clipboard on server whilst not focused, will request data later");
+    pendingServerClipboard = true;
+    return;
+  }
+
+  vlog.debug("Got notification of new clipboard on server, requesting data");
+  cc->requestClipboard();
+}
+
+void Viewport::handleClipboardData(const char* cbdata)
+{
+  vlog.debug("Viewport::handleClipboardData: %s", cbdata);
+  vlog.debug("Got clipboard data (%d bytes)", (int)strlen(cbdata));
+#ifdef __APPLE__
+  serverReceivedData = cbdata;
+#endif
+  QGuiApplication::clipboard()->setText(cbdata);
+#if !defined(WIN32) && !defined(__APPLE__)
+  if (::setPrimary)
+    QGuiApplication::clipboard()->setText(cbdata, QClipboard::Mode::Selection);
+#endif
+}
+
+void Viewport::setLEDState(unsigned int state)
+{
+  vlog.debug("QVNCConnection::ledStateChanged");
+  // The first message is just considered to be the server announcing
+  // support for this extension. We will push our state to sync up the
+  // server when we get focus. If we already have focus we need to push
+  // it here though.
+  if (firstLEDState) {
+    firstLEDState = false;
+    if (hasFocus()) {
+      vlog.debug("KeyboardHandler::pushLEDState");
+      pushLEDState();
+    }
+  } else if (hasFocus()) {
+    vlog.debug("KeyboardHandler::setLEDState");
+    keyboardHandler->setLEDState(state);
+  }
+}
+
+void Viewport::pushLEDState()
+{
+  unsigned int state;
+
+  // Server support?
+  if (cc->server.ledState() == rfb::ledUnknown)
+    return;
+
+  state = keyboardHandler->getLEDState();
+  if (state == rfb::ledUnknown)
+    return;
+
+#if defined(__APPLE__)
+  // No support for Scroll Lock //
+  state |= (cc->server.ledState() & rfb::ledScrollLock);
+#endif
+
+  if ((state & rfb::ledCapsLock) != (cc->server.ledState() & rfb::ledCapsLock)) {
+    vlog.debug("Inserting fake CapsLock to get in sync with server");
+    handleKeyPress(FAKE_KEY_CODE, 0x3a, XK_Caps_Lock);
+    handleKeyRelease(FAKE_KEY_CODE);
+  }
+  if ((state & rfb::ledNumLock) != (cc->server.ledState() & rfb::ledNumLock)) {
+    vlog.debug("Inserting fake NumLock to get in sync with server");
+    handleKeyPress(FAKE_KEY_CODE, 0x45, XK_Num_Lock);
+    handleKeyRelease(FAKE_KEY_CODE);
+  }
+  if ((state & rfb::ledScrollLock) != (cc->server.ledState() & rfb::ledScrollLock)) {
+    vlog.debug("Inserting fake ScrollLock to get in sync with server");
+    handleKeyPress(FAKE_KEY_CODE, 0x46, XK_Scroll_Lock);
+    handleKeyRelease(FAKE_KEY_CODE);
+  }
+}
+
+void Viewport::paintEvent(QPaintEvent* event)
+{
+  PlatformPixelBuffer* framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
+
+  if ((framebuffer->width() != pixmap.width()) || (framebuffer->height() != pixmap.height())) {
+    update();
+    return;
+  }
+
+  if (!damage.isEmpty()) {
+    QPainter pixmapPainter(&pixmap);
+    const uint8_t* fbdata;
+    int stride;
+    QRect bounds = damage.boundingRect();
+    int x = bounds.x();
+    int y = bounds.y();
+    int w = bounds.width();
+    int h = bounds.height();
+    rfb::Rect rfbrect(x, y, x + w, y + h);
+
+    if (rfbrect.enclosed_by(framebuffer->getRect())) {
+      fbdata = framebuffer->getBuffer(rfbrect, &stride);
+      QImage image(fbdata, w, h, stride * 4, QImage::Format_RGB32);
+#ifdef __APPLE__
+      pixmapPainter.fillRect(bounds, QColor("#ff000000"));
+      pixmapPainter.setCompositionMode(QPainter::CompositionMode_Plus);
+#endif
+      pixmapPainter.drawImage(bounds, image);
+    }
+    damage = QRegion();
+  }
+
+  QPainter painter(this);
+  QRect r = event->rect();
+
+  painter.drawPixmap(r, pixmap, remoteRectAdjust(r));
+
+#ifdef QT_DEBUG
+  fpsCounter++;
+  QFont f;
+  f.setBold(true);
+  f.setPixelSize(14);
+  painter.setFont(f);
+  painter.setPen(Qt::NoPen);
+  painter.setRenderHint(QPainter::Antialiasing);
+  painter.setBrush(QColor("#96101010"));
+  painter.drawRect(fpsRect);
+  QPen p;
+  p.setColor("#e0ffffff");
+  painter.setPen(p);
+  QString text = QString("%1 fps").arg(fpsValue);
+  painter.drawText(fpsRect, text, QTextOption(Qt::AlignCenter));
+
+  painter.setBrush(Qt::NoBrush);
+  painter.setPen(Qt::red);
+  painter.drawRect(rect());
+#endif
+
+  setAttribute(Qt::WA_OpaquePaintEvent, true);
+}
+
+void Viewport::resize(int width, int height)
+{
+  vlog.debug("Viewport::resize size=(%d, %d)", width, height);
+  if (this->width() == width && this->height() == height) {
+    vlog.debug("Viewport::resize ignored");
+    return;
+  }
+  QWidget::resize(width, height);
+}
+
+bool Viewport::event(QEvent *event)
+{
+  switch (event->type()) {
+  case QEvent::WindowActivate:
+    vlog.debug("Viewport::WindowActivate");
+    break;
+  case QEvent::WindowDeactivate:
+    vlog.debug("Viewport::WindowDeactivate");
+    ungrabPointer();
+    break;
+  case QEvent::CursorChange:
+    event->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
+    return true;
+  case QEvent::Gesture:
+    return gestureEvent(reinterpret_cast<QGestureEvent*>(event));
+  default:
+    break;
+  }
+  return QWidget::event(event);
+}
+
+void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
+{
+  if (::viewOnly) {
+    return;
+  }
+  bool instantPosting = ::pointerEventInterval == 0 || (buttonMask != lastButtonMask);
+  lastPointerPos = remotePointAdjust(pos);
+  lastButtonMask = buttonMask;
+  if (instantPosting) {
+    try {
+      cc->writer()->writePointerEvent(pos, buttonMask);
+    } catch (rdr::Exception& e) {
+      abort_connection_with_unexpected_error(e);
+    }
+  } else {
+    if (!mousePointerTimer->isActive()) {
+      mousePointerTimer->start();
+    }
+  }
+}
+
+bool Viewport::hasFocus()
+{
+  return QWidget::hasFocus() || isActiveWindow();
+}
+
+void Viewport::handleClipboardChange(QClipboard::Mode mode)
+{
+  vlog.debug("Viewport::handleClipboardChange: mode=%d", mode);
+  vlog.debug("Viewport::handleClipboardChange: text=%s", QGuiApplication::clipboard()->text(mode).toStdString().c_str());
+  vlog.debug("Viewport::handleClipboardChange: ownsClipboard=%d", QGuiApplication::clipboard()->ownsClipboard());
+  vlog.debug("Viewport::handleClipboardChange: hasText=%d", QGuiApplication::clipboard()->mimeData(mode)->hasText());
+
+  if (!::sendClipboard) {
+    return;
+  }
+
+#if !defined(WIN32) && !defined(__APPLE__)
+  if (mode == QClipboard::Mode::Selection && !::sendPrimary) {
+    return;
+  }
+#endif
+
+  if(mode == QClipboard::Mode::Clipboard && QGuiApplication::clipboard()->ownsClipboard()) {
+    return;
+  }
+
+  if(mode == QClipboard::Mode::Selection && QGuiApplication::clipboard()->ownsSelection()) {
+    return;
+  }
+
+  if (!QGuiApplication::clipboard()->mimeData(mode)->hasText()) {
+    return;
+  }
+
+#ifdef __APPLE__
+  if (QGuiApplication::clipboard()->text(mode) == serverReceivedData) {
+    serverReceivedData = "";
+    return;
+  }
+#endif
+
+  pendingServerClipboard = false;
+  pendingClientData = QGuiApplication::clipboard()->text(mode);
+
+  if (!hasFocus()) {
+    vlog.debug("Local clipboard changed whilst not focused, will notify server later");
+    pendingClientClipboard = true;
+    // Clear any older client clipboard from the server
+    cc->announceClipboard(false);
+    return;
+  }
+
+  vlog.debug("Local clipboard changed, notifying server");
+  cc->announceClipboard(true);
+}
+
+void Viewport::flushPendingClipboard()
+{
+  if (pendingServerClipboard) {
+    vlog.debug("Focus regained after remote clipboard change, requesting data");
+    cc->requestClipboard();
+  }
+
+  if (pendingClientClipboard) {
+    vlog.debug("Focus regained after local clipboard change, notifying server");
+    cc->announceClipboard(true);
+  }
+
+  pendingServerClipboard = false;
+  pendingClientClipboard = false;
+}
+
+void Viewport::resetKeyboard()
+{
+  cc->releaseAllKeys();
+  if (keyboardHandler)
+    keyboardHandler->reset();
+}
+
+void Viewport::handleKeyPress(int systemKeyCode,
+                              uint32_t keyCode, uint32_t keySym)
+{
+  static bool menuRecursion = false;
+  int menuKeyCode;
+  quint32 menuKeySym;
+  ::getMenuKey(&menuKeyCode, &menuKeySym);
+
+  // Prevent recursion if the menu wants to send its own
+  // activation key.
+  if (menuKeySym && keySym == menuKeySym && !menuRecursion) {
+    menuRecursion = true;
+    toggleContextMenu();
+    menuRecursion = false;
+    return;
+  }
+
+  if (viewOnly)
+    return;
+
+  cc->sendKeyPress(systemKeyCode, keyCode, keySym);
+}
+
+void Viewport::handleKeyRelease(int systemKeyCode)
+{
+  if (viewOnly)
+    return;
+
+  cc->sendKeyRelease(systemKeyCode);
 }
 
 void Viewport::createContextMenu()
@@ -443,6 +823,17 @@ void Viewport::sendContextMenuKey()
   contextMenu->hide();
 }
 
+void Viewport::toggleContextMenu()
+{
+  if (isVisibleContextMenu()) {
+    contextMenu->hide();
+  } else {
+    createContextMenu();
+    contextMenu->exec(QCursor::pos());
+    contextMenu->setFocus();
+  }
+}
+
 void Viewport::sendCtrlAltDel()
 {
   handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
@@ -481,16 +872,6 @@ bool Viewport::eventFilter(QObject* obj, QEvent* event)
     }
   }
   return QWidget::eventFilter(obj, event);
-}
-
-void Viewport::resize(int width, int height)
-{
-  vlog.debug("Viewport::resize size=(%d, %d)", width, height);
-  if (this->width() == width && this->height() == height) {
-    vlog.debug("Viewport::resize ignored");
-    return;
-  }
-  QWidget::resize(width, height);
 }
 
 void Viewport::initKeyboardHandler()
@@ -533,78 +914,6 @@ bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, qin
   return false;
 }
 
-void Viewport::pushLEDState()
-{
-  unsigned int state;
-
-  // Server support?
-  if (cc->server.ledState() == rfb::ledUnknown)
-    return;
-
-  state = keyboardHandler->getLEDState();
-  if (state == rfb::ledUnknown)
-    return;
-
-#if defined(__APPLE__)
-  // No support for Scroll Lock //
-  state |= (cc->server.ledState() & rfb::ledScrollLock);
-#endif
-
-  if ((state & rfb::ledCapsLock) != (cc->server.ledState() & rfb::ledCapsLock)) {
-    vlog.debug("Inserting fake CapsLock to get in sync with server");
-    handleKeyPress(FAKE_KEY_CODE, 0x3a, XK_Caps_Lock);
-    handleKeyRelease(FAKE_KEY_CODE);
-  }
-  if ((state & rfb::ledNumLock) != (cc->server.ledState() & rfb::ledNumLock)) {
-    vlog.debug("Inserting fake NumLock to get in sync with server");
-    handleKeyPress(FAKE_KEY_CODE, 0x45, XK_Num_Lock);
-    handleKeyRelease(FAKE_KEY_CODE);
-  }
-  if ((state & rfb::ledScrollLock) != (cc->server.ledState() & rfb::ledScrollLock)) {
-    vlog.debug("Inserting fake ScrollLock to get in sync with server");
-    handleKeyPress(FAKE_KEY_CODE, 0x46, XK_Scroll_Lock);
-    handleKeyRelease(FAKE_KEY_CODE);
-  }
-}
-
-void Viewport::resetKeyboard()
-{
-  cc->releaseAllKeys();
-  if (keyboardHandler)
-    keyboardHandler->reset();
-}
-
-void Viewport::handleKeyPress(int systemKeyCode,
-                              uint32_t keyCode, uint32_t keySym)
-{
-  static bool menuRecursion = false;
-  int menuKeyCode;
-  quint32 menuKeySym;
-  ::getMenuKey(&menuKeyCode, &menuKeySym);
-
-  // Prevent recursion if the menu wants to send its own
-  // activation key.
-  if (menuKeySym && keySym == menuKeySym && !menuRecursion) {
-    menuRecursion = true;
-    toggleContextMenu();
-    menuRecursion = false;
-    return;
-  }
-
-  if (viewOnly)
-    return;
-
-  cc->sendKeyPress(systemKeyCode, keyCode, keySym);
-}
-
-void Viewport::handleKeyRelease(int systemKeyCode)
-{
-  if (viewOnly)
-    return;
-
-  cc->sendKeyRelease(systemKeyCode);
-}
-
 void Viewport::resizeFramebuffer(int new_w, int new_h)
 {
   pixmap = QPixmap(new_w, new_h);
@@ -613,49 +922,6 @@ void Viewport::resizeFramebuffer(int new_w, int new_h)
               pixmap.size().width(), pixmap.size().height(), width(), height());
   emit bufferResized(width(), height(), new_w, new_h);
   resize(new_w, new_h);
-}
-
-void Viewport::setCursor(int width, int height,
-                         const rfb::Point& hotspot,
-                         const uint8_t* pixels)
-{
-  bool emptyCursor = true;
-  for (int i = 0; i < width * height; i++) {
-    if (pixels[i*4 + 3] != 0) {
-      emptyCursor = false;
-      break;
-    }
-  }
-  if (emptyCursor) {
-    if (::dotWhenNoCursor) {
-      static const char * dotcursor_xpm[] = {
-        "5 5 2 1",
-        ".	c #000000",
-        " 	c #FFFFFF",
-        "     ",
-        " ... ",
-        " ... ",
-        " ... ",
-        "     "};
-      delete cursor;
-      cursor = new QCursor(QPixmap(dotcursor_xpm), 2, 2);
-    }
-    else {
-      static const char * emptycursor_xpm[] = {
-        "2 2 1 1",
-        ".	c None",
-        "..",
-        ".."};
-      delete cursor;
-      cursor = new QCursor(QPixmap(emptycursor_xpm), 0, 0);
-    }
-  }
-  else {
-    QImage image(pixels, width, height, QImage::Format_RGBA8888);
-    delete cursor;
-    cursor = new QCursor(QPixmap::fromImage(image), hotspot.x, hotspot.y);
-  }
-  QWidget::setCursor(*cursor);
 }
 
 void Viewport::setCursorPos(const rfb::Point& pos)
@@ -669,140 +935,6 @@ void Viewport::setCursorPos(const rfb::Point& pos)
   vlog.debug("Viewport::setCursorPos local x=%d y=%d", pos.x, pos.y);
   vlog.debug("Viewport::setCursorPos screen x=%d y=%d", gp.x(), gp.y());
   QCursor::setPos(gp.x(), gp.y());
-}
-
-void Viewport::setLEDState(unsigned int state)
-{
-  vlog.debug("QVNCConnection::ledStateChanged");
-  // The first message is just considered to be the server announcing
-  // support for this extension. We will push our state to sync up the
-  // server when we get focus. If we already have focus we need to push
-  // it here though.
-  if (firstLEDState) {
-    firstLEDState = false;
-    if (hasFocus()) {
-      vlog.debug("KeyboardHandler::pushLEDState");
-      pushLEDState();
-    }
-  } else if (hasFocus()) {
-    vlog.debug("KeyboardHandler::setLEDState");
-    keyboardHandler->setLEDState(state);
-  }
-}
-
-void Viewport::flushPendingClipboard()
-{
-  if (pendingServerClipboard) {
-    vlog.debug("Focus regained after remote clipboard change, requesting data");
-    cc->requestClipboard();
-  }
-
-  if (pendingClientClipboard) {
-    vlog.debug("Focus regained after local clipboard change, notifying server");
-    cc->announceClipboard(true);
-  }
-
-  pendingServerClipboard = false;
-  pendingClientClipboard = false;
-}
-
-void Viewport::handleClipboardRequest()
-{
-  vlog.debug("Viewport::handleClipboardRequest: %s", pendingClientData.toStdString().c_str());
-  vlog.debug("Sending clipboard data (%d bytes)", (int)pendingClientData.size());
-  cc->sendClipboardData(pendingClientData.toStdString().c_str());
-  pendingClientData = "";
-}
-
-void Viewport::handleClipboardChange(QClipboard::Mode mode)
-{
-  vlog.debug("Viewport::handleClipboardChange: mode=%d", mode);
-  vlog.debug("Viewport::handleClipboardChange: text=%s", QGuiApplication::clipboard()->text(mode).toStdString().c_str());
-  vlog.debug("Viewport::handleClipboardChange: ownsClipboard=%d", QGuiApplication::clipboard()->ownsClipboard());
-  vlog.debug("Viewport::handleClipboardChange: hasText=%d", QGuiApplication::clipboard()->mimeData(mode)->hasText());
-
-  if (!::sendClipboard) {
-    return;
-  }
-
-#if !defined(WIN32) && !defined(__APPLE__)
-  if (mode == QClipboard::Mode::Selection && !::sendPrimary) {
-    return;
-  }
-#endif
-
-  if(mode == QClipboard::Mode::Clipboard && QGuiApplication::clipboard()->ownsClipboard()) {
-    return;
-  }
-
-  if(mode == QClipboard::Mode::Selection && QGuiApplication::clipboard()->ownsSelection()) {
-    return;
-  }
-
-  if (!QGuiApplication::clipboard()->mimeData(mode)->hasText()) {
-    return;
-  }
-
-#ifdef __APPLE__
-  if (QGuiApplication::clipboard()->text(mode) == serverReceivedData) {
-    serverReceivedData = "";
-    return;
-  }
-#endif
-
-  pendingServerClipboard = false;
-  pendingClientData = QGuiApplication::clipboard()->text(mode);
-
-  if (!hasFocus()) {
-    vlog.debug("Local clipboard changed whilst not focused, will notify server later");
-    pendingClientClipboard = true;
-    // Clear any older client clipboard from the server
-    cc->announceClipboard(false);
-    return;
-  }
-
-  vlog.debug("Local clipboard changed, notifying server");
-  cc->announceClipboard(true);
-}
-
-void Viewport::handleClipboardAnnounce(bool available)
-{
-  vlog.debug("Viewport::handleClipboardAnnounce: available=%d", available);
-
-  if (!::acceptClipboard)
-    return;
-
-  if (!available) {
-    vlog.debug("Clipboard is no longer available on server");
-    pendingServerClipboard = false;
-    return;
-  }
-
-  pendingClientClipboard = false;
-  pendingClientData = "";
-
-  if (!hasFocus()) {
-    vlog.debug("Got notification of new clipboard on server whilst not focused, will request data later");
-    pendingServerClipboard = true;
-    return;
-  }
-
-  vlog.debug("Got notification of new clipboard on server, requesting data");
-  cc->requestClipboard();
-}
-
-void Viewport::handleClipboardData(const char* cbdata)
-{
-  vlog.debug("Viewport::handleClipboardData: %s", cbdata);
-  vlog.debug("Got clipboard data (%d bytes)", (int)strlen(cbdata));
-#ifdef __APPLE__
-  serverReceivedData = cbdata;
-#endif
-  QGuiApplication::clipboard()->setText(cbdata);
-#if !defined(WIN32) && !defined(__APPLE__)
-  if (::setPrimary)
-    QGuiApplication::clipboard()->setText(cbdata, QClipboard::Mode::Selection);
-#endif
 }
 
 void Viewport::maybeGrabPointer()
@@ -851,91 +983,6 @@ QRect Viewport::remoteRectAdjust(QRect r)
 rfb::Point Viewport::remotePointAdjust(const rfb::Point& pos)
 {
   return rfb::Point(pos.x - (width() - pixmap.width()) / 2, pos.y - (height() - pixmap.height()) / 2);
-}
-
-// Copy the areas of the framebuffer that have been changed (damaged)
-// to the displayed window.
-void Viewport::updateWindow()
-{
-  // copied from DesktopWindow.cxx.
-  if (firstUpdate) {
-    if (cc->server.supportsSetDesktopSize) {
-      emit remoteResizeRequest();
-    }
-    firstUpdate = false;
-  }
-
-  PlatformPixelBuffer* framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-  rfb::Rect rect = framebuffer->getDamage();
-  int x = rect.tl.x;
-  int y = rect.tl.y;
-  int w = rect.br.x - x;
-  int h = rect.br.y - y;
-  if (!rect.is_empty()) {
-    damage += QRect(x, y, w, h);
-    update(localRectAdjust(QRect(x, y, w, h)));
-  }
-}
-
-void Viewport::paintEvent(QPaintEvent* event)
-{
-  PlatformPixelBuffer* framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-
-  if ((framebuffer->width() != pixmap.width()) || (framebuffer->height() != pixmap.height())) {
-    update();
-    return;
-  }
-
-  if (!damage.isEmpty()) {
-    QPainter pixmapPainter(&pixmap);
-    const uint8_t* fbdata;
-    int stride;
-    QRect bounds = damage.boundingRect();
-    int x = bounds.x();
-    int y = bounds.y();
-    int w = bounds.width();
-    int h = bounds.height();
-    rfb::Rect rfbrect(x, y, x + w, y + h);
-
-    if (rfbrect.enclosed_by(framebuffer->getRect())) {
-      fbdata = framebuffer->getBuffer(rfbrect, &stride);
-      QImage image(fbdata, w, h, stride * 4, QImage::Format_RGB32);
-#ifdef __APPLE__
-      pixmapPainter.fillRect(bounds, QColor("#ff000000"));
-      pixmapPainter.setCompositionMode(QPainter::CompositionMode_Plus);
-#endif
-      pixmapPainter.drawImage(bounds, image);
-    }
-    damage = QRegion();
-  }
-
-  QPainter painter(this);
-  QRect r = event->rect();
-
-  painter.drawPixmap(r, pixmap, remoteRectAdjust(r));
-
-#ifdef QT_DEBUG
-  fpsCounter++;
-  QFont f;
-  f.setBold(true);
-  f.setPixelSize(14);
-  painter.setFont(f);
-  painter.setPen(Qt::NoPen);
-  painter.setRenderHint(QPainter::Antialiasing);
-  painter.setBrush(QColor("#96101010"));
-  painter.drawRect(fpsRect);
-  QPen p;
-  p.setColor("#e0ffffff");
-  painter.setPen(p);
-  QString text = QString("%1 fps").arg(fpsValue);
-  painter.drawText(fpsRect, text, QTextOption(Qt::AlignCenter));
-
-  painter.setBrush(Qt::NoBrush);
-  painter.setPen(Qt::red);
-  painter.drawRect(rect());
-#endif
-
-  setAttribute(Qt::WA_OpaquePaintEvent, true);
 }
 
 #ifdef QT_DEBUG
@@ -1150,48 +1197,6 @@ void Viewport::leaveEvent(QEvent *event)
   vlog.debug("Viewport::leaveEvent");
   ungrabPointer();
   QWidget::leaveEvent(event);
-}
-
-bool Viewport::event(QEvent *event)
-{
-  switch (event->type()) {
-  case QEvent::WindowActivate:
-    vlog.debug("Viewport::WindowActivate");
-    break;
-  case QEvent::WindowDeactivate:
-    vlog.debug("Viewport::WindowDeactivate");
-    ungrabPointer();
-    break;
-  case QEvent::CursorChange:
-    event->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
-    return true;
-  case QEvent::Gesture:
-    return gestureEvent(reinterpret_cast<QGestureEvent*>(event));
-  default:
-    break;
-  }
-  return QWidget::event(event);
-}
-
-void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
-{
-  if (::viewOnly) {
-    return;
-  }
-  bool instantPosting = ::pointerEventInterval == 0 || (buttonMask != lastButtonMask);
-  lastPointerPos = remotePointAdjust(pos);
-  lastButtonMask = buttonMask;
-  if (instantPosting) {
-    try {
-      cc->writer()->writePointerEvent(pos, buttonMask);
-    } catch (rdr::Exception& e) {
-      abort_connection_with_unexpected_error(e);
-    }
-  } else {
-    if (!mousePointerTimer->isActive()) {
-      mousePointerTimer->start();
-    }
-  }
 }
 
 bool Viewport::gestureEvent(QGestureEvent* event)
