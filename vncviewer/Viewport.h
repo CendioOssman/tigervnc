@@ -1,5 +1,8 @@
-#ifndef ABSTRACTVNCVIEW_H
-#define ABSTRACTVNCVIEW_H
+#ifndef __VIEWPORT_H__
+#define __VIEWPORT_H__
+
+#include "rfb/Rect.h"
+#include "rfb/Timer.h"
 
 #include <QAbstractNativeEventFilter>
 #include <QClipboard>
@@ -8,9 +11,6 @@
 #include <QScrollArea>
 #include <QWidget>
 #include <functional>
-
-#include "rfb/Rect.h"
-#include "rfb/Timer.h"
 
 #include "EmulateMB.h"
 #include "Keyboard.h"
@@ -43,6 +43,24 @@ class Viewport : public QWidget, protected EmulateMB, protected KeyboardHandler,
 public:
   Viewport(CConn* cc, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~Viewport();
+
+  QSize pixmapSize() const { return pixmap.size(); };
+
+  // Flush updates to screen
+  void updateWindow();
+
+  // New image for the locally rendered cursor
+  void setCursor(int width, int height, const rfb::Point& hotspot,
+                 const uint8_t* pixels);
+
+  // Change client LED state
+  void setLEDState(unsigned int state);
+
+  // Clipboard events
+  void handleClipboardRequest();
+  void handleClipboardAnnounce(bool available);
+  void handleClipboardData(const char* data);
+
   void toggleContextMenu();
 
   bool hasFocus();
@@ -53,22 +71,11 @@ public:
   void toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint32 keySym);
   void resize(int width, int height);
 
-  QSize pixmapSize() const { return pixmap.size(); };
-
-  void updateWindow();
-
   void resizeFramebuffer(int new_w, int new_h);
 
-  void setCursor(int width, int height, const rfb::Point& hotspot,
-                 const uint8_t* pixels);
   virtual void setCursorPos(const rfb::Point& pos);
 
-  void setLEDState(unsigned int state);
-
   void flushPendingClipboard();
-  void handleClipboardRequest();
-  void handleClipboardAnnounce(bool available);
-  void handleClipboardData(const char* data);
 
 public slots:
   void handleClipboardChange(QClipboard::Mode mode);
@@ -177,4 +184,4 @@ private:
 #endif
 };
 
-#endif // ABSTRACTVNCVIEW_H
+#endif
