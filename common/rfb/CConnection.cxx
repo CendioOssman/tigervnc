@@ -83,6 +83,8 @@ CConnection::CConnection()
   registerSignal("updatestart");
   registerSignal("updateend");
 
+  registerSignal("bell");
+
   registerSignal("ledstate");
 
   registerSignal("clipboardrequest");
@@ -608,6 +610,11 @@ void CConnection::framebufferUpdateEnd()
 bool CConnection::dataRect(const core::Rect& r, int encoding)
 {
   return decoder.decodeRect(r, encoding, framebuffer);
+}
+
+void CConnection::bell()
+{
+  emitSignal("bell");
 }
 
 void CConnection::serverCutText(const char* str)
