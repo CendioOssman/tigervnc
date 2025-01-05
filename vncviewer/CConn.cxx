@@ -90,6 +90,8 @@ CConn::CConn()
 
   connectSignal(&ready, this, &CConn::connectionReady);
 
+  connectSignal(&bellrequest, []() { fl_beep(); });
+
   if (customCompressLevel)
     setCompressLevel(::compressLevel);
 
@@ -405,11 +407,6 @@ void CConn::framebufferUpdateEnd()
 }
 
 // The rest of the callbacks are fairly self-explanatory...
-
-void CConn::bell()
-{
-  fl_beep();
-}
 
 bool CConn::dataRect(const core::Rect& r, int encoding)
 {

@@ -605,6 +605,11 @@ void CConnection::setColourMapEntries(int /*firstColour*/,
   vlog.error("Invalid SetColourMapEntries from server!");
 }
 
+void CConnection::bell()
+{
+  emitSignal(&bellrequest);
+}
+
 void CConnection::serverCutText(const char* str)
 {
   hasLocalClipboard = false;

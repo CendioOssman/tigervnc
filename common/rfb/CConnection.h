@@ -233,6 +233,9 @@ namespace rfb {
     // been decoded and updated.
     core::signal<> updateend;
 
+    // bellrequest is emitted when the server requests a bell alert.
+    core::signal<> bellrequest;
+
     // ledstate is emitted when the current lock keys LED state changes.
     core::signal<> ledstate;
 
@@ -293,7 +296,7 @@ namespace rfb {
 
     void setColourMapEntries(int firstColour, int nColours,
                              uint16_t* rgbs) override;
-
+    void bell() override;
     void serverCutText(const char* str) override;
 
     void setLEDState(unsigned int state) override;
