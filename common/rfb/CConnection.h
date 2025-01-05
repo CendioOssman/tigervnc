@@ -275,6 +275,7 @@ namespace rfb {
     void framebufferUpdateEnd() override;
     bool dataRect(const core::Rect& r, int encoding) override;
 
+    void bell() override;
     void serverCutText(const char* str) override;
 
     void setLEDState(unsigned int state) override;
