@@ -277,7 +277,7 @@ namespace rfb {
 
     void setColourMapEntries(int firstColour, int nColours,
                              uint16_t* rgbs) override;
-
+    void bell() override;
     void serverCutText(const char* str) override;
 
     void setLEDState(unsigned int state) override;

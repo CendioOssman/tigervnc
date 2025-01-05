@@ -89,6 +89,8 @@ CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
 
   connectSignal("ready", this, &CConn::connectionReady);
 
+  connectSignal("bell", []() { fl_beep(); });
+
   if (customCompressLevel)
     setCompressLevel(::compressLevel);
 
@@ -386,11 +388,6 @@ void CConn::framebufferUpdateEnd()
 }
 
 // The rest of the callbacks are fairly self-explanatory...
-
-void CConn::bell()
-{
-  fl_beep();
-}
 
 bool CConn::dataRect(const core::Rect& r, int encoding)
 {

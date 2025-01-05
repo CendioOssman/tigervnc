@@ -61,8 +61,6 @@ protected:
                               int w, int h,
                               const rfb::ScreenSet& layout) override;
 
-  void bell() override;
-
   void framebufferUpdateStart() override;
   void framebufferUpdateEnd() override;
   bool dataRect(const core::Rect& r, int encoding) override;

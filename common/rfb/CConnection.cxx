@@ -83,6 +83,8 @@ CConnection::CConnection()
   registerSignal("updatestart");
   registerSignal("updateend");
 
+  registerSignal("bell");
+
   registerSignal("ledstate");
 
   registerSignal("clipboardrequest");
@@ -615,6 +617,11 @@ void CConnection::setColourMapEntries(int /*firstColour*/,
                                       uint16_t* /*rgbs*/)
 {
   vlog.error("Invalid SetColourMapEntries from server!");
+}
+
+void CConnection::bell()
+{
+  emitSignal("bell");
 }
 
 void CConnection::serverCutText(const char* str)
