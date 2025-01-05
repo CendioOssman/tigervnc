@@ -84,7 +84,6 @@ private:
   unsigned updateCount;
   unsigned pixelCount;
 
-  rfb::PixelFormat serverPF;
   rfb::PixelFormat fullColourPF;
 
   int lastServerEncoding;
