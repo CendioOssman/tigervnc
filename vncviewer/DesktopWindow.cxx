@@ -79,9 +79,7 @@ static core::LogWriter vlog("DesktopWindow");
 // issue for Fl::event_dispatch.
 static std::set<DesktopWindow *> instances;
 
-DesktopWindow::DesktopWindow(int w, int h,
-                             const rfb::PixelFormat& serverPF,
-                             CConn* cc_)
+DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
   : Fl_Window(w, h), cc(cc_), offscreen(nullptr), overlay(nullptr),
     firstUpdate(true),
     delayedFullscreen(false), delayedDesktopSize(false),
@@ -96,7 +94,7 @@ DesktopWindow::DesktopWindow(int w, int h,
   group->resizable(nullptr);
   resizable(group);
 
-  viewport = new Viewport(w, h, serverPF, cc);
+  viewport = new Viewport(w, h, cc);
 
   // Position will be adjusted later
   hscroll = new Fl_Scrollbar(0, 0, 0, 0);

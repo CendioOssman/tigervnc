@@ -183,11 +183,6 @@ std::string CConn::connectionInfo()
   infoText += core::format(_("Pixel format: %s"), pfStr);
   infoText += "\n";
 
-  // TRANSLATORS: Similar to the earlier "Pixel format" string
-  serverPF.print(pfStr, 100);
-  infoText += core::format(_("(server default %s)"), pfStr);
-  infoText += "\n";
-
   infoText += core::format(_("Requested encoding: %s"),
                            rfb::encodingName(getPreferredEncoding()));
   infoText += "\n";
@@ -323,10 +318,7 @@ void CConn::connectionReady()
   if (server.beforeVersion(3, 8) && autoSelect)
     fullColour.setParam(true);
 
-  serverPF = server.pf();
-
-  desktop = new DesktopWindow(server.width(), server.height(),
-                              serverPF, this);
+  desktop = new DesktopWindow(server.width(), server.height(), this);
   fullColourPF = desktop->getPreferredPF();
 
   // Force a switch to the format and encoding we'd like
