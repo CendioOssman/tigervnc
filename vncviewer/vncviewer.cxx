@@ -228,9 +228,10 @@ static void mainloop(const char* vncserver, network::Socket* sock)
       d->addButton(QMessageBox::Close);
 
       d->exec();
+      QMessageBox::ButtonRole clickedButtonRole = d->buttonRole(d->clickedButton());
       delete d;
       exitError.clear();
-      if (d->buttonRole(d->clickedButton()) == QMessageBox::AcceptRole)
+      if (clickedButtonRole == QMessageBox::AcceptRole)
         continue;
       else
         break;
