@@ -847,48 +847,22 @@ void Viewport::popupContextMenu()
   }
 }
 
-bool Viewport::isVisibleContextMenu() const
-{
-  return contextMenu && contextMenu->isVisible();
-}
-
-void Viewport::sendContextMenuKey()
-{
-  vlog.debug("Viewport::sendContextMenuKey");
-  if (::viewOnly) {
-    return;
-  }
-  int keyCode;
-  quint32 keySym;
-  ::getMenuKey(&keyCode, &keySym);
-  handleKeyPress(FAKE_KEY_CODE, keyCode, keySym);
-  handleKeyRelease(FAKE_KEY_CODE);
-  contextMenu->hide();
-}
-
-void Viewport::toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint32 keySym)
-{
-  if (toggle) {
-    handleKeyPress(systemKeyCode, keyCode, keySym);
-  } else {
-    handleKeyRelease(systemKeyCode);
-  }
-  if (keySym == XK_Control_L) {
-    menuCtrlKey = toggle;
-  } else if (keySym == XK_Alt_L) {
-    menuAltKey = toggle;
-  }
-}
-
 // As QMenu eventFilter
 bool Viewport::eventFilter(QObject* obj, QEvent* event)
 {
   if (event->type() == QEvent::KeyPress) {
     QKeyEvent* e = static_cast<QKeyEvent*>(event);
-    if (isVisibleContextMenu()) {
+    if (contextMenu && contextMenu->isVisible()) {
       QString str = ::getMenuKeyQString();
       if (!str.isEmpty() && QKeySequence(e->key()).toString() == str) {
-        sendContextMenuKey();
+        if (::viewOnly)
+          return true;
+        int keyCode;
+        quint32 keySym;
+        ::getMenuKey(&keyCode, &keySym);
+        handleKeyPress(FAKE_KEY_CODE, keyCode, keySym);
+        handleKeyRelease(FAKE_KEY_CODE);
+        contextMenu->hide();
         return true;
       }
     }

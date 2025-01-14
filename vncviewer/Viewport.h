@@ -64,9 +64,6 @@ public:
 
   bool hasFocus();
 
-  bool isVisibleContextMenu() const;
-  void sendContextMenuKey();
-  void toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint32 keySym);
   void resize(int width, int height);
 
   void resizeFramebuffer(int new_w, int new_h);
