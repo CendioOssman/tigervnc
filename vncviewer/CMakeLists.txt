@@ -438,7 +438,7 @@ if(APPLE AND CMAKE_BUILD_TYPE MATCHES Release AND NOT BUILD_STATIC)
         TARGET vncviewer
         POST_BUILD
         WORKING_DIRECTORY "${DEPLOY_DIR}"
-        COMMAND ${DEPLOYQT} "${DEPLOY_DIR}" "-dmg" "-always-overwrite" "-verbose=2")
+        COMMAND ${DEPLOYQT} "${DEPLOY_DIR}" "-dmg" "-always-overwrite" "-verbose=2" "-no-strip" "-codesign=-")
 
         file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/../po/LINGUAS po_FILES)
         foreach(lang ${po_FILES})
