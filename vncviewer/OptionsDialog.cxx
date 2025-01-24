@@ -71,19 +71,15 @@ static std::set<OptionsDialog *> instances;
 OptionsDialog::OptionsDialog()
   : Fl_Window(580, 420, _("TigerVNC options"))
 {
-  int x, y;
   Fl_Navigation *navigation;
-  Fl_Button *button;
 
   // Odd dimensions to get rid of extra borders
   // FIXME: We need to retain the top border on Windows as they don't
   //        have any separator for the caption, which looks odd
 #ifdef WIN32
-  navigation = new Fl_Navigation(-1, 0, w()+2,
-                                 h() - OUTER_MARGIN - BUTTON_HEIGHT - OUTER_MARGIN);
+  navigation = new Fl_Navigation(-1, 0, w()+2, h()+1);
 #else
-  navigation = new Fl_Navigation(-1, -1, w()+2,
-                                 h()+1 - OUTER_MARGIN - BUTTON_HEIGHT - OUTER_MARGIN);
+  navigation = new Fl_Navigation(-1, -1, w()+2, h()+2);
 #endif
   {
     int tx, ty, tw, th;
@@ -99,19 +95,6 @@ OptionsDialog::OptionsDialog()
   }
 
   navigation->end();
-
-  x = w() - BUTTON_WIDTH * 2 - INNER_MARGIN - OUTER_MARGIN;
-  y = h() - BUTTON_HEIGHT - OUTER_MARGIN;
-
-  button = new Fl_Button(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Cancel"));
-  button->callback(this->handleCancel, this);
-
-  x += BUTTON_WIDTH + INNER_MARGIN;
-
-  button = new Fl_Return_Button(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("OK"));
-  button->callback(this->handleOK, this);
-
-  callback(this->handleCancel, this);
 
   set_modal();
 
@@ -357,161 +340,6 @@ void OptionsDialog::loadOptions(void)
 }
 
 
-void OptionsDialog::storeOptions(void)
-{
-  /* Compression */
-  autoSelect.setParam(autoselectCheckbox->value());
-  rfb::CConnection::noJpeg.setParam(!jpegCheckbox->value());
-
-  if (tightButton->value())
-    preferredEncoding.setParam(rfb::encodingName(rfb::encodingTight));
-  else if (jpegButton->value())
-    preferredEncoding.setParam(rfb::encodingName(rfb::encodingJPEG));
-  else if (zrleButton->value())
-    preferredEncoding.setParam(rfb::encodingName(rfb::encodingZRLE));
-  else if (hextileButton->value())
-    preferredEncoding.setParam(rfb::encodingName(rfb::encodingHextile));
-#ifdef HAVE_H264
-  else if (h264Button->value())
-    preferredEncoding.setParam(rfb::encodingName(rfb::encodingH264));
-#endif
-  else if (rawButton->value())
-    preferredEncoding.setParam(rfb::encodingName(rfb::encodingRaw));
-
-  fullColour.setParam(fullcolorCheckbox->value());
-  if (verylowcolorCheckbox->value())
-    lowColourLevel.setParam(0);
-  else if (lowcolorCheckbox->value())
-    lowColourLevel.setParam(1);
-  else if (mediumcolorCheckbox->value())
-    lowColourLevel.setParam(2);
-
-  customCompressLevel.setParam(compressionCheckbox->value());
-  compressLevel.setParam(atoi(compressionInput->value()));
-  qualityLevel.setParam(atoi(jpegInput->value()));
-
-#if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
-  /* Security */
-  rfb::Security security;
-
-  /* Process security types which don't use encryption */
-  if (encNoneCheckbox->value()) {
-    if (authNoneCheckbox->value())
-      security.EnableSecType(rfb::secTypeNone);
-    if (authVncCheckbox->value()) {
-      security.EnableSecType(rfb::secTypeVncAuth);
-#ifdef HAVE_NETTLE
-      security.EnableSecType(rfb::secTypeRA2ne);
-      security.EnableSecType(rfb::secTypeRAne256);
-#endif
-    }
-    if (authPlainCheckbox->value()) {
-      security.EnableSecType(rfb::secTypePlain);
-#ifdef HAVE_NETTLE
-      security.EnableSecType(rfb::secTypeRA2ne);
-      security.EnableSecType(rfb::secTypeRAne256);
-      security.EnableSecType(rfb::secTypeDH);
-      security.EnableSecType(rfb::secTypeMSLogonII);
-#endif
-    }
-  }
-
-#ifdef HAVE_GNUTLS
-  /* Process security types which use TLS encryption */
-  if (encTLSCheckbox->value()) {
-    if (authNoneCheckbox->value())
-      security.EnableSecType(rfb::secTypeTLSNone);
-    if (authVncCheckbox->value())
-      security.EnableSecType(rfb::secTypeTLSVnc);
-    if (authPlainCheckbox->value())
-      security.EnableSecType(rfb::secTypeTLSPlain);
-  }
-
-  /* Process security types which use X509 encryption */
-  if (encX509Checkbox->value()) {
-    if (authNoneCheckbox->value())
-      security.EnableSecType(rfb::secTypeX509None);
-    if (authVncCheckbox->value())
-      security.EnableSecType(rfb::secTypeX509Vnc);
-    if (authPlainCheckbox->value())
-      security.EnableSecType(rfb::secTypeX509Plain);
-  }
-
-  rfb::CSecurityTLS::X509CA.setParam(caInput->value());
-  rfb::CSecurityTLS::X509CRL.setParam(crlInput->value());
-#endif
-
-#ifdef HAVE_NETTLE
-  if (encRSAAESCheckbox->value()) {
-    security.EnableSecType(rfb::secTypeRA2);
-    security.EnableSecType(rfb::secTypeRA256);
-  }
-#endif
-  rfb::SecurityClient::secTypes.setParam(security.ToString());
-#endif
-
-  /* Input */
-  viewOnly.setParam(viewOnlyCheckbox->value());
-  emulateMiddleButton.setParam(emulateMBCheckbox->value());
-  acceptClipboard.setParam(acceptClipboardCheckbox->value());
-#if !defined(WIN32) && !defined(__APPLE__)
-  setPrimary.setParam(setPrimaryCheckbox->value());
-#endif
-  sendClipboard.setParam(sendClipboardCheckbox->value());
-#if !defined(WIN32) && !defined(__APPLE__)
-  sendPrimary.setParam(sendPrimaryCheckbox->value());
-#endif
-  fullscreenSystemKeys.setParam(systemKeysCheckbox->value());
-
-  /* Keyboard shortcuts */
-  std::list<std::string> modifierList;
-
-  if (ctrlButton->value())
-    modifierList.push_back(
-      ShortcutHandler::modifierString(ShortcutHandler::Control));
-  if (shiftButton->value())
-    modifierList.push_back(
-      ShortcutHandler::modifierString(ShortcutHandler::Shift));
-  if (altButton->value())
-    modifierList.push_back(
-      ShortcutHandler::modifierString(ShortcutHandler::Alt));
-  if (superButton->value())
-    modifierList.push_back(
-      ShortcutHandler::modifierString(ShortcutHandler::Super));
-
-  shortcutModifiers.setParam(modifierList);
-
-  /* Display */
-  if (windowedButton->value()) {
-    fullScreen.setParam(false);
-  } else {
-    if (allMonitorsButton->value()) {
-      fullScreenMode.setParam("All");
-    } else if (selectedMonitorsButton->value()) {
-      fullScreenMode.setParam("Selected");
-    } else {
-      fullScreenMode.setParam("Current");
-    }
-
-    fullScreen.setParam(true);
-  }
-
-  fullScreenSelectedMonitors.setMonitors(monitorArrangement->value());
-
-  /* Misc. */
-  shared.setParam(sharedCheckbox->value());
-  reconnectOnError.setParam(reconnectCheckbox->value());
-  alwaysCursor.setParam(alwaysCursorCheckbox->value());
-
-  if (cursorTypeChoice->value() == 1) {
-    cursorType.setParam("System");
-  } else {
-    // Default
-    cursorType.setParam("Dot");
-  }
-}
-
-
 void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
 {
   Fl_Group *group = new Fl_Group(tx, ty, tw, th, _("Compression"));
@@ -539,6 +367,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                               CHECK_MIN_WIDTH,
                                               CHECK_HEIGHT,
                                               _("Allow JPEG compression")));
+  jpegCheckbox->callback(handleBoolParam, &rfb::CConnection::noJpeg);
   ty += CHECK_HEIGHT + INNER_MARGIN;
 
   /* Two columns */
@@ -562,6 +391,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                                RADIO_HEIGHT,
                                                "Tight"));
     tightButton->type(FL_RADIO_BUTTON);
+    tightButton->callback(handleEncoding, this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
 
     jpegButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
@@ -569,6 +399,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                               RADIO_HEIGHT,
                                               "JPEG"));
     jpegButton->type(FL_RADIO_BUTTON);
+    jpegButton->callback(handleEncoding, this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
 
     zrleButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
@@ -576,6 +407,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                               RADIO_HEIGHT,
                                               "ZRLE"));
     zrleButton->type(FL_RADIO_BUTTON);
+    zrleButton->callback(handleEncoding, this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
 
     hextileButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
@@ -583,6 +415,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                                  RADIO_HEIGHT,
                                                  "Hextile"));
     hextileButton->type(FL_RADIO_BUTTON);
+    hextileButton->callback(handleEncoding, this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
 
 #ifdef HAVE_H264
@@ -591,6 +424,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                              RADIO_HEIGHT,
                                              "H.264"));
     h264Button->type(FL_RADIO_BUTTON);
+    h264Button->callback(handleEncoding, this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
 #endif
 
@@ -599,6 +433,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                              RADIO_HEIGHT,
                                              "Raw"));
     rawButton->type(FL_RADIO_BUTTON);
+    rawButton->callback(handleEncoding, this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
   }
 
@@ -630,6 +465,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                                      RADIO_HEIGHT,
                                                      _("Full")));
     fullcolorCheckbox->type(FL_RADIO_BUTTON);
+    fullcolorCheckbox->callback(handleColor, this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
 
     mediumcolorCheckbox = new Fl_Round_Button(LBLRIGHT(tx, ty,
@@ -637,6 +473,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                                        RADIO_HEIGHT,
                                                        _("Medium")));
     mediumcolorCheckbox->type(FL_RADIO_BUTTON);
+    mediumcolorCheckbox->callback(handleColor, this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
 
     lowcolorCheckbox = new Fl_Round_Button(LBLRIGHT(tx, ty,
@@ -644,6 +481,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                                     RADIO_HEIGHT,
                                                     _("Low")));
     lowcolorCheckbox->type(FL_RADIO_BUTTON);
+    lowcolorCheckbox->callback(handleColor, this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
 
     verylowcolorCheckbox = new Fl_Round_Button(LBLRIGHT(tx, ty,
@@ -651,6 +489,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                                         RADIO_HEIGHT,
                                                         _("Very low")));
     verylowcolorCheckbox->type(FL_RADIO_BUTTON);
+    verylowcolorCheckbox->callback(handleColor, this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
   }
 
@@ -685,6 +524,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
     compressionInput = new Fl_Int_Input(tx, ty,
                                         INPUT_HEIGHT, INPUT_HEIGHT,
                                         _("level (0=fast, 9=best)"));
+    compressionInput->callback(handleIntParam, &compressLevel);
     compressionInput->align(FL_ALIGN_RIGHT);
     ty += INPUT_HEIGHT + INNER_MARGIN;
   }
@@ -716,6 +556,7 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                  INPUT_HEIGHT, INPUT_HEIGHT,
                                  _("quality (0=poor, 9=best)"));
     jpegInput->align(FL_ALIGN_RIGHT);
+    jpegInput->callback(handleIntParam, &qualityLevel);
     ty += INPUT_HEIGHT + INNER_MARGIN;
   }
 
@@ -765,6 +606,7 @@ void OptionsDialog::createSecurityPage(int tx, int ty, int tw, int th)
                                                    CHECK_MIN_WIDTH,
                                                    CHECK_HEIGHT,
                                                    _("None")));
+    encNoneCheckbox->callback(handleAuth, this);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
 
 #ifdef HAVE_GNUTLS
@@ -772,6 +614,7 @@ void OptionsDialog::createSecurityPage(int tx, int ty, int tw, int th)
                                                   CHECK_MIN_WIDTH,
                                                   CHECK_HEIGHT,
                                                   _("TLS with anonymous certificates")));
+    encTLSCheckbox->callback(handleAuth, this);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
 
     encX509Checkbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
@@ -786,6 +629,7 @@ void OptionsDialog::createSecurityPage(int tx, int ty, int tw, int th)
                            width - INDENT * 2, INPUT_HEIGHT,
                            _("Path to X509 CA certificate"));
     caInput->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
+    caInput->callback(handleStringParam, &rfb::CSecurityTLS::X509CA);
     ty += INPUT_HEIGHT + TIGHT_MARGIN;
 
     ty += INPUT_LABEL_OFFSET;
@@ -793,6 +637,7 @@ void OptionsDialog::createSecurityPage(int tx, int ty, int tw, int th)
                             width - INDENT * 2, INPUT_HEIGHT,
                             _("Path to X509 CRL file"));
     crlInput->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
+    crlInput->callback(handleStringParam, &rfb::CSecurityTLS::X509CRL);
     ty += INPUT_HEIGHT + TIGHT_MARGIN;
 #endif
 #ifdef HAVE_NETTLE
@@ -832,18 +677,21 @@ void OptionsDialog::createSecurityPage(int tx, int ty, int tw, int th)
                                                     CHECK_MIN_WIDTH,
                                                     CHECK_HEIGHT,
                                                     _("None")));
+    authNoneCheckbox->callback(handleAuth, this);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
 
     authVncCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
                                                    CHECK_MIN_WIDTH,
                                                    CHECK_HEIGHT,
                                                    _("Standard VNC (insecure without encryption)")));
+    authVncCheckbox->callback(handleAuth, this);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
 
     authPlainCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
                                                      CHECK_MIN_WIDTH,
                                                      CHECK_HEIGHT,
                                                      _("Username and password (insecure without encryption)")));
+    authPlainCheckbox->callback(handleAuth, this);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
   }
 
@@ -885,6 +733,7 @@ void OptionsDialog::createInputPage(int tx, int ty, int tw, int th)
                                                   CHECK_MIN_WIDTH,
                                                   CHECK_HEIGHT,
                                                   _("View only (ignore mouse and keyboard)")));
+  viewOnlyCheckbox->callback(handleBoolParam, &viewOnly);
   ty += CHECK_HEIGHT + INNER_MARGIN;
 
   orig_tx = tx;
@@ -904,6 +753,7 @@ void OptionsDialog::createInputPage(int tx, int ty, int tw, int th)
                                                      CHECK_MIN_WIDTH,
                                                      CHECK_HEIGHT,
                                                      _("Emulate middle mouse button")));
+    emulateMBCheckbox->callback(handleBoolParam, &emulateMiddleButton);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
 
     alwaysCursorCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
@@ -915,6 +765,7 @@ void OptionsDialog::createInputPage(int tx, int ty, int tw, int th)
 
     /* Cursor type */
     cursorTypeChoice = new Fl_Choice(LBLLEFT(tx, ty, 150, CHOICE_HEIGHT, _("Cursor type")));
+    cursorTypeChoice->callback(handleCursorType, this);
 
     fltk_menu_add(cursorTypeChoice, _("Dot"), 0, nullptr, nullptr, 0);
     fltk_menu_add(cursorTypeChoice, _("System"), 0, nullptr, nullptr, 0);
@@ -986,6 +837,7 @@ void OptionsDialog::createInputPage(int tx, int ty, int tw, int th)
                                                       CHECK_MIN_WIDTH,
                                                       CHECK_HEIGHT,
                                                       _("Also set primary selection")));
+    setPrimaryCheckbox->callback(handleBoolParam, &setPrimary);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
 #endif
 
@@ -1001,6 +853,7 @@ void OptionsDialog::createInputPage(int tx, int ty, int tw, int th)
                                                        CHECK_MIN_WIDTH,
                                                        CHECK_HEIGHT,
                                                        _("Send primary selection as clipboard")));
+    sendPrimaryCheckbox->callback(handleBoolParam, &sendPrimary);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
 #endif
   }
@@ -1150,6 +1003,7 @@ void OptionsDialog::createDisplayPage(int tx, int ty, int tw, int th)
     monitorArrangement = new Fl_Monitor_Arrangement(
                               tx + INDENT, ty,
                               width - INDENT, 150);
+    monitorArrangement->callback(handleFullScreenMode, this);
     ty += 150 + INNER_MARGIN;
 
     bool supportsMultihead;
@@ -1224,19 +1078,66 @@ void OptionsDialog::createMiscPage(int tx, int ty, int tw, int th)
                                                   CHECK_MIN_WIDTH,
                                                   CHECK_HEIGHT,
                                                   _("Shared (don't disconnect other viewers)")));
+  sharedCheckbox->callback(handleBoolParam, &shared);
   ty += CHECK_HEIGHT + TIGHT_MARGIN;
 
   reconnectCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
                                                   CHECK_MIN_WIDTH,
                                                   CHECK_HEIGHT,
                                                   _("Ask to reconnect on connection errors")));
+  reconnectCheckbox->callback(handleBoolParam, &reconnectOnError);
   ty += CHECK_HEIGHT + TIGHT_MARGIN;
 
   group->end();
 }
 
 
-void OptionsDialog::handleAutoselect(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleBoolParam(Fl_Widget *widget, void *data)
+{
+  Fl_Check_Button *check;
+  core::BoolParameter *param;
+
+  check = dynamic_cast<Fl_Check_Button*>(widget);
+  param = dynamic_cast<core::BoolParameter*>((core::Parameter*)data);
+
+  assert(check);
+  assert(param);
+
+  param->setParam(check->value());
+}
+
+
+void OptionsDialog::handleIntParam(Fl_Widget *widget, void *data)
+{
+  Fl_Int_Input *input;
+  core::IntParameter *param;
+
+  input = dynamic_cast<Fl_Int_Input*>(widget);
+  param = dynamic_cast<core::IntParameter*>((core::Parameter*)data);
+
+  assert(input);
+  assert(param);
+
+  param->setParam(input->value());
+}
+
+
+void OptionsDialog::handleStringParam(Fl_Widget *widget, void *data)
+{
+  Fl_Input *input;
+  core::StringParameter *param;
+
+  input = dynamic_cast<Fl_Input*>(widget);
+  param = dynamic_cast<core::StringParameter*>((core::Parameter*)data);
+
+  assert(input);
+  assert(param);
+
+  param->setParam(input->value());
+}
+
+
+void OptionsDialog::handleAutoselect(Fl_Widget *widget, void *data)
 {
   OptionsDialog *dialog = (OptionsDialog*)data;
 
@@ -1249,10 +1150,47 @@ void OptionsDialog::handleAutoselect(Fl_Widget* /*widget*/, void *data)
     dialog->colorlevelGroup->activate();
     dialog->qualityGroup->activate();
   }
+
+  handleBoolParam(widget, &autoSelect);
 }
 
 
-void OptionsDialog::handleCompression(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleEncoding(Fl_Widget* /*widget*/, void *data)
+{
+  OptionsDialog *dialog = (OptionsDialog*)data;
+
+  if (dialog->tightButton->value())
+    preferredEncoding.setParam(rfb::encodingName(rfb::encodingTight));
+  else if (dialog->jpegButton->value())
+    preferredEncoding.setParam(rfb::encodingName(rfb::encodingJPEG));
+  else if (dialog->zrleButton->value())
+    preferredEncoding.setParam(rfb::encodingName(rfb::encodingZRLE));
+  else if (dialog->hextileButton->value())
+    preferredEncoding.setParam(rfb::encodingName(rfb::encodingHextile));
+#ifdef HAVE_H264
+  else if (dialog->h264Button->value())
+    preferredEncoding.setParam(rfb::encodingName(rfb::encodingH264));
+#endif
+  else if (dialog->rawButton->value())
+    preferredEncoding.setParam(rfb::encodingName(rfb::encodingRaw));
+}
+
+
+void OptionsDialog::handleColor(Fl_Widget* /*widget*/, void *data)
+{
+  OptionsDialog *dialog = (OptionsDialog*)data;
+
+  fullColour.setParam(dialog->fullcolorCheckbox->value());
+  if (dialog->verylowcolorCheckbox->value())
+    lowColourLevel.setParam(0);
+  else if (dialog->lowcolorCheckbox->value())
+    lowColourLevel.setParam(1);
+  else if (dialog->mediumcolorCheckbox->value())
+    lowColourLevel.setParam(2);
+}
+
+
+void OptionsDialog::handleCompression(Fl_Widget *widget, void *data)
 {
   OptionsDialog *dialog = (OptionsDialog*)data;
 
@@ -1260,10 +1198,75 @@ void OptionsDialog::handleCompression(Fl_Widget* /*widget*/, void *data)
     dialog->compressionInput->activate();
   else
     dialog->compressionInput->deactivate();
+
+  handleBoolParam(widget, &customCompressLevel);
 }
 
 
-void OptionsDialog::handleX509(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleAuth(Fl_Widget* /*widget*/, void *data)
+{
+  (void)data;
+#if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
+  OptionsDialog *dialog = (OptionsDialog*)data;
+  rfb::Security security;
+
+  /* Process security types which don't use encryption */
+  if (dialog->encNoneCheckbox->value()) {
+    if (dialog->authNoneCheckbox->value())
+      security.EnableSecType(rfb::secTypeNone);
+    if (dialog->authVncCheckbox->value()) {
+      security.EnableSecType(rfb::secTypeVncAuth);
+#ifdef HAVE_NETTLE
+      security.EnableSecType(rfb::secTypeRA2ne);
+      security.EnableSecType(rfb::secTypeRAne256);
+#endif
+    }
+    if (dialog->authPlainCheckbox->value()) {
+      security.EnableSecType(rfb::secTypePlain);
+#ifdef HAVE_NETTLE
+      security.EnableSecType(rfb::secTypeRA2ne);
+      security.EnableSecType(rfb::secTypeRAne256);
+      security.EnableSecType(rfb::secTypeDH);
+      security.EnableSecType(rfb::secTypeMSLogonII);
+#endif
+    }
+  }
+
+#ifdef HAVE_GNUTLS
+  /* Process security types which use TLS encryption */
+  if (dialog->encTLSCheckbox->value()) {
+    if (dialog->authNoneCheckbox->value())
+      security.EnableSecType(rfb::secTypeTLSNone);
+    if (dialog->authVncCheckbox->value())
+      security.EnableSecType(rfb::secTypeTLSVnc);
+    if (dialog->authPlainCheckbox->value())
+      security.EnableSecType(rfb::secTypeTLSPlain);
+  }
+
+  /* Process security types which use X509 encryption */
+  if (dialog->encX509Checkbox->value()) {
+    if (dialog->authNoneCheckbox->value())
+      security.EnableSecType(rfb::secTypeX509None);
+    if (dialog->authVncCheckbox->value())
+      security.EnableSecType(rfb::secTypeX509Vnc);
+    if (dialog->authPlainCheckbox->value())
+      security.EnableSecType(rfb::secTypeX509Plain);
+  }
+#endif
+
+#ifdef HAVE_NETTLE
+  if (dialog->encRSAAESCheckbox->value()) {
+    security.EnableSecType(rfb::secTypeRA2);
+    security.EnableSecType(rfb::secTypeRA256);
+  }
+#endif
+
+  rfb::SecurityClient::secTypes.setParam(security.ToString());
+#endif
+}
+
+
+void OptionsDialog::handleX509(Fl_Widget *widget, void *data)
 {
   OptionsDialog *dialog = (OptionsDialog*)data;
 
@@ -1274,10 +1277,12 @@ void OptionsDialog::handleX509(Fl_Widget* /*widget*/, void *data)
     dialog->caInput->deactivate();
     dialog->crlInput->deactivate();
   }
+
+  handleAuth(widget, data);
 }
 
 
-void OptionsDialog::handleRSAAES(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleRSAAES(Fl_Widget *widget, void *data)
 {
   OptionsDialog *dialog = (OptionsDialog*)data;
 
@@ -1285,28 +1290,30 @@ void OptionsDialog::handleRSAAES(Fl_Widget* /*widget*/, void *data)
     dialog->authVncCheckbox->value(true);
     dialog->authPlainCheckbox->value(true);
   }
+
+  handleAuth(widget, data);
 }
 
 
 void OptionsDialog::handleSystemKeys(Fl_Widget* /*widget*/, void* data)
 {
-#ifdef __APPLE__
   OptionsDialog* dialog = (OptionsDialog*)data;
 
+#ifdef __APPLE__
   // Pop up the access dialog if needed
   if (dialog->systemKeysCheckbox->value())
     cocoa_is_trusted(true);
-#else
-  (void)data;
 #endif
+
+  handleBoolParam(dialog->systemKeysCheckbox, &fullscreenSystemKeys);
 }
 
 
 void OptionsDialog::handleClipboard(Fl_Widget* /*widget*/, void *data)
 {
-  (void)data;
-#if !defined(WIN32) && !defined(__APPLE__)
   OptionsDialog *dialog = (OptionsDialog*)data;
+
+#if !defined(WIN32) && !defined(__APPLE__)
 
   if (dialog->acceptClipboardCheckbox->value())
     dialog->setPrimaryCheckbox->activate();
@@ -1317,12 +1324,16 @@ void OptionsDialog::handleClipboard(Fl_Widget* /*widget*/, void *data)
   else
     dialog->sendPrimaryCheckbox->deactivate();
 #endif
+
+  handleBoolParam(dialog->acceptClipboardCheckbox, &acceptClipboard);
+  handleBoolParam(dialog->sendClipboardCheckbox, &sendClipboard);
 }
 
 void OptionsDialog::handleModifier(Fl_Widget* /*widget*/, void *data)
 {
   OptionsDialog *dialog = (OptionsDialog*)data;
   unsigned mask;
+  std::list<std::string> modifierList;
 
   mask = 0;
   if (dialog->ctrlButton->value())
@@ -1372,6 +1383,21 @@ void OptionsDialog::handleModifier(Fl_Widget* /*widget*/, void *data)
 
     dialog->shortcutsText->copy_label(label.c_str());
   }
+
+  if (dialog->ctrlButton->value())
+    modifierList.push_back(
+      ShortcutHandler::modifierString(ShortcutHandler::Control));
+  if (dialog->shiftButton->value())
+    modifierList.push_back(
+      ShortcutHandler::modifierString(ShortcutHandler::Shift));
+  if (dialog->altButton->value())
+    modifierList.push_back(
+      ShortcutHandler::modifierString(ShortcutHandler::Alt));
+  if (dialog->superButton->value())
+    modifierList.push_back(
+      ShortcutHandler::modifierString(ShortcutHandler::Super));
+
+  shortcutModifiers.setParam(modifierList);
 }
 
 void OptionsDialog::handleFullScreenMode(Fl_Widget* /*widget*/, void *data)
@@ -1383,24 +1409,24 @@ void OptionsDialog::handleFullScreenMode(Fl_Widget* /*widget*/, void *data)
   } else {
     dialog->monitorArrangement->deactivate();
   }
+
+  if (dialog->windowedButton->value()) {
+    fullScreen.setParam(false);
+  } else {
+    if (dialog->allMonitorsButton->value()) {
+      fullScreenMode.setParam("All");
+    } else if (dialog->selectedMonitorsButton->value()) {
+      fullScreenMode.setParam("Selected");
+    } else {
+      fullScreenMode.setParam("Current");
+    }
+
+    fullScreen.setParam(true);
+  }
+
+  fullScreenSelectedMonitors.setMonitors(dialog->monitorArrangement->value());
 }
 
-void OptionsDialog::handleCancel(Fl_Widget* /*widget*/, void *data)
-{
-  OptionsDialog *dialog = (OptionsDialog*)data;
-
-  dialog->hide();
-}
-
-
-void OptionsDialog::handleOK(Fl_Widget* /*widget*/, void *data)
-{
-  OptionsDialog *dialog = (OptionsDialog*)data;
-
-  dialog->hide();
-
-  dialog->storeOptions();
-}
 
 int OptionsDialog::fltk_event_handler(int event)
 {
@@ -1435,5 +1461,21 @@ void OptionsDialog::handleAlwaysCursor(Fl_Widget* /*widget*/, void *data)
     dialog->cursorTypeChoice->activate();
   } else {
     dialog->cursorTypeChoice->deactivate();
+  }
+
+  handleBoolParam(dialog->alwaysCursorCheckbox, &alwaysCursor);
+}
+
+void OptionsDialog::handleCursorType(Fl_Widget* /*widget*/, void *data)
+{
+  OptionsDialog *dialog = (OptionsDialog*)data;
+
+  if (dialog->alwaysCursorCheckbox->value()) {
+    if (dialog->cursorTypeChoice->value() == 1) {
+      cursorType.setParam("System");
+    } else {
+      // Default
+      cursorType.setParam("Dot");
+    }
   }
 }
