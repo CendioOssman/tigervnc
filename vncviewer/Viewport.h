@@ -140,6 +140,11 @@ protected:
   bool menuAltKey = false;
   void initContextMenu();
   void popupContextMenu();
+
+  void setMenuKey();
+
+  static void handleOptions(void *data);
+
   void sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask) override;
   // As QMenu eventFilter
   bool eventFilter(QObject* watched, QEvent* event) override;

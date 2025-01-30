@@ -290,6 +290,10 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
   setMouseTracking(true);
 
   initContextMenu();
+
+  setMenuKey();
+
+  OptionsDialog::addCallback(handleOptions, this);
 }
 
 Viewport::~Viewport()
@@ -299,6 +303,8 @@ Viewport::~Viewport()
   for (auto gr : gestureRecognizers.keys()) {
     QGestureRecognizer::unregisterRecognizer(gr);
   }
+
+  OptionsDialog::removeCallback(handleOptions);
 
   // Qt automatically deletes all child widgets, so we shouldn't touch
   // them ourselves here
@@ -845,6 +851,19 @@ void Viewport::popupContextMenu()
       about_vncviewer(this);
       break;
   }
+}
+
+void Viewport::setMenuKey()
+{
+  ::getMenuKey(&menuKeyCode, &menuKeySym);
+  initContextMenu();
+}
+
+void Viewport::handleOptions(void *data)
+{
+  Viewport *self = (Viewport*)data;
+
+  self->setMenuKey();
 }
 
 // As QMenu eventFilter
