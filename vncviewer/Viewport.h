@@ -8,7 +8,6 @@
 #include <QClipboard>
 #include <QLabel>
 #include <QMap>
-#include <QMessageBox>
 #include <QScrollArea>
 #include <QWidget>
 #include <functional>
@@ -62,8 +61,14 @@ public:
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* data);
 
+  void toggleContextMenu();
+
   bool hasFocus();
 
+  bool isVisibleContextMenu() const;
+  void sendContextMenuKey();
+  void sendCtrlAltDel();
+  void toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint32 keySym);
   void resize(int width, int height);
 
   void resizeFramebuffer(int new_w, int new_h);
@@ -135,16 +140,10 @@ protected:
   void handleKeyRelease(int systemKeyCode) override;
 
   // Context menu
-  QMenu* contextMenu;
+  QMenu* contextMenu = nullptr;
   bool menuCtrlKey = false;
   bool menuAltKey = false;
-  void initContextMenu();
-  void popupContextMenu();
-
-  void setMenuKey();
-
-  static void handleOptions(void *data);
-
+  void createContextMenu();
   void sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask) override;
   // As QMenu eventFilter
   bool eventFilter(QObject* watched, QEvent* event) override;
@@ -174,10 +173,6 @@ private:
   // Rendering
   QPixmap pixmap;
   QRegion damage;
-
-  quint32 menuKeySym;
-  int menuKeyCode;
-  QMessageBox* infoDialog;
 
   // FPS debugging
 #ifdef QT_DEBUG
