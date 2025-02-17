@@ -73,12 +73,6 @@
 
 static rfb::LogWriter vlog("Viewport");
 
-// Menu constants
-
-enum { ID_DISCONNECT, ID_FULLSCREEN, ID_MINIMIZE, ID_RESIZE,
-       ID_CTRL, ID_ALT, ID_MENUKEY, ID_CTRLALTDEL,
-       ID_REFRESH, ID_OPTIONS, ID_INFO, ID_ABOUT };
-
 // Used for fake key presses from the menu
 static const int FAKE_CTRL_KEY_CODE = 0x10001;
 static const int FAKE_ALT_KEY_CODE = 0x10002;
@@ -658,62 +652,147 @@ int Viewport::handleSystemEvent(void *event, void *data)
   return 0;
 }
 
-// FIXME: gcc confuses ID_DISCONNECT with NULL
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
 void Viewport::initContextMenu()
 {
   contextMenu->clear();
 
-  fltk_menu_add(contextMenu, p_("ContextMenu|", "Disconn&ect"),
-                0, nullptr, (void*)ID_DISCONNECT, FL_MENU_DIVIDER);
+  fltk_menu_add(contextMenu, p_("ContextMenu|", "Disconn&ect"), 0,
+                [](Fl_Widget*, void*) {
+                  disconnect();
+                }, nullptr, FL_MENU_DIVIDER);
 
-  fltk_menu_add(contextMenu, p_("ContextMenu|", "&Full screen"),
-                0, nullptr, (void*)ID_FULLSCREEN,
+  fltk_menu_add(contextMenu, p_("ContextMenu|", "&Full screen"), 0,
+                [](Fl_Widget*, void* data) {
+                  Viewport* self = (Viewport*)data;
+                  if (self->window()->fullscreen_active())
+                    self->window()->fullscreen_off();
+                  else
+                    ((DesktopWindow*)self->window())->fullscreen_on();
+                }, this,
                 FL_MENU_TOGGLE | (window()->fullscreen_active()?FL_MENU_VALUE:0));
-  fltk_menu_add(contextMenu, p_("ContextMenu|", "Minimi&ze"),
-                0, nullptr, (void*)ID_MINIMIZE, 0);
-  fltk_menu_add(contextMenu, p_("ContextMenu|", "Resize &window to session"),
-                0, nullptr, (void*)ID_RESIZE,
+
+  fltk_menu_add(contextMenu, p_("ContextMenu|", "Minimi&ze"), 0,
+                [](Fl_Widget*, void* data) {
+                  Viewport* self = (Viewport*)data;
+#ifdef __APPLE__
+                  // FIXME: Workaround for not being able to minimize in fullscreen
+                  // https://github.com/TigerVNC/tigervnc/pull/1813
+                  if (self->window()->fullscreen_active())
+                    self->window()->fullscreen_off();
+#endif
+                  self->window()->iconize();
+                }, this, 0);
+
+  fltk_menu_add(contextMenu, p_("ContextMenu|",
+                                "Resize &window to session"), 0,
+                [](Fl_Widget*, void* data) {
+                  Viewport* self = (Viewport*)data;
+                  if (self->window()->fullscreen_active())
+                    return;
+                  self->window()->size(self->w(), self->h());
+                }, this,
                 (window()->fullscreen_active()?FL_MENU_INACTIVE:0) |
                 FL_MENU_DIVIDER);
 
-  fltk_menu_add(contextMenu, p_("ContextMenu|", "&Ctrl"),
-                0, nullptr, (void*)ID_CTRL,
+  fltk_menu_add(contextMenu, p_("ContextMenu|", "&Ctrl"), 0,
+                [](Fl_Widget* w, void* data) {
+                  const Fl_Menu_Item* m = ((Fl_Menu_*)w)->mvalue();
+                  Viewport* self = (Viewport*)data;
+                  if (m->value())
+                    self->sendKeyPress(FAKE_CTRL_KEY_CODE,
+                                       0x1d, XK_Control_L);
+                  else
+                    self->sendKeyRelease(FAKE_CTRL_KEY_CODE);
+                  self->menuCtrlKey = !(self->menuCtrlKey);
+                }, this,
                 FL_MENU_TOGGLE | (menuCtrlKey?FL_MENU_VALUE:0));
-  fltk_menu_add(contextMenu, p_("ContextMenu|", "&Alt"),
-                0, nullptr, (void*)ID_ALT,
+
+  fltk_menu_add(contextMenu, p_("ContextMenu|", "&Alt"), 0,
+                [](Fl_Widget* w, void* data) {
+                  const Fl_Menu_Item* m = ((Fl_Menu_*)w)->mvalue();
+                  Viewport* self = (Viewport*)data;
+                  if (m->value())
+                    self->sendKeyPress(FAKE_ALT_KEY_CODE,
+                                       0x38, XK_Alt_L);
+                  else
+                    self->sendKeyRelease(FAKE_ALT_KEY_CODE);
+                  self->menuAltKey = !(self->menuAltKey);
+                }, this,
                 FL_MENU_TOGGLE | (menuAltKey?FL_MENU_VALUE:0));
 
   if (menuKeySym) {
+    Fl_Callback* menuCB;
     char sendMenuKey[64];
+    menuCB = [](Fl_Widget*, void* data) {
+      Viewport* self = (Viewport*)data;
+      self->sendKeyPress(FAKE_KEY_CODE,
+                         self->menuKeyCode, self->menuKeySym);
+      self->sendKeyRelease(FAKE_KEY_CODE);
+    };
     snprintf(sendMenuKey, 64, p_("ContextMenu|", "Send %s"), (const char *)menuKey);
-    fltk_menu_add(contextMenu, sendMenuKey, 0, nullptr, (void*)ID_MENUKEY, 0);
+    fltk_menu_add(contextMenu, sendMenuKey, 0, menuCB, this, 0);
     fltk_menu_add(contextMenu, "Secret shortcut menu key",
-                  menuKeyFLTK, nullptr,
-                  (void*)ID_MENUKEY, FL_MENU_INVISIBLE);
+                  menuKeyFLTK, menuCB,
+                  this, FL_MENU_INVISIBLE);
   }
 
-  fltk_menu_add(contextMenu, p_("ContextMenu|", "Send Ctrl-Alt-&Del"),
-                0, nullptr, (void*)ID_CTRLALTDEL, FL_MENU_DIVIDER);
+  fltk_menu_add(contextMenu, p_("ContextMenu|", "Send Ctrl-Alt-&Del"), 0,
+                [](Fl_Widget*, void* data) {
+                  Viewport* self = (Viewport*)data;
+                  self->sendKeyPress(FAKE_CTRL_KEY_CODE,
+                                     0x1d, XK_Control_L);
+                  self->sendKeyPress(FAKE_ALT_KEY_CODE,
+                                     0x38, XK_Alt_L);
+                  self->sendKeyPress(FAKE_DEL_KEY_CODE,
+                                     0xd3, XK_Delete);
+                  self->sendKeyRelease(FAKE_DEL_KEY_CODE);
+                  self->sendKeyRelease(FAKE_ALT_KEY_CODE);
+                  self->sendKeyRelease(FAKE_CTRL_KEY_CODE);
+                }, this, FL_MENU_DIVIDER);
 
-  fltk_menu_add(contextMenu, p_("ContextMenu|", "&Refresh screen"),
-                0, nullptr, (void*)ID_REFRESH, FL_MENU_DIVIDER);
+  fltk_menu_add(contextMenu, p_("ContextMenu|", "&Refresh screen"), 0,
+                [](Fl_Widget*, void* data) {
+                  Viewport* self = (Viewport*)data;
+                  self->cc->refreshFramebuffer();
+                }, this, FL_MENU_DIVIDER);
 
-  fltk_menu_add(contextMenu, p_("ContextMenu|", "&Options..."),
-                0, nullptr, (void*)ID_OPTIONS, 0);
-  fltk_menu_add(contextMenu, p_("ContextMenu|", "Connection &info..."),
-                0, nullptr, (void*)ID_INFO, 0);
-  fltk_menu_add(contextMenu, p_("ContextMenu|", "About &TigerVNC viewer..."),
-                0, nullptr, (void*)ID_ABOUT, 0);
+  fltk_menu_add(contextMenu, p_("ContextMenu|", "&Options..."), 0,
+                [](Fl_Widget*, void*) {
+                  OptionsDialog* dlg;
+
+                  dlg = new OptionsDialog();
+                  dlg->set_modal();
+                  dlg->finished([](Fl_Widget* d, void*)
+                                { Fl::delete_widget(d); });
+                  dlg->show();
+                }, nullptr, 0);
+
+  fltk_menu_add(contextMenu, p_("ContextMenu|", "Connection &info..."), 0,
+                [](Fl_Widget*, void* data) {
+                  Viewport* self = (Viewport*)data;
+                  char buffer[1024];
+                  if (fltk_escape(self->cc->connectionInfo(), buffer,
+                                  sizeof(buffer)) < sizeof(buffer)) {
+                    Fl_Message_Box* dlg;
+
+                    dlg = new Fl_Message_Box(_("VNC connection info"),
+                                             "%s", buffer);
+                    dlg->set_modal();
+                    dlg->finished([](Fl_Widget* d, void*)
+                                  { Fl::delete_widget(d); });
+                    dlg->show();
+                  }
+                }, this, 0);
+
+  fltk_menu_add(contextMenu, p_("ContextMenu|",
+                                "About &TigerVNC viewer..."), 0,
+                [](Fl_Widget*, void*) {
+                  about_vncviewer();
+                }, nullptr, 0);
 }
-#pragma GCC diagnostic pop
 
 void Viewport::popupContextMenu()
 {
-  const Fl_Menu_Item *m;
-  char buffer[1024];
-
   // Make sure the menu is reset to its initial state between goes or
   // it will start up highlighting the previously selected entry.
   contextMenu->value(-1);
@@ -729,95 +808,14 @@ void Viewport::popupContextMenu()
   // FLTK also doesn't switch focus properly for menus
   handle(FL_UNFOCUS);
 
-  m = contextMenu->popup();
+  // FIXME: This is blocking, but FLTK has no non-blocking API
+  contextMenu->popup();
 
   handle(FL_FOCUS);
 
   // Back to our proper mouse pointer.
   if (Fl::belowmouse())
     window()->cursor(cursor, cursorHotspot.x, cursorHotspot.y);
-
-  if (m == nullptr)
-    return;
-
-  switch (m->argument()) {
-  case ID_DISCONNECT:
-    disconnect();
-    break;
-  case ID_FULLSCREEN:
-    if (window()->fullscreen_active())
-      window()->fullscreen_off();
-    else
-      ((DesktopWindow*)window())->fullscreen_on();
-    break;
-  case ID_MINIMIZE:
-#ifdef __APPLE__
-    // FIXME: Workaround for not being able to minimize in fullscreen
-    // https://github.com/TigerVNC/tigervnc/pull/1813
-    if (window()->fullscreen_active())
-      window()->fullscreen_off();
-#endif
-    window()->iconize();
-    break;
-  case ID_RESIZE:
-    if (window()->fullscreen_active())
-      break;
-    window()->size(w(), h());
-    break;
-  case ID_CTRL:
-    if (m->value())
-      sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-    else
-      sendKeyRelease(FAKE_CTRL_KEY_CODE);
-    menuCtrlKey = !menuCtrlKey;
-    break;
-  case ID_ALT:
-    if (m->value())
-      sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-    else
-      sendKeyRelease(FAKE_ALT_KEY_CODE);
-    menuAltKey = !menuAltKey;
-    break;
-  case ID_MENUKEY:
-    sendKeyPress(FAKE_KEY_CODE, menuKeyCode, menuKeySym);
-    sendKeyRelease(FAKE_KEY_CODE);
-    break;
-  case ID_CTRLALTDEL:
-    sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-    sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-    sendKeyPress(FAKE_DEL_KEY_CODE, 0xd3, XK_Delete);
-
-    sendKeyRelease(FAKE_DEL_KEY_CODE);
-    sendKeyRelease(FAKE_ALT_KEY_CODE);
-    sendKeyRelease(FAKE_CTRL_KEY_CODE);
-    break;
-  case ID_REFRESH:
-    cc->refreshFramebuffer();
-    break;
-  case ID_OPTIONS:
-    {
-      OptionsDialog* dlg;
-
-      dlg = new OptionsDialog();
-      dlg->set_modal();
-      dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
-      dlg->show();
-    }
-    break;
-  case ID_INFO:
-    if (fltk_escape(cc->connectionInfo(), buffer, sizeof(buffer)) < sizeof(buffer)) {
-      Fl_Message_Box* dlg;
-
-      dlg = new Fl_Message_Box(_("VNC connection info"), "%s", buffer);
-      dlg->set_modal();
-      dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
-      dlg->show();
-    }
-    break;
-  case ID_ABOUT:
-    about_vncviewer();
-    break;
-  }
 }
 
 
