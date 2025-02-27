@@ -26,6 +26,9 @@ jobs:
             https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-fltk-1.3.9-2-any.pkg.tar.zst
       - name: Configure
         run: cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Debug -S . -B build
+      - name: Dump log
+        if: always()
+        run: cat build/CMakeFiles/CMakeConfigureLog.yaml
       - name: Build
         run: cmake --build build
       - name: Install
