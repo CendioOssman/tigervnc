@@ -101,7 +101,7 @@ endif()
 
 if(MSVC)
   # undef min and max macro
-  target_compile_definitions(rfb PRIVATE NOMINMAX)
+  add_compile_definitions(NOMINMAX)
 endif()
 
 if(NOT DEFINED BUILD_WINVNC)
