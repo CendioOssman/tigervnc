@@ -304,7 +304,9 @@ if(BUILD_VIEWER)
     endif()
   endif()
 
+  if(!MSVC)
   set(CMAKE_REQUIRED_FLAGS "-Wno-error")
+  endif()
   set(CMAKE_REQUIRED_INCLUDES ${FLTK_INCLUDE_DIR})
   set(CMAKE_REQUIRED_LIBRARIES ${FLTK_LIBRARIES})
 
