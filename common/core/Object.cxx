@@ -62,7 +62,7 @@ Object::~Object()
   }
 }
 
-void Object::registerSignal(const char* name)
+void Object::registerSignal(const char* name, size_t argType)
 {
   assert(name);
 
@@ -71,6 +71,8 @@ void Object::registerSignal(const char* name)
 
   // Just to force it being created
   signalReceivers[name].clear();
+
+  signalArgTypes[name] = argType;
 }
 
 void Object::emitSignal(const char* name)
@@ -82,6 +84,9 @@ void Object::emitSignal(const char* name)
 
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot emit unknown signal %s", name));
+
+  if (signalArgTypes[name] != typeid(void).hash_code())
+    throw std::logic_error(format("Missing data when emitting signal %s", name));
 
   // Convoluted iteration so that we safely handle changes to
   // the list
@@ -107,6 +112,12 @@ void Object::emitSignal(const char* name, const any& info)
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot emit unknown signal %s", name));
 
+  if (signalArgTypes[name] == typeid(void).hash_code())
+    throw std::logic_error(format("Unexpected data emitting signal %s", name));
+
+  if (signalArgTypes[name] != info.type().hash_code())
+    throw std::logic_error(format("Incompatible signal data emitting signal %s", name));
+
   // Convoluted iteration so that we safely handle changes to
   // the list
   siglist = signalReceivers[name];
@@ -123,7 +134,8 @@ void Object::emitSignal(const char* name, const any& info)
 
 Connection Object::connectSignal(const char* name, Object* obj,
                                  const comp_any& callback,
-                                 const emitter_t& emitter)
+                                 const emitter_t& emitter,
+                                 size_t argType)
 {
   ReceiverList::iterator iter;
   Connection connection;
@@ -133,6 +145,19 @@ Connection Object::connectSignal(const char* name, Object* obj,
 
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot connect to unknown signal %s", name));
+
+  if (signalArgTypes[name] == typeid(void).hash_code()) {
+    if (argType != typeid(void).hash_code())
+      throw std::logic_error(format("Unexpected callback data argument "
+                                    "for signal %s", name));
+  } else {
+    if (argType == typeid(void).hash_code())
+      throw std::logic_error(format("Missing callback data argument "
+                                    "for signal %s", name));
+    if (argType != signalArgTypes[name])
+      throw std::logic_error(format("Incompatible callback data "
+                                    "argument for signal %s", name));
+  }
 
   connection = {name, this, obj, callback};
 
