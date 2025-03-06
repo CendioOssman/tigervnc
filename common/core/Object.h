@@ -31,6 +31,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <typeinfo>
 
 #include <core/any.h>
 #include <core/comp_any.h>
@@ -81,12 +82,16 @@ namespace core {
   protected:
     // registerSignal() registers a new signal type with the specified
     // name. This must always be done before connectSignal() or
-    // emitSignal() is used.
+    // emitSignal() is used. If the signal will include signal
+    // information, then the typed version must be called with the
+    // intended type that will be used with emitSignal().
+    void registerSignal(const char* name);
+    template<typename I>
     void registerSignal(const char* name);
 
     // emitSignal() calls all the registered object methods for the
     // specified name. Inclusion of signal information must match the
-    // connected methods or an exception will be thrown.
+    // type from registerSignal() or an exception will be thrown.
     void emitSignal(const char* name);
     template<typename I>
     void emitSignal(const char* name, const I& info);
@@ -95,11 +100,14 @@ namespace core {
     // Wrapper to contain member function pointers
     typedef std::function<void(const any&)> emitter_t;
 
+    void registerSignal(const char* name, size_t argType);
+
     void emitSignal(const char* name, const any& info);
 
     Connection connectSignal(const char* name, Object* obj,
                              const comp_any& callback,
-                             const emitter_t& emitter);
+                             const emitter_t& emitter,
+                             size_t argType);
 
   private:
     // Signal handling makes these objects difficult to copy, so it
@@ -113,6 +121,8 @@ namespace core {
 
     // Mapping between signal names and the methods receiving them
     std::map<std::string, ReceiverList> signalReceivers;
+    // Signal argument type information (void if no argument)
+    std::map<std::string, size_t> signalArgTypes;
 
     // Other objects that we have connected to signals on
     std::set<Object*> connectedObjects;
@@ -147,7 +157,8 @@ namespace core {
       assert(!info.has_value());
       (obj->*callback)(sender, name);
     };
-    return connectSignal(name, obj, callback, emitter);
+    return connectSignal(name, obj, callback, emitter,
+                         typeid(void).hash_code());
   }
 
   template<class T, class S, typename I>
@@ -162,7 +173,8 @@ namespace core {
       using I_d = typename std::decay<I>::type;
       (obj->*callback)(sender, name, any_cast<I_d>(info));
     };
-    return connectSignal(name, obj, callback, emitter);
+    return connectSignal(name, obj, callback, emitter,
+                         typeid(I).hash_code());
   }
 
   template<class T, class S>
@@ -177,6 +189,17 @@ namespace core {
                                 void (T::*callback)(S*, const char*, I))
   {
     disconnectSignal({name, this, obj, callback});
+  }
+
+  inline void Object::registerSignal(const char* name)
+  {
+    registerSignal(name, typeid(void).hash_code());
+  }
+
+  template<typename I>
+  void Object::registerSignal(const char* name)
+  {
+    registerSignal(name, typeid(I).hash_code());
   }
 
   template<typename I>
