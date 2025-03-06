@@ -46,6 +46,15 @@ public:
 
   void genericHandler(Object*, const char*) { callCount++; }
   void otherGenericHandler(Object*, const char*) { callCount++; }
+
+  void registerHandler(Object* s, const char* signal)
+  {
+    s->connectSignal(signal, this, &Receiver::genericHandler);
+  }
+  void unregisterHandler(Object* s, const char* signal)
+  {
+    s->disconnectSignal(signal, this, &Receiver::genericHandler);
+  }
 };
 
 TEST(Signals, doubleRegister)
@@ -196,6 +205,33 @@ TEST(Signals, disconnectUnknown)
   EXPECT_THROW({
     s.disconnectSignal("nosignal", &r, &Receiver::genericHandler);
   }, std::logic_error);
+}
+
+TEST(Signals, addWhileEmitting)
+{
+  Sender s;
+  Receiver r;
+
+  callCount = 0;
+  s.registerSignal("asignal");
+  s.connectSignal("asignal", &r, &Receiver::registerHandler);
+  s.connectSignal("asignal", &r, &Receiver::otherGenericHandler);
+  s.emitSignal("asignal");
+  EXPECT_EQ(callCount, 1);
+}
+
+TEST(Signals, removeWhileEmitting)
+{
+  Sender s;
+  Receiver r;
+
+  callCount = 0;
+  s.registerSignal("rsignal");
+  s.connectSignal("rsignal", &r, &Receiver::unregisterHandler);
+  s.connectSignal("rsignal", &r, &Receiver::genericHandler);
+  s.connectSignal("rsignal", &r, &Receiver::otherGenericHandler);
+  s.emitSignal("rsignal");
+  EXPECT_EQ(callCount, 1);
 }
 
 int main(int argc, char** argv)
