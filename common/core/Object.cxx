@@ -22,6 +22,7 @@
 
 #include <assert.h>
 
+#include <algorithm>
 #include <stdexcept>
 
 #include <core/Object.h>
@@ -61,6 +62,7 @@ void Object::registerSignal(const char* name)
 
 void Object::emitSignal(const char* name)
 {
+  ReceiverList siglist;
   ReceiverList::iterator iter;
 
   assert(name);
@@ -68,9 +70,18 @@ void Object::emitSignal(const char* name)
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot emit unknown signal %s", name));
 
-  for (iter = signalReceivers[name].begin();
-       iter != signalReceivers[name].end(); ++iter)
+  // Convoluted iteration so that we safely handle changes to
+  // the list
+  siglist = signalReceivers[name];
+  for (iter = siglist.begin(); iter != siglist.end(); ++iter) {
+    if (std::find_if(signalReceivers[name].begin(),
+                     signalReceivers[name].end(),
+                     [iter](const SignalReceiver& recv) {
+                       return recv.connection == iter->connection;
+                     }) == signalReceivers[name].end())
+      continue;
     iter->emitter();
+  }
 }
 
 Connection Object::connectSignal(const char* name, Object* obj,
