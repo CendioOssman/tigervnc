@@ -34,6 +34,12 @@ public:
   {
     core::Object::registerSignal(name);
   }
+  template<typename I>
+  void registerSignal(const char* name)
+  {
+    core::Object::registerSignal<I>(name);
+  }
+
   void emitSignal(const char* name)
   {
     core::Object::emitSignal(name);
@@ -103,6 +109,17 @@ TEST(Signals, doubleRegister)
   }, std::logic_error);
 }
 
+TEST(Signals, doubleRegisterArg)
+{
+  Sender s;
+
+  s.registerSignal<const char*>("signal");
+  EXPECT_THROW({
+    // Doesn't matter that the type differs
+    s.registerSignal<int>("signal");
+  }, std::logic_error);
+}
+
 TEST(Signals, emitUnknown)
 {
   Sender s;
@@ -113,6 +130,36 @@ TEST(Signals, emitUnknown)
 
   EXPECT_THROW({
     s.emitSignal("nosignal", "data");
+  }, std::logic_error);
+}
+
+TEST(Signals, emitUnexpectedData)
+{
+  Sender s;
+
+  s.registerSignal("signal");
+  EXPECT_THROW({
+    s.emitSignal("signal", "data");
+  }, std::logic_error);
+}
+
+TEST(Signals, emitMissingData)
+{
+  Sender s;
+
+  s.registerSignal<const char*>("signal");
+  EXPECT_THROW({
+    s.emitSignal("signal");
+  }, std::logic_error);
+}
+
+TEST(Signals, emitWrongData)
+{
+  Sender s;
+
+  s.registerSignal<const char*>("signal");
+  EXPECT_THROW({
+    s.emitSignal("signal", 1234);
   }, std::logic_error);
 }
 
@@ -143,7 +190,7 @@ TYPED_TEST(SignalsArgs, connectSignalArg)
 
   /* Generic handler */
   callCount = 0;
-  s.registerSignal("gsignal");
+  s.registerSignal<TypeParam>("gsignal");
   s.connectSignal("gsignal", &r,
                   &Receiver::genericTypeHandler<TypeParam>);
   s.emitSignal("gsignal", TestFixture::value);
@@ -151,7 +198,7 @@ TYPED_TEST(SignalsArgs, connectSignalArg)
 
   /* Specific handler */
   callCount = 0;
-  s.registerSignal("ssignal");
+  s.registerSignal<TypeParam>("ssignal");
   s.connectSignal("ssignal", &r,
                   &Receiver::specificTypeHandler<TypeParam>);
   s.emitSignal("ssignal", TestFixture::value);
@@ -196,12 +243,47 @@ TYPED_TEST(SignalsArgs, doubleConnectArg)
   Sender s;
   Receiver r;
 
-  s.registerSignal("dblsignal");
+  s.registerSignal<TypeParam>("dblsignal");
   s.connectSignal("dblsignal", &r,
                   &Receiver::genericTypeHandler<TypeParam>);
   EXPECT_THROW({
     s.connectSignal("dblsignal", &r,
                     &Receiver::genericTypeHandler<TypeParam>);
+  }, std::logic_error);
+}
+
+TEST(Signals, connectUnexpectedData)
+{
+  Sender s;
+  Receiver r;
+
+  s.registerSignal("nodata");
+  EXPECT_THROW({
+    s.connectSignal("nodata", &r,
+                    &Receiver::genericTypeHandler<const char*>);
+  }, std::logic_error);
+}
+
+TEST(Signals, connectMissingData)
+{
+  Sender s;
+  Receiver r;
+
+  s.registerSignal<int>("withdata");
+  EXPECT_THROW({
+    s.connectSignal("withdata", &r, &Receiver::genericHandler);
+  }, std::logic_error);
+}
+
+TEST(Signals, connectWrongData)
+{
+  Sender s;
+  Receiver r;
+
+  s.registerSignal<int>("withdata");
+  EXPECT_THROW({
+    s.connectSignal("withdata", &r,
+                    &Receiver::genericTypeHandler<const char*>);
   }, std::logic_error);
 }
 
@@ -261,7 +343,7 @@ TYPED_TEST(SignalsArgs, disconnectSignalArg)
 
   /* Generic handler with args */
   callCount = 0;
-  s.registerSignal("gsignal");
+  s.registerSignal<TypeParam>("gsignal");
   c = s.connectSignal("gsignal", &r,
                       &Receiver::genericTypeHandler<TypeParam>);
   s.disconnectSignal(c);
@@ -270,7 +352,7 @@ TYPED_TEST(SignalsArgs, disconnectSignalArg)
 
   /* Specific handler with args */
   callCount = 0;
-  s.registerSignal("ssignal");
+  s.registerSignal<TypeParam>("ssignal");
   c = s.connectSignal("ssignal", &r,
                       &Receiver::specificTypeHandler<TypeParam>);
   s.disconnectSignal(c);
@@ -350,7 +432,7 @@ TYPED_TEST(SignalsArgs, disconnectHelperArg)
 
   /* Generic handler */
   callCount = 0;
-  s.registerSignal("gsignal");
+  s.registerSignal<TypeParam>("gsignal");
   s.connectSignal("gsignal", &r,
                   &Receiver::genericTypeHandler<TypeParam>);
   s.disconnectSignal("gsignal", &r,
@@ -360,7 +442,7 @@ TYPED_TEST(SignalsArgs, disconnectHelperArg)
 
   /* Specific handler */
   callCount = 0;
-  s.registerSignal("ssignal");
+  s.registerSignal<TypeParam>("ssignal");
   s.connectSignal("ssignal", &r,
                   &Receiver::specificTypeHandler<TypeParam>);
   s.disconnectSignal("ssignal", &r,
@@ -389,7 +471,7 @@ TYPED_TEST(SignalsArgs, disconnectSimilarArg)
   Receiver r;
 
   callCount = 0;
-  s.registerSignal("osignal");
+  s.registerSignal<TypeParam>("osignal");
   s.connectSignal("osignal", &r,
                   &Receiver::genericTypeHandler<TypeParam>);
   s.connectSignal("osignal", &r,
@@ -430,7 +512,7 @@ TEST(Signals, disconnectAll)
   callCount = 0;
   s.registerSignal("signal1");
   s.registerSignal("signal2");
-  s.registerSignal("signal3");
+  s.registerSignal<const char*>("signal3");
   s.connectSignal("signal1", &r, &Receiver::genericHandler);
   s.connectSignal("signal2", &r, &Receiver::genericHandler);
   s.connectSignal("signal3", &r,
@@ -491,7 +573,7 @@ TYPED_TEST(SignalsArgs, emitRefConversion)
 
   /* Receiver adds reference */
   callCount = 0;
-  s.registerSignal("refhandler");
+  s.registerSignal<TypeParam>("refhandler");
   s.connectSignal("refhandler", &r,
                   &Receiver::genericTypeHandler<const TypeParam&>);
   s.emitSignal("refhandler", TestFixture::value);
@@ -499,7 +581,7 @@ TYPED_TEST(SignalsArgs, emitRefConversion)
 
   /* Sender adds reference */
   callCount = 0;
-  s.registerSignal("refemitter");
+  s.registerSignal<const TypeParam&>("refemitter");
   s.connectSignal("refemitter", &r,
                   &Receiver::genericTypeHandler<const TypeParam&>);
   s.emitSignal("refemitter", TestFixture::value);
@@ -517,7 +599,7 @@ TYPED_TEST(SignalsArgs, emitConstConversion)
 
   /* Receiver adds pointer const qualifier */
   callCount = 0;
-  s.registerSignal("consthandler");
+  s.registerSignal<TypeParam*>("consthandler");
   s.connectSignal("consthandler", &r,
                   &Receiver::genericTypeHandler<const TypeParam*>);
   s.emitSignal("consthandler", &value);
@@ -525,7 +607,7 @@ TYPED_TEST(SignalsArgs, emitConstConversion)
 
   /* Sender adds pointer const qualifier */
   callCount = 0;
-  s.registerSignal("constemitter");
+  s.registerSignal<const TypeParam*>("constemitter");
   s.connectSignal("constemitter", &r,
                   &Receiver::genericTypeHandler<const TypeParam*>);
   s.emitSignal("constemitter", &value);
