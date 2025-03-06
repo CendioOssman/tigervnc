@@ -22,6 +22,7 @@
 
 #include <assert.h>
 
+#include <algorithm>
 #include <stdexcept>
 
 #include <core/Object.h>
@@ -77,10 +78,20 @@ void signal::disconnect(const Connection connection)
 
 void signal::emit()
 {
+  ReceiverList siglist;
   ReceiverList::iterator iter;
 
-  for (iter = receivers.begin(); iter != receivers.end(); ++iter)
+  // Convoluted iteration so that we safely handle changes to
+  // the list
+  siglist = receivers;
+  for (iter = siglist.begin(); iter != siglist.end(); ++iter) {
+    if (std::find_if(receivers.begin(), receivers.end(),
+                     [iter](const SignalReceiver& recv) {
+                       return recv.connection == iter->connection;
+                     }) == receivers.end())
+      continue;
     iter->emitter();
+  }
 }
 
 Object::Object()

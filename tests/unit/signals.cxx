@@ -44,6 +44,15 @@ public:
 
   void genericHandler(Object*) { callCount++; }
   void otherGenericHandler(Object*) { callCount++; }
+
+  void registerHandler(Object* s)
+  {
+    s->connectSignal(((Sender*)s)->gsignal, this, &Receiver::genericHandler);
+  }
+  void unregisterHandler(Object* s)
+  {
+    s->disconnectSignal(((Sender*)s)->gsignal, this, &Receiver::genericHandler);
+  }
 };
 
 TEST(Signals, connectSignal)
@@ -131,6 +140,31 @@ TEST(Signals, disconnectSimilar)
   s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
   s.connectSignal(s.gsignal, &r, &Receiver::otherGenericHandler);
   s.disconnectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  s.emitSignal(s.gsignal);
+  EXPECT_EQ(callCount, 1);
+}
+
+TEST(Signals, addWhileEmitting)
+{
+  Sender s;
+  Receiver r;
+
+  callCount = 0;
+  s.connectSignal(s.gsignal, &r, &Receiver::registerHandler);
+  s.connectSignal(s.gsignal, &r, &Receiver::otherGenericHandler);
+  s.emitSignal(s.gsignal);
+  EXPECT_EQ(callCount, 1);
+}
+
+TEST(Signals, removeWhileEmitting)
+{
+  Sender s;
+  Receiver r;
+
+  callCount = 0;
+  s.connectSignal(s.gsignal, &r, &Receiver::unregisterHandler);
+  s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  s.connectSignal(s.gsignal, &r, &Receiver::otherGenericHandler);
   s.emitSignal(s.gsignal);
   EXPECT_EQ(callCount, 1);
 }
