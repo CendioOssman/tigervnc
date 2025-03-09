@@ -57,7 +57,8 @@ config-stamp: xorg-source-stamp
 		-DBUILD_STATIC=off \
 		-DCMAKE_INSTALL_PREFIX:PATH=/usr \
 		-DCMAKE_INSTALL_LIBEXECDIR:PATH=lib/$(DEB_HOST_MULTIARCH) \
-		-DCMAKE_INSTALL_UNITDIR:PATH=/lib/systemd/system
+		-DCMAKE_INSTALL_UNITDIR:PATH=/lib/systemd/system \
+		-DCMAKE_CXX_STANDARD_LIBRARIES="-lpthread"
 	(cd unix/xserver; \
 	export PIXMANINCDIR=/usr/include/pixman-1; \
 	autoreconf -fiv; \

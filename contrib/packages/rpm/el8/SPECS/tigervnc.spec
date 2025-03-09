@@ -139,7 +139,7 @@ export CFLAGS="$RPM_OPT_FLAGS -fpic"
 %endif
 export CXXFLAGS="$CFLAGS -std=c++11"
 
-%cmake
+%cmake -DCMAKE_CXX_STANDARD_LIBRARIES="-lpthread"
 
 %cmake_build
 
