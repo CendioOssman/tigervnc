@@ -1,4 +1,4 @@
-/* Copyright 2022-2024 Pierre Ossman for Cendio AB
+/* Copyright 2022-2025 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ using namespace core;
 static bool operator==(const Connection& a, const Connection& b)
 {
   return a.name == b.name && a.src == b.src && a.dst == b.dst &&
-         a.callback == b.callback;
+         a.comparer(a.callback, b.callback);
 }
 
 struct Object::SignalReceiver {
@@ -165,11 +165,13 @@ Connection Object::connectSignal(const char* name, Object* obj,
   static uint64_t index = 0;
   // This callback is not possible to check for uniqueness, so instead
   // we assume every call is unique and track them using an index.
-  return connectSignal(name, obj, index++, emitter, argType);
+  return connectSignal(name, obj, index++, compareAny<typeof(index)>,
+                       emitter, argType);
 }
 
 Connection Object::connectSignal(const char* name, Object* obj,
-                                 const comp_any& callback,
+                                 const any& callback,
+                                 bool (*comparer)(const any&, const any&),
                                  const emitter_t& emitter,
                                  size_t argType)
 {
@@ -194,7 +196,7 @@ Connection Object::connectSignal(const char* name, Object* obj,
                                     "argument for signal %s", name));
   }
 
-  connection = {name, this, obj, callback};
+  connection = {name, this, obj, callback, comparer};
 
   for (iter = signalReceivers[name].begin();
        iter != signalReceivers[name].end(); ++iter) {

@@ -1,4 +1,4 @@
-/* Copyright 2022-2024 Pierre Ossman for Cendio AB
+/* Copyright 2022-2025 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,6 @@
 #include <typeinfo>
 
 #include <core/any.h>
-#include <core/comp_any.h>
 
 namespace core {
 
@@ -133,9 +132,15 @@ namespace core {
                              const emitter_t& emitter,
                              size_t argType);
     Connection connectSignal(const char* name, Object* obj,
-                             const comp_any& callback,
+                             const any& callback,
+                             bool (*comparer)(const any&, const any&),
                              const emitter_t& emitter,
                              size_t argType);
+
+    // Compares two any objects, returning true if they are both type T
+    // and have the same value
+    template<class T>
+    static bool compareAny(const any& a, const any& b);
 
   private:
     // Signal handling makes these objects difficult to copy, so it
@@ -166,7 +171,8 @@ namespace core {
     std::string name;
     Object* src;
     Object* dst;
-    comp_any callback;
+    any callback;
+    bool (*comparer)(const any&, const any&);
   };
 
   //////////////////////////////////////////////////////////////////////
@@ -183,7 +189,8 @@ namespace core {
       (obj->*callback)();
     };
     assert(obj);
-    return connectSignal(name, obj, callback, emitter,
+    return connectSignal(name, obj, callback,
+                         compareAny<typeof(callback)>, emitter,
                          typeid(void).hash_code());
   }
 
@@ -199,7 +206,8 @@ namespace core {
       (obj->*callback)(sender, name);
     };
     assert(obj);
-    return connectSignal(name, obj, callback, emitter,
+    return connectSignal(name, obj, callback,
+                         compareAny<typeof(callback)>, emitter,
                          typeid(void).hash_code());
   }
 
@@ -213,7 +221,8 @@ namespace core {
       (obj->*callback)(any_cast<I_d>(info));
     };
     assert(obj);
-    return connectSignal(name, obj, callback, emitter,
+    return connectSignal(name, obj, callback,
+                         compareAny<typeof(callback)>, emitter,
                          typeid(I).hash_code());
   }
 
@@ -230,7 +239,8 @@ namespace core {
       (obj->*callback)(sender, name, any_cast<I_d>(info));
     };
     assert(obj);
-    return connectSignal(name, obj, callback, emitter,
+    return connectSignal(name, obj, callback,
+                         compareAny<typeof(callback)>, emitter,
                          typeid(I).hash_code());
   }
 
@@ -268,28 +278,32 @@ namespace core {
   void Object::disconnectSignal(const char* name, T* obj,
                                 void (T::*callback)())
   {
-    disconnectSignal({name, this, obj, callback});
+    disconnectSignal({name, this, obj, callback,
+                      compareAny<typeof(callback)>});
   }
 
   template<class T, class S>
   void Object::disconnectSignal(const char* name, T* obj,
                                 void (T::*callback)(S*, const char*))
   {
-    disconnectSignal({name, this, obj, callback});
+    disconnectSignal({name, this, obj, callback,
+                      compareAny<typeof(callback)>});
   }
 
   template<class T, typename I>
   void Object::disconnectSignal(const char* name, T* obj,
                                 void (T::*callback)(I))
   {
-    disconnectSignal({name, this, obj, callback});
+    disconnectSignal({name, this, obj, callback,
+                      compareAny<typeof(callback)>});
   }
 
   template<class T, class S, typename I>
   void Object::disconnectSignal(const char* name, T* obj,
                                 void (T::*callback)(S*, const char*, I))
   {
-    disconnectSignal({name, this, obj, callback});
+    disconnectSignal({name, this, obj, callback,
+                      compareAny<typeof(callback)>});
   }
 
   inline void Object::registerSignal(const char* name)
@@ -307,6 +321,18 @@ namespace core {
   void Object::emitSignal(const char* name, const I& info)
   {
     emitSignal(name, any(info));
+  }
+
+  template<class T>
+  bool Object::compareAny(const any& a, const any& b)
+  {
+    try {
+      const T& va = any_cast<T>(a);
+      const T& vb = any_cast<T>(b);
+      return std::equal_to<T>()(va, vb);
+    } catch (const std::bad_cast&) {
+      return false;
+    }
   }
 
 }
