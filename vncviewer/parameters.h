@@ -40,16 +40,6 @@ extern core::EnumParameter cursorType;
 
 extern core::StringParameter passwordFile;
 
-extern core::BoolParameter autoSelect;
-extern core::BoolParameter fullColour;
-extern core::AliasParameter fullColourAlias;
-extern core::IntParameter lowColourLevel;
-extern core::AliasParameter lowColourLevelAlias;
-extern core::EnumParameter preferredEncoding;
-extern core::BoolParameter customCompressLevel;
-extern core::IntParameter compressLevel;
-extern core::IntParameter qualityLevel;
-
 extern core::BoolParameter maximize;
 extern core::BoolParameter fullScreen;
 extern core::EnumParameter fullScreenMode;

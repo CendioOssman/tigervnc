@@ -98,51 +98,6 @@ core::AliasParameter
   passwd("passwd", "Alias for PasswordFile", &passwordFile);
 
 core::BoolParameter
-  autoSelect("AutoSelect",
-             "Auto select pixel format and encoding. Default if "
-             "PreferredEncoding and FullColor are not specified.",
-             true);
-core::BoolParameter
-  fullColour("FullColor", "Use full color", true);
-core::AliasParameter
-  fullColourAlias("FullColour", "Alias for FullColor", &fullColour);
-core::IntParameter
-  lowColourLevel("LowColorLevel",
-                 "Color level to use on slow connections. "
-                 "0 = Very Low, 1 = Low, 2 = Medium",
-                 2, 0, 2);
-core::AliasParameter
-  lowColourLevelAlias("LowColourLevel",
-                      "Alias for LowColorLevel", &lowColourLevel);
-core::EnumParameter
-  preferredEncoding("PreferredEncoding",
-                    "Preferred encoding to use (Tight, JPEG, ZRLE, "
-                    "Hextile, "
-#ifdef HAVE_H264
-                    "H.264, "
-#endif
-                    "or Raw)",
-                    {"Tight", "JPEG", "ZRLE", "Hextile",
-#ifdef HAVE_H264
-                     "H.264",
-#endif
-                     "Raw"},
-                    "Tight");
-core::BoolParameter
-  customCompressLevel("CustomCompressLevel",
-                      "Use custom compression level. Default if "
-                      "CompressLevel is specified.",
-                      false);
-core::IntParameter
-  compressLevel("CompressLevel",
-                "Use specified compression level 0 = Low, 9 = High",
-                2, 0, 9);
-core::IntParameter
-  qualityLevel("QualityLevel",
-               "JPEG quality level. 0 = Low, 9 = High",
-               8, 0, 9);
-
-core::BoolParameter
   maximize("Maximize", "Maximize viewer window", false);
 core::BoolParameter
   fullScreen("FullScreen", "Enable full screen", false);

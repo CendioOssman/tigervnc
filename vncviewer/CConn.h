@@ -63,18 +63,12 @@ protected:
                               int w, int h,
                               const rfb::ScreenSet& layout) override;
 
-  void framebufferUpdateStart() override;
   void framebufferUpdateEnd() override;
   bool dataRect(const core::Rect& r, int encoding) override;
 
 private:
 
   void connectionReady();
-
-  void updateEncoding();
-  void updateCompressLevel();
-  void updateQualityLevel();
-  void updatePixelFormat();
 
 private:
   std::string serverHost;
@@ -89,10 +83,6 @@ private:
   rfb::PixelFormat fullColourPF;
 
   int lastServerEncoding;
-
-  struct timeval updateStartTime;
-  size_t updateStartPos;
-  unsigned long long bpsEstimate;
 
   UserDialog dlg;
 };

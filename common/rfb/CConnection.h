@@ -35,6 +35,13 @@
 #include <rfb/PixelFormat.h>
 #include <rfb/SecurityClient.h>
 
+namespace core {
+  class AliasParameter;
+  class BoolParameter;
+  class EnumParameter;
+  class IntParameter;
+}
+
 namespace rdr {
   class InStream;
   class OutStream;
@@ -66,7 +73,16 @@ namespace rfb {
 
     // Settings that control the connection
 
+    static core::BoolParameter autoSelect;
+    static core::BoolParameter fullColour;
+    static core::AliasParameter fullColourAlias;
+    static core::IntParameter lowColourLevel;
+    static core::AliasParameter lowColourLevelAlias;
+    static core::EnumParameter preferredEncoding;
+    static core::BoolParameter customCompressLevel;
+    static core::IntParameter compressLevel;
     static core::BoolParameter noJpeg;
+    static core::IntParameter qualityLevel;
 
     // Methods to initialise the connection
 
@@ -142,22 +158,6 @@ namespace rfb {
     // refreshFramebuffer() forces a complete refresh of the entire
     // framebuffer
     void refreshFramebuffer();
-
-    // setPreferredEncoding()/getPreferredEncoding() adjusts which
-    // encoding is listed first as a hint to the server that it is the
-    // preferred one
-    void setPreferredEncoding(int encoding);
-    int getPreferredEncoding();
-    // setCompressLevel()/setQualityLevel() controls the encoding hints
-    // sent to the server
-    void setCompressLevel(int level);
-    int getCompressLevel();
-    void setQualityLevel(int level);
-    int getQualityLevel();
-    // setPF() controls the pixel format requested from the server.
-    // server.pf() will automatically be adjusted once the new format
-    // is active.
-    void setPF(const PixelFormat& pf);
 
     CMsgReader* reader() { return reader_; }
     CMsgWriter* writer() { return writer_; }
@@ -328,6 +328,10 @@ namespace rfb {
 
     void requestNewUpdate();
     void updateEncodings();
+    void updateEncoding();
+    void updateCompressLevel();
+    void updateQualityLevel();
+    void updatePixelFormat();
 
     rdr::InStream* is;
     rdr::OutStream* os;
@@ -342,9 +346,7 @@ namespace rfb {
     bool pendingPFChange;
     rfb::PixelFormat pendingPF;
 
-    int preferredEncoding;
-    int compressLevel;
-    int qualityLevel;
+    int activeQualityLevel;
 
     bool formatChange;
     rfb::PixelFormat nextPF;
@@ -355,6 +357,10 @@ namespace rfb {
     bool continuousUpdates;
 
     bool forceNonincremental;
+
+    struct timeval updateStartTime;
+    size_t updateStartPos;
+    unsigned long long bpsEstimate;
 
     ModifiablePixelBuffer* framebuffer;
     DecodeManager decoder;

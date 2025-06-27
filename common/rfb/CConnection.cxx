@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include <algorithm>
 
@@ -56,9 +57,61 @@ using namespace rfb;
 
 static core::LogWriter vlog("CConnection");
 
-core::BoolParameter
-  CConnection::noJpeg("NoJPEG", "Disable lossy JPEG compression.",
-                      false);
+// 8 colours (1 bit per component)
+static const PixelFormat verylowColourPF(8, 3,false, true,
+                                         1, 1, 1, 2, 1, 0);
+// 64 colours (2 bits per component)
+static const PixelFormat lowColourPF(8, 6, false, true,
+                                     3, 3, 3, 4, 2, 0);
+// 256 colours (2-3 bits per component)
+static const PixelFormat mediumColourPF(8, 8, false, true,
+                                        7, 7, 3, 5, 2, 0);
+
+// Time new bandwidth estimates are weighted against (in ms)
+static const unsigned bpsEstimateWindow = 1000;
+
+core::BoolParameter CConnection::autoSelect(
+  "AutoSelect",
+  "Auto select pixel format and encoding. Default if PreferredEncoding "
+  "and FullColor are not specified.",
+  true);
+core::BoolParameter CConnection::fullColour("FullColor",
+                                            "Use full color", true);
+core::AliasParameter CConnection::fullColourAlias(
+  "FullColour", "Alias for FullColor", &fullColour);
+core::IntParameter CConnection::lowColourLevel(
+  "LowColorLevel",
+  "Color level to use on slow connections. 0 = Very Low, 1 = Low, 2 = "
+  "Medium",
+  2, 0, 2);
+core::AliasParameter CConnection::lowColourLevelAlias(
+  "LowColourLevel", "Alias for LowColorLevel", &lowColourLevel);
+core::EnumParameter CConnection::preferredEncoding(
+  "PreferredEncoding",
+  "Preferred encoding to use (Tight, JPEG, ZRLE, Hextile, "
+#ifdef HAVE_H264
+  "H.264, "
+#endif
+  "or Raw)",
+  {"Tight", "JPEG", "ZRLE", "Hextile",
+#ifdef HAVE_H264
+   "H.264",
+#endif
+   "Raw"},
+  "Tight");
+core::BoolParameter CConnection::customCompressLevel(
+  "CustomCompressLevel",
+  "Use custom compression level. Default if CompressLevel is "
+  "specified.",
+  false);
+core::IntParameter CConnection::compressLevel(
+  "CompressLevel",
+  "Use specified compression level 0 = Low, 9 = High",
+  2, 0, 9);
+core::BoolParameter CConnection::noJpeg(
+  "NoJPEG", "Disable lossy JPEG compression.", false);
+core::IntParameter CConnection::qualityLevel(
+  "QualityLevel", "JPEG quality level. 0 = Low, 9 = High", 8, 0, 9);
 
 CConnection::CConnection()
   : csecurity(nullptr),
@@ -67,9 +120,7 @@ CConnection::CConnection()
     is(nullptr), os(nullptr), reader_(nullptr), writer_(nullptr),
     shared(false),
     state_(RFBSTATE_UNINITIALISED),
-    pendingPFChange(false), preferredEncoding(encodingTight),
-    compressLevel(2), qualityLevel(-1),
-    formatChange(false), encodingChange(false),
+    pendingPFChange(false), formatChange(false), encodingChange(false),
     firstUpdate(true), pendingUpdate(false), continuousUpdates(false),
     forceNonincremental(true),
     framebuffer(nullptr), decoder(this),
@@ -582,11 +633,18 @@ void CConnection::framebufferUpdateStart()
 
   requestNewUpdate();
 
+  // For bandwidth estimate
+  gettimeofday(&updateStartTime, nullptr);
+  updateStartPos = is->pos();
+
   emitSignal("updatestart");
 }
 
 void CConnection::framebufferUpdateEnd()
 {
+  unsigned long long elapsed, bps, weight;
+  struct timeval now;
+
   decoder.flush();
 
   // A format change has been scheduled and we are now past the update
@@ -608,7 +666,130 @@ void CConnection::framebufferUpdateEnd()
     firstUpdate = false;
   }
 
+  // Calculate bandwidth everything managed to maintain during this update
+  gettimeofday(&now, nullptr);
+  elapsed = (now.tv_sec - updateStartTime.tv_sec) * 1000000;
+  elapsed += now.tv_usec - updateStartTime.tv_usec;
+  if (elapsed == 0)
+    elapsed = 1;
+  bps = (unsigned long long)(is->pos() - updateStartPos) * 8 *
+                            1000000 / elapsed;
+  // Allow this update to influence things more the longer it took, to a
+  // maximum of 20% of the new value.
+  weight = elapsed * 1000 / bpsEstimateWindow;
+  if (weight > 200000)
+    weight = 200000;
+  bpsEstimate = ((bpsEstimate * (1000000 - weight)) +
+                 (bps * weight)) / 1000000;
+
+  // Compute new settings based on updated bandwidth values
+  if (autoSelect) {
+    updateEncoding();
+    updateQualityLevel();
+    updatePixelFormat();
+  }
+
   emitSignal("updateend");
+}
+
+void CConnection::updateEncoding()
+{
+  int encNum;
+
+  if (autoSelect)
+    encNum = encodingTight;
+  else
+    encNum = encodingNum(preferredEncoding.getValueStr().c_str());
+
+  if (encNum != -1)
+    setPreferredEncoding(encNum);
+}
+
+void CConnection::updateCompressLevel()
+{
+  if (customCompressLevel)
+    setCompressLevel(::compressLevel);
+  else
+    setCompressLevel(-1);
+}
+
+void CConnection::updateQualityLevel()
+{
+  int newQualityLevel;
+
+  if (!autoSelect)
+    newQualityLevel = qualityLevel;
+  else {
+    // Above 16Mbps (i.e. LAN), we choose the second highest JPEG
+    // quality, which should be perceptually lossless. If the bandwidth
+    // is below that, we choose a more lossy JPEG quality.
+
+    if (bpsEstimate > 16000000)
+      newQualityLevel = 8;
+    else
+      newQualityLevel = 6;
+
+    if (newQualityLevel != activeQualityLevel) {
+      vlog.info("Throughput %d kbit/s - changing to quality %d",
+                (int)(bpsEstimate/1000), newQualityLevel);
+    }
+  }
+
+  activeQualityLevel = newQualityLevel;
+  encodingChange = true;
+}
+
+void CConnection::updatePixelFormat()
+{
+  bool useFullColour;
+  PixelFormat pf, fullColourPF;
+
+  if (server.beforeVersion(3, 8)) {
+    // Xvnc from TightVNC 1.2.9 sends out FramebufferUpdates with
+    // cursors "asynchronously". If this happens in the middle of a
+    // pixel format change, the server will encode the cursor with
+    // the old format, but the client will try to decode it
+    // according to the new format. This will lead to a
+    // crash. Therefore, we do not allow automatic format change for
+    // old servers.
+    return;
+  }
+
+  fullColourPF = getFramebuffer()->getPF();
+
+  useFullColour = fullColour;
+
+  // If the bandwidth drops below 256 Kbps, we switch to palette mode.
+  if (autoSelect) {
+    useFullColour = (bpsEstimate > 256000);
+    if (useFullColour != (server.pf() == fullColourPF)) {
+      if (useFullColour)
+        vlog.info("Throughput %d kbit/s - full color is now enabled",
+                  (int)(bpsEstimate/1000));
+      else
+        vlog.info("Throughput %d kbit/s - full color is now disabled",
+                  (int)(bpsEstimate/1000));
+    }
+  }
+
+  if (useFullColour) {
+    pf = fullColourPF;
+  } else {
+    if (lowColourLevel == 0)
+      pf = verylowColourPF;
+    else if (lowColourLevel == 1)
+      pf = lowColourPF;
+    else
+      pf = mediumColourPF;
+  }
+
+  if ((pf != server.pf()) || (pf != nextPF)) {
+    char str[256];
+    pf.print(str, 256);
+    vlog.info("Using pixel format %s",str);
+    nextPF = pf;
+    formatChange = true;
+  }
 }
 
 bool CConnection::dataRect(const core::Rect& r, int encoding)
@@ -899,56 +1080,41 @@ void CConnection::refreshFramebuffer()
     requestNewUpdate();
 }
 
-void CConnection::setPreferredEncoding(int encoding)
-{
-  if (preferredEncoding == encoding)
-    return;
+// void CConnection::setPreferredEncoding(int encoding)
+// {
+//   if (preferredEncoding == encoding)
+//     return;
 
-  preferredEncoding = encoding;
-  encodingChange = true;
-}
+//   preferredEncoding = encoding;
+//   encodingChange = true;
+// }
 
-int CConnection::getPreferredEncoding()
-{
-  return preferredEncoding;
-}
+// void CConnection::setCompressLevel(int level)
+// {
+//   if (compressLevel == level)
+//     return;
 
-void CConnection::setCompressLevel(int level)
-{
-  if (compressLevel == level)
-    return;
+//   compressLevel = level;
+//   encodingChange = true;
+// }
 
-  compressLevel = level;
-  encodingChange = true;
-}
+// void CConnection::setQualityLevel(int level)
+// {
+//   if (qualityLevel == level)
+//     return;
 
-int CConnection::getCompressLevel()
-{
-  return compressLevel;
-}
+//   qualityLevel = level;
+//   encodingChange = true;
+// }
 
-void CConnection::setQualityLevel(int level)
-{
-  if (qualityLevel == level)
-    return;
+// void CConnection::setPF(const PixelFormat& pf)
+// {
+//   if (server.pf() == pf && !formatChange)
+//     return;
 
-  qualityLevel = level;
-  encodingChange = true;
-}
-
-int CConnection::getQualityLevel()
-{
-  return qualityLevel;
-}
-
-void CConnection::setPF(const PixelFormat& pf)
-{
-  if (server.pf() == pf && !formatChange)
-    return;
-
-  nextPF = pf;
-  formatChange = true;
-}
+//   nextPF = pf;
+//   formatChange = true;
+// }
 
 bool CConnection::isSecure() const
 {
@@ -1008,6 +1174,7 @@ void CConnection::requestNewUpdate()
 void CConnection::updateEncodings()
 {
   std::list<uint32_t> encodings;
+  int preferredNum;
 
   if (supportsLocalCursor) {
     encodings.push_back(pseudoEncodingCursorWithAlpha);
@@ -1035,22 +1202,27 @@ void CConnection::updateEncodings()
   encodings.push_back(pseudoEncodingQEMUKeyEvent);
   encodings.push_back(pseudoEncodingExtendedMouseButtons);
 
-  if (Decoder::supported(preferredEncoding)) {
-    if (!noJpeg || preferredEncoding != encodingJPEG)
-      encodings.push_back(preferredEncoding);
+  if (autoSelect)
+    preferredNum = encodingTight;
+  else
+    preferredNum = encodingNum(preferredEncoding.getValueStr().c_str());
+
+  if ((preferredNum != -1) && Decoder::supported(preferredNum)) {
+    if (!noJpeg || preferredNum != encodingJPEG)
+      encodings.push_back(preferredNum);
   }
 
   encodings.push_back(encodingCopyRect);
 
   for (int i = encodingMax; i >= 0; i--) {
-    if ((i != preferredEncoding) && Decoder::supported(i)) {
+    if ((i != preferredNum) && Decoder::supported(i)) {
       if (noJpeg && i == encodingJPEG)
         continue;
       encodings.push_back(i);
     }
   }
 
-  if (compressLevel >= 0 && compressLevel <= 9)
+  if (customCompressLevel && (compressLevel >= 0 && compressLevel <= 9))
       encodings.push_back(pseudoEncodingCompressLevel0 + compressLevel);
   // Tight JPEG is enabled by setting a quality level
   if (!noJpeg) {

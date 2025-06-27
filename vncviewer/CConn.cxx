@@ -63,19 +63,6 @@
 
 static core::LogWriter vlog("CConn");
 
-// 8 colours (1 bit per component)
-static const rfb::PixelFormat verylowColourPF(8, 3,false, true,
-                                              1, 1, 1, 2, 1, 0);
-// 64 colours (2 bits per component)
-static const rfb::PixelFormat lowColourPF(8, 6, false, true,
-                                          3, 3, 3, 4, 2, 0);
-// 256 colours (2-3 bits per component)
-static const rfb::PixelFormat mediumColourPF(8, 8, false, true,
-                                             7, 7, 3, 5, 2, 0);
-
-// Time new bandwidth estimates are weighted against (in ms)
-static const unsigned bpsEstimateWindow = 1000;
-
 CConn::CConn()
   : serverPort(0), sock(nullptr), desktop(nullptr),
     updateCount(0), pixelCount(0),
@@ -91,11 +78,6 @@ CConn::CConn()
   connectSignal("ready", this, &CConn::connectionReady);
 
   connectSignal("bell", []() { fl_beep(); });
-
-  if (customCompressLevel)
-    setCompressLevel(::compressLevel);
-
-  setQualityLevel(::qualityLevel);
 }
 
 CConn::~CConn()
@@ -355,55 +337,11 @@ void CConn::setExtendedDesktopSize(unsigned reason, unsigned result,
     desktop->setDesktopSizeDone(result);
 }
 
-// framebufferUpdateStart() is called at the beginning of an update.
-// Here we try to send out a new framebuffer update request so that the
-// next update can be sent out in parallel with us decoding the current
-// one.
-void CConn::framebufferUpdateStart()
-{
-  CConnection::framebufferUpdateStart();
-
-  // For bandwidth estimate
-  gettimeofday(&updateStartTime, nullptr);
-  updateStartPos = sock->inStream().pos();
-}
-
-// framebufferUpdateEnd() is called at the end of an update.
-// For each rectangle, the FdInStream will have timed the speed
-// of the connection, allowing us to select format and encoding
-// appropriately, and then request another incremental update.
 void CConn::framebufferUpdateEnd()
 {
-  unsigned long long elapsed, bps, weight;
-  struct timeval now;
-
   CConnection::framebufferUpdateEnd();
 
   updateCount++;
-
-  // Calculate bandwidth everything managed to maintain during this update
-  gettimeofday(&now, nullptr);
-  elapsed = (now.tv_sec - updateStartTime.tv_sec) * 1000000;
-  elapsed += now.tv_usec - updateStartTime.tv_usec;
-  if (elapsed == 0)
-    elapsed = 1;
-  bps = (unsigned long long)(sock->inStream().pos() -
-                             updateStartPos) * 8 *
-                            1000000 / elapsed;
-  // Allow this update to influence things more the longer it took, to a
-  // maximum of 20% of the new value.
-  weight = elapsed * 1000 / bpsEstimateWindow;
-  if (weight > 200000)
-    weight = 200000;
-  bpsEstimate = ((bpsEstimate * (1000000 - weight)) +
-                 (bps * weight)) / 1000000;
-
-  // Compute new settings based on updated bandwidth values
-  if (autoSelect) {
-    updateEncoding();
-    updateQualityLevel();
-    updatePixelFormat();
-  }
 }
 
 // The rest of the callbacks are fairly self-explanatory...
@@ -421,103 +359,4 @@ bool CConn::dataRect(const core::Rect& r, int encoding)
     pixelCount += r.area();
 
   return ret;
-}
-
-
-////////////////////// Internal methods //////////////////////
-
-void CConn::updateEncoding()
-{
-  int encNum;
-
-  if (autoSelect)
-    encNum = rfb::encodingTight;
-  else
-    encNum = rfb::encodingNum(::preferredEncoding.getValueStr().c_str());
-
-  if (encNum != -1)
-    setPreferredEncoding(encNum);
-}
-
-void CConn::updateCompressLevel()
-{
-  if (customCompressLevel)
-    setCompressLevel(::compressLevel);
-  else
-    setCompressLevel(-1);
-}
-
-void CConn::updateQualityLevel()
-{
-  int newQualityLevel;
-
-  if (!autoSelect)
-    newQualityLevel = ::qualityLevel;
-  else {
-    // Above 16Mbps (i.e. LAN), we choose the second highest JPEG
-    // quality, which should be perceptually lossless. If the bandwidth
-    // is below that, we choose a more lossy JPEG quality.
-
-    if (bpsEstimate > 16000000)
-      newQualityLevel = 8;
-    else
-      newQualityLevel = 6;
-
-    if (newQualityLevel != getQualityLevel()) {
-      vlog.info(_("Throughput %d kbit/s - changing to quality %d"),
-                (int)(bpsEstimate/1000), newQualityLevel);
-    }
-  }
-
-  setQualityLevel(newQualityLevel);
-}
-
-void CConn::updatePixelFormat()
-{
-  bool useFullColour;
-  rfb::PixelFormat pf;
-
-  if (server.beforeVersion(3, 8)) {
-    // Xvnc from TightVNC 1.2.9 sends out FramebufferUpdates with
-    // cursors "asynchronously". If this happens in the middle of a
-    // pixel format change, the server will encode the cursor with
-    // the old format, but the client will try to decode it
-    // according to the new format. This will lead to a
-    // crash. Therefore, we do not allow automatic format change for
-    // old servers.
-    return;
-  }
-
-  useFullColour = fullColour;
-
-  // If the bandwidth drops below 256 Kbps, we switch to palette mode.
-  if (autoSelect) {
-    useFullColour = (bpsEstimate > 256000);
-    if (useFullColour != (server.pf() == fullColourPF)) {
-      if (useFullColour)
-        vlog.info(_("Throughput %d kbit/s - full color is now enabled"),
-                  (int)(bpsEstimate/1000));
-      else
-        vlog.info(_("Throughput %d kbit/s - full color is now disabled"),
-                  (int)(bpsEstimate/1000));
-    }
-  }
-
-  if (useFullColour) {
-    pf = fullColourPF;
-  } else {
-    if (lowColourLevel == 0)
-      pf = verylowColourPF;
-    else if (lowColourLevel == 1)
-      pf = lowColourPF;
-    else
-      pf = mediumColourPF;
-  }
-
-  if (pf != server.pf()) {
-    char str[256];
-    pf.print(str, 256);
-    vlog.info(_("Using pixel format %s"),str);
-    setPF(pf);
-  }
 }
