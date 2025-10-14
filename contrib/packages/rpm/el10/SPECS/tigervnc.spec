@@ -26,7 +26,6 @@ BuildRequires:  zlib-devel
 BuildRequires:  libuuid-devel, glib2-devel, pipewire-devel
 BuildRequires:  wayland-devel, libxkbcommon-devel
 # X11/graphics dependencies
-BuildRequires: xorg-x11-server-source
 BuildRequires: libXext-devel, libX11-devel, libXi-devel, libXfixes-devel
 BuildRequires: libXdamage-devel, libXrandr-devel, libXt-devel, libXdmcp-devel
 BuildRequires: libXinerama-devel, mesa-libGL-devel, libxshmfence-devel
@@ -40,7 +39,6 @@ BuildRequires:  systemd-devel
 # TigerVNC 1.4.x requires fltk 1.3.3 for keyboard handling support
 # See https://github.com/TigerVNC/tigervnc/issues/8, also bug #1208814
 BuildRequires:  fltk-devel >= 1.3.3
-BuildRequires:  xorg-x11-server-devel
 
 Requires:       hicolor-icon-theme
 Requires:       tigervnc-license
@@ -56,11 +54,8 @@ server.
 
 %package server
 Summary:        A TigerVNC server
-Requires:       perl-interpreter
-Requires:       tigervnc-server-minimal = %{version}-%{release}
 Requires:       (%{name}-selinux if selinux-policy-%{selinuxtype})
-Requires:       xorg-x11-xauth
-Requires:       xorg-x11-xinit
+Requires:       tigervnc-license
 
 %description server
 The VNC system allows you to access the same desktop from a wide
@@ -68,31 +63,6 @@ variety of platforms.  This package includes set of utilities
 which make usage of TigerVNC server more user friendly. It also
 contains x0vncserver program which can export your active
 X session.
-
-%package server-minimal
-Summary:        A minimal installation of TigerVNC server
-Requires(post): systemd
-Requires(preun): systemd
-Requires(postun): systemd
-Requires(post): systemd
-
-Requires:       mesa-dri-drivers, xkeyboard-config, xkbcomp
-Requires:       tigervnc-license, dbus-x11
-
-%description server-minimal
-The VNC system allows you to access the same desktop from a wide
-variety of platforms. This package contains minimal installation
-of TigerVNC server, allowing others to access the desktop on your
-machine.
-
-%package server-module
-Summary:        TigerVNC module to Xorg
-Requires:       xorg-x11-server-Xorg %(xserver-sdk-abi-requires ansic) %(xserver-sdk-abi-requires videodrv)
-Requires:       tigervnc-license
-
-%description server-module
-This package contains libvnc.so module to X server, allowing others
-to access the desktop on your machine.
 
 %package license
 Summary:        License of TigerVNC suite
@@ -124,15 +94,6 @@ runs properly under an environment with SELinux enabled.
 %prep
 %setup -q -n %{name}-%{version}%{?snap:-%{snap}}
 
-cp -r /usr/share/xorg-x11-server-source/* unix/xserver
-pushd unix/xserver
-for all in `find . -type f -perm -001`; do
-        chmod -x "$all"
-done
-xserver_patch="../xserver$(rpm -q --qf '%%{VERSION}' xorg-x11-server-source | awk -F. '{ print $1 $2 }').patch"
-patch -p1 -b --suffix .vnc < "$xserver_patch"
-popd
-
 %build
 %ifarch sparcv9 sparc64 s390 s390x
 export CFLAGS="$RPM_OPT_FLAGS -fPIC"
@@ -152,26 +113,6 @@ export CXXFLAGS="$CFLAGS -std=c++11"
 
 %cmake_build
 
-pushd unix/xserver
-
-autoreconf -fiv
-%configure \
-        --disable-xorg --disable-xnest --disable-xvfb --disable-dmx \
-        --disable-xwin --disable-xephyr --disable-kdrive --disable-xwayland \
-        --with-pic --disable-static \
-        --with-default-font-path="catalogue:%{_sysconfdir}/X11/fontpath.d,built-ins" \
-        --with-xkb-output=%{_localstatedir}/lib/xkb \
-        --enable-glx --disable-dri --enable-dri2 --enable-dri3 \
-        --disable-unit-tests \
-        --disable-config-hal \
-        --disable-config-udev \
-        --without-dtrace \
-        --disable-devel-docs \
-        --disable-selective-werror
-
-make TIGERVNC_BUILDDIR="`pwd`/../../%{__cmake_builddir}" %{?_smp_mflags}
-popd
-
 # SELinux
 pushd unix/vncserver/selinux
 make
@@ -180,22 +121,25 @@ popd
 %install
 %cmake_install
 
-pushd unix/xserver/hw/vnc
-%make_install TIGERVNC_BUILDDIR="`pwd`/../../../../%{__cmake_builddir}"
-popd
-
 # Install systemd unit file
 pushd unix/vncserver/selinux
 make install DESTDIR=%{buildroot}
 popd
 
+# We have no Xvnc, so remove everything that depends on it
+rm %{buildroot}%{_sysconfdir}/pam.d/tigervnc
+rm -r %{buildroot}%{_sysconfdir}/tigervnc
+rm %{buildroot}%{_unitdir}/vncserver@.service
+rm %{buildroot}%{_bindir}/vncconfig
+rm %{buildroot}%{_sbindir}/vncsession
+rm %{buildroot}%{_libexecdir}/vncserver
+rm %{buildroot}%{_libexecdir}/vncsession-start
+rm %{buildroot}%{_mandir}/man1/vncconfig.1*
+rm %{buildroot}%{_mandir}/man8/vncserver.8*
+rm %{buildroot}%{_mandir}/man8/vncsession.8*
+rm %{buildroot}%{_docdir}/%{name}/HOWTO.md
+
 %find_lang %{name} %{name}.lang
-
-# remove unwanted files
-rm -f  %{buildroot}%{_libdir}/xorg/modules/extensions/libvnc.la
-
-mkdir -p %{buildroot}%{_sysconfdir}/X11/xorg.conf.d/
-install -m 644 %{SOURCE3} %{buildroot}%{_sysconfdir}/X11/xorg.conf.d/10-libvnc.conf
 
 %pre selinux
 %selinux_relabel_pre -s %{selinuxtype}
@@ -219,33 +163,12 @@ fi
 %{_mandir}/man1/vncviewer.1*
 
 %files server
-%config(noreplace) %{_sysconfdir}/pam.d/tigervnc
-%config(noreplace) %{_sysconfdir}/tigervnc/vncserver-config-defaults
-%config(noreplace) %{_sysconfdir}/tigervnc/vncserver-config-mandatory
-%config(noreplace) %{_sysconfdir}/tigervnc/vncserver.users
-%{_unitdir}/vncserver@.service
 %{_bindir}/x0vncserver
-%{_bindir}/w0vncserver
-%{_sbindir}/vncsession
-%{_libexecdir}/vncserver
-%{_libexecdir}/vncsession-start
-%{_mandir}/man1/x0vncserver.1*
-%{_mandir}/man1/w0vncserver.1*
-%{_mandir}/man8/vncserver.8*
-%{_mandir}/man8/vncsession.8*
-%doc %{_docdir}/%{name}/HOWTO.md
-
-%files server-minimal
-%{_bindir}/vncconfig
 %{_bindir}/vncpasswd
-%{_bindir}/Xvnc
-%{_mandir}/man1/Xvnc.1*
+%{_bindir}/w0vncserver
+%{_mandir}/man1/x0vncserver.1*
 %{_mandir}/man1/vncpasswd.1*
-%{_mandir}/man1/vncconfig.1*
-
-%files server-module
-%{_libdir}/xorg/modules/extensions/libvnc.so
-%config(noreplace) %{_sysconfdir}/X11/xorg.conf.d/10-libvnc.conf
+%{_mandir}/man1/w0vncserver.1*
 
 %files license
 %doc %{_docdir}/%{name}/LICENCE.TXT
