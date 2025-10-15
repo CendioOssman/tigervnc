@@ -2,6 +2,8 @@
 %global selinuxtype targeted
 %global modulename vncsession
 
+%global xorgversion 21.1.18
+
 Name:           tigervnc
 Version:        @VERSION@
 Release:        1%{?snap:.%{snap}}%{?dist}
@@ -13,7 +15,7 @@ License:        GPLv2+
 URL:            http://www.tigervnc.com
 
 Source0:        %{name}-%{version}%{?snap:-%{snap}}.tar.bz2
-Source3:        10-libvnc.conf
+Source1:        https://xorg.freedesktop.org/releases/individual/xserver/xorg-server-%{xorgversion}.tar.xz
 
 BuildRequires:  make
 BuildRequires:  gcc-c++
@@ -54,8 +56,11 @@ server.
 
 %package server
 Summary:        A TigerVNC server
+Requires:       perl-interpreter
+Requires:       tigervnc-server-minimal = %{version}-%{release}
 Requires:       (%{name}-selinux if selinux-policy-%{selinuxtype})
-Requires:       tigervnc-license
+Requires:       xorg-x11-xauth
+Requires:       xorg-x11-xinit
 
 %description server
 The VNC system allows you to access the same desktop from a wide
@@ -63,6 +68,22 @@ variety of platforms.  This package includes set of utilities
 which make usage of TigerVNC server more user friendly. It also
 contains x0vncserver program which can export your active
 X session.
+
+%package server-minimal
+Summary:        A minimal installation of TigerVNC server
+Requires(post): systemd
+Requires(preun): systemd
+Requires(postun): systemd
+Requires(post): systemd
+
+Requires:       mesa-dri-drivers, xkeyboard-config, xkbcomp
+Requires:       tigervnc-license, dbus-x11
+
+%description server-minimal
+The VNC system allows you to access the same desktop from a wide
+variety of platforms. This package contains minimal installation
+of TigerVNC server, allowing others to access the desktop on your
+machine.
 
 %package license
 Summary:        License of TigerVNC suite
@@ -94,6 +115,15 @@ runs properly under an environment with SELinux enabled.
 %prep
 %setup -q -n %{name}-%{version}%{?snap:-%{snap}}
 
+tar -axf %{SOURCE1}
+cp -r xorg-server-%{xorgversion}/* unix/xserver
+pushd unix/xserver
+for all in `find . -type f -perm -001`; do
+        chmod -x "$all"
+done
+patch -p1 -b --suffix .vnc < ../xserver21.patch
+popd
+
 %build
 %ifarch sparcv9 sparc64 s390 s390x
 export CFLAGS="$RPM_OPT_FLAGS -fPIC"
@@ -113,6 +143,26 @@ export CXXFLAGS="$CFLAGS -std=c++11"
 
 %cmake_build
 
+pushd unix/xserver
+
+autoreconf -fiv
+%configure \
+        --disable-xorg --disable-xnest --disable-xvfb --disable-dmx \
+        --disable-xwin --disable-xephyr --disable-kdrive --disable-xwayland \
+        --with-pic --disable-static \
+        --with-default-font-path="catalogue:%{_sysconfdir}/X11/fontpath.d,built-ins" \
+        --with-xkb-output=%{_localstatedir}/lib/xkb \
+        --enable-glx --disable-dri --enable-dri2 --enable-dri3 \
+        --disable-unit-tests \
+        --disable-config-hal \
+        --disable-config-udev \
+        --without-dtrace \
+        --disable-devel-docs \
+        --disable-selective-werror
+
+make TIGERVNC_BUILDDIR="`pwd`/../../%{__cmake_builddir}" %{?_smp_mflags}
+popd
+
 # SELinux
 pushd unix/vncserver/selinux
 make
@@ -121,25 +171,19 @@ popd
 %install
 %cmake_install
 
+pushd unix/xserver/hw/vnc
+%make_install TIGERVNC_BUILDDIR="`pwd`/../../../../%{__cmake_builddir}"
+popd
+
 # Install systemd unit file
 pushd unix/vncserver/selinux
 make install DESTDIR=%{buildroot}
 popd
 
-# We have no Xvnc, so remove everything that depends on it
-rm %{buildroot}%{_sysconfdir}/pam.d/tigervnc
-rm -r %{buildroot}%{_sysconfdir}/tigervnc
-rm %{buildroot}%{_unitdir}/vncserver@.service
-rm %{buildroot}%{_bindir}/vncconfig
-rm %{buildroot}%{_sbindir}/vncsession
-rm %{buildroot}%{_libexecdir}/vncserver
-rm %{buildroot}%{_libexecdir}/vncsession-start
-rm %{buildroot}%{_mandir}/man1/vncconfig.1*
-rm %{buildroot}%{_mandir}/man8/vncserver.8*
-rm %{buildroot}%{_mandir}/man8/vncsession.8*
-rm %{buildroot}%{_docdir}/%{name}/HOWTO.md
-
 %find_lang %{name} %{name}.lang
+
+# No Xorg server, so no use for the module
+rm -f  %{buildroot}%{_libdir}/xorg/modules/extensions/libvnc.*
 
 %pre selinux
 %selinux_relabel_pre -s %{selinuxtype}
@@ -163,12 +207,29 @@ fi
 %{_mandir}/man1/vncviewer.1*
 
 %files server
+%config(noreplace) %{_sysconfdir}/pam.d/tigervnc
+%config(noreplace) %{_sysconfdir}/tigervnc/vncserver-config-defaults
+%config(noreplace) %{_sysconfdir}/tigervnc/vncserver-config-mandatory
+%config(noreplace) %{_sysconfdir}/tigervnc/vncserver.users
+%{_unitdir}/vncserver@.service
 %{_bindir}/x0vncserver
-%{_bindir}/vncpasswd
 %{_bindir}/w0vncserver
+%{_sbindir}/vncsession
+%{_libexecdir}/vncserver
+%{_libexecdir}/vncsession-start
 %{_mandir}/man1/x0vncserver.1*
-%{_mandir}/man1/vncpasswd.1*
 %{_mandir}/man1/w0vncserver.1*
+%{_mandir}/man8/vncserver.8*
+%{_mandir}/man8/vncsession.8*
+%doc %{_docdir}/%{name}/HOWTO.md
+
+%files server-minimal
+%{_bindir}/vncconfig
+%{_bindir}/vncpasswd
+%{_bindir}/Xvnc
+%{_mandir}/man1/Xvnc.1*
+%{_mandir}/man1/vncpasswd.1*
+%{_mandir}/man1/vncconfig.1*
 
 %files license
 %doc %{_docdir}/%{name}/LICENCE.TXT
