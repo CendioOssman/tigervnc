@@ -16,6 +16,8 @@ URL:            http://www.tigervnc.com
 
 Source0:        %{name}-%{version}%{?snap:-%{snap}}.tar.bz2
 Source1:        https://xorg.freedesktop.org/releases/individual/xserver/xorg-server-%{xorgversion}.tar.xz
+# Patch from RHEL to avoid dependency on xorg-x11-font-utils
+Source2:        0001-configure.ac-search-for-the-fontrootdir-ourselves.patch
 
 BuildRequires:  make
 BuildRequires:  gcc-c++
@@ -121,6 +123,7 @@ pushd unix/xserver
 for all in `find . -type f -perm -001`; do
         chmod -x "$all"
 done
+patch -p1 -b --suffix .fontrootdir < %{SOURCE2}
 patch -p1 -b --suffix .vnc < ../xserver21.patch
 popd
 

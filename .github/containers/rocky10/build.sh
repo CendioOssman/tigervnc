@@ -21,6 +21,7 @@ chmod a+w ${CURDIR}/rpmbuild/{BUILD,BUILDROOT,SRPMS,RPMS}
 
 ## Copy over the packaging files
 
+cp ${RPMDIR}/SOURCES/* ${CURDIR}/rpmbuild/SOURCES
 cp ${RPMDIR}/SPECS/tigervnc.spec ${CURDIR}/rpmbuild/SPECS
 sed -i "s/@VERSION@/${VERSION}/" ${CURDIR}/rpmbuild/SPECS/tigervnc.spec
 
