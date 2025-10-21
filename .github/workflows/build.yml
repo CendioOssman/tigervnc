@@ -73,11 +73,6 @@ jobs:
             mingw-w64-x86_64-gnutls mingw-w64-x86_64-pixman \
             mingw-w64-x86_64-nettle mingw-w64-x86_64-gmp \
             mingw-w64-x86_64-gtest
-      - name: Install InnoSetup
-        shell: pwsh
-        run: |
-          winget source remove msstore
-          winget install --disable-interactivity --exact --id JRSoftware.InnoSetup
       - name: Configure
         run: |
           cmake \
@@ -96,10 +91,7 @@ jobs:
         working-directory: build
         env:
           MSYS2_PATH_TYPE: inherit
-        run: |
-          INNOPATH="$(cygpath -u "$LOCALAPPDATA\\Programs\\Inno Setup 6")"
-          export PATH="$PATH:$INNOPATH"
-          make installer winvnc_installer
+        run: make installer winvnc_installer
       - uses: actions/upload-artifact@v4
         with:
           name: Windows
