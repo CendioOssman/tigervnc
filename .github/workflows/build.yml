@@ -76,7 +76,7 @@ jobs:
       - name: Install InnoSetup
         shell: pwsh
         run: |
-          winget install --accept-package-agreements --accept-source-agreements --disable-interactivity --exact --id JRSoftware.InnoSetup
+          winget install --disable-interactivity --exact --id JRSoftware.InnoSetup --accept-package-agreements --accept-source-agreements
       - name: Configure
         run: |
           cmake \
