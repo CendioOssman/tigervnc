@@ -76,7 +76,8 @@ jobs:
       - name: Install InnoSetup
         shell: pwsh
         run: |
-          winget install --disable-interactivity --exact --id JRSoftware.InnoSetup --accept-package-agreements --accept-source-agreements
+          winget source remove msstore
+          winget install --disable-interactivity --exact --id JRSoftware.InnoSetup
       - name: Configure
         run: |
           cmake \
