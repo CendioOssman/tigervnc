@@ -48,7 +48,6 @@ public:
 
   // // -=- SDesktop interface
   void init(rfb::VNCServer* vs) override;
-  void queryConnection(rfb::SConnection* conn) override;
 
   // Check if necessary wayland protocols are available
   static bool available();

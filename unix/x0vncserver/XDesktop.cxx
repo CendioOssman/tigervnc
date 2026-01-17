@@ -252,6 +252,9 @@ void XDesktop::init(rfb::VNCServer* vs)
   server->connectSignal("starting", this, &XDesktop::start);
   server->connectSignal("stopped", this, &XDesktop::stop);
 
+  server->connectSignal("queryconnection", this,
+                        &XDesktop::queryConnection);
+
   server->connectSignal("terminate", this,
                         []() { kill(getpid(), SIGTERM); });
 

@@ -98,12 +98,13 @@ public:
 
   // rfb::SDesktop callbacks
   void init(rfb::VNCServer* vs) override;
-  void queryConnection(rfb::SConnection* conn) override;
 
   // rfb::PixelBuffer callbacks
   void grabRegion(const core::Region& r) override;
 
 protected:
+  void queryConnection(rfb::SConnection* conn);
+
   void pointerEvent(rfb::PointerEvent event);
   void keyEvent(rfb::VNCServerST*, const char* name,
                 rfb::KeyEvent event);

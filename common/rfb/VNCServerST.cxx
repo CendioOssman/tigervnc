@@ -102,6 +102,8 @@ VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
   registerSignal("started");
   registerSignal("stopped");
 
+  registerSignal<SConnection*>("queryconnection");
+
   registerSignal("terminate");
 
   registerSignal<KeyEvent>("keydown");
@@ -902,7 +904,7 @@ void VNCServerST::queryConnection(VNCSConnectionST* client)
     return;
   }
 
-  desktop->queryConnection(client);
+  emitSignal("queryconnection", (SConnection*)client);
 }
 
 // -=- Internal methods

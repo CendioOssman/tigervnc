@@ -62,6 +62,14 @@ void PortalDesktop::init(rfb::VNCServer* vs)
   server->connectSignal("starting", this, &PortalDesktop::start);
   server->connectSignal("stopped", this, &PortalDesktop::stop);
 
+  // FIXME: Implement this.
+  server->connectSignal<rfb::SConnection*>(
+    "queryconnection", this, [this](rfb::SConnection* conn) {
+      server->approveConnection(conn, false,
+                                "Unable to query the local user to "
+                                "accept the connection.");
+    });
+
   server->connectSignal("terminate", this,
                         []() { kill(getpid(), SIGTERM); });
 
@@ -108,13 +116,6 @@ void PortalDesktop::stop()
   restoreToken = remoteDesktop->getRestoreToken();
   delete remoteDesktop;
   remoteDesktop = nullptr;
-}
-
-void PortalDesktop::queryConnection(rfb::SConnection* conn)
-{
-  // FIXME: Implement this.
-  server->approveConnection(conn, false,
-                            "Unable to query the local user to accept the connection.");
 }
 
 void PortalDesktop::keyEvent(rfb::VNCServer*, const char* name,
