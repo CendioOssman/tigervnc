@@ -59,8 +59,6 @@ public:
   bool isRunning();
   void queryConnection(network::Socket* sock,
                        const char* userName) override;
-  void setScreenLayout(int fb_width, int fb_height,
-                       const rfb::ScreenSet& layout) override;
 
   // -=- TXGlobalEventHandler interface
   bool handleGlobalEvent(XEvent* ev) override;
@@ -75,6 +73,8 @@ protected:
   void stop();
   void pointerEvent(core::Point pos, uint16_t buttonMask);
   void keyEvent(uint32_t keysym, uint32_t xtcode, bool down);
+  void layoutRequest(int width, int height,
+                     const rfb::ScreenSet& layout);
 
 protected:
   Display* dpy;

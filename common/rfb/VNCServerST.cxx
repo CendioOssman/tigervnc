@@ -209,6 +209,12 @@ bool VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
                           handleClipboardData(client, data);
                         });
 
+  client->connectSignal(
+    &SConnection::screenLayoutRequested, this,
+    [client, this](int width, int height, const ScreenSet& layout) {
+      handleLayoutRequest(client, width, height, layout);
+    });
+
   client->init();
 
   return true;
@@ -677,9 +683,9 @@ void VNCServerST::pointerEvent(VNCSConnectionST* client,
   emitSignal(&VNCServer::pointer, pos, buttonMask);
 }
 
-void VNCServerST::setDesktopSize(VNCSConnectionST* requester,
-                                 int fb_width, int fb_height,
-                                 const ScreenSet& layout)
+void VNCServerST::handleLayoutRequest(VNCSConnectionST* requester,
+                                      int width, int height,
+                                      const ScreenSet& layout)
 {
   std::list<VNCSConnectionST*>::iterator ci;
 
@@ -691,14 +697,14 @@ void VNCServerST::setDesktopSize(VNCSConnectionST* requester,
 
   // We can't handle a framebuffer larger than this, so don't let a
   // client set one (see PixelBuffer.cxx)
-  if ((fb_width > 16384) || (fb_height > 16384)) {
+  if ((width > 16384) || (height > 16384)) {
     slog.error(_("Rejecting too large resize request"));
     requester->setDesktopSizeFailureOrClose(resultProhibited);
     return;
   }
 
   // Don't bother the desktop with an invalid configuration
-  if (!layout.validate(fb_width, fb_height)) {
+  if (!layout.validate(width, height)) {
     slog.error(_("Invalid screen layout requested by client"));
     requester->setDesktopSizeFailureOrClose(resultInvalid);
     return;
@@ -717,7 +723,7 @@ void VNCServerST::setDesktopSize(VNCSConnectionST* requester,
   // FIXME: the desktop will call back to VNCServerST and an extra set
   // of ExtendedDesktopSize messages will be sent. This is okay
   // protocol-wise, but unnecessary.
-  desktop->setScreenLayout(fb_width, fb_height, layout);
+  emitSignal(&VNCServer::screenLayoutRequested, width, height, layout);
 }
 
 // Other public methods

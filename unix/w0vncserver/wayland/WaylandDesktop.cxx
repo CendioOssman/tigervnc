@@ -100,6 +100,12 @@ void WaylandDesktop::init(rfb::VNCServer* vs)
                         &WaylandDesktop::handleClipboardAnnounce);
   server->connectSignal(&rfb::VNCServer::clipboardData, this,
                         &WaylandDesktop::handleClipboardData);
+
+  server->connectSignal(&rfb::VNCServer::screenLayoutRequested, this,
+                        [this](int, int, rfb::ScreenSet) {
+                          server->rejectScreenLayout(
+                            rfb::resultProhibited);
+                        });
 }
 
 void WaylandDesktop::start()
@@ -243,13 +249,6 @@ void WaylandDesktop::handleClipboardData(const char* data)
     return;
 
   dataControl->writePending(data);
-}
-
-void WaylandDesktop::setScreenLayout(int /* fb_width */,
-                                     int /* fb_height */,
-                                     const rfb::ScreenSet& /*  layout */)
-{
-  server->rejectScreenLayout(rfb::resultProhibited);
 }
 
 bool WaylandDesktop::available()

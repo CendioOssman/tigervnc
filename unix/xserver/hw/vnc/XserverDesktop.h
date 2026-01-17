@@ -97,8 +97,6 @@ public:
   void init(rfb::VNCServer* vs) override;
   void queryConnection(network::Socket* sock,
                        const char* userName) override;
-  void setScreenLayout(int fb_width, int fb_height,
-                       const rfb::ScreenSet& layout) override;
 
   // rfb::PixelBuffer callbacks
   void grabRegion(const core::Region& r) override;
@@ -106,6 +104,9 @@ public:
 protected:
   void pointerEvent(core::Point pos, uint16_t buttonMask);
   void keyEvent(uint32_t keysym, uint32_t keycode, bool down);
+
+  void layoutRequest(int width, int height,
+                     const rfb::ScreenSet& layout);
 
   void frameTick();
 
