@@ -98,8 +98,7 @@ public:
 
   // rfb::SDesktop callbacks
   void init(rfb::VNCServer* vs) override;
-  void queryConnection(network::Socket* sock,
-                       const char* userName) override;
+  void queryConnection(rfb::SConnection* conn) override;
 
   // rfb::PixelBuffer callbacks
   void grabRegion(const core::Region& r) override;
@@ -129,10 +128,7 @@ private:
   std::list<network::SocketListener*> listeners;
   uint8_t* shadowFramebuffer;
 
-  uint32_t queryConnectId;
-  network::Socket* queryConnectSocket;
-  std::string queryConnectAddress;
-  std::string queryConnectUsername;
+  rfb::SConnection* pendingQuery;
   core::Timer queryConnectTimer;
 
   OutputIdMap outputIdMap;

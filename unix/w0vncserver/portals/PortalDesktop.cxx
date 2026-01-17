@@ -110,11 +110,10 @@ void PortalDesktop::stop()
   remoteDesktop = nullptr;
 }
 
-void PortalDesktop::queryConnection(network::Socket* sock,
-                                    const char* /* userName */)
+void PortalDesktop::queryConnection(rfb::SConnection* conn)
 {
   // FIXME: Implement this.
-  server->approveConnection(sock, false,
+  server->approveConnection(conn, false,
                             "Unable to query the local user to accept the connection.");
 }
 

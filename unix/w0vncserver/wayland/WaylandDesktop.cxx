@@ -153,11 +153,10 @@ void WaylandDesktop::keyEvent(rfb::VNCServer*, const char* name,
                        strcmp(name, "keydown") == 0);
 }
 
-void WaylandDesktop::queryConnection(network::Socket* sock,
-                                     const char* /* userName */)
+void WaylandDesktop::queryConnection(rfb::SConnection* conn)
 {
   // FIXME: Implement this.
-  server->approveConnection(sock, false,
+  server->approveConnection(conn, false,
                             "Unable to query the local user to accept the connection.");
 }
 
