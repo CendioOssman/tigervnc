@@ -194,6 +194,10 @@ namespace rfb {
     // received the request. A const char* string is included that
     // contains the actual clipboard contents.
     core::signal<const char*> clipboarddata;
+
+    // frame is emitted whenever a frame update has been processed,
+    // signalling that a good time to render new data
+    core::signal<> frame;
   };
 }
 #endif

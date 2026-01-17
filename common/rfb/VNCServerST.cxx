@@ -789,7 +789,7 @@ void VNCServerST::frameTimeout()
     writeUpdate();
 
   msc++;
-  desktop->frameTick(msc);
+  emitSignal(&frame);
 }
 
 void VNCServerST::idleTimeout()

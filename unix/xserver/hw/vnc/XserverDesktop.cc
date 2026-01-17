@@ -104,6 +104,9 @@ XserverDesktop::XserverDesktop(int screenIndex_,
                           vncHandleClipboardData(data_);
                         });
 
+  server->connectSignal(&server->frame, this,
+                        &XserverDesktop::frameTick);
+
   setFramebuffer(width, height, fbptr, stride_);
 
   queryConnectTimer.connectSignal(&queryConnectTimer.timer, this,
@@ -526,9 +529,12 @@ unsigned int XserverDesktop::setScreenLayout(int fb_width, int fb_height,
   return result;
 }
 
-void XserverDesktop::frameTick(uint64_t msc)
+void XserverDesktop::frameTick()
 {
   std::map<uint64_t, uint64_t>::iterator iter, next;
+  uint64_t msc;
+
+  msc = server->getMsc();
 
   for (iter = pendingMsc.begin(); iter != pendingMsc.end();) {
     next = iter; next++;
