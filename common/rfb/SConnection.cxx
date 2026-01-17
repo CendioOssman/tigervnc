@@ -545,6 +545,24 @@ void SConnection::handleClipboardProvide(uint32_t flags,
   emitSignal(&clipboarddata, clientClipboard.c_str());
 }
 
+void SConnection::setDesktopSize(int fb_width, int fb_height,
+                                const ScreenSet& layout)
+{
+  char buffer[2048];
+
+  vlog.debug("Got request for framebuffer resize to %dx%d",
+             fb_width, fb_height);
+  layout.print(buffer, sizeof(buffer));
+  vlog.debug("%s", buffer);
+
+  if (!accessCheck(AccessSetDesktopSize)) {
+    vlog.debug("Rejecting unauthorized framebuffer resize request");
+    writer()->writeDesktopSize(reasonClient, resultProhibited);
+  } else {
+    emitSignal(&layoutrequest, fb_width, fb_height, layout);
+  }
+}
+
 void SConnection::supportsLocalCursor()
 {
 }

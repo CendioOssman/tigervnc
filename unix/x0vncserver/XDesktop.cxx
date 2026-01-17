@@ -272,6 +272,9 @@ void XDesktop::init(rfb::VNCServer* vs)
                             selection.handleClientClipboardData(data);
                         });
 
+  server->connectSignal(&server->layoutrequest, this,
+                        &XDesktop::layoutRequest);
+
   selection.connectSignal(&selection.announce, this,
                           [this](bool available) {
                             server->announceClipboard(available);
@@ -715,8 +718,8 @@ static void GetSmallerMode(XRRScreenResources *res,
 }
 #endif /* HAVE_XRANDR */
 
-void XDesktop::setScreenLayout(int fb_width, int fb_height,
-                               const rfb::ScreenSet& layout)
+void XDesktop::layoutRequest(int width, int height,
+                             const rfb::ScreenSet& layout)
 {
 #ifdef HAVE_XRANDR
   unsigned int ret;
@@ -737,10 +740,10 @@ void XDesktop::setScreenLayout(int fb_width, int fb_height,
      cases, we first call tryScreenLayout. If this fails, we try to
      adjust the request to one screen with a smaller mode. */
   vlog.debug("Testing screen layout");
-  ret = ::tryScreenLayout(fb_width, fb_height, layout, &outputIdMap);
+  ret = ::tryScreenLayout(width, height, layout, &outputIdMap);
   if (ret == rfb::resultSuccess) {
-    adjustedWidth = fb_width;
-    adjustedHeight = fb_height;
+    adjustedWidth = width;
+    adjustedHeight = height;
     adjustedLayout = layout;
   } else {
     vlog.debug("Impossible layout - trying to adjust");
@@ -877,7 +880,7 @@ void XDesktop::setScreenLayout(int fb_width, int fb_height,
   server->setScreenLayout(computeScreenLayout());
 
   if (ret == rfb::resultSuccess)
-    server->acceptScreenLayout(fb_width, fb_height, layout);
+    server->acceptScreenLayout(width, height, layout);
   else
     server->rejectScreenLayout(rfb::resultInvalid);
 

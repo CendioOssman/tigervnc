@@ -210,6 +210,11 @@ namespace rfb {
     // contains the actual clipboard contents.
     core::signal<const char*> clipboarddata;
 
+    // layoutrequest is emitted whenever the client requests the to
+    // reconfigure the framebuffer and/or the layout of screens. The
+    // width, height, and screen layout are included.
+    core::signal<int, int, ScreenSet> layoutrequest;
+
     // frame is emitted whenever a frame update has been processed,
     // signalling that a good time to render new data
     core::signal<> frame;

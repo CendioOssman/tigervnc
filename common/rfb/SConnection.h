@@ -30,6 +30,7 @@
 
 #include <rfb/AccessRights.h>
 #include <rfb/SMsgHandler.h>
+#include <rfb/ScreenSet.h>
 #include <rfb/SecurityServer.h>
 
 namespace rdr {
@@ -181,6 +182,11 @@ namespace rfb {
     // contains the actual clipboard contents.
     core::signal<const char*> clipboarddata;
 
+    // layoutrequest is emitted whenever the client requests the to
+    // reconfigure the framebuffer and/or the layout of screens. The
+    // width, height, and screen layout are included.
+    core::signal<int, int, ScreenSet> layoutrequest;
+
   protected:
 
     // Overridden from SMsgHandler
@@ -203,6 +209,9 @@ namespace rfb {
     void handleClipboardNotify(uint32_t flags) override;
     void handleClipboardProvide(uint32_t flags, const size_t* lengths,
                                 const uint8_t* const* data) override;
+
+    void setDesktopSize(int fb_width, int fb_height,
+                        const ScreenSet& layout) override;
 
     // Methods to be overridden in a derived class
 

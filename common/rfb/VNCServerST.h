@@ -120,11 +120,6 @@ namespace rfb {
     unsigned getLEDState() const { return ledState; }
     bool isDesktopReady() const { return desktopStarted; }
 
-    // Event handlers
-    void setDesktopSize(VNCSConnectionST* requester,
-                        int fb_width, int fb_height,
-                        const ScreenSet& layout);
-
     // closeClients() closes all RFB sessions, except the specified one (if
     // any), and logs the specified reason for closure.
     void closeClients(const char* reason, network::Socket* sock);
@@ -160,6 +155,10 @@ namespace rfb {
                                  bool available);
     void handleClipboardData(VNCSConnectionST* client,
                              const char* data);
+
+    void handleLayoutRequest(VNCSConnectionST* client,
+                             int width, int height,
+                             const ScreenSet& layout);
 
     // Timer callbacks
     void frameTimeout();
