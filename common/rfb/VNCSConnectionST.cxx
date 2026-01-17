@@ -467,6 +467,15 @@ void VNCSConnectionST::approveConnectionOrClose(bool accept,
 
 // -=- Callbacks from SConnection
 
+void VNCSConnectionST::clientInit(bool shared)
+{
+  if (rfb::Server::alwaysShared || reverseConnection) shared = true;
+  if (!accessCheck(AccessNonShared)) shared = true;
+  if (rfb::Server::neverShared) shared = false;
+
+  SConnection::clientInit(shared);
+}
+
 void VNCSConnectionST::authSuccess()
 {
   if (rfb::Server::idleTimeout)
@@ -478,15 +487,10 @@ void VNCSConnectionST::queryConnection(const char* userName)
   server->queryConnection(this, userName);
 }
 
-void VNCSConnectionST::clientReady(bool shared)
+void VNCSConnectionST::clientReady()
 {
   if (rfb::Server::idleTimeout)
     idleTimer.start(core::secsToMillis(rfb::Server::idleTimeout));
-
-  if (rfb::Server::alwaysShared || reverseConnection) shared = true;
-  if (!accessCheck(AccessNonShared)) shared = true;
-  if (rfb::Server::neverShared) shared = false;
-  server->clientReady(this, shared);
 
   if (server->isDesktopReady())
     desktopReady();

@@ -124,9 +124,10 @@ namespace rfb {
     // SConnection callbacks
 
     // These methods are invoked as callbacks from processMsg(
+    void clientInit(bool shared) override;
     void authSuccess() override;
     void queryConnection(const char* userName) override;
-    void clientReady(bool shared) override;
+    void clientReady() override;
     void setPixelFormat(const PixelFormat& pf) override;
     void setEncodings(int nEncodings,
                       const int32_t* encodings) override;
