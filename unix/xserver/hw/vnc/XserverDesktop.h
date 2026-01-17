@@ -102,7 +102,6 @@ public:
                        const char* userName) override;
   unsigned int setScreenLayout(int fb_width, int fb_height,
                                const rfb::ScreenSet& layout) override;
-  void frameTick(uint64_t msc) override;
 
   // rfb::PixelBuffer callbacks
   void grabRegion(const core::Region& r) override;
@@ -111,6 +110,8 @@ protected:
   void pointerEvent(rfb::PointerEvent event);
   void keyEvent(rfb::VNCServerST*, const char* name,
                 rfb::KeyEvent event);
+
+  void frameTick();
 
   bool handleListenerEvent(int fd,
                            std::list<network::SocketListener*>* sockets,
