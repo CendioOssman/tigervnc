@@ -48,6 +48,7 @@
 #include <rfb/SConnection.h>
 #include <rfb/VNCServerST.h>
 #include <rfb/ServerCore.h>
+#include <rfb/screenTypes.h>
 
 #include "XserverDesktop.h"
 #include "vncBlockHandler.h"
@@ -509,8 +510,8 @@ void XserverDesktop::pointerEvent(rfb::PointerEvent event)
   vncPointerButtonAction(event.buttonMask);
 }
 
-unsigned int XserverDesktop::setScreenLayout(int fb_width, int fb_height,
-                                             const rfb::ScreenSet& layout)
+void XserverDesktop::setScreenLayout(int fb_width, int fb_height,
+                                     const rfb::ScreenSet& layout)
 {
   unsigned int result;
 
@@ -521,7 +522,10 @@ unsigned int XserverDesktop::setScreenLayout(int fb_width, int fb_height,
   // can be corner cases where we don't get feedback from the X core
   refreshScreenLayout();
 
-  return result;
+  if (result == rfb::resultSuccess)
+    server->acceptScreenLayout(fb_width, fb_height, layout);
+  else
+    server->rejectScreenLayout(result);
 }
 
 void XserverDesktop::frameTick()
