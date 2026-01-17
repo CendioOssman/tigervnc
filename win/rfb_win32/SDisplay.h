@@ -58,8 +58,7 @@ namespace rfb {
     class QueryConnectionHandler {
     public:
       virtual ~QueryConnectionHandler() {}
-      virtual void queryConnection(network::Socket* sock,
-                                   const char* userName) = 0;
+      virtual void queryConnection(rfb::SConnection* conn) = 0;
     };
 
     class SDisplay : public SDesktop,
@@ -74,8 +73,7 @@ namespace rfb {
       // -=- SDesktop interface
 
       void init(VNCServer* vs) override;
-      void queryConnection(network::Socket* sock,
-                           const char* userName) override;
+      void queryConnection(rfb::SConnection* conn) override;
 
       // -=- Clipboard events
       
