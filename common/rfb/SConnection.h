@@ -157,6 +157,10 @@ namespace rfb {
 
     // Signals
 
+    // "ready" is emitted when the connection has completed the
+    // handshake and is ready for normal communication. A boolean is
+    // included to indicate if the connection should be shared or not.
+
     // "keydown" is emitted whenever the client sends a key press
     // message. A KeyEvent structure is included with the KeySym and key
     // code.
@@ -234,7 +238,7 @@ namespace rfb {
     // time to get ready (i.e. provide a framebuffer and name). Once the
     // desktop is ready, the derived class must call on to
     // SConnection::desktopReady().
-    virtual void clientReady(bool shared);
+    virtual void clientReady();
 
     // setPixelFormat() is called when a SetPixelFormat message is received.
     // The derived class must call on to SConnection::setPixelFormat().
@@ -299,6 +303,8 @@ namespace rfb {
     stateEnum state_;
     int32_t preferredEncoding;
     AccessRights accessRights;
+
+    bool shared_;
 
     std::string clientClipboard;
     bool hasRemoteClipboard;
