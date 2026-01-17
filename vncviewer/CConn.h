@@ -61,8 +61,6 @@ protected:
   bool verifyHostKey(const uint8_t* key, size_t length,
                      const char* fingerprint) override;
 
-  void initDone() override;
-
   void setExtendedDesktopSize(unsigned reason, unsigned result,
                               int w, int h,
                               const rfb::ScreenSet& layout) override;
@@ -82,6 +80,8 @@ protected:
   void setLEDState(unsigned int state) override;
 
 private:
+
+  void connectionReady();
 
   void resizeFramebuffer() override;
 

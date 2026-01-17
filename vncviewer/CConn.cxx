@@ -102,6 +102,9 @@ CConn::CConn()
   supportsDesktopResize = true;
   supportsLEDState = true;
 
+  connectSignal(&CConnection::connectionReady, this,
+                &CConn::connectionReady);
+
   if (customCompressLevel)
     setCompressLevel(::compressLevel);
 
@@ -410,10 +413,11 @@ void CConn::getUserPasswd(bool secure, std::string *user,
     throw rfb::auth_cancelled();
 }
 
-// initDone() is called when the serverInit message has been received.  At
-// this point we create the desktop window and display it.  We also tell the
-// server the pixel format and encodings to use and request the first update.
-void CConn::initDone()
+// connectionReady() is called when the serverInit message has been
+// received.  At this point we create the desktop window and display it.
+// We also tell the server the pixel format and encodings to use and
+// request the first update.
+void CConn::connectionReady()
 {
   // If using AutoSelect with old servers, start in FullColor
   // mode. See comment in autoSelectFormatAndEncoding. 

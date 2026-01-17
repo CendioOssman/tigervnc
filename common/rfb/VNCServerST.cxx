@@ -181,6 +181,11 @@ bool VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
 
   clients.push_front(client);
 
+  client->connectSignal(&SConnection::connectionReady, this,
+                        [client, this](bool shared) {
+                          clientReady(client, shared);
+                        });
+
   client->connectSignal(&SConnection::key, this,
                         &VNCServerST::keyEvent);
   client->connectSignal(
@@ -558,6 +563,30 @@ void VNCServerST::setLEDState(unsigned int state)
 
 // Event handlers
 
+void VNCServerST::clientReady(VNCSConnectionST* client, bool shared)
+{
+  // Adjust the exit timers
+  if (rfb::Server::maxConnectionTime && !connectTimer.isStarted())
+    connectTimer.start(core::secsToMillis(rfb::Server::maxConnectionTime));
+  disconnectTimer.stop();
+
+  if (!shared) {
+    if (rfb::Server::disconnectClients &&
+        client->accessCheck(AccessNonShared)) {
+      // - Close all the other connected clients
+      slog.debug("Non-shared connection - closing clients");
+      closeClients(_("Non-shared connection requested"), client->getSock());
+    } else {
+      // - Refuse this connection if there are existing clients, in addition to
+      // this one
+      if (authClientCount() > 1) {
+        client->close(_("Server is already in use"));
+        return;
+      }
+    }
+  }
+}
+
 void VNCServerST::keyEvent(uint32_t keysym, uint32_t keycode, bool down)
 {
   if (!rfb::Server::acceptKeyEvents)
@@ -820,30 +849,6 @@ void VNCServerST::queryConnection(VNCSConnectionST* client,
   }
 
   desktop->queryConnection(client->getSock(), userName);
-}
-
-void VNCServerST::clientReady(VNCSConnectionST* client, bool shared)
-{
-  // Adjust the exit timers
-  if (rfb::Server::maxConnectionTime && !connectTimer.isStarted())
-    connectTimer.start(core::secsToMillis(rfb::Server::maxConnectionTime));
-  disconnectTimer.stop();
-
-  if (!shared) {
-    if (rfb::Server::disconnectClients &&
-        client->accessCheck(AccessNonShared)) {
-      // - Close all the other connected clients
-      slog.debug("Non-shared connection - closing clients");
-      closeClients(_("Non-shared connection requested"), client->getSock());
-    } else {
-      // - Refuse this connection if there are existing clients, in addition to
-      // this one
-      if (authClientCount() > 1) {
-        client->close(_("Server is already in use"));
-        return;
-      }
-    }
-  }
 }
 
 // -=- Internal methods

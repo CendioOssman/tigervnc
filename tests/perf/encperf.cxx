@@ -96,7 +96,6 @@ public:
   void getStats(double& ratio, unsigned long long& bytes,
                 unsigned long long& rawEquivalent);
 
-  void initDone() override {};
   void resizeFramebuffer() override;
   void framebufferUpdateStart() override;
   void framebufferUpdateEnd() override;

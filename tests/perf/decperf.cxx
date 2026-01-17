@@ -66,7 +66,6 @@ public:
   CConn(const char *filename);
   ~CConn();
 
-  void initDone() override;
   void framebufferUpdateStart() override;
   void framebufferUpdateEnd() override;
   void setColourMapEntries(int, int, uint16_t*) override;
@@ -81,6 +80,9 @@ public:
 
 public:
   double cpuTime;
+
+private:
+  void connectionReady();
 
 protected:
   rdr::FileInStream *in;
@@ -118,6 +120,9 @@ CConn::CConn(const char *filename)
 {
   cpuTime = 0.0;
 
+  connectSignal(&CConnection::connectionReady, this,
+                &CConn::connectionReady);
+
   in = new rdr::FileInStream(filename);
   out = new DummyOutStream;
   setStreams(in, out);
@@ -135,7 +140,7 @@ CConn::~CConn()
   delete out;
 }
 
-void CConn::initDone()
+void CConn::connectionReady()
 {
   setFramebuffer(new rfb::ManagedPixelBuffer(filePF,
                                              server.width(),
