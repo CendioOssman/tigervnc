@@ -27,6 +27,7 @@
 #include <rfb/ScreenSet.h>
 #include <rfb/SConnection.h>
 #include <rfb/VNCServerST.h>
+#include <rfb/screenTypes.h>
 
 #include <core/LogWriter.h>
 #include <core/xdgdirs.h>
@@ -112,11 +113,11 @@ void PortalDesktop::queryConnection(network::Socket* sock,
                             "Unable to query the local user to accept the connection.");
 }
 
-unsigned int PortalDesktop::setScreenLayout(int /* fb_width */,
-                                            int /* fb_height */,
-                                            const rfb::ScreenSet& /*  layout */)
+void PortalDesktop::setScreenLayout(int /* fb_width */,
+                                    int /* fb_height */,
+                                    const rfb::ScreenSet& /*  layout */)
 {
-  return rfb::resultProhibited;
+  server->rejectScreenLayout(rfb::resultProhibited);
 }
 
 void PortalDesktop::keyEvent(uint32_t keysym, uint32_t keycode,

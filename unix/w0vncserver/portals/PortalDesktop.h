@@ -43,8 +43,8 @@ public:
   void init(rfb::VNCServer* vs) override;
   void queryConnection(network::Socket* sock,
                        const char* userName) override;
-  unsigned int setScreenLayout(int fb_width, int fb_height,
-                               const rfb::ScreenSet& layout) override;
+  void setScreenLayout(int fb_width, int fb_height,
+                       const rfb::ScreenSet& layout) override;
 
   // Check if portals implementations are available
   static bool available();

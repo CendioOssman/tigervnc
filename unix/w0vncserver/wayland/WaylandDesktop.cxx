@@ -33,6 +33,7 @@
 
 #include <rfb/SConnection.h>
 #include <rfb/VNCServerST.h>
+#include <rfb/screenTypes.h>
 
 #include "../w0vncserver.h"
 #include "objects/Display.h"
@@ -154,6 +155,13 @@ void WaylandDesktop::queryConnection(network::Socket* sock,
   // FIXME: Implement this.
   server->approveConnection(sock, false,
                             "Unable to query the local user to accept the connection.");
+}
+
+void WaylandDesktop::setScreenLayout(int /* fb_width */,
+                                     int /* fb_height */,
+                                     const rfb::ScreenSet& /*  layout */)
+{
+  server->rejectScreenLayout(rfb::resultProhibited);
 }
 
 bool WaylandDesktop::available()
