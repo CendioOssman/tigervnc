@@ -84,6 +84,9 @@ namespace rfb {
     void setPixelBuffer(PixelBuffer* pb, const ScreenSet& layout) override;
     void setPixelBuffer(PixelBuffer* pb) override;
     void setScreenLayout(const ScreenSet& layout) override;
+    void acceptScreenLayout(int fb_width, int fb_height,
+                            const ScreenSet& layout) override;
+    void rejectScreenLayout(unsigned int reason) override;
     const PixelBuffer* getPixelBuffer() const override { return pb; }
 
     void requestClipboard() override;
@@ -199,6 +202,8 @@ namespace rfb {
     std::list<VNCSConnectionST*> clipboardRequestors;
 
     time_t pointerClientTime;
+
+    VNCSConnectionST* layoutClient;
 
     ComparingUpdateTracker* comparer;
 

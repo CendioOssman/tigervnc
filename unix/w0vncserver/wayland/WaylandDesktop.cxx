@@ -34,6 +34,7 @@
 
 #include <rfb/SConnection.h>
 #include <rfb/VNCServerST.h>
+#include <rfb/screenTypes.h>
 
 #include "../w0vncserver.h"
 #include "../parameters.h"
@@ -242,6 +243,13 @@ void WaylandDesktop::handleClipboardData(const char* data)
     return;
 
   dataControl->writePending(data);
+}
+
+void WaylandDesktop::setScreenLayout(int /* fb_width */,
+                                     int /* fb_height */,
+                                     const rfb::ScreenSet& /*  layout */)
+{
+  server->rejectScreenLayout(rfb::resultProhibited);
 }
 
 bool WaylandDesktop::available()
