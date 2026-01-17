@@ -23,7 +23,7 @@
 
 #include <string>
 
-#include <rfb/SDesktop.h>
+#include <core/Object.h>
 
 class PipeWirePixelBuffer;
 
@@ -35,14 +35,11 @@ namespace rfb {
 
 class RemoteDesktop;
 
-class PortalDesktop : public rfb::SDesktop
+class PortalDesktop : public core::Object
 {
 public:
-  PortalDesktop();
+  PortalDesktop(rfb::VNCServer* server);
   virtual ~PortalDesktop();
-
-  // -=- SDesktop interface
-  void init(rfb::VNCServer* vs) override;
 
   // Check if portals implementations are available
   static bool available();

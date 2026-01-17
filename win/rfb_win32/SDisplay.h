@@ -26,7 +26,6 @@
 
 #include <core/Configuration.h>
 
-#include <rfb/SDesktop.h>
 #include <rfb/UpdateTracker.h>
 
 #include <rfb_win32/Handle.h>
@@ -44,6 +43,7 @@ namespace rfb {
   struct KeyEvent;
   struct LayoutEvent;
   struct PointerEvent;
+  class SConnection;
 
   namespace win32 {
 
@@ -65,18 +65,14 @@ namespace rfb {
       virtual void queryConnection(rfb::SConnection* conn) = 0;
     };
 
-    class SDisplay : public SDesktop,
+    class SDisplay : public core::Object,
       WMMonitor::Notifier,
       Clipboard::Notifier,
       public EventHandler
     {
     public:
-      SDisplay();
+      SDisplay(rfb::VNCServer* server);
       virtual ~SDisplay();
-
-      // -=- SDesktop interface
-
-      void init(VNCServer* vs) override;
 
       // -=- Clipboard events
       

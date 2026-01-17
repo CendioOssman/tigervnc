@@ -112,8 +112,8 @@ namespace winvnc {
     rfb::win32::Handle sessionEvent;
 
     // VNCServerWin32 Server-internal state
-    rfb::win32::SDisplay desktop;
     rfb::VNCServerST vncServer;
+    rfb::win32::SDisplay desktop;
     std::mutex runLock;
     DWORD thread_id;
     bool runServer;

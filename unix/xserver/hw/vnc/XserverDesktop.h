@@ -34,7 +34,6 @@
 #include <core/Object.h>
 #include <core/Timer.h>
 
-#include <rfb/SDesktop.h>
 #include <rfb/PixelBuffer.h>
 
 #include <unixcommon.h>
@@ -45,12 +44,14 @@ namespace rfb {
   struct KeyEvent;
   struct LayoutEvent;
   struct PointerEvent;
+  class SConnection;
+  class VNCServer;
   class VNCServerST;
 }
 
 namespace network { class SocketListener; class Socket; }
 
-class XserverDesktop : public rfb::SDesktop,
+class XserverDesktop : public core::Object,
                        public rfb::FullFramePixelBuffer {
 public:
 
@@ -95,9 +96,6 @@ public:
   //   Used by X server code to supply the result of a query.
   void approveConnection(uint32_t opaqueId, bool accept,
                          const char* rejectMsg=0);
-
-  // rfb::SDesktop callbacks
-  void init(rfb::VNCServer* vs) override;
 
   // rfb::PixelBuffer callbacks
   void grabRegion(const core::Region& r) override;

@@ -65,7 +65,6 @@
 #include <rfb/ComparingUpdateTracker.h>
 #include <rfb/KeyRemapper.h>
 #include <rfb/KeysymStr.h>
-#include <rfb/SDesktop.h>
 #include <rfb/Security.h>
 #include <rfb/ServerCore.h>
 #include <rfb/VNCServerST.h>
@@ -85,9 +84,9 @@ static core::LogWriter connectionsLog("Connections");
 
 // -=- Constructors/Destructor
 
-VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
-  : desktop(desktop_), desktopStarted(false),
-    desktopStarting(false), blockCounter(0), pb(nullptr),
+VNCServerST::VNCServerST(const char* name_)
+  : desktopStarted(false), desktopStarting(false),
+    blockCounter(0), pb(nullptr),
     ledState(ledUnknown), name(name_), pointerClient(nullptr),
     clipboardClient(nullptr), pointerClientTime(0),
     layoutClient(nullptr),
@@ -126,8 +125,6 @@ VNCServerST::VNCServerST(const char* name_, SDesktop* desktop_)
                              &VNCServerST::connectTimeout);
   frameTimer.connectSignal("timer", this,
                            &VNCServerST::frameTimeout);
-
-  desktop_->init(this);
 
   // FIXME: Do we really want to kick off these right away?
   if (rfb::Server::maxIdleTime)

@@ -25,7 +25,6 @@
 #ifndef __RFB_WIN32_CLIPBOARD_H__
 #define __RFB_WIN32_CLIPBOARD_H__
 
-#include <rfb/SDesktop.h>
 #include <rfb_win32/MsgWindow.h>
 #include <rfb_win32/DeviceFrameBuffer.h>
 
