@@ -154,11 +154,10 @@ void WaylandDesktop::keyEvent(uint32_t keysym, uint32_t keycode,
   virtualKeyboard->key(keysym, keycode, down);
 }
 
-void WaylandDesktop::queryConnection(network::Socket* sock,
-                                     const char* /* userName */)
+void WaylandDesktop::queryConnection(rfb::SConnection* conn)
 {
   // FIXME: Implement this.
-  server->approveConnection(sock, false,
+  server->approveConnection(conn, false,
                             "Unable to query the local user to accept the connection.");
 }
 
