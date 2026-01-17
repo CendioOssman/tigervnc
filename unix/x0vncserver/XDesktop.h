@@ -21,7 +21,6 @@
 #ifndef __XDESKTOP_H__
 #define __XDESKTOP_H__
 
-#include <rfb/SDesktop.h>
 #include <tx/TXWindow.h>
 #include <unixcommon.h>
 
@@ -33,6 +32,10 @@
 #include <vncconfig/QueryConnectDialog.h>
 
 #include "XSelection.h"
+
+namespace rfb {
+  class VNCServer;
+}
 
 class Geometry;
 class XPixelBuffer;
@@ -46,16 +49,14 @@ struct AddedKeySym
 // number of XKb indicator leds to handle
 #define XDESKTOP_N_LEDS 3
 
-class XDesktop : public rfb::SDesktop,
+class XDesktop : public core::Object,
                  public TXGlobalEventHandler,
                  public QueryResultCallback
 {
 public:
-  XDesktop(Display* dpy_, Geometry *geometry);
+  XDesktop(rfb::VNCServer* server_, Display* dpy_, Geometry* geometry);
   virtual ~XDesktop();
   void poll();
-  // -=- SDesktop interface
-  void init(rfb::VNCServer* vs) override;
   bool isRunning();
 
   // -=- TXGlobalEventHandler interface

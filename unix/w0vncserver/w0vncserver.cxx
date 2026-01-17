@@ -103,7 +103,7 @@ int main(int argc, char** argv)
   int32_t sighupTag;
   RFBTimerSource* timerSource;
   GSocketSource* monitor;
-  rfb::SDesktop* desktop;
+  core::Object* desktop;
   rfb::VNCServerST* server;
 
   programName = argv[0];
@@ -188,15 +188,15 @@ int main(int argc, char** argv)
   sighupTag = g_unix_signal_add(SIGHUP, CleanupSignalHandler, nullptr);
 
   try {
+    server = new rfb::VNCServerST(desktopName);
     if (PortalDesktop::available()) {
-      desktop = new PortalDesktop();
+      desktop = new PortalDesktop(server);
     } else if (WaylandDesktop::available()) {
-      desktop = new WaylandDesktop(loop);
+      desktop = new WaylandDesktop(loop, server);
     } else {
       fprintf(stderr, "No remote desktop implementation found.\n");
       return -1;
     }
-    server = new rfb::VNCServerST(desktopName, desktop);
     timerSource = new RFBTimerSource();
     monitor = new GSocketSource(server, &listeners);
   } catch (std::exception& e) {

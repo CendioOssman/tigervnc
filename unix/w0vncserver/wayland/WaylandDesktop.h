@@ -22,7 +22,7 @@
 #include <glib.h>
 #include <stdint.h>
 
-#include <rfb/SDesktop.h>
+#include <core/Object.h>
 
 namespace rfb {
   class VNCServer;
@@ -39,13 +39,11 @@ namespace wayland {
 class WaylandPixelBuffer;
 class GWaylandSource;
 
-class WaylandDesktop : public rfb::SDesktop {
+class WaylandDesktop : public core::Object
+{
 public:
-  WaylandDesktop(GMainLoop* loop);
+  WaylandDesktop(GMainLoop* loop, rfb::VNCServer* server);
   virtual ~WaylandDesktop();
-
-  // // -=- SDesktop interface
-  void init(rfb::VNCServer* vs) override;
 
   // Check if necessary wayland protocols are available
   static bool available();
