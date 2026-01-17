@@ -86,6 +86,11 @@ void WaylandDesktop::init(rfb::VNCServer* vs)
   server->connectSignal("keydown", this, &WaylandDesktop::keyEvent);
   server->connectSignal("keyup", this, &WaylandDesktop::keyEvent);
   server->connectSignal("pointer", this, &WaylandDesktop::pointerEvent);
+
+  server->connectSignal<rfb::LayoutEvent>(
+    "layoutrequest", this, [this](rfb::LayoutEvent) {
+      server->rejectScreenLayout(rfb::resultProhibited);
+    });
 }
 
 void WaylandDesktop::start()
@@ -154,13 +159,6 @@ void WaylandDesktop::queryConnection(network::Socket* sock,
   // FIXME: Implement this.
   server->approveConnection(sock, false,
                             "Unable to query the local user to accept the connection.");
-}
-
-void WaylandDesktop::setScreenLayout(int /* fb_width */,
-                                     int /* fb_height */,
-                                     const rfb::ScreenSet& /*  layout */)
-{
-  server->rejectScreenLayout(rfb::resultProhibited);
 }
 
 bool WaylandDesktop::available()
