@@ -68,6 +68,15 @@ void PortalDesktop::init(rfb::VNCServer* vs)
   server->connectSignal(&rfb::VNCServer::stopped, this,
                         &PortalDesktop::stop);
 
+  // FIXME: Implement this.
+  server->connectSignal(
+    &rfb::VNCServer::connectionRequested, this,
+    [this](rfb::SConnection* conn) {
+      server->approveConnection(conn, false,
+                                _("Unable to query the local user to "
+                                  "accept the connection."));
+    });
+
   server->connectSignal(&rfb::VNCServer::terminateRequested,
                         []() { kill(getpid(), SIGTERM); });
 
@@ -176,14 +185,6 @@ void PortalDesktop::stop()
   delete clipboard;
   clipboard = nullptr;
   clipboardAccess = false;
-}
-
-void PortalDesktop::queryConnection(rfb::SConnection* conn)
-{
-  // FIXME: Implement this.
-  server->approveConnection(conn, false,
-                            _("Unable to query the local user to "
-                              "accept the connection."));
 }
 
 void PortalDesktop::keyEvent(uint32_t keysym, uint32_t keycode,

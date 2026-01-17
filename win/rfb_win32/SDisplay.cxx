@@ -113,6 +113,9 @@ void SDisplay::init(VNCServer* vs)
   server->connectSignal(&VNCServer::starting, this, &SDisplay::start);
   server->connectSignal(&VNCServer::stopped, this, &SDisplay::stop);
 
+  server->connectSignal(&VNCServer::connectionRequested, this,
+                        &SDisplay::queryConnection);
+
   server->connectSignal(&VNCServer::terminateRequested, this,
                         [this]() { SetEvent(terminateEvent); });
 
@@ -178,7 +181,7 @@ void SDisplay::stop()
 }
 
 
-void SDisplay::queryConnection(rfb::SConnection* conn)
+void SDisplay::queryConnection(SConnection* conn)
 {
   assert(server != nullptr);
 
