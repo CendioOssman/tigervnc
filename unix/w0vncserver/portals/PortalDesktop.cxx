@@ -47,22 +47,10 @@ extern const unsigned int code_map_qnum_to_xorgevdev_len;
 
 static core::LogWriter vlog("PortalDesktop");
 
-PortalDesktop::PortalDesktop()
-  : server(nullptr), remoteDesktop(nullptr), clipboard(nullptr),
+PortalDesktop::PortalDesktop(rfb::VNCServer* server_)
+  : server(server_), remoteDesktop(nullptr), clipboard(nullptr),
     pb(nullptr), restoreToken(""), clipboardAccess(false)
 {
-}
-
-PortalDesktop::~PortalDesktop()
-{
-  delete remoteDesktop;
-  delete clipboard;
-}
-
-void PortalDesktop::init(rfb::VNCServer* vs)
-{
-  server = vs;
-
   server->connectSignal(&rfb::VNCServer::starting, this,
                         &PortalDesktop::start);
   server->connectSignal(&rfb::VNCServer::stopped, this,
@@ -97,6 +85,12 @@ void PortalDesktop::init(rfb::VNCServer* vs)
                           server->rejectScreenLayout(
                             rfb::resultProhibited);
                         });
+}
+
+PortalDesktop::~PortalDesktop()
+{
+  delete remoteDesktop;
+  delete clipboard;
 }
 
 void PortalDesktop::start()

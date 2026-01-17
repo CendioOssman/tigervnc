@@ -52,34 +52,13 @@ static core::LogWriter vlog("WaylandDesktop");
 
 #define BUTTONS 9
 
-WaylandDesktop::WaylandDesktop(GMainLoop* loop_)
-  : server(nullptr), pb(nullptr), loop(loop_), waylandSource(nullptr),
+WaylandDesktop::WaylandDesktop(GMainLoop* loop_,
+                               rfb::VNCServer* server_)
+  : server(server_), pb(nullptr), loop(loop_), waylandSource(nullptr),
     display(nullptr), seat(nullptr), virtualPointer(nullptr),
     virtualKeyboard(nullptr), dataControl(nullptr)
 {
   assert(available());
-
-  display = new wayland::Display();
-  output = new wayland::Output(display);
-  seat = new wayland::Seat(display);
-  seat->connectSignal(&wayland::Seat::ledStateChanged, this,
-                      &WaylandDesktop::ledState);
-}
-
-WaylandDesktop::~WaylandDesktop()
-{
-  delete pb;
-  delete waylandSource;
-  delete virtualPointer;
-  delete virtualKeyboard;
-  delete seat;
-  delete output;
-  delete display;
-}
-
-void WaylandDesktop::init(rfb::VNCServer* vs)
-{
-  server = vs;
 
   server->connectSignal(&rfb::VNCServer::starting, this,
                         &WaylandDesktop::start);
@@ -115,6 +94,23 @@ void WaylandDesktop::init(rfb::VNCServer* vs)
                           server->rejectScreenLayout(
                             rfb::resultProhibited);
                         });
+
+  display = new wayland::Display();
+  output = new wayland::Output(display);
+  seat = new wayland::Seat(display);
+  seat->connectSignal(&wayland::Seat::ledStateChanged, this,
+                      &WaylandDesktop::ledState);
+}
+
+WaylandDesktop::~WaylandDesktop()
+{
+  delete pb;
+  delete waylandSource;
+  delete virtualPointer;
+  delete virtualKeyboard;
+  delete seat;
+  delete output;
+  delete display;
 }
 
 void WaylandDesktop::start()
@@ -267,8 +263,6 @@ bool WaylandDesktop::available()
 
 void WaylandDesktop::ledState()
 {
-  if (!server)
-    return;
   if (!virtualKeyboard)
     return;
 

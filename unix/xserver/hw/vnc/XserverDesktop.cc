@@ -89,7 +89,7 @@ XserverDesktop::XserverDesktop(int screenIndex_,
 {
   format = pf;
 
-  server = new rfb::VNCServerST(name, this);
+  server = new rfb::VNCServerST(name);
 
   server->connectSignal(&rfb::VNCServer::connectionRequested, this,
                         &XserverDesktop::queryConnection);
@@ -193,12 +193,6 @@ void XserverDesktop::queueMsc(uint64_t id, uint64_t msc)
 void XserverDesktop::abortMsc(uint64_t id)
 {
   pendingMsc.erase(id);
-}
-
-void XserverDesktop::init(rfb::VNCServer* vs)
-{
-  // We already own the server object, and we always keep it in a
-  // ready state
 }
 
 void XserverDesktop::queryConnection(rfb::SConnection* conn)
@@ -514,7 +508,7 @@ void XserverDesktop::approveConnection(uint32_t opaqueId, bool accept,
 
 ///////////////////////////////////////////////////////////////////////////
 //
-// SDesktop callbacks
+// Signal handlers
 
 
 void XserverDesktop::pointerEvent(core::Point pos, uint16_t buttonMask)

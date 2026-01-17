@@ -378,9 +378,9 @@ int main(int argc, char** argv)
       vlog.error(_("Invalid geometry"));
       return 1;
     }
-    XDesktop desktop(dpy, &geo);
 
-    rfb::VNCServerST server(desktopName, &desktop);
+    rfb::VNCServerST server(desktopName);
+    XDesktop desktop(&server, dpy, &geo);
 
     FileTcpFilter fileTcpFilter(hostsFile);
 
