@@ -881,7 +881,7 @@ void VNCServerST::queryConnection(VNCSConnectionST* client)
     return;
   }
 
-  desktop->queryConnection(client);
+  emitSignal(&queryconnection, (SConnection*)client);
 }
 
 // -=- Internal methods

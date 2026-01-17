@@ -95,12 +95,13 @@ public:
 
   // rfb::SDesktop callbacks
   void init(rfb::VNCServer* vs) override;
-  void queryConnection(rfb::SConnection* conn) override;
 
   // rfb::PixelBuffer callbacks
   void grabRegion(const core::Region& r) override;
 
 protected:
+  void queryConnection(rfb::SConnection* conn);
+
   void pointerEvent(core::Point pos, uint16_t buttonMask);
   void keyEvent(uint32_t keysym, uint32_t keycode, bool down);
 

@@ -82,6 +82,14 @@ void WaylandDesktop::init(rfb::VNCServer* vs)
   server->connectSignal(&server->stopped, this,
                         &WaylandDesktop::stop);
 
+  // FIXME: Implement this.
+  server->connectSignal(
+    &server->queryconnection, this, [this](rfb::SConnection* conn) {
+      server->approveConnection(conn, false,
+                                "Unable to query the local user to "
+                                "accept the connection.");
+    });
+
   server->connectSignal(&server->terminate,
                         []() { kill(getpid(), SIGTERM); });
 
@@ -152,13 +160,6 @@ void WaylandDesktop::keyEvent(uint32_t keysym, uint32_t keycode,
                               bool down)
 {
   virtualKeyboard->key(keysym, keycode, down);
-}
-
-void WaylandDesktop::queryConnection(rfb::SConnection* conn)
-{
-  // FIXME: Implement this.
-  server->approveConnection(conn, false,
-                            "Unable to query the local user to accept the connection.");
 }
 
 bool WaylandDesktop::available()

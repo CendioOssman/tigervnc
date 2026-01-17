@@ -90,6 +90,9 @@ XserverDesktop::XserverDesktop(int screenIndex_,
 
   server = new rfb::VNCServerST(name, this);
 
+  server->connectSignal(&server->queryconnection, this,
+                        &XserverDesktop::queryConnection);
+
   server->connectSignal(&server->terminate,
                         []() { kill(getpid(), SIGTERM); });
 
