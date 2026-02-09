@@ -69,7 +69,7 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
                              CConn* cc_)
   : Fl_Window(w, h), cc(cc_), offscreen(nullptr), overlay(nullptr),
     firstUpdate(true),
-    delayedFullscreen(false), sentDesktopSize(false),
+    delayedFullscreen(false), hasResized(false), sentDesktopSize(false),
     pendingRemoteResize(false), lastResize({0, 0}),
     keyboardGrabbed(false), mouseGrabbed(false)
 {
@@ -580,6 +580,8 @@ void DesktopWindow::resize(int x, int y, int w, int h)
   Fl_Window::resize(x, y, w, h);
 
   if (resizing) {
+    hasResized = true;
+
     remoteResize();
 
     repositionWidgets();
@@ -743,9 +745,11 @@ int DesktopWindow::handle(int event)
     // The window manager respected our full screen request, so stop
     // waiting and delaying the session resize
     if (delayedFullscreen && fullscreen_active()) {
-      Fl::remove_timeout(handleFullscreenTimeout, this);
       delayedFullscreen = false;
-      remoteResize();
+      if (hasResized) {
+        Fl::remove_timeout(handleFullscreenTimeout, this);
+        remoteResize();
+      }
     }
 
     break;
@@ -827,10 +831,10 @@ int DesktopWindow::fltkDispatch(int event, Fl_Window *win)
       // which means we can continue enabling initial fullscreen.
       if (dw->delayedFullscreen) {
         // Hack: Fullscreen requests may be ignored, so we need a
-        // timeout for when we should stop waiting. We also really need
-        // to wait for the resize, which can come after the fullscreen
-        // event.
+        // timeout for when we should stop waiting. We also need to wait
+        // for the resize, which can come after the fullscreen event.
         Fl::add_timeout(0.5, handleFullscreenTimeout, dw);
+        dw->hasResized = false;
         dw->fullscreen_on();
       }
       break;
@@ -1384,6 +1388,9 @@ void DesktopWindow::handleFullscreenTimeout(void *data)
   DesktopWindow *self = (DesktopWindow *)data;
 
   assert(self);
+
+  // We are here because we got tired of waiting for either the
+  // full-screen state, or the resize notification
 
   self->delayedFullscreen = false;
   self->remoteResize();
