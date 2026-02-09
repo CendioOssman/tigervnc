@@ -118,7 +118,6 @@ private:
 
   bool firstUpdate;
   bool delayedFullscreen;
-  bool hasResized;
   bool sentDesktopSize;
 
   bool pendingRemoteResize;
