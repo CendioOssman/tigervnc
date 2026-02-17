@@ -135,9 +135,9 @@ namespace rfb {
 
     // Methods to be overridden in a derived class
 
-    // credentialsRequested() gets the username and password. This might
-    // involve a dialog, getpass(), etc.  The user buffer pointer can be
-    // null, in which case no user name will be retrieved.
+    // credentialsRequested() is called when credentials are required.
+    // This method should be non-blocking and call setCredentials()
+    // when credentials are available.
     virtual void credentialsRequested(bool secure, bool needsUser,
                                       bool needsPassword) = 0;
 
@@ -183,11 +183,20 @@ namespace rfb {
 
     // Other methods
 
+    // setCredentials() is called when the server requires authenication
+    // and the client has credentials available.
     void setCredentials(const std::string& user,
                         const std::string& password);
+    // requestCredentials() is a non-blocking function that is called
+    // when the server requires authentication. It immediately returns
+    // true if credentials are available, and false otherwise.
     bool requestCredentials(bool needsUser, bool needsPassword);
 
+    // Note: getUsername() should only be used if requestCredentials()
+    // returned true.
     std::string getUsername();
+    // Note: getPassword() should only be used if requestCredentials()
+    //returned true.
     std::string getPassword();
 
     // requestClipboard() will result in a request to the server to

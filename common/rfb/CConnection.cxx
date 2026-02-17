@@ -679,6 +679,9 @@ bool CConnection::requestCredentials(bool needsUser, bool needsPassword)
       (needsPassword && credentials.password.empty())) {
     requestedUser = needsUser;
     requestedPassword = needsPassword;
+    // Postpone credentials requests to the next event loop iteration to
+    // avoid recursive behaviour and prevent potential conflicts with
+    // ongoing event handling
     credentialsTimer.start(0);
     return false;
   }
