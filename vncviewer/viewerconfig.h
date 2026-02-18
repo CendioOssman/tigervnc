@@ -33,7 +33,6 @@ public:
   static ViewerConfig* instance();
 
   static bool canFullScreenOnMultiDisplays();
-  static bool hasWM();
 
 private:
   ViewerConfig();

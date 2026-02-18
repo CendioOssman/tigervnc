@@ -68,24 +68,8 @@ bool ViewerConfig::canFullScreenOnMultiDisplays()
 #endif
   bool supported = X11Utils::isEWMHsupported(dpy);
   vlog.debug("isEWMHsupported %d", supported);
-  bool wm = hasWM();
+  bool wm = X11Utils::hasWM(dpy);
   return supported || !wm;
-#else
-  return true;
-#endif
-}
-
-bool ViewerConfig::hasWM()
-{
-#if defined(Q_OS_LINUX)
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    auto dpy = QX11Info::display();
-#else
-    auto dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
-#endif
-  bool hasWM = X11Utils::hasWM(dpy);
-  vlog.debug("hasWM %d", hasWM);
-  return hasWM;
 #else
   return true;
 #endif
