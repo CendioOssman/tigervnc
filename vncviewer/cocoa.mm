@@ -124,6 +124,11 @@ void cocoa_release_displays(Fl_Window *win)
     [nsw setLevel:newlevel];
 }
 
+bool cocoa_screens_have_separate_spaces()
+{
+  return [NSScreen screensHaveSeparateSpaces];
+}
+
 CGColorSpaceRef cocoa_win_color_space(Fl_Window *win)
 {
   NSWindow *nsw;

@@ -27,6 +27,8 @@ void cocoa_set_level(Fl_Window *win, int level);
 int cocoa_capture_displays(Fl_Window *win);
 void cocoa_release_displays(Fl_Window *win);
 
+bool cocoa_screens_have_separate_spaces();
+
 typedef struct CGColorSpace *CGColorSpaceRef;
 
 CGColorSpaceRef cocoa_win_color_space(Fl_Window *win);
