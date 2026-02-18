@@ -254,8 +254,11 @@ DesktopWindow::~DesktopWindow()
 
 void DesktopWindow::updateMonitorsFullscreen()
 {
+  bool allMonitors = !strcasecmp(fullScreenMode, "all");
+  bool selectedMonitors = !strcasecmp(fullScreenMode, "selected");
+
   if ((fullscreenEnabled || pendingFullscreen)
-      && ViewerConfig::fullscreenType() != ViewerConfig::Current) {
+      && (allMonitors || selectedMonitors)) {
     fullscreen(false);
     fullscreen(true);
   }
@@ -275,11 +278,11 @@ QList<int> DesktopWindow::fullscreenScreens() const
   QApplication* app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
   QList<int> applicableScreens;
-  if (ViewerConfig::fullscreenType() == ViewerConfig::All) {
+  if (!strcasecmp(fullScreenMode, "all")) {
     for (int i = 0; i < screens.length(); i++) {
       applicableScreens << i;
     }
-  } else if (ViewerConfig::fullscreenType() == ViewerConfig::Selected) {
+  } else if (!strcasecmp(fullScreenMode, "selected")) {
     for (int const& id : ::fullScreenSelectedMonitors.getParam()) {
       int i = id - 1; // Screen ID in config is 1-origin.
       if (i < screens.length()) {
@@ -338,11 +341,13 @@ void DesktopWindow::fullscreen(bool enabled)
       previousScreen = getCurrentScreen();
     }
 
+    bool allMonitors = !strcasecmp(fullScreenMode, "all");
+    bool selectedMonitors = !strcasecmp(fullScreenMode, "selected");
     QList<int> selectedScreens = fullscreenScreens();
     int top, bottom, left, right;
     QScreen* selectedPrimaryScreen = screens[selectedScreens[0]];
     top = bottom = left = right = selectedScreens[0];
-    if (ViewerConfig::fullscreenType() != ViewerConfig::Current && selectedScreens.length() > 0) {
+    if ((allMonitors || selectedMonitors) && selectedScreens.length() > 0) {
       int xmin = INT_MAX;
       int ymin = INT_MAX;
       int xmax = INT_MIN;

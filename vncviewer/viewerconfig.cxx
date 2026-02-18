@@ -56,21 +56,6 @@ ViewerConfig *ViewerConfig::instance()
   return &config;
 }
 
-ViewerConfig::FullscreenType ViewerConfig::fullscreenType()
-{
-  if (!strcasecmp(::fullScreenMode.getValueStr().c_str(), "selected")) {
-    return Selected;
-  }
-
-  if (!strcasecmp(::fullScreenMode.getValueStr().c_str(), "all")) {
-    if (ViewerConfig::canFullScreenOnMultiDisplays()) {
-      return All;
-    }
-  }
-
-  return Current;
-}
-
 bool ViewerConfig::canFullScreenOnMultiDisplays()
 {
 #if defined(__APPLE__)

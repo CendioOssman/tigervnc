@@ -30,16 +30,8 @@ class ViewerConfig : public QObject
   Q_OBJECT
 
 public:
-  enum FullscreenType
-  {
-    Current,
-    All,
-    Selected
-  };
-
   static ViewerConfig* instance();
 
-  static FullscreenType fullscreenType();
   static bool canFullScreenOnMultiDisplays();
   static bool hasWM();
 
