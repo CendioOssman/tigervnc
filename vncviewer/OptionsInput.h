@@ -37,16 +37,16 @@ public:
   void reset() override;
 
 private:
-  QCheckBox* inputViewOnly;
-  QCheckBox* inputMouseEmulateMiddleButton;
-  QCheckBox* inputMouseShowDot;
-  QCheckBox* inputKeyboardPassSystemKeys;
-  QComboBox* inputKeyboardMenuKeyCombo;
-  QCheckBox* inputClipboardFromServer;
-  QCheckBox* inputClipboardToServer;
+  QCheckBox* viewOnlyCheckbox;
+  QCheckBox* emulateMBCheckbox;
+  QCheckBox* dotCursorCheckbox;
+  QCheckBox* systemKeysCheckbox;
+  QComboBox* menuKeyChoice;
+  QCheckBox* acceptClipboardCheckbox;
+  QCheckBox* sendClipboardCheckbox;
 #if !defined(WIN32) && !defined(__APPLE__)
-  QCheckBox* inputSetPrimary;
-  QCheckBox* inputSendPrimary;
+  QCheckBox* setPrimaryCheckbox;
+  QCheckBox* sendPrimaryCheckbox;
 #endif
 };
 

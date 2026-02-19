@@ -32,22 +32,22 @@ OptionsMisc::OptionsMisc(QWidget* parent)
   : OptionsPage{parent}
 {
   QVBoxLayout* layout = new QVBoxLayout;
-  shared = new QCheckBox(_("Shared (don't disconnect other viewers)"));
-  layout->addWidget(shared);
-  reconnect = new QCheckBox(_("Ask to reconnect on connection errors"));
-  layout->addWidget(reconnect);
+  sharedCheckbox = new QCheckBox(_("Shared (don't disconnect other viewers)"));
+  layout->addWidget(sharedCheckbox);
+  reconnectCheckbox = new QCheckBox(_("Ask to reconnect on connection errors"));
+  layout->addWidget(reconnectCheckbox);
   layout->addStretch(1);
   setLayout(layout);
 }
 
 void OptionsMisc::apply()
 {
-  ::shared.setParam(shared->isChecked());
-  ::reconnectOnError.setParam(reconnect->isChecked());
+  ::shared.setParam(sharedCheckbox->isChecked());
+  ::reconnectOnError.setParam(reconnectCheckbox->isChecked());
 }
 
 void OptionsMisc::reset()
 {
-  shared->setChecked(::shared);
-  reconnect->setChecked(::reconnectOnError);
+  sharedCheckbox->setChecked(::shared);
+  reconnectCheckbox->setChecked(::reconnectOnError);
 }

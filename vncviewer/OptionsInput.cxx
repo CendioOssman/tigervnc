@@ -38,26 +38,26 @@ OptionsInput::OptionsInput(QWidget* parent)
 {
   QVBoxLayout* layout = new QVBoxLayout;
 
-  inputViewOnly = new QCheckBox(_("View only (ignore mouse and keyboard)"));
-  layout->addWidget(inputViewOnly);
+  viewOnlyCheckbox = new QCheckBox(_("View only (ignore mouse and keyboard)"));
+  layout->addWidget(viewOnlyCheckbox);
 
   QGroupBox* groupBox1 = new QGroupBox(_("Mouse"));
   QVBoxLayout* vbox1 = new QVBoxLayout;
-  inputMouseEmulateMiddleButton = new QCheckBox(_("Emulate middle mouse button"));
-  vbox1->addWidget(inputMouseEmulateMiddleButton);
-  inputMouseShowDot = new QCheckBox(_("Show dot when no cursor"));
-  vbox1->addWidget(inputMouseShowDot);
+  emulateMBCheckbox = new QCheckBox(_("Emulate middle mouse button"));
+  vbox1->addWidget(emulateMBCheckbox);
+  dotCursorCheckbox = new QCheckBox(_("Show dot when no cursor"));
+  vbox1->addWidget(dotCursorCheckbox);
   groupBox1->setLayout(vbox1);
   layout->addWidget(groupBox1);
 
   QGroupBox* groupBox2 = new QGroupBox(_("Keyboard"));
   QVBoxLayout* vbox2 = new QVBoxLayout;
-  inputKeyboardPassSystemKeys = new QCheckBox(_("Pass system keys directly to server (full screen)"));
-  vbox2->addWidget(inputKeyboardPassSystemKeys);
+  systemKeysCheckbox = new QCheckBox(_("Pass system keys directly to server (full screen)"));
+  vbox2->addWidget(systemKeysCheckbox);
   QHBoxLayout* hbox2 = new QHBoxLayout;
   QLabel* label = new QLabel(_("Menu key"));
   hbox2->addWidget(label);
-  inputKeyboardMenuKeyCombo = new QComboBox;
+  menuKeyChoice = new QComboBox;
   QStringListModel* model = new QStringListModel;
   QStringList menuKeys;
   auto keysyms = getMenuKeySymbols();
@@ -65,8 +65,8 @@ OptionsInput::OptionsInput(QWidget* parent)
     menuKeys.append(keysyms[i].name);
   }
   model->setStringList(menuKeys);
-  inputKeyboardMenuKeyCombo->setModel(model);
-  hbox2->addWidget(inputKeyboardMenuKeyCombo);
+  menuKeyChoice->setModel(model);
+  hbox2->addWidget(menuKeyChoice);
   hbox2->addStretch(1);
   vbox2->addLayout(hbox2);
   groupBox2->setLayout(vbox2);
@@ -74,22 +74,22 @@ OptionsInput::OptionsInput(QWidget* parent)
 
   QGroupBox* groupBox3 = new QGroupBox(_("Clipboard"));
   QVBoxLayout* vbox3 = new QVBoxLayout;
-  inputClipboardFromServer = new QCheckBox(_("Accept clipboard from server"));
-  vbox3->addWidget(inputClipboardFromServer);
+  acceptClipboardCheckbox = new QCheckBox(_("Accept clipboard from server"));
+  vbox3->addWidget(acceptClipboardCheckbox);
 #if !defined(WIN32) && !defined(__APPLE__)
   QHBoxLayout* h1 = new QHBoxLayout;
   h1->addSpacing(20);
-  inputSetPrimary = new QCheckBox(_("Also set primary selection"));
-  h1->addWidget(inputSetPrimary);
+  setPrimaryCheckbox = new QCheckBox(_("Also set primary selection"));
+  h1->addWidget(setPrimaryCheckbox);
   vbox3->addLayout(h1);
 #endif
-  inputClipboardToServer = new QCheckBox(_("Send clipboard to server"));
-  vbox3->addWidget(inputClipboardToServer);
+  sendClipboardCheckbox = new QCheckBox(_("Send clipboard to server"));
+  vbox3->addWidget(sendClipboardCheckbox);
 #if !defined(WIN32) && !defined(__APPLE__)
   QHBoxLayout* h2 = new QHBoxLayout;
   h2->addSpacing(20);
-  inputSendPrimary = new QCheckBox(_("Send primary selection as clipboard"));
-  h2->addWidget(inputSendPrimary);
+  sendPrimaryCheckbox = new QCheckBox(_("Send primary selection as clipboard"));
+  h2->addWidget(sendPrimaryCheckbox);
   vbox3->addLayout(h2);
 #endif
   groupBox3->setLayout(vbox3);
@@ -101,30 +101,30 @@ OptionsInput::OptionsInput(QWidget* parent)
 
 void OptionsInput::apply()
 {
-  ::viewOnly.setParam(inputViewOnly->isChecked());
-  ::emulateMiddleButton.setParam(inputMouseEmulateMiddleButton->isChecked());
-  ::dotWhenNoCursor.setParam(inputMouseShowDot->isChecked());
-  ::fullscreenSystemKeys.setParam(inputKeyboardPassSystemKeys->isChecked());
-  ::menuKey.setParam(inputKeyboardMenuKeyCombo->currentText().toStdString().c_str());
-  ::acceptClipboard.setParam(inputClipboardFromServer->isChecked());
-  ::sendClipboard.setParam(inputClipboardToServer->isChecked());
+  ::viewOnly.setParam(viewOnlyCheckbox->isChecked());
+  ::emulateMiddleButton.setParam(emulateMBCheckbox->isChecked());
+  ::dotWhenNoCursor.setParam(dotCursorCheckbox->isChecked());
+  ::fullscreenSystemKeys.setParam(systemKeysCheckbox->isChecked());
+  ::menuKey.setParam(menuKeyChoice->currentText().toStdString().c_str());
+  ::acceptClipboard.setParam(acceptClipboardCheckbox->isChecked());
+  ::sendClipboard.setParam(sendClipboardCheckbox->isChecked());
 #if !defined(WIN32) && !defined(__APPLE__)
-  ::setPrimary.setParam(inputSetPrimary->isChecked());
-  ::sendPrimary.setParam(inputSendPrimary->isChecked());
+  ::setPrimary.setParam(setPrimaryCheckbox->isChecked());
+  ::sendPrimary.setParam(sendPrimaryCheckbox->isChecked());
 #endif
 }
 
 void OptionsInput::reset()
 {
-  inputViewOnly->setChecked(::viewOnly);
-  inputMouseEmulateMiddleButton->setChecked(::emulateMiddleButton);
-  inputMouseShowDot->setChecked(::dotWhenNoCursor);
-  inputKeyboardPassSystemKeys->setChecked(::fullscreenSystemKeys);
-  inputKeyboardMenuKeyCombo->setCurrentText(::menuKey.getValueStr().c_str());
-  inputClipboardFromServer->setChecked(::acceptClipboard);
-  inputClipboardToServer->setChecked(::sendClipboard);
+  viewOnlyCheckbox->setChecked(::viewOnly);
+  emulateMBCheckbox->setChecked(::emulateMiddleButton);
+  dotCursorCheckbox->setChecked(::dotWhenNoCursor);
+  systemKeysCheckbox->setChecked(::fullscreenSystemKeys);
+  menuKeyChoice->setCurrentText(::menuKey.getValueStr().c_str());
+  acceptClipboardCheckbox->setChecked(::acceptClipboard);
+  sendClipboardCheckbox->setChecked(::sendClipboard);
 #if !defined(WIN32) && !defined(__APPLE__)
-  inputSetPrimary->setChecked(::setPrimary);
-  inputSendPrimary->setChecked(::sendPrimary);
+  setPrimaryCheckbox->setChecked(::setPrimary);
+  sendPrimaryCheckbox->setChecked(::sendPrimary);
 #endif
 }

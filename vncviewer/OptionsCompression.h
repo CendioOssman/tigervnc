@@ -38,20 +38,20 @@ public:
   void reset() override;
 
 private:
-  QCheckBox* compressionAutoSelect;
-  QRadioButton* compressionEncodingTight;
-  QRadioButton* compressionEncodingZRLE;
-  QRadioButton* compressionEncodingHextile;
-  QRadioButton* compressionEncodingH264;
-  QRadioButton* compressionEncodingRaw;
-  QRadioButton* compressionColorLevelFull;
-  QRadioButton* compressionColorLevelMedium;
-  QRadioButton* compressionColorLevelLow;
-  QRadioButton* compressionColorLevelVeryLow;
-  QCheckBox* compressionCustomCompressionLevel;
-  QSpinBox* compressionCustomCompressionLevelTextEdit;
-  QCheckBox* compressionJPEGCompression;
-  QSpinBox* compressionJPEGCompressionTextEdit;
+  QCheckBox* autoselectCheckbox;
+  QRadioButton* tightButton;
+  QRadioButton* zrleButton;
+  QRadioButton* hextileButton;
+  QRadioButton* h264Button;
+  QRadioButton* rawButton;
+  QRadioButton* fullcolorCheckbox;
+  QRadioButton* mediumcolorCheckbox;
+  QRadioButton* lowcolorCheckbox;
+  QRadioButton* verylowcolorCheckbox;
+  QCheckBox* compressionCheckbox;
+  QSpinBox* compressionInput;
+  QCheckBox* jpegCheckbox;
+  QSpinBox* jpegInput;
 };
 
 #endif

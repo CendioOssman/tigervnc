@@ -38,54 +38,54 @@ OptionsDisplay::OptionsDisplay(QWidget* parent)
 
   QGroupBox* groupBox1 = new QGroupBox(_("Display mode"));
   QVBoxLayout* vbox1 = new QVBoxLayout;
-  displayWindowed = new QRadioButton(_("Windowed"));
-  vbox1->addWidget(displayWindowed);
-  displayFullScreenOnCurrentMonitor = new QRadioButton(_("Full screen on current monitor"));
-  vbox1->addWidget(displayFullScreenOnCurrentMonitor);
-  displayFullScreenOnAllMonitors = new QRadioButton(_("Full screen on all monitors"));
-  displayFullScreenOnAllMonitors->setEnabled(ViewerConfig::canFullScreenOnMultiDisplays());
-  vbox1->addWidget(displayFullScreenOnAllMonitors);
-  displayFullScreenOnSelectedMonitors = new QRadioButton(_("Full screen on selected monitor(s)"));
-  vbox1->addWidget(displayFullScreenOnSelectedMonitors);
+  windowedButton = new QRadioButton(_("Windowed"));
+  vbox1->addWidget(windowedButton);
+  currentMonitorButton = new QRadioButton(_("Full screen on current monitor"));
+  vbox1->addWidget(currentMonitorButton);
+  allMonitorsButton = new QRadioButton(_("Full screen on all monitors"));
+  allMonitorsButton->setEnabled(ViewerConfig::canFullScreenOnMultiDisplays());
+  vbox1->addWidget(allMonitorsButton);
+  selectedMonitorsButton = new QRadioButton(_("Full screen on selected monitor(s)"));
+  vbox1->addWidget(selectedMonitorsButton);
   QHBoxLayout* h1 = new QHBoxLayout;
   h1->addSpacing(20);
-  selectedScreens = new QMonitorArrangement;
-  selectedScreens->setEnabled(false);
-  h1->addWidget(selectedScreens, 1);
+  monitorArrangement = new QMonitorArrangement;
+  monitorArrangement->setEnabled(false);
+  h1->addWidget(monitorArrangement, 1);
   vbox1->addLayout(h1, 1);
   groupBox1->setLayout(vbox1);
   layout->addWidget(groupBox1, 1);
 
   setLayout(layout);
 
-  connect(displayFullScreenOnSelectedMonitors, &QRadioButton::toggled, this, [=](bool checked) {
-    selectedScreens->setEnabled(checked);
+  connect(selectedMonitorsButton, &QRadioButton::toggled, this, [=](bool checked) {
+    monitorArrangement->setEnabled(checked);
   });
 }
 
 void OptionsDisplay::apply()
 {
-  if (displayWindowed->isChecked()) {
+  if (windowedButton->isChecked()) {
     ::fullScreen.setParam(false);
   } else {
-    auto newFullScreenMode = displayFullScreenOnAllMonitors->isChecked()      ? "all"
-                           : displayFullScreenOnSelectedMonitors->isChecked() ? "selected"
+    auto newFullScreenMode = allMonitorsButton->isChecked()      ? "all"
+                           : selectedMonitorsButton->isChecked() ? "selected"
                                                                               : "current";
     ::fullScreenMode.setParam(newFullScreenMode);
     ::fullScreen.setParam(true);
   }
-  selectedScreens->apply();
+  monitorArrangement->apply();
 }
 
 void OptionsDisplay::reset()
 {
   bool allMonitors = !strcasecmp(fullScreenMode, "all");
   bool selectedMonitors = !strcasecmp(fullScreenMode, "selected");
-  displayWindowed->setChecked(!::fullScreen);
-  displayFullScreenOnCurrentMonitor->setChecked(::fullScreen
+  windowedButton->setChecked(!::fullScreen);
+  currentMonitorButton->setChecked(::fullScreen
                                                 && ((!allMonitors && !selectedMonitors)
                                                     || (allMonitors && !ViewerConfig::canFullScreenOnMultiDisplays())));
-  displayFullScreenOnAllMonitors->setChecked(::fullScreen && allMonitors && ViewerConfig::canFullScreenOnMultiDisplays());
-  displayFullScreenOnSelectedMonitors->setChecked(::fullScreen && selectedMonitors);
-  selectedScreens->reset();
+  allMonitorsButton->setChecked(::fullScreen && allMonitors && ViewerConfig::canFullScreenOnMultiDisplays());
+  selectedMonitorsButton->setChecked(::fullScreen && selectedMonitors);
+  monitorArrangement->reset();
 }

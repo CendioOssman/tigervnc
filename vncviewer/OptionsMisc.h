@@ -36,8 +36,8 @@ public:
   void reset() override;
 
 private:
-  QCheckBox* shared;
-  QCheckBox* reconnect;
+  QCheckBox* sharedCheckbox;
+  QCheckBox* reconnectCheckbox;
 };
 
 #endif

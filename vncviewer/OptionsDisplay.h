@@ -37,11 +37,11 @@ public:
   void reset() override;
 
 private:
-  QRadioButton* displayWindowed;
-  QRadioButton* displayFullScreenOnCurrentMonitor;
-  QRadioButton* displayFullScreenOnAllMonitors;
-  QRadioButton* displayFullScreenOnSelectedMonitors;
-  QMonitorArrangement* selectedScreens;
+  QRadioButton* windowedButton;
+  QRadioButton* currentMonitorButton;
+  QRadioButton* allMonitorsButton;
+  QRadioButton* selectedMonitorsButton;
+  QMonitorArrangement* monitorArrangement;
 };
 
 #endif

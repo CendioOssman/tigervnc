@@ -43,18 +43,18 @@ OptionsSecurity::OptionsSecurity(QWidget* parent)
 
   QGroupBox* groupBox1 = new QGroupBox(_("Encryption"));
   QVBoxLayout* vbox1 = new QVBoxLayout;
-  securityEncryptionNone = new QCheckBox(_("None"));
-  vbox1->addWidget(securityEncryptionNone);
-  securityEncryptionTLSWithAnonymousCerts = new QCheckBox(_("TLS with anonymous certificates"));
+  encNoneCheckbox = new QCheckBox(_("None"));
+  vbox1->addWidget(encNoneCheckbox);
+  encTLSCheckbox = new QCheckBox(_("TLS with anonymous certificates"));
 #ifndef HAVE_GNUTLS
-  securityEncryptionTLSWithAnonymousCerts->setVisible(false);
+  encTLSCheckbox->setVisible(false);
 #endif
-  vbox1->addWidget(securityEncryptionTLSWithAnonymousCerts);
-  securityEncryptionTLSWithX509Certs = new QCheckBox(_("TLS with X509 certificates"));
+  vbox1->addWidget(encTLSCheckbox);
+  encX509Checkbox = new QCheckBox(_("TLS with X509 certificates"));
 #ifndef HAVE_GNUTLS
-  securityEncryptionTLSWithX509Certs->setVisible(false);
+  encX509Checkbox->setVisible(false);
 #endif
-  vbox1->addWidget(securityEncryptionTLSWithX509Certs);
+  vbox1->addWidget(encX509Checkbox);
   QHBoxLayout* h2 = new QHBoxLayout;
   h2->addSpacing(20);
   QLabel* securityEncryptionTLSWithX509CALabel = new QLabel(_("Path to X509 CA certificate"));
@@ -62,12 +62,12 @@ OptionsSecurity::OptionsSecurity(QWidget* parent)
   vbox1->addLayout(h2);
   QHBoxLayout* h3 = new QHBoxLayout;
   h3->addSpacing(20);
-  securityEncryptionTLSWithX509CATextEdit = new QLineEdit;
+  caInput = new QLineEdit;
 #ifndef HAVE_GNUTLS
   securityEncryptionTLSWithX509CALabel->setVisible(false);
-  securityEncryptionTLSWithX509CATextEdit->setVisible(false);
+  caInput->setVisible(false);
 #endif
-  h3->addWidget(securityEncryptionTLSWithX509CATextEdit);
+  h3->addWidget(caInput);
   vbox1->addLayout(h3);
   QHBoxLayout* h4 = new QHBoxLayout;
   h4->addSpacing(20);
@@ -76,43 +76,43 @@ OptionsSecurity::OptionsSecurity(QWidget* parent)
   vbox1->addLayout(h4);
   QHBoxLayout* h5 = new QHBoxLayout;
   h5->addSpacing(20);
-  securityEncryptionTLSWithX509CRLTextEdit = new QLineEdit;
+  crlInput = new QLineEdit;
 #ifndef HAVE_GNUTLS
   securityEncryptionTLSWithX509CRLLabel->setVisible(false);
-  securityEncryptionTLSWithX509CRLTextEdit->setVisible(false);
+  crlInput->setVisible(false);
 #endif
-  h5->addWidget(securityEncryptionTLSWithX509CRLTextEdit);
+  h5->addWidget(crlInput);
   vbox1->addLayout(h5);
-  securityEncryptionAES = new QCheckBox(_("RSA-AES"));
+  encRSAAESCheckbox = new QCheckBox(_("RSA-AES"));
 #ifndef HAVE_NETTLE
-  securityEncryptionAES->setVisible(false);
+  encRSAAESCheckbox->setVisible(false);
 #endif
-  vbox1->addWidget(securityEncryptionAES);
+  vbox1->addWidget(encRSAAESCheckbox);
   groupBox1->setLayout(vbox1);
   layout->addWidget(groupBox1);
 
   QGroupBox* groupBox2 = new QGroupBox(_("Authentication"));
   QVBoxLayout* vbox2 = new QVBoxLayout;
-  securityAuthenticationNone = new QCheckBox(_("None"));
-  vbox2->addWidget(securityAuthenticationNone);
-  securityAuthenticationStandard = new QCheckBox(_("Standard VNC (insecure without encryption)"));
-  vbox2->addWidget(securityAuthenticationStandard);
-  securityAuthenticationUsernameAndPassword = new QCheckBox(_("Username and password (insecure without encryption)"));
-  vbox2->addWidget(securityAuthenticationUsernameAndPassword);
+  authNoneCheckbox = new QCheckBox(_("None"));
+  vbox2->addWidget(authNoneCheckbox);
+  authVncCheckbox = new QCheckBox(_("Standard VNC (insecure without encryption)"));
+  vbox2->addWidget(authVncCheckbox);
+  authPlainCheckbox = new QCheckBox(_("Username and password (insecure without encryption)"));
+  vbox2->addWidget(authPlainCheckbox);
   groupBox2->setLayout(vbox2);
   layout->addWidget(groupBox2);
 
   layout->addStretch(1);
   setLayout(layout);
 
-  connect(securityEncryptionTLSWithX509Certs, &QCheckBox::toggled, this, [=](bool checked) {
-    securityEncryptionTLSWithX509CATextEdit->setEnabled(checked);
-    securityEncryptionTLSWithX509CRLTextEdit->setEnabled(checked);
+  connect(encX509Checkbox, &QCheckBox::toggled, this, [=](bool checked) {
+    caInput->setEnabled(checked);
+    crlInput->setEnabled(checked);
   });
-  connect(securityEncryptionAES, &QCheckBox::toggled, this, [=](bool checked) {
+  connect(encRSAAESCheckbox, &QCheckBox::toggled, this, [=](bool checked) {
     if (checked) {
-      securityAuthenticationStandard->setChecked(checked);
-      securityAuthenticationUsernameAndPassword->setChecked(checked);
+      authVncCheckbox->setChecked(checked);
+      authPlainCheckbox->setChecked(checked);
     }
   });
 }
@@ -123,17 +123,17 @@ void OptionsSecurity::apply()
   rfb::Security security;
 
   /* Process security types which don't use encryption */
-  if (securityEncryptionNone->isChecked()) {
-    if (securityAuthenticationNone->isChecked())
+  if (encNoneCheckbox->isChecked()) {
+    if (authNoneCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeNone);
-    if (securityAuthenticationStandard->isChecked()) {
+    if (authVncCheckbox->isChecked()) {
       security.EnableSecType(rfb::secTypeVncAuth);
 #ifdef HAVE_NETTLE
       security.EnableSecType(rfb::secTypeRA2ne);
       security.EnableSecType(rfb::secTypeRAne256);
 #endif
     }
-    if (securityAuthenticationUsernameAndPassword->isChecked()) {
+    if (authPlainCheckbox->isChecked()) {
       security.EnableSecType(rfb::secTypePlain);
 #ifdef HAVE_NETTLE
       security.EnableSecType(rfb::secTypeRA2ne);
@@ -146,31 +146,31 @@ void OptionsSecurity::apply()
 
 #ifdef HAVE_GNUTLS
   /* Process security types which use TLS encryption */
-  if (securityEncryptionTLSWithAnonymousCerts->isChecked()) {
-    if (securityAuthenticationNone->isChecked())
+  if (encTLSCheckbox->isChecked()) {
+    if (authNoneCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeTLSNone);
-    if (securityAuthenticationStandard->isChecked())
+    if (authVncCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeTLSVnc);
-    if (securityAuthenticationUsernameAndPassword->isChecked())
+    if (authPlainCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeTLSPlain);
   }
 
   /* Process security types which use X509 encryption */
-  if (securityEncryptionTLSWithX509Certs->isChecked()) {
-    if (securityAuthenticationNone->isChecked())
+  if (encX509Checkbox->isChecked()) {
+    if (authNoneCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeX509None);
-    if (securityAuthenticationStandard->isChecked())
+    if (authVncCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeX509Vnc);
-    if (securityAuthenticationUsernameAndPassword->isChecked())
+    if (authPlainCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeX509Plain);
   }
 
-  rfb::CSecurityTLS::X509CA.setParam(securityEncryptionTLSWithX509CATextEdit->text().toStdString().c_str());
-  rfb::CSecurityTLS::X509CRL.setParam(securityEncryptionTLSWithX509CRLTextEdit->text().toStdString().c_str());
+  rfb::CSecurityTLS::X509CA.setParam(caInput->text().toStdString().c_str());
+  rfb::CSecurityTLS::X509CRL.setParam(crlInput->text().toStdString().c_str());
 #endif
 
 #ifdef HAVE_NETTLE
-  if (securityEncryptionAES->isChecked()) {
+  if (encRSAAESCheckbox->isChecked()) {
     security.EnableSecType(rfb::secTypeRA2);
     security.EnableSecType(rfb::secTypeRA256);
   }
@@ -185,12 +185,12 @@ void OptionsSecurity::reset()
   for (auto iter = secTypes.begin(); iter != secTypes.end(); ++iter) {
     switch (*iter) {
     case rfb::secTypeNone:
-      securityEncryptionNone->setChecked(true);
-      securityAuthenticationNone->setChecked(true);
+      encNoneCheckbox->setChecked(true);
+      authNoneCheckbox->setChecked(true);
       break;
     case rfb::secTypeVncAuth:
-      securityEncryptionNone->setChecked(true);
-      securityAuthenticationStandard->setChecked(true);
+      encNoneCheckbox->setChecked(true);
+      authVncCheckbox->setChecked(true);
       break;
     }
   }
@@ -199,57 +199,57 @@ void OptionsSecurity::reset()
   for (auto iterExt = secTypesExt.begin(); iterExt != secTypesExt.end(); ++iterExt) {
     switch (*iterExt) {
     case rfb::secTypePlain:
-      securityEncryptionNone->setChecked(true);
-      securityAuthenticationUsernameAndPassword->setChecked(true);
+      encNoneCheckbox->setChecked(true);
+      authPlainCheckbox->setChecked(true);
       break;
 #ifdef HAVE_GNUTLS
     case rfb::secTypeTLSNone:
-      securityEncryptionTLSWithAnonymousCerts->setChecked(true);
-      securityAuthenticationNone->setChecked(true);
+      encTLSCheckbox->setChecked(true);
+      authNoneCheckbox->setChecked(true);
       break;
     case rfb::secTypeTLSVnc:
-      securityEncryptionTLSWithAnonymousCerts->setChecked(true);
-      securityAuthenticationStandard->setChecked(true);
+      encTLSCheckbox->setChecked(true);
+      authVncCheckbox->setChecked(true);
       break;
     case rfb::secTypeTLSPlain:
-      securityEncryptionTLSWithAnonymousCerts->setChecked(true);
-      securityAuthenticationUsernameAndPassword->setChecked(true);
+      encTLSCheckbox->setChecked(true);
+      authPlainCheckbox->setChecked(true);
       break;
     case rfb::secTypeX509None:
-      securityEncryptionTLSWithX509Certs->setChecked(true);
-      securityAuthenticationNone->setChecked(true);
+      encX509Checkbox->setChecked(true);
+      authNoneCheckbox->setChecked(true);
       break;
     case rfb::secTypeX509Vnc:
-      securityEncryptionTLSWithX509Certs->setChecked(true);
-      securityAuthenticationStandard->setChecked(true);
+      encX509Checkbox->setChecked(true);
+      authVncCheckbox->setChecked(true);
       break;
     case rfb::secTypeX509Plain:
-      securityEncryptionTLSWithX509Certs->setChecked(true);
-      securityAuthenticationUsernameAndPassword->setChecked(true);
+      encX509Checkbox->setChecked(true);
+      authPlainCheckbox->setChecked(true);
       break;
 #endif
 #ifdef HAVE_NETTLE
     case rfb::secTypeRA2:
     case rfb::secTypeRA256:
-      securityEncryptionAES->setChecked(true);
-      securityAuthenticationStandard->setChecked(true);
-      securityAuthenticationUsernameAndPassword->setChecked(true);
+      encRSAAESCheckbox->setChecked(true);
+      authVncCheckbox->setChecked(true);
+      authPlainCheckbox->setChecked(true);
       break;
     case rfb::secTypeRA2ne:
     case rfb::secTypeRAne256:
-      securityAuthenticationStandard->setChecked(true);
+      authVncCheckbox->setChecked(true);
       /* fall through */
     case rfb::secTypeDH:
     case rfb::secTypeMSLogonII:
-      securityEncryptionNone->setChecked(true);
-      securityAuthenticationUsernameAndPassword->setChecked(true);
+      encNoneCheckbox->setChecked(true);
+      authPlainCheckbox->setChecked(true);
       break;
 #endif
     }
   }
 
 #ifdef HAVE_GNUTLS
-  securityEncryptionTLSWithX509CATextEdit->setText(rfb::CSecurityTLS::X509CA.getValueStr().c_str());
-  securityEncryptionTLSWithX509CRLTextEdit->setText(rfb::CSecurityTLS::X509CRL.getValueStr().c_str());
+  caInput->setText(rfb::CSecurityTLS::X509CA.getValueStr().c_str());
+  crlInput->setText(rfb::CSecurityTLS::X509CRL.getValueStr().c_str());
 #endif
 }

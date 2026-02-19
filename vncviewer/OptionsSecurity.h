@@ -37,15 +37,15 @@ public:
   void reset() override;
 
 private:
-  QCheckBox* securityEncryptionNone;
-  QCheckBox* securityEncryptionTLSWithAnonymousCerts;
-  QCheckBox* securityEncryptionTLSWithX509Certs;
-  QLineEdit* securityEncryptionTLSWithX509CATextEdit;
-  QLineEdit* securityEncryptionTLSWithX509CRLTextEdit;
-  QCheckBox* securityAuthenticationNone;
-  QCheckBox* securityAuthenticationStandard;
-  QCheckBox* securityAuthenticationUsernameAndPassword;
-  QCheckBox* securityEncryptionAES;
+  QCheckBox* encNoneCheckbox;
+  QCheckBox* encTLSCheckbox;
+  QCheckBox* encX509Checkbox;
+  QLineEdit* caInput;
+  QLineEdit* crlInput;
+  QCheckBox* authNoneCheckbox;
+  QCheckBox* authVncCheckbox;
+  QCheckBox* authPlainCheckbox;
+  QCheckBox* encRSAAESCheckbox;
 };
 
 #endif
