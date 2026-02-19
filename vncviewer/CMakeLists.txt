@@ -15,7 +15,13 @@ add_executable(vncviewer
   EmulateMB.cxx
   ServerDialog.cxx
   Surface.cxx
+  OptionsCompression.cxx
   OptionsDialog.cxx
+  OptionsDisplay.cxx
+  OptionsInput.cxx
+  OptionsMisc.cxx
+  OptionsPage.cxx
+  OptionsSecurity.cxx
   PlatformPixelBuffer.cxx
   Viewport.cxx
   i18n.cxx

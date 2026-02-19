@@ -1,57 +1,54 @@
 /* Copyright 2011-2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
- * 
+ *
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this software; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
  * USA.
  */
 
-#ifndef __OPTIONSDIALOG_H__
-#define __OPTIONSDIALOG_H__
+#ifndef __OPTIONSSECURITY_H__
+#define __OPTIONSSECURITY_H__
 
-#include <list>
-#include <map>
+#include "OptionsPage.h"
 
-#include <FL/Fl_Window.H>
+class Fl_Check_Button;
+class Fl_Input;
 
-class OptionsPage;
-
-typedef void (OptionsCallback)(void*);
-
-class OptionsDialog : public Fl_Window {
-protected:
-  OptionsDialog();
-  ~OptionsDialog();
-
+class OptionsSecurity : public OptionsPage
+{
 public:
-  static void showDialog(void);
+  OptionsSecurity(int tx, int ty, int tw, int th);
 
-  static void addCallback(OptionsCallback *cb, void *data = nullptr);
-  static void removeCallback(OptionsCallback *cb);
-
-  void show(void) override;
+  void loadOptions() override;
+  void storeOptions() override;
 
 protected:
-  void loadOptions(void);
-  void storeOptions(void);
-
-  void handleCancel();
-  void handleOK();
+  void handleX509();
+  void handleRSAAES();
 
 protected:
-  static std::map<OptionsCallback*, void*> callbacks;
+  Fl_Group *encryptionGroup;
+  Fl_Check_Button *encNoneCheckbox;
+  Fl_Check_Button *encTLSCheckbox;
+  Fl_Check_Button *encX509Checkbox;
+  Fl_Check_Button *encRSAAESCheckbox;
+  Fl_Input *caInput;
+  Fl_Input *crlInput;
 
-  std::list<OptionsPage*> pages;
+  Fl_Group *authenticationGroup;
+  Fl_Check_Button *authNoneCheckbox;
+  Fl_Check_Button *authVncCheckbox;
+  Fl_Check_Button *authPlainCheckbox;
 };
 
 #endif
