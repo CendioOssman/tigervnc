@@ -19,14 +19,14 @@
 #ifndef __OPTIONSDISPLAY_H__
 #define __OPTIONSDISPLAY_H__
 
-#include "OptionsDialog.h"
+#include "OptionsPage.h"
 
 #include <QWidget>
 
 class QMonitorArrangement;
 class QRadioButton;
 
-class OptionsDisplay : public TabElement
+class OptionsDisplay : public OptionsPage
 {
   Q_OBJECT
 

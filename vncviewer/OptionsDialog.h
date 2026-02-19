@@ -23,20 +23,6 @@
 
 class QStackedWidget;
 
-class TabElement : public QWidget
-{
-  Q_OBJECT
-
-public:
-  TabElement(QWidget* parent = nullptr)
-    : QWidget(parent)
-  {
-  }
-
-  virtual void apply() = 0;
-  virtual void reset() = 0;
-};
-
 typedef void (OptionsCallback)(void*);
 
 class OptionsDialog : public QDialog

@@ -29,7 +29,7 @@
 #include <QVBoxLayout>
 
 OptionsMisc::OptionsMisc(QWidget* parent)
-  : TabElement{parent}
+  : OptionsPage{parent}
 {
   QVBoxLayout* layout = new QVBoxLayout;
   shared = new QCheckBox(_("Shared (don't disconnect other viewers)"));

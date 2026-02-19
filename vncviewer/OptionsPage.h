@@ -1,4 +1,4 @@
-/* Copyright 2011-2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
+/* Copyright 2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
  *
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,36 +16,23 @@
  * USA.
  */
 
-#ifndef __OPTIONSSECURITY_H__
-#define __OPTIONSSECURITY_H__
-
-#include "OptionsPage.h"
+#ifndef __OPTIONSPAGE_H__
+#define __OPTIONSPAGE_H__
 
 #include <QWidget>
 
-class QCheckBox;
-class QLineEdit;
-
-class OptionsSecurity : public OptionsPage
+class OptionsPage : public QWidget
 {
   Q_OBJECT
 
 public:
-  OptionsSecurity(QWidget* parent = nullptr);
+  OptionsPage(QWidget* parent = nullptr)
+    : QWidget(parent)
+  {
+  }
 
-  void apply() override;
-  void reset() override;
-
-private:
-  QCheckBox* securityEncryptionNone;
-  QCheckBox* securityEncryptionTLSWithAnonymousCerts;
-  QCheckBox* securityEncryptionTLSWithX509Certs;
-  QLineEdit* securityEncryptionTLSWithX509CATextEdit;
-  QLineEdit* securityEncryptionTLSWithX509CRLTextEdit;
-  QCheckBox* securityAuthenticationNone;
-  QCheckBox* securityAuthenticationStandard;
-  QCheckBox* securityAuthenticationUsernameAndPassword;
-  QCheckBox* securityEncryptionAES;
+  virtual void apply() = 0;
+  virtual void reset() = 0;
 };
 
 #endif

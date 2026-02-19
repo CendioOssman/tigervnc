@@ -19,14 +19,14 @@
 #ifndef __OPTIONSINPUT_H__
 #define __OPTIONSINPUT_H__
 
-#include "OptionsDialog.h"
+#include "OptionsPage.h"
 
 #include <QWidget>
 
 class QCheckBox;
 class QComboBox;
 
-class OptionsInput : public TabElement
+class OptionsInput : public OptionsPage
 {
   Q_OBJECT
 

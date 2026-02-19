@@ -37,7 +37,7 @@
 #include <QVBoxLayout>
 
 OptionsSecurity::OptionsSecurity(QWidget* parent)
-  : TabElement{parent}
+  : OptionsPage{parent}
 {
   QVBoxLayout* layout = new QVBoxLayout;
 

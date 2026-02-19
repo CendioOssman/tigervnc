@@ -34,7 +34,7 @@
 #include <QVBoxLayout>
 
 OptionsCompression::OptionsCompression(QWidget* parent)
-  : TabElement{parent}
+  : OptionsPage{parent}
 {
   QVBoxLayout* layout = new QVBoxLayout;
 

@@ -19,7 +19,7 @@
 #ifndef __OPTIONSCOMPRESSION_H__
 #define __OPTIONSCOMPRESSION_H__
 
-#include "OptionsDialog.h"
+#include "OptionsPage.h"
 
 #include <QWidget>
 
@@ -27,7 +27,7 @@ class QCheckBox;
 class QSpinBox;
 class QRadioButton;
 
-class OptionsCompression : public TabElement
+class OptionsCompression : public OptionsPage
 {
   Q_OBJECT
 

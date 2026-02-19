@@ -113,6 +113,7 @@ set(PROJECT_SOURCES
         OptionsDisplay.h
         OptionsMisc.cxx
         OptionsMisc.h
+        OptionsPage.h
         OptionsSecurity.cxx
         OptionsSecurity.h
         QMonitorArrangement.cxx

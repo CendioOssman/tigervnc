@@ -158,7 +158,7 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
 void OptionsDialog::apply()
 {
   for (int i = 0; i < tabWidget->count(); ++i) {
-    auto w = qobject_cast<TabElement*>(tabWidget->widget(i));
+    auto w = qobject_cast<OptionsPage*>(tabWidget->widget(i));
     if (w) {
       w->apply();
     }
@@ -175,7 +175,7 @@ void OptionsDialog::apply()
 void OptionsDialog::reset()
 {
   for (int i = 0; i < tabWidget->count(); ++i) {
-    auto w = qobject_cast<TabElement*>(tabWidget->widget(i));
+    auto w = qobject_cast<OptionsPage*>(tabWidget->widget(i));
     if (w) {
       w->reset();
     }

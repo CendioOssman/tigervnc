@@ -32,7 +32,7 @@
 #include <QVBoxLayout>
 
 OptionsDisplay::OptionsDisplay(QWidget* parent)
-  : TabElement{parent}
+  : OptionsPage{parent}
 {
   QVBoxLayout* layout = new QVBoxLayout;
 

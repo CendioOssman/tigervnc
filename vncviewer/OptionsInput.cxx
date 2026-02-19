@@ -34,7 +34,7 @@
 #include <QVBoxLayout>
 
 OptionsInput::OptionsInput(QWidget* parent)
-  : TabElement{parent}
+  : OptionsPage{parent}
 {
   QVBoxLayout* layout = new QVBoxLayout;
 

@@ -19,13 +19,13 @@
 #ifndef __OPTIONSMISC_H__
 #define __OPTIONSMISC_H__
 
-#include "OptionsDialog.h"
+#include "OptionsPage.h"
 
 #include <QWidget>
 
 class QCheckBox;
 
-class OptionsMisc : public TabElement
+class OptionsMisc : public OptionsPage
 {
   Q_OBJECT
 
