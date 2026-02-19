@@ -102,7 +102,7 @@ private:
 
   static void handleOptions(void *data);
 
-  static void handleUpdateTimeout(void *data);
+  void handleUpdateTimeout(core::Timer*);
 
   void handleAuthFinished();
   void handleCertificateFinished();
@@ -139,6 +139,8 @@ private:
 
   static std::string savedUsername;
   static std::string savedPassword;
+
+  core::MethodTimer<CConn> updateTimer;
 };
 
 #endif
