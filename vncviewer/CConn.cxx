@@ -18,10 +18,11 @@
  * USA.
  */
 
-#include "rfb/screenTypes.h"
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+
+#include <time.h>
 
 #include <QGuiApplication>
 #include <QTimer>
@@ -41,27 +42,27 @@
 #include <X11/Xlib.h>
 #endif
 
-#include <time.h>
-#include "rfb/Hostname.h"
-#include "rfb/LogWriter.h"
-#include "rfb/fenceTypes.h"
-#include "rfb/Exception.h"
-#include "rfb/obfuscate.h"
-#include "rfb/CMsgWriter.h"
-#include "network/TcpSocket.h"
-#include "parameters.h"
-#include "PlatformPixelBuffer.h"
-#include "i18n.h"
-#include "appmanager.h"
-#include "OptionsDialog.h"
-#include "DesktopWindow.h"
+#include <rfb/CMsgWriter.h>
+#include <rfb/Exception.h>
+#include <rfb/Hostname.h>
+#include <rfb/LogWriter.h>
+#include <rfb/screenTypes.h>
+#include <rfb/fenceTypes.h>
+#include <rfb/obfuscate.h>
+#include <network/TcpSocket.h>
+#ifndef WIN32
+#include <network/UnixSocket.h>
+#endif
+
 #include "authdialog.h"
 #include "CConn.h"
+#include "OptionsDialog.h"
+#include "DesktopWindow.h"
+#include "PlatformPixelBuffer.h"
+#include "i18n.h"
+#include "parameters.h"
+#include "appmanager.h"
 #include "vncviewer.h"
-
-#if !defined(Q_OS_WIN)
-#include "network/UnixSocket.h"
-#endif
 
 #ifdef __APPLE__
 #include "cocoa.h"
@@ -70,11 +71,9 @@
 std::string CConn::savedUsername;
 std::string CConn::savedPassword;
 
-
-using namespace rdr;
 using namespace rfb;
 
-static LogWriter vlog("CConn");
+static rfb::LogWriter vlog("CConn");
 
 // 8 colours (1 bit per component)
 static const PixelFormat verylowColourPF(8, 3,false, true,
@@ -89,67 +88,61 @@ static const PixelFormat mediumColourPF(8, 8, false, true,
 // Time new bandwidth estimates are weighted against (in ms)
 static const unsigned bpsEstimateWindow = 1000;
 
-CConn::CConn(const char* vncserver, network::Socket* socket_)
- : CConnection()
- , serverHost("")
- , serverPort(5900)
- , socket(socket_)
- , socketReadNotifier(nullptr)
- , socketWriteNotifier(nullptr)
- , processTimer(nullptr)
- , desktop(nullptr)
- , updateCount(0)
- , pixelCount(0)
- , serverPF(new PixelFormat)
- , fullColourPF(new PixelFormat(32, 24, false, true, 255, 255, 255, 16, 8, 0))
- , lastServerEncoding((unsigned int)-1)
- , updateStartPos(0)
- , bpsEstimate(20000000)
- , authDialog(nullptr)
- , updateTimer(this, &CConn::handleUpdateTimeout)
+CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
+  : serverPort(0),
+    socketReadNotifier(nullptr), socketWriteNotifier(nullptr),
+    processTimer(nullptr), desktop(nullptr),
+    updateCount(0), pixelCount(0),
+    lastServerEncoding((unsigned int)-1), bpsEstimate(20000000),
+    authDialog(nullptr), updateTimer(this, &CConn::handleUpdateTimeout)
 {
   setShared(::shared);
+  sock = socket;
 
   supportsLocalCursor = true;
   supportsCursorPosition = true;
   supportsDesktopResize = true;
   supportsLEDState = true;
 
-  QString address = vncserver;
-  if (socket == nullptr) {
+  if (customCompressLevel)
+    setCompressLevel(::compressLevel);
+
+  if (!noJpeg)
+    setQualityLevel(::qualityLevel);
+
+  if(sock == nullptr) {
     try {
-#ifndef Q_OS_WIN
-      if (address.contains("/")) {
-        socket = new network::UnixSocket(address.toStdString().c_str());
-        serverHost = socket->getPeerAddress();
-        vlog.info(_("Connected to socket %s"), serverHost.toStdString().c_str());
+#ifndef WIN32
+      if (strchr(vncServerName, '/') != nullptr) {
+        sock = new network::UnixSocket(vncServerName);
+        serverHost = sock->getPeerAddress();
+        vlog.info(_("Connected to socket %s"), serverHost.c_str());
       } else
 #endif
       {
-        std::string shost;
-        rfb::getHostAndPort(address.toStdString().c_str(), &shost, &serverPort);
-        serverHost = shost.c_str();
+        getHostAndPort(vncServerName, &serverHost, &serverPort);
 
-        socket = new network::TcpSocket(shost.c_str(), serverPort);
+        sock = new network::TcpSocket(serverHost.c_str(), serverPort);
         vlog.info(_("Connected to host %s port %d"),
-                  shost.c_str(), serverPort);
+                  serverHost.c_str(), serverPort);
       }
     } catch (rdr::Exception& e) {
       vlog.error("%s", e.str());
       abort_connection(_("Failed to connect to \"%s\":\n\n%s"),
-                       address.toStdString().c_str(), e.str());
+                       vncServerName, e.str());
       return;
     }
   }
 
-  setStreams(&socket->inStream(), &socket->outStream());
+  setServerName(serverHost.c_str());
+  setStreams(&sock->inStream(), &sock->outStream());
 
-  socketReadNotifier = new QSocketNotifier(socket->getFd(), QSocketNotifier::Read);
+  socketReadNotifier = new QSocketNotifier(sock->getFd(), QSocketNotifier::Read);
   QObject::connect(socketReadNotifier, &QSocketNotifier::activated, [this](int) {
     startProcessing();
   });
 
-  socketWriteNotifier = new QSocketNotifier(socket->getFd(), QSocketNotifier::Write);
+  socketWriteNotifier = new QSocketNotifier(sock->getFd(), QSocketNotifier::Write);
   socketWriteNotifier->setEnabled(false);
   QObject::connect(socketWriteNotifier, &QSocketNotifier::activated, [this](int) {
     flushSocket();
@@ -163,14 +156,6 @@ CConn::CConn(const char* vncserver, network::Socket* socket_)
 
   initialiseProtocol();
 
-  if (::customCompressLevel) {
-    setCompressLevel(::compressLevel);
-  }
-
-  if (!::noJpeg) {
-    setQualityLevel(::qualityLevel);
-  }
-
   OptionsDialog::addCallback(handleOptions, this);
 }
 
@@ -183,17 +168,14 @@ CConn::~CConn()
   if (desktop)
     delete desktop;
 
-  delete serverPF;
-  delete fullColourPF;
-
   delete processTimer;
 
   delete socketReadNotifier;
   delete socketWriteNotifier;
-  delete socket;
+  delete sock;
 }
 
-QString CConn::connectionInfo()
+const char *CConn::connectionInfo()
 {
   static char infoText[1024] = "";
 
@@ -211,7 +193,7 @@ QString CConn::connectionInfo()
   strcat(infoText, "\n");
 
   snprintf(scratch, sizeof(scratch),
-           _("Host: %.80s port: %d"), serverHost.toStdString().c_str(), serverPort);
+           _("Host: %.80s port: %d"), serverHost.c_str(), serverPort);
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
@@ -229,7 +211,7 @@ QString CConn::connectionInfo()
   strcat(infoText, "\n");
 
   // TRANSLATORS: Similar to the earlier "Pixel format" string
-  serverPF->print(pfStr, 100);
+  serverPF.print(pfStr, 100);
   snprintf(scratch, sizeof(scratch),
            _("(server default %s)"), pfStr);
   strcat(infoText, scratch);
@@ -275,32 +257,12 @@ unsigned CConn::getPixelCount()
 
 unsigned CConn::getPosition()
 {
-  return getInStream()->pos();
-}
-
-int CConn::securityType()
-{
-  return csecurity ? csecurity->getType() : -1;
+  return sock->inStream().pos();
 }
 
 ModifiablePixelBuffer *CConn::framebuffer()
 {
   return getFramebuffer();
-}
-
-void CConn::sendClipboardContent(const char* data)
-{
-  CConnection::sendClipboardData(data);
-}
-
-void CConn::setProcessState(int state)
-{
-  setState((CConnection::stateEnum)state);
-}
-
-void CConn::resetConnection()
-{
-  initialiseProtocol();
 }
 
 void CConn::startProcessing()
@@ -317,9 +279,9 @@ void CConn::startProcessing()
 
 void CConn::flushSocket()
 {
-  socket->outStream().flush();
+  sock->outStream().flush();
 
-  socketWriteNotifier->setEnabled(socket->outStream().hasBufferedData());
+  socketWriteNotifier->setEnabled(sock->outStream().hasBufferedData());
 }
 
 void CConn::processNextMsg()
@@ -342,9 +304,9 @@ void CConn::processNextMsg()
       vlog.error(_("The connection was dropped by the server before "
                    "the session could be established."));
       abort_connection(_("The connection was dropped by the server "
-                         "before the session could be established."));
+                       "before the session could be established."));
     } else {
-      ::disconnect();
+      disconnect();
     }
   } catch (rdr::Exception& e) {
     recursing = false;
@@ -363,10 +325,107 @@ void CConn::processNextMsg()
   processTimer->stop();
 
   socketReadNotifier->setEnabled(true);
-  socketWriteNotifier->setEnabled(socket->outStream().hasBufferedData());
+  socketWriteNotifier->setEnabled(sock->outStream().hasBufferedData());
 }
 
 ////////////////////// CConnection callback methods //////////////////////
+
+void CConn::credentialsRequested(bool secure, bool needsUser,
+                                 bool needsPassword)
+{
+  const char *passwordFileName(passwordFile);
+
+  assert(needsPassword);
+  char* envUsername = getenv("VNC_USERNAME");
+  char* envPassword = getenv("VNC_PASSWORD");
+
+  if (needsUser && envUsername && envPassword) {
+    setCredentials(envUsername, envPassword);
+    startProcessing();
+    return;
+  }
+
+  if (!needsUser && envPassword) {
+    setCredentials("", envPassword);
+    startProcessing();
+    return;
+  }
+
+  if (needsUser && !savedUsername.empty() && !savedPassword.empty()) {
+    setCredentials(savedUsername, savedPassword);
+    startProcessing();
+    return;
+  }
+
+  if (!needsUser && !savedPassword.empty()) {
+    setCredentials("", savedPassword);
+    startProcessing();
+    return;
+  }
+
+  if (!needsUser && passwordFileName[0]) {
+    std::vector<uint8_t> obfPwd(8);
+    FILE* fp;
+
+    fp = fopen(passwordFileName, "rb");
+    if (!fp)
+      throw rdr::SystemException(_("Opening password file failed"), errno);
+
+    obfPwd.resize(fread(obfPwd.data(), 1, obfPwd.size(), fp));
+    fclose(fp);
+
+    setCredentials("", deobfuscate(obfPwd.data(), obfPwd.size()));
+    startProcessing();
+    return;
+  }
+
+  authDialog = new AuthDialog(secure, needsUser, needsPassword);
+  QObject::connect(authDialog, &QDialog::accepted,
+                   [this]() { this->handleAuthOK(); });
+  QObject::connect(authDialog, &QDialog::rejected,
+                   [this]() { this->handleAuthCancel(); });
+
+  authDialog->open();
+}
+
+bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
+                       const char *text)
+{
+  QMessageBox* dlg;
+  QMessageBox::StandardButtons buttons;
+  QMessageBox::Icon icon;
+
+  switch (flags & 0xf) {
+  case rfb::M_OKCANCEL:
+    buttons = QMessageBox::Ok | QMessageBox::Cancel;
+    break;
+  case rfb::M_YESNO:
+    buttons = QMessageBox::Yes | QMessageBox::No;
+    break;
+  case rfb::M_OK:
+    buttons = QMessageBox::Ok;
+    break;
+  default:
+    buttons = QMessageBox::Close;
+  }
+
+  switch (flags & 0xf0) {
+  case rfb::M_ICONERROR:
+    icon = QMessageBox::Critical;
+    break;
+  case rfb::M_ICONWARNING:
+    icon = QMessageBox::Warning;
+    break;
+  default:
+    icon = QMessageBox::Information;
+  }
+
+  dlg = new QMessageBox(icon, title, text, buttons);
+  AppManager::instance()->openDialog(dlg);
+
+  return (dlg->result() == QMessageBox::Ok) ||
+         (dlg->result() == QMessageBox::Yes);
+}
 
 // initDone() is called when the serverInit message has been received.  At
 // this point we create the desktop window and display it.  We also tell the
@@ -375,16 +434,16 @@ void CConn::initDone()
 {
   // If using AutoSelect with old servers, start in FullColor
   // mode. See comment in autoSelectFormatAndEncoding.
-  if (server.beforeVersion(3, 8) && ::autoSelect)
-    ::fullColour.setParam(true);
+  if (server.beforeVersion(3, 8) && autoSelect)
+    fullColour.setParam(true);
 
-  *serverPF = server.pf();
+  serverPF = server.pf();
 
   setFramebuffer(new PlatformPixelBuffer(server.width(), server.height()));
 
   desktop = new DesktopWindow(server.width(), server.height(),
                               server.name(), this);
-  *fullColourPF = getFramebuffer()->getPF();
+  fullColourPF = getFramebuffer()->getPF();
 
   // Force a switch to the format and encoding we'd like
   updatePixelFormat();
@@ -432,7 +491,7 @@ void CConn::framebufferUpdateStart()
 
   // For bandwidth estimate
   gettimeofday(&updateStartTime, nullptr);
-  updateStartPos = getInStream()->pos();
+  updateStartPos = sock->inStream().pos();
 
   // Update the screen prematurely for very slow updates
   updateTimer.start(1000);
@@ -457,7 +516,7 @@ void CConn::framebufferUpdateEnd()
   elapsed += now.tv_usec - updateStartTime.tv_usec;
   if (elapsed == 0)
     elapsed = 1;
-  bps = (unsigned long long)(getInStream()->pos() -
+  bps = (unsigned long long)(sock->inStream().pos() -
                              updateStartPos) * 8 *
                             1000000 / elapsed;
   // Allow this update to influence things more the longer it took, to a
@@ -472,17 +531,15 @@ void CConn::framebufferUpdateEnd()
   desktop->updateWindow();
 
   // Compute new settings based on updated bandwidth values
-  if (::autoSelect)
+  if (autoSelect)
     autoSelectFormatAndEncoding();
 }
 
 // The rest of the callbacks are fairly self-explanatory...
 
-void CConn::setColourMapEntries(int firstColour, int nColours, uint16_t *rgbs)
+void CConn::setColourMapEntries(int /*firstColour*/, int /*nColours*/,
+                                uint16_t* /*rgbs*/)
 {
-  Q_UNUSED(firstColour)
-  Q_UNUSED(nColours)
-  Q_UNUSED(rgbs)
   vlog.error(_("Invalid SetColourMapEntries from server!"));
 }
 
@@ -521,13 +578,13 @@ bool CConn::dataRect(const Rect& r, int encoding)
   return ret;
 }
 
-void CConn::setCursor(int width, int height, const Point &hotspot,
-                      const uint8_t *data)
+void CConn::setCursor(int width, int height, const Point& hotspot,
+                      const uint8_t* data)
 {
   desktop->setCursor(width, height, hotspot, data);
 }
 
-void CConn::setCursorPos(const Point &pos)
+void CConn::setCursorPos(const Point& pos)
 {
   desktop->setCursorPos(pos);
 }
@@ -568,102 +625,6 @@ void CConn::handleClipboardData(const char* data)
   desktop->handleClipboardData(data);
 }
 
-void CConn::credentialsRequested(bool secure, bool needsUser,
-                                 bool needsPassword)
-{
-  const char *passwordFileName(::passwordFile);
-
-  assert(needsPassword);
-  char* envUsername = getenv("VNC_USERNAME");
-  char* envPassword = getenv("VNC_PASSWORD");
-
-  if (needsUser && envUsername && envPassword) {
-    setCredentials(envUsername, envPassword);
-    startProcessing();
-    return;
-  }
-
-  if (!needsUser && envPassword) {
-    setCredentials("", envPassword);
-    startProcessing();
-    return;
-  }
-
-  if (needsUser && !savedUsername.empty() && !savedPassword.empty()) {
-    setCredentials(savedUsername, savedPassword);
-    startProcessing();
-    return;
-  }
-
-  if (!needsUser && !savedPassword.empty()) {
-    setCredentials("", savedPassword);
-    startProcessing();
-    return;
-  }
-
-  if (!needsUser && passwordFileName[0]) {
-    std::vector<uint8_t> obfPwd(256);
-    FILE* fp;
-
-    fp = fopen(passwordFileName, "rb");
-    if (!fp)
-      throw rdr::SystemException(_("Opening password file failed"), errno);
-
-    obfPwd.resize(fread(obfPwd.data(), 1, obfPwd.size(), fp));
-    fclose(fp);
-
-    setCredentials("", rfb::deobfuscate(obfPwd.data(), obfPwd.size()));
-    startProcessing();
-    return;
-  }
-
-  authDialog = new AuthDialog(secure, needsUser, needsPassword);
-  QObject::connect(authDialog, &QDialog::accepted,
-                   [this]() { this->handleAuthOK(); });
-  QObject::connect(authDialog, &QDialog::rejected,
-                   [this]() { this->handleAuthCancel(); });
-
-  authDialog->open();
-}
-
-bool CConn::showMsgBox(rfb::MsgBoxFlags flags, const char *title,
-                       const char *text)
-{
-  QMessageBox* dlg;
-  QMessageBox::StandardButtons buttons;
-  QMessageBox::Icon icon;
-
-  switch (flags & 0xf) {
-  case rfb::M_OKCANCEL:
-    buttons = QMessageBox::Ok | QMessageBox::Cancel;
-    break;
-  case rfb::M_YESNO:
-    buttons = QMessageBox::Yes | QMessageBox::No;
-    break;
-  case rfb::M_OK:
-    buttons = QMessageBox::Ok;
-    break;
-  default:
-    buttons = QMessageBox::Close;
-  }
-
-  switch (flags & 0xf0) {
-  case rfb::M_ICONERROR:
-    icon = QMessageBox::Critical;
-    break;
-  case rfb::M_ICONWARNING:
-    icon = QMessageBox::Warning;
-    break;
-  default:
-    icon = QMessageBox::Information;
-  }
-
-  dlg = new QMessageBox(icon, title, text, buttons);
-  AppManager::instance()->openDialog(dlg);
-
-  return (dlg->result() == QMessageBox::Ok) ||
-         (dlg->result() == QMessageBox::Yes);
-}
 
 ////////////////////// Internal methods //////////////////////
 
@@ -692,12 +653,14 @@ void CConn::resizeFramebuffer()
 //
 void CConn::autoSelectFormatAndEncoding()
 {
+  bool newFullColour = fullColour;
+  int newQualityLevel = ::qualityLevel;
+
   // Always use Tight
   setPreferredEncoding(encodingTight);
 
   // Select appropriate quality level
-  if (!::noJpeg) {
-    int newQualityLevel;
+  if (!noJpeg) {
     if (bpsEstimate > 16000000)
       newQualityLevel = 8;
     else
@@ -723,15 +686,15 @@ void CConn::autoSelectFormatAndEncoding()
   }
   
   // Select best color level
-  bool newFullColour = (bpsEstimate > 256000);
-  if (newFullColour != ::fullColour) {
+  newFullColour = (bpsEstimate > 256000);
+  if (newFullColour != fullColour) {
     if (newFullColour)
       vlog.info(_("Throughput %d kbit/s - full color is now enabled"),
                 (int)(bpsEstimate/1000));
     else
       vlog.info(_("Throughput %d kbit/s - full color is now disabled"),
                 (int)(bpsEstimate/1000));
-    ::fullColour.setParam(newFullColour);
+    fullColour.setParam(newFullColour);
     updatePixelFormat();
   } 
 }
@@ -742,20 +705,17 @@ void CConn::updatePixelFormat()
 {
   PixelFormat pf;
 
-  if (::fullColour) {
-    pf = *fullColourPF;
-  }
-  else {
-    if (::lowColourLevel == 0) {
+  if (fullColour) {
+    pf = fullColourPF;
+  } else {
+    if (lowColourLevel == 0)
       pf = verylowColourPF;
-    }
-    else if (::lowColourLevel == 1) {
+    else if (lowColourLevel == 1)
       pf = lowColourPF;
-    }
-    else {
+    else
       pf = mediumColourPF;
-    }
   }
+
   char str[256];
   pf.print(str, 256);
   vlog.info(_("Using pixel format %s"),str);
@@ -764,30 +724,30 @@ void CConn::updatePixelFormat()
 
 void CConn::handleOptions(void *data)
 {
-  CConn *cc = (CConn*)data;
+  CConn *self = (CConn*)data;
 
   // Checking all the details of the current set of encodings is just
   // a pain. Assume something has changed, as resending the encoding
   // list is cheap. Avoid overriding what the auto logic has selected
   // though.
-  if (!::autoSelect) {
+  if (!autoSelect) {
     int encNum = encodingNum(::preferredEncoding);
 
     if (encNum != -1)
-      cc->setPreferredEncoding(encNum);
+      self->setPreferredEncoding(encNum);
   }
 
-  if (::customCompressLevel)
-    cc->setCompressLevel(::compressLevel);
+  if (customCompressLevel)
+    self->setCompressLevel(::compressLevel);
   else
-    cc->setCompressLevel(-1);
+    self->setCompressLevel(-1);
 
-  if (!::noJpeg && !::autoSelect)
-    cc->setQualityLevel(::qualityLevel);
+  if (!noJpeg && !autoSelect)
+    self->setQualityLevel(::qualityLevel);
   else
-    cc->setQualityLevel(-1);
+    self->setQualityLevel(-1);
 
-  cc->updatePixelFormat();
+  self->updatePixelFormat();
 }
 
 void CConn::handleUpdateTimeout(rfb::Timer*)

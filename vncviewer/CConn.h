@@ -20,59 +20,46 @@
 #ifndef __CCONN_H__
 #define __CCONN_H__
 
-#include <QString>
-#ifdef WIN32
-#include <_timeval.h>
-#endif
-//#include "rdr/types.h"
-#include "rfb/Rect.h"
-#include "rfb/CConnection.h"
-#include "rfb/Timer.h"
+#include <rfb/CConnection.h>
 
-#include "authdialog.h"
+namespace network { class Socket; }
 
-class QCursor;
 class QSocketNotifier;
 class QTimer;
 
-namespace rfb
-{
-class PixelFormat;
-class ModifiablePixelBuffer;
-} // namespace rfb
-
-namespace network
-{
-class Socket;
-}
-
 class DesktopWindow;
+class AuthDialog;
 
 class CConn : public rfb::CConnection
 {
 public:
-  CConn(const char* vncServerName, network::Socket* socket=nullptr);
+  CConn(const char* vncServerName, network::Socket* sock);
   ~CConn();
 
-  QString connectionInfo();
+  const char *connectionInfo();
 
   unsigned getUpdateCount();
   unsigned getPixelCount();
   unsigned getPosition();
 
   // CConnection callback methods
-  void initDone() override;
 
-  void sendClipboardContent(const char *data);
+  void credentialsRequested(bool secure, bool needsUser,
+                            bool needsPassword) override;
+  bool showMsgBox(rfb::MsgBoxFlags flags, const char *title,
+                  const char *text) override;
+
+  void initDone() override;
 
   void setDesktopSize(int w, int h) override;
   void setExtendedDesktopSize(unsigned reason, unsigned result,
-                                      int w, int h,
-                                      const rfb::ScreenSet& layout) override;
+                              int w, int h,
+                              const rfb::ScreenSet& layout) override;
 
   void setName(const char* name) override;
 
-  void setColourMapEntries(int firstColour, int nColours, uint16_t* rgbs) override;
+  void setColourMapEntries(int firstColour, int nColours,
+                           uint16_t* rgbs) override;
 
   void bell() override;
 
@@ -80,10 +67,12 @@ public:
   void framebufferUpdateEnd() override;
   bool dataRect(const rfb::Rect& r, int encoding) override;
 
-  void setCursor(int width, int height, const rfb::Point& hotspot, const uint8_t* data) override;
+  void setCursor(int width, int height, const rfb::Point& hotspot,
+                 const uint8_t* data) override;
   void setCursorPos(const rfb::Point& pos) override;
 
-  void fence(uint32_t flags, unsigned len, const uint8_t data[]) override;
+  void fence(uint32_t flags, unsigned len,
+             const uint8_t data[]) override;
 
   void setLEDState(unsigned int state) override;
 
@@ -91,32 +80,18 @@ public:
   void handleClipboardAnnounce(bool available) override;
   void handleClipboardData(const char* data) override;
 
-  void credentialsRequested(bool secure, bool needsUser,
-                            bool needsPassword) override;
-  bool showMsgBox(rfb::MsgBoxFlags flags, const char *title,
-                  const char *text) override;
+  rfb::ModifiablePixelBuffer* framebuffer(); // public facade for the protected method.
+
+private:
 
   void resizeFramebuffer() override;
 
-  rfb::ModifiablePixelBuffer* framebuffer(); // public facade for the protected method.
-  void setProcessState(int state);
-
-  void setHost(QString host) { serverHost = host; }
-
-  QString host() const { return serverHost; }
-
-  void setPort(int port) { serverPort = port; }
-
+  void autoSelectFormatAndEncoding();
   void updatePixelFormat();
-  void resetConnection();
 
-private:
   void startProcessing();
   void flushSocket();
   void processNextMsg();
-
-  void autoSelectFormatAndEncoding();
-  int securityType();
 
   static void handleOptions(void *data);
 
@@ -126,9 +101,9 @@ private:
   void handleAuthCancel();
 
 private:
-  QString serverHost;
+  std::string serverHost;
   int serverPort;
-  network::Socket* socket;
+  network::Socket* sock;
   QSocketNotifier* socketReadNotifier;
   QSocketNotifier* socketWriteNotifier;
   QTimer* processTimer;
@@ -138,8 +113,8 @@ private:
   unsigned updateCount;
   unsigned pixelCount;
 
-  rfb::PixelFormat* serverPF;
-  rfb::PixelFormat* fullColourPF;
+  rfb::PixelFormat serverPF;
+  rfb::PixelFormat fullColourPF;
 
   int lastServerEncoding;
 
