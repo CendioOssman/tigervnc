@@ -70,7 +70,7 @@ protected:
   }
 };
 
-ScreensSelectionWidget::ScreensSelectionWidget(QWidget* parent)
+QMonitorArrangement::QMonitorArrangement(QWidget* parent)
   : QWidget{parent}
 {
   setMinimumSize(200, 100);
@@ -79,14 +79,14 @@ ScreensSelectionWidget::ScreensSelectionWidget(QWidget* parent)
 
   QList<QScreen*> screens = qApp->screens();
   for(auto& screen : screens) {
-    connect(screen, &QScreen::geometryChanged, this, &ScreensSelectionWidget::moveCheckBoxes);
-    connect(screen, &QScreen::virtualGeometryChanged, this, &ScreensSelectionWidget::moveCheckBoxes);
+    connect(screen, &QScreen::geometryChanged, this, &QMonitorArrangement::moveCheckBoxes);
+    connect(screen, &QScreen::virtualGeometryChanged, this, &QMonitorArrangement::moveCheckBoxes);
   }
   connect(qApp, &QGuiApplication::screenAdded, this, [=](){ hide(); reset(); show(); });
   connect(qApp, &QGuiApplication::screenRemoved, this, [=](){ hide(); reset(); show(); });
 }
 
-void ScreensSelectionWidget::getGlobalScreensGeometry(QList<int> screens, int& xmin, int& ymin, qreal& w, qreal& h)
+void QMonitorArrangement::getGlobalScreensGeometry(QList<int> screens, int& xmin, int& ymin, qreal& w, qreal& h)
 {
   QList<QScreen*> appScreens = qApp->screens();
   xmin = INT_MAX;
@@ -115,7 +115,7 @@ void ScreensSelectionWidget::getGlobalScreensGeometry(QList<int> screens, int& x
   h = ymax - ymin;
 }
 
-void ScreensSelectionWidget::apply()
+void QMonitorArrangement::apply()
 {
   std::set<int> selectedScreens;
   for (auto const& c : qAsConst(checkBoxes)) {
@@ -126,7 +126,7 @@ void ScreensSelectionWidget::apply()
   ::fullScreenSelectedMonitors.setParam(selectedScreens);
 }
 
-void ScreensSelectionWidget::reset()
+void QMonitorArrangement::reset()
 {
   qDeleteAll(checkBoxes);
   checkBoxes.clear();
@@ -190,19 +190,19 @@ void ScreensSelectionWidget::reset()
   }
 }
 
-void ScreensSelectionWidget::showEvent(QShowEvent* event)
+void QMonitorArrangement::showEvent(QShowEvent* event)
 {
   moveCheckBoxes();
   QWidget::showEvent(event);
 }
 
-void ScreensSelectionWidget::resizeEvent(QResizeEvent* event)
+void QMonitorArrangement::resizeEvent(QResizeEvent* event)
 {
   moveCheckBoxes();
   QWidget::resizeEvent(event);
 }
 
-void ScreensSelectionWidget::moveCheckBoxes()
+void QMonitorArrangement::moveCheckBoxes()
 {
   QList<QScreen*> screens = qApp->screens();
   QList<int> availableScreens;
@@ -245,7 +245,7 @@ void ScreensSelectionWidget::moveCheckBoxes()
   updatePartiallyChecked();
 }
 
-void ScreensSelectionWidget::updatePartiallyChecked()
+void QMonitorArrangement::updatePartiallyChecked()
 {
   if (!ViewerConfig::canFullScreenOnMultiDisplays()) {
     return;

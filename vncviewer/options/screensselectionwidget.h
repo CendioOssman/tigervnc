@@ -4,12 +4,12 @@
 #include <QCheckBox>
 #include <QWidget>
 
-class ScreensSelectionWidget : public QWidget
+class QMonitorArrangement : public QWidget
 {
   Q_OBJECT
 
 public:
-  ScreensSelectionWidget(QWidget* parent = nullptr);
+  QMonitorArrangement(QWidget* parent = nullptr);
 
   void getGlobalScreensGeometry(QList<int> screens, int& xmin, int& ymin, qreal& w, qreal& h);
 

@@ -31,7 +31,7 @@ OptionsDisplay::OptionsDisplay(QWidget* parent)
   vbox1->addWidget(displayFullScreenOnSelectedMonitors);
   QHBoxLayout* h1 = new QHBoxLayout;
   h1->addSpacing(20);
-  selectedScreens = new ScreensSelectionWidget;
+  selectedScreens = new QMonitorArrangement;
   selectedScreens->setEnabled(false);
   h1->addWidget(selectedScreens, 1);
   vbox1->addLayout(h1, 1);
