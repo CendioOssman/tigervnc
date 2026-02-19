@@ -88,7 +88,8 @@ CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
   : serverPort(0), msgTimer(this, &CConn::processNextMsg),
     authDialog(nullptr), verifyDialog(nullptr), desktop(nullptr),
     updateCount(0), pixelCount(0),
-    lastServerEncoding((unsigned int)-1), bpsEstimate(20000000)
+    lastServerEncoding((unsigned int)-1), bpsEstimate(20000000),
+    updateTimer(this, &CConn::handleUpdateTimeout)
 {
   setShared(::shared);
   sock = socket;
@@ -146,7 +147,6 @@ CConn::~CConn()
   close();
 
   OptionsDialog::removeCallback(handleOptions);
-  Fl::remove_timeout(handleUpdateTimeout, this);
 
   delete authDialog;
   delete verifyDialog;
@@ -641,7 +641,7 @@ void CConn::framebufferUpdateStart()
   updateStartPos = sock->inStream().pos();
 
   // Update the screen prematurely for very slow updates
-  Fl::add_timeout(1.0, handleUpdateTimeout, this);
+  updateTimer.start(1000);
 }
 
 // framebufferUpdateEnd() is called at the end of an update.
@@ -674,7 +674,7 @@ void CConn::framebufferUpdateEnd()
   bpsEstimate = ((bpsEstimate * (1000000 - weight)) +
                  (bps * weight)) / 1000000;
 
-  Fl::remove_timeout(handleUpdateTimeout, this);
+  updateTimer.stop();
   desktop->updateWindow();
 
   // Compute new settings based on updated bandwidth values
@@ -878,15 +878,11 @@ void CConn::handleOptions(void *data)
   self->updatePixelFormat();
 }
 
-void CConn::handleUpdateTimeout(void *data)
+void CConn::handleUpdateTimeout(rfb::Timer*)
 {
-  CConn *self = (CConn *)data;
+  desktop->updateWindow();
 
-  assert(self);
-
-  self->desktop->updateWindow();
-
-  Fl::repeat_timeout(1.0, handleUpdateTimeout, data);
+  updateTimer.repeat();
 }
 
 void CConn::handleAuthFinished()
