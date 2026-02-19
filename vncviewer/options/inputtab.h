@@ -8,12 +8,12 @@
 class QCheckBox;
 class QComboBox;
 
-class InputTab : public TabElement
+class OptionsInput : public TabElement
 {
   Q_OBJECT
 
 public:
-  InputTab(QWidget* parent = nullptr);
+  OptionsInput(QWidget* parent = nullptr);
 
   void apply() override;
   void reset() override;

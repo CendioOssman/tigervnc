@@ -15,7 +15,7 @@
 #include <QStringListModel>
 #include <QVBoxLayout>
 
-InputTab::InputTab(QWidget* parent)
+OptionsInput::OptionsInput(QWidget* parent)
   : TabElement{parent}
 {
   QVBoxLayout* layout = new QVBoxLayout;
@@ -81,7 +81,7 @@ InputTab::InputTab(QWidget* parent)
   setLayout(layout);
 }
 
-void InputTab::apply()
+void OptionsInput::apply()
 {
   ::viewOnly.setParam(inputViewOnly->isChecked());
   ::emulateMiddleButton.setParam(inputMouseEmulateMiddleButton->isChecked());
@@ -96,7 +96,7 @@ void InputTab::apply()
 #endif
 }
 
-void InputTab::reset()
+void OptionsInput::reset()
 {
   inputViewOnly->setChecked(::viewOnly);
   inputMouseEmulateMiddleButton->setChecked(::emulateMiddleButton);

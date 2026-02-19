@@ -18,7 +18,7 @@
 #include <QLineEdit>
 #include <QVBoxLayout>
 
-SecurityTab::SecurityTab(QWidget* parent)
+OptionsSecurity::OptionsSecurity(QWidget* parent)
   : TabElement{parent}
 {
   QVBoxLayout* layout = new QVBoxLayout;
@@ -99,7 +99,7 @@ SecurityTab::SecurityTab(QWidget* parent)
   });
 }
 
-void SecurityTab::apply()
+void OptionsSecurity::apply()
 {
   /* Security */
   rfb::Security security;
@@ -160,7 +160,7 @@ void SecurityTab::apply()
   rfb::SecurityClient::secTypes.setParam(security.ToString());
 }
 
-void SecurityTab::reset()
+void OptionsSecurity::reset()
 {
   rfb::Security security(rfb::SecurityClient::secTypes);
   auto secTypes = security.GetEnabledSecTypes();

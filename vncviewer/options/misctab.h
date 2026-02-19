@@ -7,12 +7,12 @@
 
 class QCheckBox;
 
-class MiscTab : public TabElement
+class OptionsMisc : public TabElement
 {
   Q_OBJECT
 
 public:
-  MiscTab(QWidget* parent = nullptr);
+  OptionsMisc(QWidget* parent = nullptr);
 
   void apply() override;
   void reset() override;

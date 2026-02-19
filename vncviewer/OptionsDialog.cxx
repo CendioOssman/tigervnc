@@ -98,13 +98,13 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   hLayout->addWidget(vFrame);
 
   tabWidget = new QStackedWidget;
-  tabWidget->addWidget(new CompressionTab);
+  tabWidget->addWidget(new OptionsCompression);
 #if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
-  tabWidget->addWidget(new SecurityTab);
+  tabWidget->addWidget(new OptionsSecurity);
 #endif
-  tabWidget->addWidget(new InputTab);
-  tabWidget->addWidget(new DisplayTab);
-  tabWidget->addWidget(new MiscTab);
+  tabWidget->addWidget(new OptionsInput);
+  tabWidget->addWidget(new OptionsDisplay);
+  tabWidget->addWidget(new OptionsMisc);
 
   hLayout->addWidget(tabWidget, 1);
 

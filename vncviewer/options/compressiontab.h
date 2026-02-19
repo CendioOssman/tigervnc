@@ -9,12 +9,12 @@ class QCheckBox;
 class QSpinBox;
 class QRadioButton;
 
-class CompressionTab : public TabElement
+class OptionsCompression : public TabElement
 {
   Q_OBJECT
 
 public:
-  CompressionTab(QWidget* parent = nullptr);
+  OptionsCompression(QWidget* parent = nullptr);
 
   void apply() override;
   void reset() override;

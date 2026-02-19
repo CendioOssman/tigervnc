@@ -13,7 +13,7 @@
 #include <QRadioButton>
 #include <QVBoxLayout>
 
-DisplayTab::DisplayTab(QWidget* parent)
+OptionsDisplay::OptionsDisplay(QWidget* parent)
   : TabElement{parent}
 {
   QVBoxLayout* layout = new QVBoxLayout;
@@ -45,7 +45,7 @@ DisplayTab::DisplayTab(QWidget* parent)
   });
 }
 
-void DisplayTab::apply()
+void OptionsDisplay::apply()
 {
   if (displayWindowed->isChecked()) {
     ::fullScreen.setParam(false);
@@ -59,7 +59,7 @@ void DisplayTab::apply()
   selectedScreens->apply();
 }
 
-void DisplayTab::reset()
+void OptionsDisplay::reset()
 {
   bool allMonitors = !strcasecmp(fullScreenMode, "all");
   bool selectedMonitors = !strcasecmp(fullScreenMode, "selected");

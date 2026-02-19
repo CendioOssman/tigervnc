@@ -16,7 +16,7 @@
 #include <QSpinBox>
 #include <QVBoxLayout>
 
-CompressionTab::CompressionTab(QWidget* parent)
+OptionsCompression::OptionsCompression(QWidget* parent)
   : TabElement{parent}
 {
   QVBoxLayout* layout = new QVBoxLayout;
@@ -99,7 +99,7 @@ CompressionTab::CompressionTab(QWidget* parent)
   });
 }
 
-void CompressionTab::apply()
+void OptionsCompression::apply()
 {
   ::autoSelect.setParam(compressionAutoSelect->isChecked());
   if (compressionEncodingTight->isChecked()) {
@@ -133,7 +133,7 @@ void CompressionTab::apply()
   ::qualityLevel.setParam(compressionJPEGCompressionTextEdit->value());
 }
 
-void CompressionTab::reset()
+void OptionsCompression::reset()
 {
   compressionAutoSelect->setChecked(::autoSelect);
   compressionEncodingTight->setChecked(rfb::encodingNum(::preferredEncoding) == 7);

@@ -8,12 +8,12 @@
 class QCheckBox;
 class QLineEdit;
 
-class SecurityTab : public TabElement
+class OptionsSecurity : public TabElement
 {
   Q_OBJECT
 
 public:
-  SecurityTab(QWidget* parent = nullptr);
+  OptionsSecurity(QWidget* parent = nullptr);
 
   void apply() override;
   void reset() override;

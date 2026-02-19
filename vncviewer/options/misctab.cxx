@@ -10,7 +10,7 @@
 #include <QCheckBox>
 #include <QVBoxLayout>
 
-MiscTab::MiscTab(QWidget* parent)
+OptionsMisc::OptionsMisc(QWidget* parent)
   : TabElement{parent}
 {
   QVBoxLayout* layout = new QVBoxLayout;
@@ -22,13 +22,13 @@ MiscTab::MiscTab(QWidget* parent)
   setLayout(layout);
 }
 
-void MiscTab::apply()
+void OptionsMisc::apply()
 {
   ::shared.setParam(shared->isChecked());
   ::reconnectOnError.setParam(reconnect->isChecked());
 }
 
-void MiscTab::reset()
+void OptionsMisc::reset()
 {
   shared->setChecked(::shared);
   reconnect->setChecked(::reconnectOnError);

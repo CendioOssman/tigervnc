@@ -8,12 +8,12 @@
 class ScreensSelectionWidget;
 class QRadioButton;
 
-class DisplayTab : public TabElement
+class OptionsDisplay : public TabElement
 {
   Q_OBJECT
 
 public:
-  DisplayTab(QWidget* parent = nullptr);
+  OptionsDisplay(QWidget* parent = nullptr);
 
   void apply() override;
   void reset() override;
