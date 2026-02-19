@@ -5,11 +5,11 @@
 #endif
 
 #include "appmanager.h"
-#include "options/compressiontab.h"
-#include "options/displaytab.h"
-#include "options/inputtab.h"
-#include "options/misctab.h"
-#include "options/securitytab.h"
+#include "OptionsCompression.h"
+#include "OptionsDisplay.h"
+#include "OptionsInput.h"
+#include "OptionsMisc.h"
+#include "OptionsSecurity.h"
 #include "i18n.h"
 
 #include <QLabel>

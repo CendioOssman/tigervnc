@@ -1,11 +1,11 @@
-#include "misctab.h"
+#include "OptionsMisc.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include "../parameters.h"
-#include "../i18n.h"
+#include "parameters.h"
+#include "i18n.h"
 
 #include <QCheckBox>
 #include <QVBoxLayout>

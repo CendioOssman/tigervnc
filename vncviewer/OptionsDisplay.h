@@ -1,7 +1,7 @@
 #ifndef DISPLAYTAB_H
 #define DISPLAYTAB_H
 
-#include "../OptionsDialog.h"
+#include "OptionsDialog.h"
 
 #include <QWidget>
 

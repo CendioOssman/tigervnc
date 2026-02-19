@@ -1,7 +1,7 @@
 #ifndef SECURITYTAB_H
 #define SECURITYTAB_H
 
-#include "../OptionsDialog.h"
+#include "OptionsDialog.h"
 
 #include <QWidget>
 

@@ -1,7 +1,7 @@
 #ifndef INPUTTAB_H
 #define INPUTTAB_H
 
-#include "../OptionsDialog.h"
+#include "OptionsDialog.h"
 
 #include <QWidget>
 

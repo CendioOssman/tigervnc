@@ -1,13 +1,13 @@
-#include "displaytab.h"
+#include "OptionsDisplay.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include "../parameters.h"
-#include "screensselectionwidget.h"
-#include "../viewerconfig.h"
-#include "../i18n.h"
+#include "parameters.h"
+#include "QMonitorArrangement.h"
+#include "viewerconfig.h"
+#include "i18n.h"
 
 #include <QGroupBox>
 #include <QRadioButton>

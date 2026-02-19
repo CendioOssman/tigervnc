@@ -1,16 +1,16 @@
-#include "securitytab.h"
+#include "OptionsSecurity.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include "../viewerconfig.h"
+#include "viewerconfig.h"
 #include "rfb/Security.h"
 #include "rfb/SecurityClient.h"
 #ifdef HAVE_GNUTLS
 #include "rfb/CSecurityTLS.h"
 #endif
-#include "../i18n.h"
+#include "i18n.h"
 
 #include <QCheckBox>
 #include <QGroupBox>

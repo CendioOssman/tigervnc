@@ -1,12 +1,12 @@
-#include "inputtab.h"
+#include "OptionsInput.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include "../parameters.h"
-#include "../menukey.h"
-#include "../i18n.h"
+#include "parameters.h"
+#include "menukey.h"
+#include "i18n.h"
 
 #include <QCheckBox>
 #include <QComboBox>

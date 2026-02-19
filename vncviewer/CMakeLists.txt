@@ -105,18 +105,18 @@ set(PROJECT_SOURCES
         authdialog.h
         OptionsDialog.cxx
         OptionsDialog.h
-        options/compressiontab.cxx
-        options/compressiontab.h
-        options/inputtab.cxx
-        options/inputtab.h
-        options/displaytab.cxx
-        options/displaytab.h
-        options/misctab.cxx
-        options/misctab.h
-        options/securitytab.cxx
-        options/securitytab.h
-        options/screensselectionwidget.cxx
-        options/screensselectionwidget.h
+        OptionsCompression.cxx
+        OptionsCompression.h
+        OptionsInput.cxx
+        OptionsInput.h
+        OptionsDisplay.cxx
+        OptionsDisplay.h
+        OptionsMisc.cxx
+        OptionsMisc.h
+        OptionsSecurity.cxx
+        OptionsSecurity.h
+        QMonitorArrangement.cxx
+        QMonitorArrangement.h
         clicksalternativegesture.cxx
         clicksalternativegesture.h
         clicksalternativegesturerecognizer.cxx
