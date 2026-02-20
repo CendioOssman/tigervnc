@@ -53,7 +53,14 @@ static bool exitMainloop = false;
 static std::string exitError;
 static bool fatalError = false;
 
+static std::string vncServerName;
+static network::Socket* sock = nullptr;
+static CConn* cc = nullptr;
+
 static rfb::LogWriter vlog("mainloop");
+
+static void start_connection(void*);
+static void stop_connection(void*);
 
 void abort_vncviewer(const char *error, ...)
 {
@@ -101,7 +108,8 @@ void abort_connection(const char *error, ...)
     va_end(ap);
   }
 
-  exitMainloop = true;
+  if (!Fl::has_idle(stop_connection))
+    Fl::add_idle(stop_connection);
 }
 
 void abort_connection_with_unexpected_error(const rdr::Exception &e) {
@@ -111,76 +119,94 @@ void abort_connection_with_unexpected_error(const rdr::Exception &e) {
 
 void disconnect()
 {
-  exitMainloop = true;
+  if (!Fl::has_idle(stop_connection))
+    Fl::add_idle(stop_connection);
 }
 
-static void run_connection(const char* vncserver, network::Socket* sock)
+static void start_connection(void*)
+{
+  assert(cc == nullptr);
+
+  Fl::remove_idle(start_connection);
+
+  cc = new CConn(vncServerName.c_str(), sock);
+}
+
+static void stop_connection(void*)
+{
+  assert(cc != nullptr);
+
+  Fl::remove_idle(stop_connection);
+
+  delete cc;
+  cc = nullptr;
+
+  if (exitError.empty()) {
+    exitMainloop = true;
+    return;
+  }
+
+  if(reconnectOnError && (sock == nullptr)) {
+    Fl_Choice_Box* dlg;
+    int ret;
+
+    dlg = new Fl_Choice_Box(_("Connection error"),
+                            _("%s\n\nAttempt to reconnect?"),
+                            nullptr, fl_yes, fl_no,
+                            exitError.c_str());
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    ret = dlg->result();
+    delete dlg;
+
+    exitError.clear();
+    if (ret == 1) {
+      Fl::add_idle(start_connection);
+      return;
+    } else {
+      exitMainloop = true;
+      return;
+    }
+  }
+
+  if (alertOnFatalError) {
+    Fl_Alert_Box* dlg;
+
+    dlg = new Fl_Alert_Box(_("Connection error"),
+                            "%s", exitError.c_str());
+    dlg->set_modal();
+    dlg->show();
+    while (dlg->shown())
+      Fl::wait();
+    delete dlg;
+  }
+
+  exitMainloop = true;
+  return;
+}
+
+static void run_mainloop()
 {
   inMainloop = true;
 
-  while (true) {
-    CConn *cc;
+  exitMainloop = false;
+  while (!exitMainloop) {
+    int next_timer;
 
-    exitMainloop = false;
+    next_timer = Timer::checkTimeouts();
+    if (next_timer < 0)
+      next_timer = INT_MAX;
 
-    cc = new CConn(vncserver, sock);
-
-    while (!exitMainloop) {
-      int next_timer;
-
-      next_timer = Timer::checkTimeouts();
-      if (next_timer < 0)
-        next_timer = INT_MAX;
-
-      if (Fl::wait((double)next_timer / 1000.0) < 0.0) {
-        vlog.error(_("Internal FLTK error. Exiting."));
-        exit(-1);
-      }
+    if (Fl::wait((double)next_timer / 1000.0) < 0.0) {
+      vlog.error(_("Internal FLTK error. Exiting."));
+      exit(-1);
     }
+  }
 
-    delete cc;
-
-    if (fatalError) {
-      assert(!exitError.empty());
-      if (alertOnFatalError) {
-        Fl_Alert_Box* dlg;
-
-        dlg = new Fl_Alert_Box(_("Connection error"),
-                               "%s", exitError.c_str());
-        dlg->set_modal();
-        dlg->show();
-        while (dlg->shown())
-          Fl::wait();
-        delete dlg;
-      }
-      break;
-    }
-
-    if (exitError.empty())
-      break;
-
-    if(reconnectOnError && (sock == nullptr)) {
-      Fl_Choice_Box* dlg;
-      int ret;
-
-      dlg = new Fl_Choice_Box(_("Connection error"),
-                              _("%s\n\nAttempt to reconnect?"),
-                              nullptr, fl_yes, fl_no,
-                              exitError.c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      ret = dlg->result();
-      delete dlg;
-
-      exitError.clear();
-      if (ret == 1)
-        continue;
-      else
-        break;
-    }
-
+  if (fatalError) {
+    assert(!exitError.empty());
     if (alertOnFatalError) {
       Fl_Alert_Box* dlg;
 
@@ -192,8 +218,6 @@ static void run_connection(const char* vncserver, network::Socket* sock)
         Fl::wait();
       delete dlg;
     }
-
-    break;
   }
 
   inMainloop = false;
@@ -223,14 +247,14 @@ createTunnel(const char *gatewayHost, const char *remoteHost,
   free(cmd2);
 }
 
-static std::string mktunnel(const char* vncServerName)
+static std::string mktunnel(const char* server)
 {
   const char *gatewayHost;
   std::string remoteHost;
   int localPort = findFreeTcpPort();
   int remotePort;
 
-  getHostAndPort(vncServerName, &remoteHost, &remotePort);
+  getHostAndPort(server, &remoteHost, &remotePort);
   gatewayHost = (const char*)via;
   createTunnel(gatewayHost, remoteHost.c_str(), remotePort, localPort);
 
@@ -241,9 +265,6 @@ static std::string mktunnel(const char* vncServerName)
 int mainloop(const char* configServerName,
              const char* cmdlineServerName)
 {
-  std::string vncServerName;
-  Socket *sock = nullptr;
-
 #ifndef WIN32
   /* Specifying -via and -listen together is nonsense */
   if (listenMode && strlen(via) > 0) {
@@ -332,7 +353,13 @@ int mainloop(const char* configServerName,
 #endif
   }
 
-  run_connection(vncServerName.c_str(), sock);
+  Fl::add_idle(start_connection);
+
+  run_mainloop();
+
+  // Clean up CConn on fatal errors
+  if (cc != nullptr)
+    delete cc;
 
   return 0;
 }
