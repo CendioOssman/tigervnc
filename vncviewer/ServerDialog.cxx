@@ -61,11 +61,14 @@ static core::LogWriter vlog("ServerDialog");
 const char* SERVER_HISTORY="tigervnc.history";
 
 ServerDialog::ServerDialog()
-  : Fl_Window(450, 0, "TigerVNC")
+  : Fl_Window(450, 0, "TigerVNC"),
+  finishedCallback(nullptr), finishedUserData(nullptr)
 {
   int x, y, x2;
   Fl_Button *button;
   Fl_Box *divider;
+
+  result_ = 0;
 
   x = OUTER_MARGIN;
   y = OUTER_MARGIN;
@@ -137,21 +140,39 @@ ServerDialog::~ServerDialog()
 }
 
 
-std::string ServerDialog::run(const char* servername)
+void ServerDialog::finished(Fl_Callback* cb, void* p)
 {
-  ServerDialog dialog;
-
-  dialog.serverName->value(servername);
-
-  dialog.show();
-  while (dialog.shown()) Fl::wait();
-
-  if (dialog.serverName->value() == nullptr) {
-    return "";
-  }
-
-  return dialog.serverName->value();
+  finishedCallback = cb;
+  finishedUserData = p;
 }
+
+
+void ServerDialog::hide()
+{
+  Fl_Window::hide();
+
+  if (finishedCallback != nullptr)
+    finishedCallback(this, finishedUserData);
+}
+
+
+int ServerDialog::result()
+{
+  return result_;
+}
+
+
+std::string ServerDialog::getServerName()
+{
+  return serverName->value();
+}
+
+
+void ServerDialog::setServerName(const char* servername)
+{
+  serverName->value(servername);
+}
+
 
 void ServerDialog::handleOptions(Fl_Widget* /*widget*/, void* /*data*/)
 {
@@ -299,7 +320,7 @@ void ServerDialog::handleCancel(Fl_Widget* /*widget*/, void* data)
 {
   ServerDialog *dialog = (ServerDialog*)data;
 
-  dialog->serverName->value("");
+  dialog->result_ = 0;
   dialog->hide();
 }
 
@@ -309,7 +330,7 @@ void ServerDialog::handleConnect(Fl_Widget* /*widget*/, void *data)
   ServerDialog *dialog = (ServerDialog*)data;
   const char* servername = dialog->serverName->value();
 
-  dialog->hide();
+  dialog->result_ = 1;
 
   try {
     saveViewerParameters(nullptr, servername);
@@ -327,6 +348,8 @@ void ServerDialog::handleConnect(Fl_Widget* /*widget*/, void *data)
   } catch (std::exception& e) {
     vlog.error(_("Unable to save the server history: %s"), e.what());
   }
+
+  dialog->hide();
 }
 
 
