@@ -27,12 +27,18 @@ class Fl_Widget;
 class Fl_Input_Choice;
 
 class ServerDialog : public Fl_Window {
-protected:
+public:
   ServerDialog();
   ~ServerDialog();
 
-public:
-  static std::string run(const char* servername);
+  void finished(Fl_Callback* cb, void* p=nullptr);
+
+  void hide() override;
+
+  int result();
+
+  std::string getServerName();
+  void setServerName(const char* servername);
 
 protected:
   static void handleOptions(Fl_Widget *widget, void *data);
@@ -51,6 +57,12 @@ protected:
   Fl_Input_Choice *serverName;
   std::list<std::string> serverHistory;
   std::string usedDir;
+
+private:
+  int result_;
+
+  Fl_Callback* finishedCallback;
+  void* finishedUserData;
 };
 
 #endif

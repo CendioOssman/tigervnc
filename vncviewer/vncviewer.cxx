@@ -741,9 +741,18 @@ int main(int argc, char** argv)
     }
   } else {
     if (vncServerName.empty()) {
-      vncServerName = ServerDialog::run(defaultServerName.c_str());
-      if (vncServerName.empty())
+      ServerDialog dialog;
+
+      dialog.setServerName(defaultServerName.c_str());
+
+      dialog.show();
+      while (dialog.shown())
+        Fl::wait();
+
+      if (!dialog.result())
         return 1;
+
+      vncServerName = dialog.getServerName();
     }
 
 #ifndef WIN32
