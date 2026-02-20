@@ -54,7 +54,7 @@
 #include <network/UnixSocket.h>
 #endif
 
-#include "authdialog.h"
+#include "AuthDialog.h"
 #include "CConn.h"
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"

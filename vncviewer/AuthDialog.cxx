@@ -1,4 +1,4 @@
-#include "authdialog.h"
+#include "AuthDialog.h"
 #include <qboxlayout.h>
 #include <qlayout.h>
 

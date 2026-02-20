@@ -93,6 +93,8 @@ set(PROJECT_SOURCES
         PlatformPixelBuffer.cxx
         EmulateMB.h
         EmulateMB.cxx
+        AuthDialog.cxx
+        AuthDialog.h
         CConn.h
         CConn.cxx
         toast.cxx
@@ -101,8 +103,6 @@ set(PROJECT_SOURCES
         viewerconfig.h
         ServerDialog.cxx
         ServerDialog.h
-        authdialog.cxx
-        authdialog.h
         OptionsDialog.cxx
         OptionsDialog.h
         OptionsCompression.cxx
