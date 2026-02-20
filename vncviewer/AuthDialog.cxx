@@ -1,21 +1,40 @@
-#include "AuthDialog.h"
-#include <qboxlayout.h>
-#include <qlayout.h>
+/* Copyright 2024 Adam Halim for Cendio AB
+ * Copyright 2011-2026 Pierre Ossman for Cendio AB
+ *
+ * This is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this software; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+ * USA.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
-#include "appmanager.h"
-#include "i18n.h"
 
 #include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include <qboxlayout.h>
+#include <qlayout.h>
 
-AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword, QWidget* parent)
+#include "AuthDialog.h"
+#include "appmanager.h"
+#include "i18n.h"
+
+AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
+                       QWidget* parent)
   : QDialog{parent}
 {
   setWindowTitle(_("VNC authentication"));
@@ -42,26 +61,37 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword, QWidget
 
   QFormLayout* formLayout = new QFormLayout;
   formLayout->setContentsMargins(5, 5, 5, 5);
+
   if (needsUser) {
-    userText = new QLineEdit;
-    userText->setFocus();
-    formLayout->addRow(_("Username:"), userText);
-  } else if (needsPassword) {
-    passwordText = new QLineEdit;
-    passwordText->setEchoMode(QLineEdit::Password);
-    passwordText->setFocus();
-    formLayout->addRow(_("Password:"), passwordText);
-    connect(passwordText, &QLineEdit::returnPressed, this, &AuthDialog::accept);
+    username = new QLineEdit;
+    username->setFocus();
+    formLayout->addRow(_("Username:"), username);
+  } else {
+    username = nullptr;
   }
+
+  if (needsPassword) {
+    passwd = new QLineEdit;
+    passwd->setEchoMode(QLineEdit::Password);
+    passwd->setFocus();
+    formLayout->addRow(_("Password:"), passwd);
+    connect(passwd, &QLineEdit::returnPressed, this, &AuthDialog::accept);
+  } else {
+    passwd = nullptr;
+  }
+
   layout->addLayout(formLayout);
 
   QHBoxLayout* btnsLayout = new QHBoxLayout;
   btnsLayout->setContentsMargins(5, 5, 5, 5);
   btnsLayout->addStretch(1);
+
   QPushButton* cancelBtn = new QPushButton(_("Cancel"));
   btnsLayout->addWidget(cancelBtn, 0, Qt::AlignRight);
+
   QPushButton* okBtn = new QPushButton(_("Ok"));
   btnsLayout->addWidget(okBtn, 0, Qt::AlignRight);
+
   layout->addLayout(btnsLayout);
 
   setLayout(layout);
@@ -70,12 +100,16 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword, QWidget
   connect(okBtn, &QPushButton::clicked, this, &AuthDialog::accept);
 }
 
-QString AuthDialog::getUser() const
+std::string AuthDialog::getUser()
 {
-  return userText ? userText->text() : QString();
+  if (username)
+    return username->text().toStdString();
+  return "";
 }
 
-QString AuthDialog::getPassword() const
+std::string AuthDialog::getPassword()
 {
-  return passwordText ? passwordText->text() : QString();
+  if (passwd)
+    return passwd->text().toStdString();
+  return "";
 }

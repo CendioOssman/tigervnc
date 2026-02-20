@@ -764,11 +764,8 @@ void CConn::handleAuthOK()
   std::string user;
   std::string password;
 
-  if (!authDialog->getUser().isEmpty()) {
-    user = authDialog->getUser().toStdString();
-  }
-
-  password = authDialog->getPassword().toStdString();
+  user = authDialog->getUser();
+  password = authDialog->getPassword();
 
   authDialog->deleteLater();
   authDialog = nullptr;
