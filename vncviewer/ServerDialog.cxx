@@ -122,6 +122,13 @@ ServerDialog::ServerDialog()
   h(y-INNER_MARGIN+OUTER_MARGIN);
 
   callback(this->handleCancel, this);
+
+  try {
+    loadServerHistory();
+    serverName->set_suggestions(serverHistory);
+  } catch (std::exception& e) {
+    vlog.error(_("Unable to load the server history: %s"), e.what());
+  }
 }
 
 
@@ -137,14 +144,6 @@ std::string ServerDialog::run(const char* servername)
   dialog.serverName->value(servername);
 
   dialog.show();
-
-  try {
-    dialog.loadServerHistory();
-    dialog.serverName->set_suggestions(dialog.serverHistory);
-  } catch (std::exception& e) {
-    vlog.error(_("Unable to load the server history: %s"), e.what());
-  }
-
   while (dialog.shown()) Fl::wait();
 
   if (dialog.serverName->value() == nullptr) {
