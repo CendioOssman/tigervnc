@@ -23,10 +23,6 @@ namespace rdr {
   struct Exception;
 };
 
-namespace network {
-  class Socket;
-};
-
 // Report a fatal issue that requires us to terminate all of vncviewer
 void abort_vncviewer(const char *error, ...)
   __attribute__((__format__ (__printf__, 1, 2)));
@@ -40,7 +36,8 @@ void abort_connection_with_unexpected_error(const rdr::Exception &);
 // Cleanly terminate the connection
 void disconnect();
 
-// Run the main loop for a specific target server
-void mainloop(const char* vncserver, network::Socket* sock);
+// Establish a connection and run it until completion
+int mainloop(const char* configServerName,
+             const char* cmdlineServerName);
 
 #endif

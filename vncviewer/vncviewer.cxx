@@ -33,13 +33,9 @@
 #include <sys/stat.h>
 
 #include <rfb/Logger_stdio.h>
-#include <rfb/Hostname.h>
 #include <rfb/LogWriter.h>
 #include <rfb/Exception.h>
-
-#include <rdr/Exception.h>
-
-#include <network/TcpSocket.h>
+#include <rfb/util.h>
 
 #include <os/os.h>
 
@@ -47,7 +43,6 @@
 #include <FL/Fl_PNG_Image.H>
 #include <FL/Fl_Sys_Menu_Bar.H>
 #include <FL/fl_ask.H>
-#include <FL/x.H>
 
 #include "fltk/Fl_Message_Box.h"
 #include "fltk/theme.h"
@@ -55,7 +50,6 @@
 #include "i18n.h"
 #include "mainloop.h"
 #include "parameters.h"
-#include "ServerDialog.h"
 #include "touch.h"
 #include "vncviewer.h"
 
@@ -65,10 +59,7 @@
 
 static rfb::LogWriter vlog("main");
 
-using namespace network;
 using namespace rfb;
-
-static std::string vncServerName;
 
 static const char *argv0 = nullptr;
 
@@ -298,35 +289,33 @@ static void usage(const char *programName)
   exit(1);
 }
 
-static void
-potentiallyLoadConfigurationFile(const char *filename)
+static bool isPath(const char *maybe)
 {
-  const bool hasPathSeparator = (strchr(filename, '/') != nullptr ||
-                                 (strchr(filename, '\\')) != nullptr);
+  if (strchr(maybe, '/') != nullptr)
+    return true;
+  if (strchr(maybe, '\\') != nullptr)
+    return true;
 
-  if (hasPathSeparator) {
+  return false;
+}
+
+static bool isUnixSocket(const char *filename)
+{
 #ifndef WIN32
-    struct stat sb;
+  struct stat sb;
 
-    // This might be a UNIX socket, we need to check
-    if (stat(filename, &sb) == -1) {
-      // Some access problem; let loadViewerParameters() deal with it...
-    } else {
-      if ((sb.st_mode & S_IFMT) == S_IFSOCK)
-        return;
-    }
+  // This might be a UNIX socket, we need to check
+  if (stat(filename, &sb) == -1) {
+    // Some access problem; let loadViewerParameters() deal with it...
+  } else {
+    if ((sb.st_mode & S_IFMT) == S_IFSOCK)
+      return true;
+  }
+#else
+  (void)filename;
 #endif
 
-    try {
-      // The server name might be empty, but we still need to clear it
-      // so we don't try to connect to the filename
-      vncServerName = loadViewerParameters(filename);
-    } catch (rfb::Exception& e) {
-      vlog.error("%s", e.str());
-      abort_vncviewer(_("Unable to load the specified configuration "
-                        "file:\n\n%s"), e.str());
-    }
-  }
+  return false;
 }
 
 static void
@@ -391,46 +380,10 @@ create_base_dirs()
   }
 }
 
-#ifndef WIN32
-static void
-createTunnel(const char *gatewayHost, const char *remoteHost,
-             int remotePort, int localPort)
-{
-  const char *cmd = getenv("VNC_VIA_CMD");
-  char *cmd2, *percent;
-  char lport[10], rport[10];
-  sprintf(lport, "%d", localPort);
-  sprintf(rport, "%d", remotePort);
-  setenv("G", gatewayHost, 1);
-  setenv("H", remoteHost, 1);
-  setenv("R", rport, 1);
-  setenv("L", lport, 1);
-  if (!cmd)
-    cmd = "/usr/bin/ssh -f -L \"$L\":\"$H\":\"$R\" \"$G\" sleep 20";
-  /* Compatibility with TigerVNC's method. */
-  cmd2 = strdup(cmd);
-  while ((percent = strchr(cmd2, '%')) != nullptr)
-    *percent = '$';
-  system(cmd2);
-  free(cmd2);
-}
-
-static void mktunnel()
-{
-  const char *gatewayHost;
-  std::string remoteHost;
-  int localPort = findFreeTcpPort();
-  int remotePort;
-
-  getHostAndPort(vncServerName.c_str(), &remoteHost, &remotePort);
-  vncServerName = format("localhost::%d", localPort);
-  gatewayHost = (const char*)via;
-  createTunnel(gatewayHost, remoteHost.c_str(), remotePort, localPort);
-}
-#endif /* !WIN32 */
-
 int main(int argc, char** argv)
 {
+  std::string configServerName, cmdlineServerName;
+
   argv0 = argv[0];
 
   i18n_init();
@@ -467,9 +420,8 @@ int main(int argc, char** argv)
   Configuration::enableViewerParams();
 
   /* Load the default parameter settings */
-  std::string defaultServerName;
   try {
-    defaultServerName = loadViewerParameters(nullptr);
+    configServerName = loadViewerParameters(nullptr);
   } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
   }
@@ -511,7 +463,7 @@ int main(int argc, char** argv)
       usage(argv[0]);
     }
 
-    vncServerName = argv[i];
+    cmdlineServerName = argv[i];
     i++;
   }
 
@@ -519,102 +471,21 @@ int main(int argc, char** argv)
   enable_touch();
 
   // Check if the server name in reality is a configuration file
-  potentiallyLoadConfigurationFile(vncServerName.c_str());
+  if (isPath(cmdlineServerName.c_str()) &&
+      !isUnixSocket(cmdlineServerName.c_str())) {
+    try {
+      cmdlineServerName =
+        loadViewerParameters(cmdlineServerName.c_str());
+    } catch (rfb::Exception& e) {
+      vlog.error("%s", e.str());
+      abort_vncviewer(_("Unable to load the specified configuration "
+                        "file:\n\n%s"), e.str());
+    }
+  }
 
   migrateDeprecatedOptions();
 
   create_base_dirs();
 
-  Socket *sock = nullptr;
-
-#ifndef WIN32
-  /* Specifying -via and -listen together is nonsense */
-  if (listenMode && strlen(via) > 0) {
-    // TRANSLATORS: "Parameters" are command line arguments, or settings
-    // from a file or the Windows registry.
-    vlog.error(_("Parameters -listen and -via are incompatible"));
-    abort_vncviewer(_("Parameters -listen and -via are incompatible"));
-    return 1; /* Not reached */
-  }
-#endif
-
-  if (listenMode) {
-    std::list<SocketListener*> listeners;
-    try {
-      int port = 5500;
-      if (!vncServerName.empty() && isdigit(vncServerName[0]))
-        port = atoi(vncServerName.c_str());
-
-      createTcpListeners(&listeners, nullptr, port);
-      if (listeners.empty())
-        throw Exception(_("Unable to listen for incoming connections"));
-
-      vlog.info(_("Listening on port %d"), port);
-
-      /* Wait for a connection */
-      while (sock == nullptr) {
-        fd_set rfds;
-        FD_ZERO(&rfds);
-        for (SocketListener* listener : listeners)
-          FD_SET(listener->getFd(), &rfds);
-
-        int n = select(FD_SETSIZE, &rfds, nullptr, nullptr, nullptr);
-        if (n < 0) {
-          if (errno == EINTR) {
-            vlog.debug("Interrupted select() system call");
-            continue;
-          } else {
-            throw rdr::SystemException("select", errno);
-          }
-        }
-
-        for (SocketListener* listener : listeners)
-          if (FD_ISSET(listener->getFd(), &rfds)) {
-            sock = listener->accept();
-            if (sock)
-              /* Got a connection */
-              break;
-          }
-      }
-    } catch (rdr::Exception& e) {
-      vlog.error("%s", e.str());
-      abort_vncviewer(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str());
-      return 1; /* Not reached */
-    }
-
-    while (!listeners.empty()) {
-      delete listeners.back();
-      listeners.pop_back();
-    }
-  } else {
-    if (vncServerName.empty()) {
-      ServerDialog dialog;
-
-      dialog.setServerName(defaultServerName.c_str());
-
-      dialog.show();
-      while (dialog.shown())
-        Fl::wait();
-
-      if (!dialog.result())
-        return 1;
-
-      vncServerName = dialog.getServerName();
-    }
-
-#ifndef WIN32
-    if (strlen(via) > 0) {
-      try {
-        mktunnel();
-      } catch (rdr::Exception& e) {
-        vlog.error("%s", e.str());
-        abort_vncviewer(_("Failure setting up encrypted tunnel:\n\n%s"), e.str());
-      }
-    }
-#endif
-  }
-
-  mainloop(vncServerName.c_str(), sock);
-
-  return 0;
+  return mainloop(configServerName.c_str(), cmdlineServerName.c_str());
 }
