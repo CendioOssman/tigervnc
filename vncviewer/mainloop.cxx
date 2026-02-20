@@ -27,16 +27,19 @@
 #include <stdexcept>
 #include <string>
 
-#include <FL/Fl.H>
 #include <FL/fl_ask.H>
 
+#include <core/Exception.h>
 #include <core/LogWriter.h>
 #include <core/Timer.h>
 #include <core/i18n.h>
 #include <core/string.h>
 
+#include <network/TcpSocket.h>
+
 #include "fltk/Fl_Message_Box.h"
 #include "CConn.h"
+#include "ServerDialog.h"
 #include "i18n.h"
 #include "mainloop.h"
 #include "parameters.h"
@@ -107,7 +110,7 @@ void disconnect()
   exitMainloop = true;
 }
 
-void mainloop(const char* vncserver, network::Socket* sock)
+static void run_connection(const char* vncserver, network::Socket* sock)
 {
   inMainloop = true;
 
@@ -191,4 +194,145 @@ void mainloop(const char* vncserver, network::Socket* sock)
   }
 
   inMainloop = false;
+}
+
+#ifndef WIN32
+static void
+createTunnel(const char *gatewayHost, const char *remoteHost,
+             int remotePort, int localPort)
+{
+  const char *cmd = getenv("VNC_VIA_CMD");
+  char *cmd2, *percent;
+  char lport[10], rport[10];
+  sprintf(lport, "%d", localPort);
+  sprintf(rport, "%d", remotePort);
+  setenv("G", gatewayHost, 1);
+  setenv("H", remoteHost, 1);
+  setenv("R", rport, 1);
+  setenv("L", lport, 1);
+  if (!cmd)
+    cmd = "/usr/bin/ssh -f -L \"$L\":\"$H\":\"$R\" -- \"$G\" sleep 20";
+  /* Compatibility with TigerVNC's method. */
+  cmd2 = strdup(cmd);
+  while ((percent = strchr(cmd2, '%')) != nullptr)
+    *percent = '$';
+  int res = system(cmd2);
+  if (res != 0)
+    vlog.error(_("Failed to create tunnel: '%s' returned %d"),
+               cmd2, res);
+  free(cmd2);
+}
+
+static std::string mktunnel(const char* vncServerName)
+{
+  const char *gatewayHost;
+  std::string remoteHost;
+  int localPort = network::findFreeTcpPort();
+  int remotePort;
+
+  network::getHostAndPort(vncServerName, &remoteHost, &remotePort);
+  gatewayHost = (const char*)via;
+  createTunnel(gatewayHost, remoteHost.c_str(), remotePort, localPort);
+
+  return core::format("localhost::%d", localPort);
+}
+#endif /* !WIN32 */
+
+int mainloop(const char* configServerName,
+             const char* cmdlineServerName)
+{
+  std::string vncServerName;
+  network::Socket* sock = nullptr;
+
+#ifndef WIN32
+  /* Specifying -via and -listen together is nonsense */
+  if (listenMode && strlen(via) > 0) {
+    // TRANSLATORS: "Parameters" are command line arguments, or settings
+    // from a file or the Windows registry.
+    vlog.error(_("Parameters -listen and -via are incompatible"));
+    abort_vncviewer(_("Parameters -listen and -via are incompatible"));
+    return 1; /* Not reached */
+  }
+#endif
+
+  if (listenMode) {
+    std::list<network::SocketListener*> listeners;
+    try {
+      int port = 5500;
+      if ((cmdlineServerName[0] != '\0') &&
+          isdigit(cmdlineServerName[0]))
+        port = atoi(cmdlineServerName);
+
+      createTcpListeners(&listeners, nullptr, port);
+      if (listeners.empty())
+        throw std::runtime_error(_("Unable to listen for incoming connections"));
+
+      vlog.info(_("Listening on port %d"), port);
+
+      /* Wait for a connection */
+      while (sock == nullptr) {
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        for (network::SocketListener* listener : listeners)
+          FD_SET(listener->getFd(), &rfds);
+
+        int n = select(FD_SETSIZE, &rfds, nullptr, nullptr, nullptr);
+        if (n < 0) {
+          if (errno == EINTR) {
+            vlog.debug("Interrupted select() system call");
+            continue;
+          } else {
+            throw core::socket_error("select", errno);
+          }
+        }
+
+        for (network::SocketListener* listener : listeners)
+          if (FD_ISSET(listener->getFd(), &rfds)) {
+            sock = listener->accept();
+            if (sock)
+              /* Got a connection */
+              break;
+          }
+      }
+    } catch (std::exception& e) {
+      vlog.error("%s", e.what());
+      abort_vncviewer(_("Failure waiting for incoming VNC connection:\n\n%s"), e.what());
+      return 1; /* Not reached */
+    }
+
+    while (!listeners.empty()) {
+      delete listeners.back();
+      listeners.pop_back();
+    }
+  } else {
+    if (cmdlineServerName[0] == '\0') {
+      ServerDialog dialog;
+
+      dialog.setServerName(configServerName);
+
+      dialog.show();
+      while (dialog.shown())
+        Fl::wait();
+
+      if (!dialog.result())
+        return 1;
+
+      vncServerName = dialog.getServerName();
+    }
+
+#ifndef WIN32
+    if (strlen(via) > 0) {
+      try {
+        vncServerName = mktunnel(vncServerName.c_str());
+      } catch (std::exception& e) {
+        vlog.error("%s", e.what());
+        abort_vncviewer(_("Failure setting up encrypted tunnel:\n\n%s"), e.what());
+      }
+    }
+#endif
+  }
+
+  run_connection(vncServerName.c_str(), sock);
+
+  return 0;
 }
