@@ -113,6 +113,15 @@ ServerDialog::ServerDialog()
   h(y-INNER_MARGIN+OUTER_MARGIN);
 
   callback(this->handleCancel, this);
+
+  try {
+    loadServerHistory();
+    for (const std::string& entry : serverHistory)
+      fltk_menu_add(serverName->menubutton(),
+                    entry.c_str(), 0, nullptr);
+  } catch (rfb::Exception& e) {
+    vlog.error(_("Unable to load the server history: %s"), e.str());
+  }
 }
 
 
@@ -128,18 +137,6 @@ std::string ServerDialog::run(const char* servername)
   dialog.serverName->value(servername);
 
   dialog.show();
-
-  try {
-    dialog.loadServerHistory();
-
-    dialog.serverName->clear();
-    for (const std::string& entry : dialog.serverHistory)
-      fltk_menu_add(dialog.serverName->menubutton(),
-                    entry.c_str(), 0, nullptr);
-  } catch (rfb::Exception& e) {
-    vlog.error(_("Unable to load the server history: %s"), e.str());
-  }
-
   while (dialog.shown()) Fl::wait();
 
   if (dialog.serverName->value() == nullptr) {
