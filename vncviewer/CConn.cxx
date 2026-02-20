@@ -67,8 +67,8 @@
 #include "CConn.h"
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"
+#include "mainloop.h"
 #include "parameters.h"
-#include "vncviewer.h"
 
 std::string CConn::savedUsername;
 std::string CConn::savedPassword;

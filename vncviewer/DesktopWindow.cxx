@@ -38,8 +38,8 @@
 
 #include "DesktopWindow.h"
 #include "OptionsDialog.h"
+#include "mainloop.h"
 #include "parameters.h"
-#include "vncviewer.h"
 #include "CConn.h"
 #include "Surface.h"
 #include "Viewport.h"

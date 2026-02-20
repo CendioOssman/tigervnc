@@ -54,6 +54,7 @@
 #include "CConn.h"
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"
+#include "mainloop.h"
 #include "parameters.h"
 #include "vncviewer.h"
 
