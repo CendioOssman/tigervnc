@@ -48,8 +48,8 @@
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"
 #include "i18n.h"
+#include "mainloop.h"
 #include "parameters.h"
-#include "vncviewer.h"
 
 #ifdef WIN32
 #include "win32.h"

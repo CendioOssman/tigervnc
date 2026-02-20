@@ -40,7 +40,7 @@
 #include <rfb/LogWriter.h>
 
 #include "i18n.h"
-#include "vncviewer.h"
+#include "mainloop.h"
 #include "BaseTouchHandler.h"
 #if defined(WIN32)
 #include "Win32TouchHandler.h"

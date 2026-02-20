@@ -35,9 +35,7 @@
 #include <rfb/Logger_stdio.h>
 #include <rfb/Hostname.h>
 #include <rfb/LogWriter.h>
-#include <rfb/Timer.h>
 #include <rfb/Exception.h>
-#include <rfb/util.h>
 
 #include <rdr/Exception.h>
 
@@ -45,6 +43,7 @@
 
 #include <os/os.h>
 
+#include <FL/Fl.H>
 #include <FL/Fl_PNG_Image.H>
 #include <FL/Fl_Sys_Menu_Bar.H>
 #include <FL/fl_ask.H>
@@ -54,8 +53,8 @@
 #include "fltk/theme.h"
 #include "fltk/util.h"
 #include "i18n.h"
+#include "mainloop.h"
 #include "parameters.h"
-#include "CConn.h"
 #include "ServerDialog.h"
 #include "touch.h"
 #include "vncviewer.h"
@@ -72,11 +71,6 @@ using namespace rfb;
 static std::string vncServerName;
 
 static const char *argv0 = nullptr;
-
-static bool inMainloop = false;
-static bool exitMainloop = false;
-static std::string exitError;
-static bool fatalError = false;
 
 static const char *about_text()
 {
@@ -95,66 +89,6 @@ static const char *about_text()
   return buffer;
 }
 
-
-void abort_vncviewer(const char *error, ...)
-{
-  fatalError = true;
-
-  // Prioritise the first error we get as that is probably the most
-  // relevant one.
-  if (exitError.empty()) {
-    va_list ap;
-
-    va_start(ap, error);
-    exitError = vformat(error, ap);
-    va_end(ap);
-  }
-
-  if (inMainloop)
-    exitMainloop = true;
-  else {
-    // We're early in the startup. Assume we can just exit().
-    if (alertOnFatalError) {
-      Fl_Alert_Box* dlg;
-
-      dlg = new Fl_Alert_Box(_("Error"), "%s", exitError.c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      delete dlg;
-    }
-    exit(EXIT_FAILURE);
-  }
-}
-
-void abort_connection(const char *error, ...)
-{
-  assert(inMainloop);
-
-  // Prioritise the first error we get as that is probably the most
-  // relevant one.
-  if (exitError.empty()) {
-    va_list ap;
-
-    va_start(ap, error);
-    exitError = vformat(error, ap);
-    va_end(ap);
-  }
-
-  exitMainloop = true;
-}
-
-void abort_connection_with_unexpected_error(const rdr::Exception &e) {
-  abort_connection(_("An unexpected error occurred when communicating "
-                     "with the server:\n\n%s"), e.str());
-}
-
-void disconnect()
-{
-  exitMainloop = true;
-}
-
 void about_vncviewer()
 {
   static Fl_Message_Box* dlg = nullptr;
@@ -171,87 +105,6 @@ void about_vncviewer()
     dlg->show();
   } else {
     dlg->take_focus();
-  }
-}
-
-static void mainloop(const char* vncserver, network::Socket* sock)
-{
-  while (true) {
-    CConn *cc;
-
-    exitMainloop = false;
-
-    cc = new CConn(vncserver, sock);
-
-    while (!exitMainloop) {
-      int next_timer;
-
-      next_timer = Timer::checkTimeouts();
-      if (next_timer < 0)
-        next_timer = INT_MAX;
-
-      if (Fl::wait((double)next_timer / 1000.0) < 0.0) {
-        vlog.error(_("Internal FLTK error. Exiting."));
-        exit(-1);
-      }
-    }
-
-    delete cc;
-
-    if (fatalError) {
-      assert(!exitError.empty());
-      if (alertOnFatalError) {
-        Fl_Alert_Box* dlg;
-
-        dlg = new Fl_Alert_Box(_("Connection error"),
-                               "%s", exitError.c_str());
-        dlg->set_modal();
-        dlg->show();
-        while (dlg->shown())
-          Fl::wait();
-        delete dlg;
-      }
-      break;
-    }
-
-    if (exitError.empty())
-      break;
-
-    if(reconnectOnError && (sock == nullptr)) {
-      Fl_Choice_Box* dlg;
-      int ret;
-
-      dlg = new Fl_Choice_Box(_("Connection error"),
-                              _("%s\n\nAttempt to reconnect?"),
-                              nullptr, fl_yes, fl_no,
-                              exitError.c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      ret = dlg->result();
-      delete dlg;
-
-      exitError.clear();
-      if (ret == 1)
-        continue;
-      else
-        break;
-    }
-
-    if (alertOnFatalError) {
-      Fl_Alert_Box* dlg;
-
-      dlg = new Fl_Alert_Box(_("Connection error"),
-                              "%s", exitError.c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      delete dlg;
-    }
-
-    break;
   }
 }
 
@@ -761,9 +614,7 @@ int main(int argc, char** argv)
 #endif
   }
 
-  inMainloop = true;
   mainloop(vncServerName.c_str(), sock);
-  inMainloop = false;
 
   return 0;
 }

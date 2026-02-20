@@ -45,6 +45,7 @@
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"
 #include "i18n.h"
+#include "mainloop.h"
 #include "parameters.h"
 #include "menukey.h"
 #include "vncviewer.h"
