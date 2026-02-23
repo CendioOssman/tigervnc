@@ -319,16 +319,6 @@ static bool isUnixSocket(const char *filename)
 }
 
 static void
-migrateDeprecatedOptions()
-{
-  if (fullScreenAllMonitors) {
-    vlog.info(_("FullScreenAllMonitors is deprecated, set FullScreenMode to 'all' instead"));
-
-    fullScreenMode.setParam("all");
-  }
-}
-
-static void
 create_base_dirs()
 {
   const char *dir;
@@ -467,6 +457,9 @@ int main(int argc, char** argv)
     i++;
   }
 
+  // Handle any old settings specified on the command line
+  migrateDeprecatedOptions();
+
   init_fltk();
   enable_touch();
 
@@ -482,8 +475,6 @@ int main(int argc, char** argv)
                         "file:\n\n%s"), e.str());
     }
   }
-
-  migrateDeprecatedOptions();
 
   create_base_dirs();
 
