@@ -289,35 +289,6 @@ static void usage(const char *programName)
   exit(1);
 }
 
-static bool isPath(const char *maybe)
-{
-  if (strchr(maybe, '/') != nullptr)
-    return true;
-  if (strchr(maybe, '\\') != nullptr)
-    return true;
-
-  return false;
-}
-
-static bool isUnixSocket(const char *filename)
-{
-#ifndef WIN32
-  struct stat sb;
-
-  // This might be a UNIX socket, we need to check
-  if (stat(filename, &sb) == -1) {
-    // Some access problem; let loadViewerParameters() deal with it...
-  } else {
-    if ((sb.st_mode & S_IFMT) == S_IFSOCK)
-      return true;
-  }
-#else
-  (void)filename;
-#endif
-
-  return false;
-}
-
 static void
 create_base_dirs()
 {
@@ -462,19 +433,6 @@ int main(int argc, char** argv)
 
   init_fltk();
   enable_touch();
-
-  // Check if the server name in reality is a configuration file
-  if (isPath(cmdlineServerName.c_str()) &&
-      !isUnixSocket(cmdlineServerName.c_str())) {
-    try {
-      cmdlineServerName =
-        loadViewerParameters(cmdlineServerName.c_str());
-    } catch (rfb::Exception& e) {
-      vlog.error("%s", e.str());
-      abort_vncviewer(_("Unable to load the specified configuration "
-                        "file:\n\n%s"), e.str());
-    }
-  }
 
   create_base_dirs();
 
