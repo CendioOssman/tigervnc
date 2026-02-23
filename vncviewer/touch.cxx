@@ -40,7 +40,6 @@
 #include <rfb/LogWriter.h>
 
 #include "i18n.h"
-#include "mainloop.h"
 #include "BaseTouchHandler.h"
 #if defined(WIN32)
 #include "Win32TouchHandler.h"
@@ -54,6 +53,7 @@ static rfb::LogWriter vlog("Touch");
 
 #if !defined(WIN32) && !defined(__APPLE__)
 static int xi_major;
+bool xi_enabled = false;
 #endif
 
 typedef std::map<Window, class BaseTouchHandler*> HandlerMap;
@@ -135,9 +135,20 @@ bool x11_grab_pointer(Window window)
 {
   bool ret;
 
+  if (!xi_enabled) {
+    int status;
+
+    status = XGrabPointer(fl_display, window, True,
+                          ButtonPressMask | ButtonReleaseMask |
+                          ButtonMotionMask | PointerMotionMask,
+                          GrabModeAsync, GrabModeAsync,
+                          None, None, CurrentTime);
+    return status == Success;
+  }
+
   if (handlers.count(window) == 0) {
     vlog.error(_("Invalid window 0x%08lx specified for pointer grab"), window);
-    return BadWindow;
+    return false;
   }
 
   // We need to remove XI_TouchOwnership from our event masks while
@@ -157,6 +168,11 @@ bool x11_grab_pointer(Window window)
 
 void x11_ungrab_pointer(Window window)
 {
+  if (!xi_enabled) {
+    XUngrabPointer(fl_display, CurrentTime);
+    return;
+  }
+
   if (handlers.count(window) == 0) {
     vlog.error(_("Invalid window 0x%08lx specified for pointer grab"), window);
     return;
@@ -182,7 +198,7 @@ static int handleTouchEvent(void *event, void* /*data*/)
       handlers[msg->hwnd] = new Win32TouchHandler(msg->hwnd);
     } catch (rfb::Exception& e) {
       vlog.error(_("Failed to create touch handler: %s"), e.str());
-      abort_vncviewer(_("Failed to create touch handler: %s"), e.str());
+      return 0;
     }
     // Add a special hook-in for handling events sent directly to WndProc
     if (!SetWindowSubclass(msg->hwnd, &win32WindowProc, 1, 0)) {
@@ -252,19 +268,23 @@ void enable_touch()
   fl_open_display();
 
   if (!XQueryExtension(fl_display, "XInputExtension", &xi_major, &ev, &err)) {
-    abort_vncviewer(_("X Input extension not available."));
-    return; // Not reached
+    vlog.error(_("X Input extension not available."));
+    return;
   }
 
   major_ver = 2;
   minor_ver = 2;
   if (XIQueryVersion(fl_display, &major_ver, &minor_ver) != Success) {
-    abort_vncviewer(_("X Input 2 (or newer) is not available."));
-    return; // Not reached
+    vlog.error(_("X Input 2 (or newer) is not available."));
+    return;
   }
 
-  if ((major_ver == 2) && (minor_ver < 2))
+  if ((major_ver == 2) && (minor_ver < 2)) {
     vlog.error(_("X Input 2.2 (or newer) is not available. Touch gestures will not be supported."));
+    return;
+  }
+
+  xi_enabled = true;
 #endif
 
   Fl::add_system_handler(handleTouchEvent, nullptr);
@@ -273,5 +293,7 @@ void enable_touch()
 void disable_touch()
 {
   Fl::remove_system_handler(handleTouchEvent);
+#if !defined(WIN32) && !defined(__APPLE__)
+  xi_enabled = false;
+#endif
 }
-
