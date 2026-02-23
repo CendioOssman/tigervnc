@@ -49,24 +49,41 @@
 using namespace network;
 using namespace rfb;
 
-static bool inMainloop = false;
 static bool exitMainloop = false;
 static std::string exitError;
-static bool fatalError = false;
+
+static std::string configServerName;
+static std::string cmdlineServerName;
 
 static std::string vncServerName;
 static network::Socket* sock = nullptr;
 static CConn* cc = nullptr;
 
+static std::list<SocketListener*> listeners;
+
 static rfb::LogWriter vlog("mainloop");
+
+static void abort_startup(const char *error, ...)
+  __attribute__((__format__ (__printf__, 1, 2)));
 
 static void start_connection(void*);
 static void stop_connection(void*);
 
-void abort_vncviewer(const char *error, ...)
-{
-  fatalError = true;
+static void load_cmdline_config(void*);
+static void setup_listen(void*);
+static void start_server_dialog(void*);
+#ifndef WIN32
+static void setup_via(void*);
+#endif
 
+static void alert_done(Fl_Widget* widget, void*)
+{
+  Fl::delete_widget(widget);
+  exitMainloop = true;
+}
+
+static void abort_startup(const char *error, ...)
+{
   // Prioritise the first error we get as that is probably the most
   // relevant one.
   if (exitError.empty()) {
@@ -77,28 +94,20 @@ void abort_vncviewer(const char *error, ...)
     va_end(ap);
   }
 
-  if (inMainloop)
-    exitMainloop = true;
-  else {
-    // We're early in the startup. Assume we can just exit().
-    if (alertOnFatalError) {
-      Fl_Alert_Box* dlg;
+  if (alertOnFatalError) {
+    Fl_Alert_Box* dlg;
 
-      dlg = new Fl_Alert_Box(_("Error"), "%s", exitError.c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      delete dlg;
-    }
-    exit(EXIT_FAILURE);
+    dlg = new Fl_Alert_Box(_("Error"), "%s", exitError.c_str());
+    dlg->set_modal();
+    dlg->finished(alert_done);
+    dlg->show();
+  } else {
+    exitMainloop = true;
   }
 }
 
 void abort_connection(const char *error, ...)
 {
-  assert(inMainloop);
-
   // Prioritise the first error we get as that is probably the most
   // relevant one.
   if (exitError.empty()) {
@@ -133,6 +142,18 @@ static void start_connection(void*)
   cc = new CConn(vncServerName.c_str(), sock);
 }
 
+static void reconnect_done(Fl_Widget* widget, void*)
+{
+  Fl_Choice_Box* dlg = (Fl_Choice_Box*)widget;
+
+  Fl::delete_widget(dlg);
+
+  if (dlg->result() == 1)
+    Fl::add_idle(start_connection);
+  else
+    exitMainloop = true;
+}
+
 static void stop_connection(void*)
 {
   assert(cc != nullptr);
@@ -149,27 +170,16 @@ static void stop_connection(void*)
 
   if(reconnectOnError && (sock == nullptr)) {
     Fl_Choice_Box* dlg;
-    int ret;
 
     dlg = new Fl_Choice_Box(_("Connection error"),
                             _("%s\n\nAttempt to reconnect?"),
                             nullptr, fl_yes, fl_no,
                             exitError.c_str());
-    dlg->set_modal();
-    dlg->show();
-    while (dlg->shown())
-      Fl::wait();
-    ret = dlg->result();
-    delete dlg;
-
     exitError.clear();
-    if (ret == 1) {
-      Fl::add_idle(start_connection);
-      return;
-    } else {
-      exitMainloop = true;
-      return;
-    }
+    dlg->set_modal();
+    dlg->finished(reconnect_done);
+    dlg->show();
+    return;
   }
 
   if (alertOnFatalError) {
@@ -178,10 +188,8 @@ static void stop_connection(void*)
     dlg = new Fl_Alert_Box(_("Connection error"),
                             "%s", exitError.c_str());
     dlg->set_modal();
-    dlg->show();
-    while (dlg->shown())
-      Fl::wait();
-    delete dlg;
+    dlg->finished(alert_done);
+    return;
   }
 
   exitMainloop = true;
@@ -190,8 +198,6 @@ static void stop_connection(void*)
 
 static void run_mainloop()
 {
-  inMainloop = true;
-
   exitMainloop = false;
   while (!exitMainloop) {
     int next_timer;
@@ -205,23 +211,6 @@ static void run_mainloop()
       exit(-1);
     }
   }
-
-  if (fatalError) {
-    assert(!exitError.empty());
-    if (alertOnFatalError) {
-      Fl_Alert_Box* dlg;
-
-      dlg = new Fl_Alert_Box(_("Connection error"),
-                              "%s", exitError.c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      delete dlg;
-    }
-  }
-
-  inMainloop = false;
 }
 
 static bool is_path(const char *maybe)
@@ -251,6 +240,137 @@ static bool is_unix_socket(const char *filename)
 #endif
 
   return false;
+}
+
+static void load_cmdline_config(void*)
+{
+  Fl::remove_idle(load_cmdline_config);
+
+  // Check if the server name in reality is a configuration file
+  if (is_path(cmdlineServerName.c_str()) &&
+      !is_unix_socket(cmdlineServerName.c_str())) {
+    try {
+      vncServerName = loadViewerParameters(cmdlineServerName.c_str());
+    } catch (rfb::Exception& e) {
+      vlog.error("%s", e.str());
+      abort_startup(_("Unable to load the specified configuration "
+                      "file:\n\n%s"), e.str());
+      return;
+    }
+  } else {
+    vncServerName = cmdlineServerName;
+  }
+
+  if (listenMode)
+    Fl::add_idle(setup_listen);
+  else if (vncServerName.empty())
+    Fl::add_idle(start_server_dialog);
+#ifndef WIN32
+  else if (strlen(via) > 0)
+    Fl::add_idle(setup_via);
+#endif
+  else
+    Fl::add_idle(start_connection);
+}
+
+static void handle_connection(FL_SOCKET, void* data)
+{
+  SocketListener* listener = (SocketListener*)data;
+
+  assert(listener);
+
+  try {
+    sock = listener->accept();
+    if (!sock)
+      return;
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_startup(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str());
+    /* Continue for cleanup */
+  }
+
+  while (!listeners.empty()) {
+    Fl::remove_fd(listeners.back()->getFd());
+    delete listeners.back();
+    listeners.pop_back();
+  }
+
+  if (sock)
+    Fl::add_idle(start_connection);
+}
+
+static void setup_listen(void*)
+{
+  Fl::remove_idle(setup_listen);
+
+  assert(listenMode);
+
+#ifndef WIN32
+  /* Specifying -via and -listen together is nonsense */
+  if (strlen(via) > 0) {
+    // TRANSLATORS: "Parameters" are command line arguments, or settings
+    // from a file or the Windows registry.
+    vlog.error(_("Parameters -listen and -via are incompatible"));
+    abort_startup(_("Parameters -listen and -via are incompatible"));
+    return;
+  }
+#endif
+
+  try {
+    int port = 5500;
+    if (!cmdlineServerName.empty() &&
+        isdigit(cmdlineServerName[0]))
+      port = atoi(cmdlineServerName.c_str());
+
+    createTcpListeners(&listeners, nullptr, port);
+    if (listeners.empty())
+      throw Exception(_("Unable to listen for incoming connections"));
+
+    vlog.info(_("Listening on port %d"), port);
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_startup(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str());
+    return;
+  }
+
+  /* Wait for a connection */
+  for (SocketListener* listener : listeners)
+    Fl::add_fd(listener->getFd(), FL_READ | FL_EXCEPT,
+                handle_connection, listener);
+}
+
+static void server_dialog_finished(Fl_Widget* widget, void*)
+{
+  ServerDialog* dialog = (ServerDialog*)widget;
+
+  Fl::delete_widget(dialog);
+
+  if (!dialog->result()) {
+    exitMainloop = true;
+    return;
+  }
+
+  vncServerName = dialog->getServerName();
+
+#ifndef WIN32
+  if (strlen(via) > 0)
+    Fl::add_idle(setup_via);
+  else
+#endif
+    Fl::add_idle(start_connection);
+}
+
+static void start_server_dialog(void*)
+{
+  ServerDialog* dialog;
+
+  Fl::remove_idle(start_server_dialog);
+
+  dialog = new ServerDialog();
+  dialog->setServerName(configServerName.c_str());
+
+  dialog->finished(server_dialog_finished);
+  dialog->show();
 }
 
 #ifndef WIN32
@@ -290,120 +410,32 @@ static std::string mktunnel(const char* server)
 
   return format("localhost::%d", localPort);
 }
-#endif /* !WIN32 */
 
-int mainloop(const char* configServerName,
-             const char* cmdlineServerName)
+static void setup_via(void*)
 {
-  // Check if the server name in reality is a configuration file
-  if (is_path(cmdlineServerName) &&
-      !is_unix_socket(cmdlineServerName)) {
-    try {
-      vncServerName = loadViewerParameters(cmdlineServerName);
-    } catch (rfb::Exception& e) {
-      vlog.error("%s", e.str());
-      abort_vncviewer(_("Unable to load the specified configuration "
-                        "file:\n\n%s"), e.str());
-    }
-  } else {
-    vncServerName = cmdlineServerName;
-  }
+  Fl::remove_idle(setup_via);
 
-#ifndef WIN32
-  /* Specifying -via and -listen together is nonsense */
-  if (listenMode && strlen(via) > 0) {
-    // TRANSLATORS: "Parameters" are command line arguments, or settings
-    // from a file or the Windows registry.
-    vlog.error(_("Parameters -listen and -via are incompatible"));
-    abort_vncviewer(_("Parameters -listen and -via are incompatible"));
-    return 1; /* Not reached */
-  }
-#endif
-
-  if (listenMode) {
-    std::list<SocketListener*> listeners;
-    try {
-      int port = 5500;
-      if ((cmdlineServerName[0] != '\0') &&
-          isdigit(cmdlineServerName[0]))
-        port = atoi(cmdlineServerName);
-
-      createTcpListeners(&listeners, nullptr, port);
-      if (listeners.empty())
-        throw Exception(_("Unable to listen for incoming connections"));
-
-      vlog.info(_("Listening on port %d"), port);
-
-      /* Wait for a connection */
-      while (sock == nullptr) {
-        fd_set rfds;
-        FD_ZERO(&rfds);
-        for (SocketListener* listener : listeners)
-          FD_SET(listener->getFd(), &rfds);
-
-        int n = select(FD_SETSIZE, &rfds, nullptr, nullptr, nullptr);
-        if (n < 0) {
-          if (errno == EINTR) {
-            vlog.debug("Interrupted select() system call");
-            continue;
-          } else {
-            throw rdr::SystemException("select", errno);
-          }
-        }
-
-        for (SocketListener* listener : listeners)
-          if (FD_ISSET(listener->getFd(), &rfds)) {
-            sock = listener->accept();
-            if (sock)
-              /* Got a connection */
-              break;
-          }
-      }
-    } catch (rdr::Exception& e) {
-      vlog.error("%s", e.str());
-      abort_vncviewer(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str());
-      return 1; /* Not reached */
-    }
-
-    while (!listeners.empty()) {
-      delete listeners.back();
-      listeners.pop_back();
-    }
-  } else {
-    if (vncServerName.empty()) {
-      ServerDialog dialog;
-
-      dialog.setServerName(configServerName);
-
-      dialog.show();
-      while (dialog.shown())
-        Fl::wait();
-
-      if (!dialog.result())
-        return 1;
-
-      vncServerName = dialog.getServerName();
-    }
-
-#ifndef WIN32
-    if (strlen(via) > 0) {
-      try {
-        vncServerName = mktunnel(vncServerName.c_str());
-      } catch (rdr::Exception& e) {
-        vlog.error("%s", e.str());
-        abort_vncviewer(_("Failure setting up encrypted tunnel:\n\n%s"), e.str());
-      }
-    }
-#endif
+  try {
+    vncServerName = mktunnel(vncServerName.c_str());
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_startup(_("Failure setting up encrypted tunnel:\n\n%s"), e.str());
+    return;
   }
 
   Fl::add_idle(start_connection);
+}
+#endif /* !WIN32 */
+
+int mainloop(const char* configServerName_,
+             const char* cmdlineServerName_)
+{
+  configServerName = configServerName_;
+  cmdlineServerName = cmdlineServerName_;
+
+  Fl::add_idle(load_cmdline_config);
 
   run_mainloop();
 
-  // Clean up CConn on fatal errors
-  if (cc != nullptr)
-    delete cc;
-
-  return 0;
+  return exitError.empty() ? 0 : 1;
 }
