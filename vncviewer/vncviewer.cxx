@@ -32,11 +32,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#if !defined(WIN32) && !defined(__APPLE__)
-#include <X11/Xlib.h>
-#include <X11/XKBlib.h>
-#endif
-
 #include <rfb/Logger_stdio.h>
 #include <rfb/Hostname.h>
 #include <rfb/LogWriter.h>
@@ -665,7 +660,6 @@ int main(int argc, char** argv)
     Fl::display(display);
   }
   fl_open_display();
-  XkbSetDetectableAutoRepeat(fl_display, True, nullptr);
 #endif
 
   init_fltk();
