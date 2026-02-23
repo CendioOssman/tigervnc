@@ -23,6 +23,7 @@
 #endif
 
 #include <assert.h>
+#include <sys/stat.h>
 
 #include <stdexcept>
 #include <string>
@@ -219,6 +220,35 @@ static void run_mainloop()
   inMainloop = false;
 }
 
+static bool is_path(const char *maybe)
+{
+  if (strchr(maybe, '/') != nullptr)
+    return true;
+  if (strchr(maybe, '\\') != nullptr)
+    return true;
+
+  return false;
+}
+
+static bool is_unix_socket(const char *filename)
+{
+#ifndef WIN32
+  struct stat sb;
+
+  // This might be a UNIX socket, we need to check
+  if (stat(filename, &sb) == -1) {
+    // Some access problem; let loadViewerParameters() deal with it...
+  } else {
+    if ((sb.st_mode & S_IFMT) == S_IFSOCK)
+      return true;
+  }
+#else
+  (void)filename;
+#endif
+
+  return false;
+}
+
 #ifndef WIN32
 static void
 createTunnel(const char *gatewayHost, const char *remoteHost,
@@ -264,6 +294,20 @@ static std::string mktunnel(const char* server)
 int mainloop(const char* configServerName,
              const char* cmdlineServerName)
 {
+  // Check if the server name in reality is a configuration file
+  if (is_path(cmdlineServerName) &&
+      !is_unix_socket(cmdlineServerName)) {
+    try {
+      vncServerName = loadViewerParameters(cmdlineServerName);
+    } catch (std::exception& e) {
+      vlog.error("%s", e.what());
+      abort_vncviewer(_("Unable to load the specified configuration "
+                        "file:\n\n%s"), e.what());
+    }
+  } else {
+    vncServerName = cmdlineServerName;
+  }
+
 #ifndef WIN32
   /* Specifying -via and -listen together is nonsense */
   if (listenMode && strlen(via) > 0) {
@@ -325,7 +369,7 @@ int mainloop(const char* configServerName,
       listeners.pop_back();
     }
   } else {
-    if (cmdlineServerName[0] == '\0') {
+    if (vncServerName.empty()) {
       ServerDialog dialog;
 
       dialog.setServerName(configServerName);
