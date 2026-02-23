@@ -291,6 +291,13 @@ static void CleanupSignalHandler(int sig)
 
 static void init_fltk()
 {
+#if !defined(WIN32) && !defined(__APPLE__)
+  if (strcmp(display, "") != 0) {
+    Fl::display(display);
+  }
+  fl_open_display();
+#endif
+
   // Adjust look of FLTK
   init_theme();
 
@@ -648,13 +655,6 @@ int main(int argc, char** argv)
 
   // Handle any old settings specified on the command line
   migrateDeprecatedOptions();
-
-#if !defined(WIN32) && !defined(__APPLE__)
-  if (strcmp(display, "") != 0) {
-    Fl::display(display);
-  }
-  fl_open_display();
-#endif
 
   init_fltk();
   enable_touch();
