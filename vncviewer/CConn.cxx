@@ -42,6 +42,10 @@
 #include <X11/Xlib.h>
 #endif
 
+#ifdef HAVE_GNUTLS
+#include <gnutls/x509.h>
+#endif
+
 #include <rfb/CMsgWriter.h>
 #include <rfb/Exception.h>
 #include <rfb/Hostname.h>
@@ -49,10 +53,12 @@
 #include <rfb/screenTypes.h>
 #include <rfb/fenceTypes.h>
 #include <rfb/obfuscate.h>
+#include <rdr/TLSException.h>
 #include <network/TcpSocket.h>
 #ifndef WIN32
 #include <network/UnixSocket.h>
 #endif
+#include <os/os.h>
 
 #include "AuthDialog.h"
 #include "CConn.h"
@@ -386,6 +392,354 @@ void CConn::credentialsRequested(bool secure, bool needsUser,
                    [this]() { this->handleAuthCancel(); });
 
   authDialog->open();
+}
+
+bool CConn::verifyCertificate(unsigned int status,
+                              const uint8_t* certificate, size_t length)
+{
+#ifndef HAVE_GNUTLS
+  throw rdr::Exception(_("TLS support not enabled"));
+#else
+  const unsigned allowed_errors =
+    GNUTLS_CERT_INVALID |
+    GNUTLS_CERT_SIGNER_NOT_FOUND |
+    GNUTLS_CERT_SIGNER_NOT_CA |
+    GNUTLS_CERT_NOT_ACTIVATED |
+    GNUTLS_CERT_EXPIRED |
+    GNUTLS_CERT_INSECURE_ALGORITHM |
+    GNUTLS_CERT_UNEXPECTED_OWNER;
+  gnutls_datum_t status_str;
+  unsigned int fatal_status;
+
+  gnutls_datum_t cert_datum;
+  gnutls_x509_crt_t crt;
+  int err, known;
+
+  const char *hostsDir;
+  gnutls_datum_t info;
+  size_t len;
+
+  assert(status != 0);
+
+  fatal_status = status & (~allowed_errors);
+
+  if (fatal_status != 0) {
+    std::string error;
+
+    err = gnutls_certificate_verification_status_print(fatal_status,
+                                                       GNUTLS_CRT_X509,
+                                                       &status_str,
+                                                       0);
+    if (err != GNUTLS_E_SUCCESS)
+      throw rdr::TLSException("Failed to get certificate error description", err);
+
+    error = (const char*)status_str.data;
+
+    gnutls_free(status_str.data);
+
+    throw Exception("Invalid server certificate: %s", error.c_str());
+  }
+
+  err = gnutls_certificate_verification_status_print(status,
+                                                     GNUTLS_CRT_X509,
+                                                     &status_str,
+                                                     0);
+  if (err != GNUTLS_E_SUCCESS)
+    throw rdr::TLSException("Failed to get certificate error description", err);
+
+  vlog.info("Server certificate errors: %s", status_str.data);
+
+  gnutls_free(status_str.data);
+
+  /* Certificate has some user overridable problems, so TOFU time */
+
+  hostsDir = os::getvncstatedir();
+  if (hostsDir == nullptr) {
+    throw Exception("Could not obtain VNC state directory path for "
+                    "known hosts storage");
+  }
+
+  std::string dbPath;
+  dbPath = (std::string)hostsDir + "/x509_known_hosts";
+
+  cert_datum.data = (uint8_t*)certificate;
+  cert_datum.size = length;
+
+  known = gnutls_verify_stored_pubkey(dbPath.c_str(), nullptr,
+                                      getServerName(), nullptr,
+                                      GNUTLS_CRT_X509, &cert_datum, 0);
+
+  /* Previously known? */
+  if (known == GNUTLS_E_SUCCESS) {
+    vlog.info("Server certificate found in known hosts file");
+    return true;
+  }
+
+  if ((known != GNUTLS_E_NO_CERTIFICATE_FOUND) &&
+      (known != GNUTLS_E_CERTIFICATE_KEY_MISMATCH)) {
+    throw rdr::TLSException("Could not load known hosts database", known);
+  }
+
+  gnutls_x509_crt_init(&crt);
+  err = gnutls_x509_crt_import(crt, &cert_datum, GNUTLS_X509_FMT_DER);
+  if (err != GNUTLS_E_SUCCESS)
+    throw rdr::TLSException("Failed to decode server certificate", err);
+
+  err = gnutls_x509_crt_print(crt, GNUTLS_CRT_PRINT_ONELINE, &info);
+  gnutls_x509_crt_deinit(crt);
+  if (err != GNUTLS_E_SUCCESS)
+    throw rdr::TLSException("Could not find certificate to display", err);
+
+  len = strlen((char*)info.data);
+  for (size_t i = 0; i < len - 1; i++) {
+    if (info.data[i] == ',' && info.data[i + 1] == ' ')
+      info.data[i] = '\n';
+  }
+
+  /* New host */
+  if (known == GNUTLS_E_NO_CERTIFICATE_FOUND) {
+    std::string text;
+
+    vlog.info("Server host not previously known");
+    vlog.info("%s", info.data);
+
+    if (status & (GNUTLS_CERT_INVALID |
+                  GNUTLS_CERT_SIGNER_NOT_FOUND |
+                  GNUTLS_CERT_SIGNER_NOT_CA)) {
+      text = format("This certificate has been signed by an unknown "
+                    "authority:\n"
+                    "\n"
+                    "%s\n"
+                    "\n"
+                    "Someone could be trying to impersonate the site "
+                    "and you should not continue.\n"
+                    "\n"
+                    "Do you want to make an exception for this "
+                    "server?", info.data);
+
+      if (!showMsgBox(MsgBoxFlags::M_YESNO,
+                      "Unknown certificate issuer",
+                      text.c_str()))
+        return false;
+
+      status &= ~(GNUTLS_CERT_INVALID |
+                  GNUTLS_CERT_SIGNER_NOT_FOUND |
+                  GNUTLS_CERT_SIGNER_NOT_CA);
+    }
+
+    if (status & GNUTLS_CERT_NOT_ACTIVATED) {
+      text = format("This certificate is not yet valid:\n"
+                    "\n"
+                    "%s\n"
+                    "\n"
+                    "Someone could be trying to impersonate the site "
+                    "and you should not continue.\n"
+                    "\n"
+                    "Do you want to make an exception for this "
+                    "server?", info.data);
+      if (!showMsgBox(MsgBoxFlags::M_YESNO,
+                       "Certificate is not yet valid",
+                       text.c_str()))
+        return false;
+
+      status &= ~GNUTLS_CERT_NOT_ACTIVATED;
+    }
+
+    if (status & GNUTLS_CERT_EXPIRED) {
+      text = format("This certificate has expired:\n"
+                    "\n"
+                    "%s\n"
+                    "\n"
+                    "Someone could be trying to impersonate the site "
+                    "and you should not continue.\n"
+                    "\n"
+                    "Do you want to make an exception for this "
+                    "server?", info.data);
+
+      if (!showMsgBox(MsgBoxFlags::M_YESNO,
+                      "Expired certificate",
+                      text.c_str()))
+        return false;
+
+      status &= ~GNUTLS_CERT_EXPIRED;
+    }
+
+    if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
+      text = format("This certificate uses an insecure algorithm:\n"
+                    "\n"
+                    "%s\n"
+                    "\n"
+                    "Someone could be trying to impersonate the site "
+                    "and you should not continue.\n"
+                    "\n"
+                    "Do you want to make an exception for this "
+                    "server?", info.data);
+
+      if (!showMsgBox(MsgBoxFlags::M_YESNO,
+                      "Insecure certificate algorithm",
+                      text.c_str()))
+        return false;
+
+      status &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
+    }
+
+    if (status & GNUTLS_CERT_UNEXPECTED_OWNER) {
+      text = format("The specified hostname \"%s\" does not match the "
+                    "certificate provided by the server:\n"
+                    "\n"
+                    "%s\n"
+                    "\n"
+                    "Someone could be trying to impersonate the site "
+                    "and you should not continue.\n"
+                    "\n"
+                    "Do you want to make an exception for this "
+                    "server?", getServerName(), info.data);
+
+      if (!showMsgBox(MsgBoxFlags::M_YESNO,
+                      "Certificate hostname mismatch",
+                      text.c_str()))
+        return false;
+
+      status &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
+    }
+
+    if (status != 0) {
+      vlog.error("Unhandled certificate problems: 0x%x", status);
+      throw Exception("Unhandled certificate problems");
+    }
+  } else if (known == GNUTLS_E_CERTIFICATE_KEY_MISMATCH) {
+    std::string text;
+
+    vlog.info("Server host key mismatch");
+    vlog.info("%s", info.data);
+
+    if (status & (GNUTLS_CERT_INVALID |
+                  GNUTLS_CERT_SIGNER_NOT_FOUND |
+                  GNUTLS_CERT_SIGNER_NOT_CA)) {
+      text = format("This host is previously known with a different "
+                    "certificate, and the new certificate has been "
+                    "signed by an unknown authority:\n"
+                    "\n"
+                    "%s\n"
+                    "\n"
+                    "Someone could be trying to impersonate the site "
+                    "and you should not continue.\n"
+                    "\n"
+                    "Do you want to make an exception for this "
+                    "server?", info.data);
+
+      if (!showMsgBox(MsgBoxFlags::M_YESNO,
+                      "Unexpected server certificate",
+                      text.c_str()))
+        return false;
+
+      status &= ~(GNUTLS_CERT_INVALID |
+                  GNUTLS_CERT_SIGNER_NOT_FOUND |
+                  GNUTLS_CERT_SIGNER_NOT_CA);
+    }
+
+    if (status & GNUTLS_CERT_NOT_ACTIVATED) {
+      text = format("This host is previously known with a different "
+                    "certificate, and the new certificate is not yet "
+                    "valid:\n"
+                    "\n"
+                    "%s\n"
+                    "\n"
+                    "Someone could be trying to impersonate the site "
+                    "and you should not continue.\n"
+                    "\n"
+                    "Do you want to make an exception for this "
+                    "server?", info.data);
+
+      if (!showMsgBox(MsgBoxFlags::M_YESNO,
+                      "Unexpected server certificate",
+                      text.c_str()))
+        return false;
+
+      status &= ~GNUTLS_CERT_NOT_ACTIVATED;
+    }
+
+    if (status & GNUTLS_CERT_EXPIRED) {
+      text = format("This host is previously known with a different "
+                    "certificate, and the new certificate has "
+                    "expired:\n"
+                    "\n"
+                    "%s\n"
+                    "\n"
+                    "Someone could be trying to impersonate the site "
+                    "and you should not continue.\n"
+                    "\n"
+                    "Do you want to make an exception for this "
+                    "server?", info.data);
+
+      if (!showMsgBox(MsgBoxFlags::M_YESNO,
+                      "Unexpected server certificate",
+                      text.c_str()))
+        return false;
+
+      status &= ~GNUTLS_CERT_EXPIRED;
+    }
+
+    if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
+      text = format("This host is previously known with a different "
+                    "certificate, and the new certificate uses an "
+                    "insecure algorithm:\n"
+                    "\n"
+                    "%s\n"
+                    "\n"
+                    "Someone could be trying to impersonate the site "
+                    "and you should not continue.\n"
+                    "\n"
+                    "Do you want to make an exception for this "
+                    "server?", info.data);
+
+      if (!showMsgBox(MsgBoxFlags::M_YESNO,
+                      "Unexpected server certificate",
+                      text.c_str()))
+        return false;
+
+      status &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
+    }
+
+    if (status & GNUTLS_CERT_UNEXPECTED_OWNER) {
+      text = format("This host is previously known with a different "
+                    "certificate, and the specified hostname \"%s\" "
+                    "does not match the new certificate provided by "
+                    "the server:\n"
+                    "\n"
+                    "%s\n"
+                    "\n"
+                    "Someone could be trying to impersonate the site "
+                    "and you should not continue.\n"
+                    "\n"
+                    "Do you want to make an exception for this "
+                    "server?", getServerName(), info.data);
+
+      if (!showMsgBox(MsgBoxFlags::M_YESNO,
+                      "Unexpected server certificate",
+                      text.c_str()))
+        return false;
+
+      status &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
+    }
+
+    if (status != 0) {
+      vlog.error("Unhandled certificate problems: 0x%x", status);
+      throw Exception("Unhandled certificate problems");
+    }
+  }
+
+  if (gnutls_store_pubkey(dbPath.c_str(), nullptr,
+                          getServerName(), nullptr,
+                          GNUTLS_CRT_X509, &cert_datum, 0, 0))
+    vlog.error("Failed to store server certificate to known hosts database");
+
+  vlog.info("Exception added for server host");
+
+  gnutls_free(info.data);
+
+  return true;
+#endif
 }
 
 bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
