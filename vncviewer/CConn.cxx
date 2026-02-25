@@ -41,7 +41,6 @@
 #include <rfb/fenceTypes.h>
 #include <rfb/Timer.h>
 #include <rfb/obfuscate.h>
-#include <rdr/TLSException.h>
 #include <network/TcpSocket.h>
 #ifndef WIN32
 #include <network/UnixSocket.h>
@@ -387,11 +386,12 @@ void CConn::credentialsRequested(bool secure, bool needsUser,
   authDialog->show();
 }
 
-bool CConn::verifyCertificate(unsigned int status,
-                              const uint8_t* certificate, size_t length)
+void CConn::certificateReceived(unsigned int status,
+                                const uint8_t* certificate,
+                                size_t length)
 {
 #ifndef HAVE_GNUTLS
-  throw rdr::Exception(_("TLS support not enabled"));
+  abort_connection_unexpected(_("TLS support not enabled"));
 #else
   const unsigned allowed_errors =
     GNUTLS_CERT_INVALID |
@@ -424,24 +424,32 @@ bool CConn::verifyCertificate(unsigned int status,
                                                        GNUTLS_CRT_X509,
                                                        &status_str,
                                                        0);
-    if (err != GNUTLS_E_SUCCESS)
-      throw rdr::TLSException(_("Failed to get certificate problem "
-                                "description"), err);
+    if (err != GNUTLS_E_SUCCESS) {
+      abort_connection_unexpected(_("Failed to get certificate problem "
+                                    "description: %s"),
+                                  gnutls_strerror(err));
+      return;
+    }
 
     error = (const char*)status_str.data;
 
     gnutls_free(status_str.data);
 
-    throw Exception(_("Invalid server certificate: %s"), error.c_str());
+    abort_connection_unexpected(_("Invalid server certificate: %s"),
+                                error.c_str());
+    return;
   }
 
   err = gnutls_certificate_verification_status_print(status,
                                                      GNUTLS_CRT_X509,
                                                      &status_str,
                                                      0);
-  if (err != GNUTLS_E_SUCCESS)
-    throw rdr::TLSException(_("Failed to get certificate problem "
-                              "description"), err);
+  if (err != GNUTLS_E_SUCCESS) {
+    abort_connection_unexpected(_("Failed to get certificate problem "
+                                  "description: %s"),
+                                gnutls_strerror(err));
+    return;
+  }
 
   vlog.info(_("Server certificate problems: %s"), status_str.data);
 
@@ -451,7 +459,9 @@ bool CConn::verifyCertificate(unsigned int status,
 
   hostsDir = os::getvncstatedir();
   if (hostsDir == nullptr) {
-    throw Exception(_("Could not determine VNC state directory path"));
+    abort_connection_unexpected(_("Could not determine VNC state "
+                                  "directory path"));
+    return;
   }
 
   std::string dbPath;
@@ -467,27 +477,37 @@ bool CConn::verifyCertificate(unsigned int status,
   /* Previously known? */
   if (known == GNUTLS_E_SUCCESS) {
     vlog.info(_("Server has an existing security exception"));
-    return true;
+    approveCertificate();
+    resumeProcessing();
+    return;
   }
 
   if ((known != GNUTLS_E_NO_CERTIFICATE_FOUND) &&
       (known != GNUTLS_E_CERTIFICATE_KEY_MISMATCH)) {
-    throw rdr::TLSException(_("Failed to load list of servers with a "
-                              "security exception"), known);
+    abort_connection_unexpected(_("Failed to load list of servers with "
+                                  "a security exception: %s"),
+                                gnutls_strerror(err));
+    return;
   }
 
   gnutls_x509_crt_init(&crt);
   err = gnutls_x509_crt_import(crt, &cert_datum, GNUTLS_X509_FMT_DER);
-  if (err != GNUTLS_E_SUCCESS)
-    throw rdr::TLSException(_("Failed to decode server certificate"),
-                            err);
+  if (err != GNUTLS_E_SUCCESS) {
+    abort_connection_unexpected(_("Failed to decode server "
+                                  "certificate: %s"),
+                                gnutls_strerror(err));
+    return;
+  }
 
   err = gnutls_x509_crt_print(crt, GNUTLS_CRT_PRINT_ONELINE,
                               &info_datum);
   gnutls_x509_crt_deinit(crt);
-  if (err != GNUTLS_E_SUCCESS)
-    throw rdr::TLSException(_("Failed to format server certificate "
-                              "for display"), err);
+  if (err != GNUTLS_E_SUCCESS) {
+    abort_connection_unexpected(_("Failed to format server "
+                                  "certificate for display: %s"),
+                                gnutls_strerror(err));
+    return;
+  }
 
   len = strlen((char*)info_datum.data);
   for (size_t i = 0; i < len - 1; i++) {
@@ -522,8 +542,11 @@ bool CConn::verifyCertificate(unsigned int status,
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Unknown certificate issuer"),
-                      text.c_str()))
-        return false;
+                      text.c_str())) {
+        vlog.info(_("Authentication cancelled"));
+        disconnect();
+        return;
+      }
 
       status &= ~(GNUTLS_CERT_INVALID |
                   GNUTLS_CERT_SIGNER_NOT_FOUND |
@@ -541,9 +564,12 @@ bool CConn::verifyCertificate(unsigned int status,
                       "Do you want to make an exception for this "
                       "server?"), info.c_str());
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
-                       _("Certificate is not yet valid"),
-                       text.c_str()))
-        return false;
+                      _("Certificate is not yet valid"),
+                      text.c_str())) {
+        vlog.info(_("Authentication cancelled"));
+        disconnect();
+        return;
+      }
 
       status &= ~GNUTLS_CERT_NOT_ACTIVATED;
     }
@@ -561,8 +587,11 @@ bool CConn::verifyCertificate(unsigned int status,
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Expired certificate"),
-                      text.c_str()))
-        return false;
+                      text.c_str())) {
+        vlog.info(_("Authentication cancelled"));
+        disconnect();
+        return;
+      }
 
       status &= ~GNUTLS_CERT_EXPIRED;
     }
@@ -580,8 +609,11 @@ bool CConn::verifyCertificate(unsigned int status,
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Insecure certificate algorithm"),
-                      text.c_str()))
-        return false;
+                      text.c_str())) {
+        vlog.info(_("Authentication cancelled"));
+        disconnect();
+        return;
+      }
 
       status &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
     }
@@ -600,8 +632,11 @@ bool CConn::verifyCertificate(unsigned int status,
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Certificate hostname mismatch"),
-                      text.c_str()))
-        return false;
+                      text.c_str())) {
+        vlog.info(_("Authentication cancelled"));
+        disconnect();
+        return;
+      }
 
       status &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
     }
@@ -609,7 +644,9 @@ bool CConn::verifyCertificate(unsigned int status,
     if (status != 0) {
       vlog.error(_("Unhandled server certificate problems: 0x%x"),
                  status);
-      throw Exception(_("Unhandled server certificate problems"));
+      abort_connection_unexpected(_("Unhandled server certificate "
+                                    "problems"));
+      return;
     }
   } else if (known == GNUTLS_E_CERTIFICATE_KEY_MISMATCH) {
     std::string text;
@@ -634,8 +671,11 @@ bool CConn::verifyCertificate(unsigned int status,
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Unexpected server certificate"),
-                      text.c_str()))
-        return false;
+                      text.c_str())) {
+        vlog.info(_("Authentication cancelled"));
+        disconnect();
+        return;
+      }
 
       status &= ~(GNUTLS_CERT_INVALID |
                   GNUTLS_CERT_SIGNER_NOT_FOUND |
@@ -657,8 +697,11 @@ bool CConn::verifyCertificate(unsigned int status,
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Unexpected server certificate"),
-                      text.c_str()))
-        return false;
+                      text.c_str())) {
+        vlog.info(_("Authentication cancelled"));
+        disconnect();
+        return;
+      }
 
       status &= ~GNUTLS_CERT_NOT_ACTIVATED;
     }
@@ -678,8 +721,11 @@ bool CConn::verifyCertificate(unsigned int status,
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Unexpected server certificate"),
-                      text.c_str()))
-        return false;
+                      text.c_str())) {
+        vlog.info(_("Authentication cancelled"));
+        disconnect();
+        return;
+      }
 
       status &= ~GNUTLS_CERT_EXPIRED;
     }
@@ -699,8 +745,11 @@ bool CConn::verifyCertificate(unsigned int status,
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Unexpected server certificate"),
-                      text.c_str()))
-        return false;
+                      text.c_str())) {
+        vlog.info(_("Authentication cancelled"));
+        disconnect();
+        return;
+      }
 
       status &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
     }
@@ -721,8 +770,11 @@ bool CConn::verifyCertificate(unsigned int status,
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Unexpected server certificate"),
-                      text.c_str()))
-        return false;
+                      text.c_str())) {
+        vlog.info(_("Authentication cancelled"));
+        disconnect();
+        return;
+      }
 
       status &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
     }
@@ -730,7 +782,9 @@ bool CConn::verifyCertificate(unsigned int status,
     if (status != 0) {
       vlog.error(_("Unhandled server certificate problems: 0x%x"),
                  status);
-      throw Exception(_("Unhandled server certificate problems"));
+      abort_connection_unexpected(_("Unhandled server certificate "
+                                    "problems"));
+      return;
     }
   }
 
@@ -742,7 +796,8 @@ bool CConn::verifyCertificate(unsigned int status,
 
   vlog.info(_("Security exception added for server host"));
 
-  return true;
+  approveCertificate();
+  resumeProcessing();
 #endif
 }
 

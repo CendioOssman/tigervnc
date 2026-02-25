@@ -109,9 +109,9 @@ public:
   void bell() override;
   void serverCutText(const char*) override;
   void credentialsRequested(bool, bool, bool) override;
-  bool verifyCertificate(unsigned int status,
-                         const uint8_t* certificate,
-                         size_t length) override;
+  void certificateReceived(unsigned int status,
+                           const uint8_t* certificate,
+                           size_t length) override;
   virtual bool showMsgBox(rfb::MsgBoxFlags flags, const char *title, const char *text) override;
 
 public:
@@ -288,9 +288,8 @@ void CConn::credentialsRequested(bool, bool, bool)
 {
 }
 
-bool CConn::verifyCertificate(unsigned int, const uint8_t*, size_t)
+void CConn::certificateReceived(unsigned int, const uint8_t*, size_t)
 {
-  return true;
 }
 
 bool CConn::showMsgBox(rfb::MsgBoxFlags, const char *, const char *)

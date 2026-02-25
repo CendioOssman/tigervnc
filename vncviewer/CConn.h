@@ -52,9 +52,9 @@ protected:
 
   void credentialsRequested(bool secure, bool needsUser,
                             bool needsPassword) override;
-  bool verifyCertificate(unsigned int status,
-                         const uint8_t* certificate,
-                         size_t length) override;
+  void certificateReceived(unsigned int status,
+                           const uint8_t* certificate,
+                           size_t length) override;
   bool showMsgBox(rfb::MsgBoxFlags flags, const char *title,
                   const char *text) override;
 
