@@ -26,6 +26,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #include <rfb/CMsgHandler.h>
 #include <rfb/DecodeManager.h>
@@ -141,12 +142,12 @@ namespace rfb {
     virtual void credentialsRequested(bool secure, bool needsUser,
                                       bool needsPassword) = 0;
 
-    // verifyCertificate() is called when a certificate is received from
-    // the server. Return true if the certificate should be accepted,
-    // and false if it should be rejected.
-    virtual bool verifyCertificate(unsigned int status,
-                                   const uint8_t* certificate,
-                                   size_t length) = 0;
+    // certificateReceived() is called when a certificate is received
+    // from the server. Call approveCertificate() once the certificate
+    // has been verified to continue communication.
+    virtual void certificateReceived(unsigned int status,
+                                     const uint8_t* certificate,
+                                     size_t length) = 0;
 
     // verifyHostKey() is called when a host authentication key is
     // received from the server. Return true if the key should be
@@ -200,6 +201,10 @@ namespace rfb {
     // and the client has credentials available.
     void setCredentials(const std::string& user,
                         const std::string& password);
+
+    // approveCertificate() is called when the server has sent us a
+    // certificate and the client has verified it.
+    void approveCertificate();
 
     // requestClipboard() will result in a request to the server to
     // transfer its clipboard data. A call to handleClipboardData()
@@ -288,6 +293,13 @@ namespace rfb {
     //returned true.
     std::string getPassword();
 
+    // verifyCertificate() is called when the server has sent us a
+    // certificate and we need to have it verified. It returns true if
+    // the certificate has been approved by the user, and false is the
+    // user hasn't responeded yet.
+    bool verifyCertificate(unsigned int status,
+                           const uint8_t* certificate, size_t length);
+
   protected:
     CSecurity *csecurity;
     SecurityClient security;
@@ -326,6 +338,7 @@ namespace rfb {
     void securityCompleted();
 
     void handleCredentialsTimer(Timer*);
+    void handleCertificateTimer(Timer*);
 
     void requestNewUpdate();
     void updateEncodings();
@@ -347,6 +360,11 @@ namespace rfb {
     MethodTimer<CConnection> credentialsTimer;
     bool requestedUser;
     bool requestedPassword;
+
+    MethodTimer<CConnection> certificateTimer;
+    unsigned int serverCertificateStatus;
+    std::vector<uint8_t> serverCertificate;
+    bool serverCertificateApproved;
 
     std::string serverName;
 

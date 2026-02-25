@@ -168,25 +168,28 @@ bool CSecurityTLS::processMsg()
     rawos = os;
   }
 
-  int err;
-  err = gnutls_handshake(session);
-  if (err != GNUTLS_E_SUCCESS) {
-    if (!gnutls_error_is_fatal(err)) {
-      vlog.debug("Deferring completion of TLS handshake: %s", gnutls_strerror(err));
-      return false;
+  if (!established) {
+    int err;
+    err = gnutls_handshake(session);
+    if (err != GNUTLS_E_SUCCESS) {
+      if (!gnutls_error_is_fatal(err)) {
+        vlog.debug("Deferring completion of TLS handshake: %s", gnutls_strerror(err));
+        return false;
+      }
+
+      vlog.error("TLS Handshake failed: %s\n", gnutls_strerror (err));
+      shutdown();
+      throw rdr::TLSException("TLS Handshake failed", err);
     }
 
-    vlog.error("TLS Handshake failed: %s\n", gnutls_strerror (err));
-    shutdown();
-    throw rdr::TLSException("TLS Handshake failed", err);
+    established = true;
+
+    vlog.debug("TLS handshake completed with %s",
+              gnutls_session_get_desc(session));
   }
 
-  established = true;
-
-  vlog.debug("TLS handshake completed with %s",
-             gnutls_session_get_desc(session));
-
-  checkSession();
+  if (!checkSession())
+    return false;
 
   cc->setStreams(tlsis, tlsos);
 
@@ -297,7 +300,7 @@ void CSecurityTLS::setParam()
   }
 }
 
-void CSecurityTLS::checkSession()
+bool CSecurityTLS::checkSession()
 {
   unsigned int status;
 
@@ -306,7 +309,7 @@ void CSecurityTLS::checkSession()
   int err;
 
   if (anon)
-    return;
+    return true;
 
   if (gnutls_certificate_type_get(session) != GNUTLS_CRT_X509)
     throw Exception("unsupported certificate type");
@@ -321,7 +324,7 @@ void CSecurityTLS::checkSession()
 
   /* Everything green? */
   if (status == 0)
-    return;
+    return true;
 
   cert_list = gnutls_certificate_get_peers(session, &cert_list_size);
   if (!cert_list_size)
@@ -330,5 +333,7 @@ void CSecurityTLS::checkSession()
   /* Process only server's certificate, not issuer's certificate */
   if (!cc->verifyCertificate(status, cert_list[0].data,
                              cert_list[0].size))
-    throw AuthCancelledException();
+    return false;
+
+  return true;
 }
