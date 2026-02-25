@@ -409,7 +409,8 @@ bool CConn::verifyCertificate(unsigned int status,
   int err, known;
 
   const char *hostsDir;
-  gnutls_datum_t info;
+  gnutls_datum_t info_datum;
+  std::string info;
   size_t len;
 
   assert(status != 0);
@@ -481,24 +482,29 @@ bool CConn::verifyCertificate(unsigned int status,
     throw rdr::TLSException(_("Failed to decode server certificate"),
                             err);
 
-  err = gnutls_x509_crt_print(crt, GNUTLS_CRT_PRINT_ONELINE, &info);
+  err = gnutls_x509_crt_print(crt, GNUTLS_CRT_PRINT_ONELINE,
+                              &info_datum);
   gnutls_x509_crt_deinit(crt);
   if (err != GNUTLS_E_SUCCESS)
     throw rdr::TLSException(_("Failed to format server certificate "
                               "for display"), err);
 
-  len = strlen((char*)info.data);
+  len = strlen((char*)info_datum.data);
   for (size_t i = 0; i < len - 1; i++) {
-    if (info.data[i] == ',' && info.data[i + 1] == ' ')
-      info.data[i] = '\n';
+    if (info_datum.data[i] == ',' && info_datum.data[i + 1] == ' ')
+      info_datum.data[i] = '\n';
   }
+
+  info = (const char*)info_datum.data;
+
+  gnutls_free(info_datum.data);
 
   /* New host */
   if (known == GNUTLS_E_NO_CERTIFICATE_FOUND) {
     std::string text;
 
     vlog.info(_("Server host is not previously known"));
-    vlog.info("%s", info.data);
+    vlog.info("%s", info.c_str());
 
     if (status & (GNUTLS_CERT_INVALID |
                   GNUTLS_CERT_SIGNER_NOT_FOUND |
@@ -512,7 +518,7 @@ bool CConn::verifyCertificate(unsigned int status,
                       "and you should not continue.\n"
                       "\n"
                       "Do you want to make an exception for this "
-                      "server?"), info.data);
+                      "server?"), info.c_str());
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Unknown certificate issuer"),
@@ -533,7 +539,7 @@ bool CConn::verifyCertificate(unsigned int status,
                       "and you should not continue.\n"
                       "\n"
                       "Do you want to make an exception for this "
-                      "server?"), info.data);
+                      "server?"), info.c_str());
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                        _("Certificate is not yet valid"),
                        text.c_str()))
@@ -551,7 +557,7 @@ bool CConn::verifyCertificate(unsigned int status,
                       "and you should not continue.\n"
                       "\n"
                       "Do you want to make an exception for this "
-                      "server?"), info.data);
+                      "server?"), info.c_str());
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Expired certificate"),
@@ -570,7 +576,7 @@ bool CConn::verifyCertificate(unsigned int status,
                       "and you should not continue.\n"
                       "\n"
                       "Do you want to make an exception for this "
-                      "server?"), info.data);
+                      "server?"), info.c_str());
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Insecure certificate algorithm"),
@@ -590,7 +596,7 @@ bool CConn::verifyCertificate(unsigned int status,
                       "and you should not continue.\n"
                       "\n"
                       "Do you want to make an exception for this "
-                      "server?"), getServerName(), info.data);
+                      "server?"), getServerName(), info.c_str());
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Certificate hostname mismatch"),
@@ -609,7 +615,7 @@ bool CConn::verifyCertificate(unsigned int status,
     std::string text;
 
     vlog.info(_("Server host certificate has changed"));
-    vlog.info("%s", info.data);
+    vlog.info("%s", info.c_str());
 
     if (status & (GNUTLS_CERT_INVALID |
                   GNUTLS_CERT_SIGNER_NOT_FOUND |
@@ -624,7 +630,7 @@ bool CConn::verifyCertificate(unsigned int status,
                       "and you should not continue.\n"
                       "\n"
                       "Do you want to make an exception for this "
-                      "server?"), info.data);
+                      "server?"), info.c_str());
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Unexpected server certificate"),
@@ -647,7 +653,7 @@ bool CConn::verifyCertificate(unsigned int status,
                       "and you should not continue.\n"
                       "\n"
                       "Do you want to make an exception for this "
-                      "server?"), info.data);
+                      "server?"), info.c_str());
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Unexpected server certificate"),
@@ -668,7 +674,7 @@ bool CConn::verifyCertificate(unsigned int status,
                       "and you should not continue.\n"
                       "\n"
                       "Do you want to make an exception for this "
-                      "server?"), info.data);
+                      "server?"), info.c_str());
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Unexpected server certificate"),
@@ -689,7 +695,7 @@ bool CConn::verifyCertificate(unsigned int status,
                       "and you should not continue.\n"
                       "\n"
                       "Do you want to make an exception for this "
-                      "server?"), info.data);
+                      "server?"), info.c_str());
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Unexpected server certificate"),
@@ -711,7 +717,7 @@ bool CConn::verifyCertificate(unsigned int status,
                       "and you should not continue.\n"
                       "\n"
                       "Do you want to make an exception for this "
-                      "server?"), getServerName(), info.data);
+                      "server?"), getServerName(), info.c_str());
 
       if (!showMsgBox(MsgBoxFlags::M_YESNO,
                       _("Unexpected server certificate"),
@@ -735,8 +741,6 @@ bool CConn::verifyCertificate(unsigned int status,
                  "servers with a security exception"));
 
   vlog.info(_("Security exception added for server host"));
-
-  gnutls_free(info.data);
 
   return true;
 #endif
