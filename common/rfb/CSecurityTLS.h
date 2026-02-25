@@ -54,7 +54,7 @@ namespace rfb {
     void shutdown();
     void freeResources();
     void setParam();
-    void checkSession();
+    bool checkSession();
     CConnection *client;
 
   private:

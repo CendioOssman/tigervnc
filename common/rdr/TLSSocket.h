@@ -49,6 +49,8 @@ namespace rdr {
     bool handshake();
     void shutdown();
 
+    bool isEstablished();
+
   protected:
     /* Used by the stream classes */
     size_t readTLS(uint8_t* buf, size_t len);

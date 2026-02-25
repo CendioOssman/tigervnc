@@ -137,6 +137,11 @@ void TLSSocket::shutdown()
   }
 }
 
+bool TLSSocket::isEstablished()
+{
+  return established;
+}
+
 size_t TLSSocket::readTLS(uint8_t* buf, size_t len)
 {
   int n;

@@ -162,18 +162,21 @@ bool CSecurityTLS::processMsg()
     rawos = os;
   }
 
-  try {
-    if (!tlssock->handshake())
-      return false;
-  } catch (std::exception&) {
-    shutdown();
-    throw;
+  if (!tlssock->isEstablished()) {
+    try {
+      if (!tlssock->handshake())
+        return false;
+    } catch (std::exception&) {
+      shutdown();
+      throw;
+    }
+
+    vlog.debug("TLS handshake completed with %s",
+              gnutls_session_get_desc(session));
   }
 
-  vlog.debug("TLS handshake completed with %s",
-             gnutls_session_get_desc(session));
-
-  checkSession();
+  if (!checkSession())
+    return false;
 
   cc->setStreams(&tlssock->inStream(), &tlssock->outStream());
 
@@ -291,7 +294,7 @@ void CSecurityTLS::setParam()
   }
 }
 
-void CSecurityTLS::checkSession()
+bool CSecurityTLS::checkSession()
 {
   unsigned int status;
 
@@ -300,7 +303,7 @@ void CSecurityTLS::checkSession()
   int err;
 
   if (anon)
-    return;
+    return true;
 
   if (gnutls_certificate_type_get(session) != GNUTLS_CRT_X509) {
     gnutls_alert_send(session, GNUTLS_AL_FATAL,
@@ -321,7 +324,7 @@ void CSecurityTLS::checkSession()
 
   /* Everything green? */
   if (status == 0)
-    return;
+    return true;
 
   cert_list = gnutls_certificate_get_peers(session, &cert_list_size);
   if (!cert_list_size) {
@@ -330,16 +333,12 @@ void CSecurityTLS::checkSession()
     throw protocol_error(_("Empty certificate chain"));
   }
 
-  try {
-    /* Process only server's certificate, not issuer's certificate */
-    if (!cc->verifyCertificate(status, cert_list[0].data,
-                              cert_list[0].size)) {
-      gnutls_alert_send(session, GNUTLS_AL_FATAL,
-                        GNUTLS_A_BAD_CERTIFICATE);
-      throw auth_cancelled();
-    }
-  } catch(rdr::tls_error& e) {
-    gnutls_alert_send_appropriate(session, e.err);
-    throw;
+  /* Process only server's certificate, not issuer's certificate */
+  if (!cc->verifyCertificate(status, cert_list[0].data,
+                             cert_list[0].size)) {
+    // FIXME: We don't send back an alert if we rejected the certificate
+    return false;
   }
+
+  return true;
 }

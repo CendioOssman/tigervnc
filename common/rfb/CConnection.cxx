@@ -79,6 +79,8 @@ CConnection::CConnection()
     state_(RFBSTATE_UNINITIALISED),
     credentialsTimer(this, &CConnection::handleCredentialsTimer),
     requestedUser(false), requestedPassword(false),
+    certificateTimer(this, &CConnection::handleCertificateTimer),
+    serverCertificateApproved(false),
     pendingPFChange(false), preferredEncoding(encodingTight),
     compressLevel(2), qualityLevel(-1),
     formatChange(false), encodingChange(false),
@@ -864,6 +866,11 @@ void CConnection::setCredentials(const std::string& user,
   requestedPassword = false;
 }
 
+void CConnection::approveCertificate()
+{
+  serverCertificateApproved = true;
+}
+
 void CConnection::requestClipboard()
 {
   if (hasRemoteClipboard) {
@@ -1109,9 +1116,50 @@ std::string CConnection::getPassword()
   return credentials.password;
 }
 
+bool CConnection::verifyCertificate(unsigned int status,
+                                    const uint8_t* certificate,
+                                    size_t length)
+{
+  // Anything actually wrong with this certificate?
+  if (status == 0)
+    return true;
+
+  // Have we already approved this?
+  if (serverCertificateApproved &&
+      (serverCertificateStatus == status) &&
+      (serverCertificate.size() == length) &&
+      (memcmp(serverCertificate.data(), certificate, length) == 0))
+    return true;
+
+  // Have we already requested this?
+  if (serverCertificateStatus == status &&
+      serverCertificate.size() == length &&
+      memcmp(serverCertificate.data(), certificate, length) == 0)
+    return false;
+
+  serverCertificateStatus = status;
+  serverCertificate.resize(length);
+  memcpy(serverCertificate.data(), certificate, length);
+  serverCertificateApproved = false;
+
+  // Postpone request to the next event loop iteration to avoid
+  // recursive behaviour and prevent potential conflicts with ongoing
+  // event handling
+  certificateTimer.start(0);
+
+  return false;
+}
+
 void CConnection::handleCredentialsTimer(core::Timer*)
 {
   credentialsRequested(isSecure(), requestedUser, requestedPassword);
+}
+
+void CConnection::handleCertificateTimer(core::Timer*)
+{
+  certificateReceived(serverCertificateStatus,
+                      serverCertificate.data(),
+                      serverCertificate.size());
 }
 
 // requestNewUpdate() requests an update from the server, having set the
