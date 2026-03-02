@@ -386,7 +386,7 @@ int Viewport::handle(int event)
       cc->sendClipboardData(filtered.c_str());
     } catch (rdr::Exception& e) {
       vlog.error("%s", e.str());
-      abort_connection_with_unexpected_error(e);
+      abort_connection_unexpected(e);
     }
 
     return 1;
@@ -479,7 +479,7 @@ void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
       cc->writer()->writePointerEvent(pos, buttonMask);
     } catch (rdr::Exception& e) {
       vlog.error("%s", e.str());
-      abort_connection_with_unexpected_error(e);
+      abort_connection_unexpected(e);
     }
   } else {
     if (!Fl::has_timeout(handlePointerTimeout, this))
@@ -530,7 +530,7 @@ void Viewport::handleClipboardChange(int source, void *data)
     self->cc->announceClipboard(true);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    abort_connection_with_unexpected_error(e);
+    abort_connection_unexpected(e);
   }
 }
 
@@ -543,7 +543,7 @@ void Viewport::flushPendingClipboard()
       cc->announceClipboard(true);
     } catch (rdr::Exception& e) {
       vlog.error("%s", e.str());
-      abort_connection_with_unexpected_error(e);
+      abort_connection_unexpected(e);
     }
   }
 
@@ -568,7 +568,7 @@ void Viewport::handlePointerTimeout(void *data)
                                           self->lastButtonMask);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    abort_connection_with_unexpected_error(e);
+    abort_connection_unexpected(e);
   }
 }
 
@@ -579,7 +579,7 @@ void Viewport::resetKeyboard()
     cc->releaseAllKeys();
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    abort_connection_with_unexpected_error(e);
+    abort_connection_unexpected(e);
   }
   keyboard->reset();
 }
@@ -606,7 +606,7 @@ void Viewport::handleKeyPress(int systemKeyCode,
     cc->sendKeyPress(systemKeyCode, keyCode, keySym);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    abort_connection_with_unexpected_error(e);
+    abort_connection_unexpected(e);
   }
 }
 
@@ -620,7 +620,7 @@ void Viewport::handleKeyRelease(int systemKeyCode)
     cc->sendKeyRelease(systemKeyCode);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    abort_connection_with_unexpected_error(e);
+    abort_connection_unexpected(e);
   }
 }
 

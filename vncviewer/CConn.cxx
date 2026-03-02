@@ -283,7 +283,7 @@ void CConn::processNextMsg(Timer*)
                        "given by the server:\n\n%s"), e.str());
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
-    abort_connection_with_unexpected_error(e);
+    abort_connection_unexpected(e);
   }
 
   recursing = false;
