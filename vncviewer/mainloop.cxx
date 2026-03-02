@@ -120,8 +120,20 @@ void abort_connection(const char *error, ...)
 
 void abort_connection_unexpected(const std::exception &e)
 {
+  abort_connection_unexpected("%s", e.what());
+}
+
+void abort_connection_unexpected(const char *error, ...)
+{
+  va_list ap;
+  std::string error_str;
+
+  va_start(ap, error);
+  error_str = core::vformat(error, ap);
+  va_end(ap);
+
   abort_connection(_("An unexpected error occurred when communicating "
-                     "with the server:\n\n%s"), e.what());
+                     "with the server:\n\n%s"), error_str.c_str());
 }
 
 void disconnect()
