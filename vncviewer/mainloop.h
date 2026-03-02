@@ -27,7 +27,7 @@ namespace rdr {
 void abort_connection(const char *error, ...)
   __attribute__((__format__ (__printf__, 1, 2)));
 // Convenience version of abort_connection() for unexpected exceptions
-void abort_connection_with_unexpected_error(const std::exception &);
+void abort_connection_unexpected(const std::exception&);
 
 // Cleanly terminate the connection
 void disconnect();

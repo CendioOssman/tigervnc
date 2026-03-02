@@ -440,7 +440,7 @@ int Viewport::handle(int event)
         this->cc->announceClipboard(false);
       } catch (std::exception& e) {
         vlog.error("%s", e.what());
-        abort_connection_with_unexpected_error(e);
+        abort_connection_unexpected(e);
       }
       return 1;
     }
@@ -453,7 +453,7 @@ int Viewport::handle(int event)
       cc->sendClipboardData(filtered.c_str());
     } catch (std::exception& e) {
       vlog.error("%s", e.what());
-      abort_connection_with_unexpected_error(e);
+      abort_connection_unexpected(e);
     }
 
     return 1;
@@ -557,7 +557,7 @@ void Viewport::sendPointerEvent(const core::Point& pos,
       cc->writer()->writePointerEvent(pos, buttonMask);
     } catch (std::exception& e) {
       vlog.error("%s", e.what());
-      abort_connection_with_unexpected_error(e);
+      abort_connection_unexpected(e);
     }
   } else {
     if (!Fl::has_timeout(handlePointerTimeout, this))
@@ -605,7 +605,7 @@ void Viewport::handleClipboardChange(int source, void *data)
       self->cc->announceClipboard(false);
     } catch (std::exception& e) {
       vlog.error("%s", e.what());
-      abort_connection_with_unexpected_error(e);
+      abort_connection_unexpected(e);
     }
     return;
   }
@@ -619,7 +619,7 @@ void Viewport::handleClipboardChange(int source, void *data)
       self->cc->announceClipboard(false);
     } catch (std::exception& e) {
       vlog.error("%s", e.what());
-      abort_connection_with_unexpected_error(e);
+      abort_connection_unexpected(e);
     }
     return;
   }
@@ -631,7 +631,7 @@ void Viewport::handleClipboardChange(int source, void *data)
     self->cc->announceClipboard(true);
   } catch (std::exception& e) {
     vlog.error("%s", e.what());
-    abort_connection_with_unexpected_error(e);
+    abort_connection_unexpected(e);
   }
 }
 
@@ -651,7 +651,7 @@ void Viewport::flushPendingClipboard()
       cc->announceClipboard(true);
     } catch (std::exception& e) {
       vlog.error("%s", e.what());
-      abort_connection_with_unexpected_error(e);
+      abort_connection_unexpected(e);
     }
   }
 
@@ -677,7 +677,7 @@ void Viewport::handlePointerTimeout(void *data)
                                           self->lastButtonMask);
   } catch (std::exception& e) {
     vlog.error("%s", e.what());
-    abort_connection_with_unexpected_error(e);
+    abort_connection_unexpected(e);
   }
 }
 
@@ -688,7 +688,7 @@ void Viewport::resetKeyboard()
     cc->releaseAllKeys();
   } catch (std::exception& e) {
     vlog.error("%s", e.what());
-    abort_connection_with_unexpected_error(e);
+    abort_connection_unexpected(e);
   }
 
   keyboard->reset();
@@ -835,7 +835,7 @@ void Viewport::sendKeyPress(int systemKeyCode,
     cc->sendKeyPress(systemKeyCode, keyCode, keySym);
   } catch (std::exception& e) {
     vlog.error("%s", e.what());
-    abort_connection_with_unexpected_error(e);
+    abort_connection_unexpected(e);
   }
 }
 
@@ -902,7 +902,7 @@ void Viewport::sendKeyRelease(int systemKeyCode)
     cc->sendKeyRelease(systemKeyCode);
   } catch (std::exception& e) {
     vlog.error("%s", e.what());
-    abort_connection_with_unexpected_error(e);
+    abort_connection_unexpected(e);
   }
 }
 
