@@ -96,10 +96,11 @@ static const unsigned bpsEstimateWindow = 1000;
 CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
   : serverPort(0),
     socketReadNotifier(nullptr), socketWriteNotifier(nullptr),
-    processTimer(nullptr), desktop(nullptr),
+    processTimer(nullptr), authDialog(nullptr), verifyDialog(nullptr),
+    desktop(nullptr),
     updateCount(0), pixelCount(0),
     lastServerEncoding((unsigned int)-1), bpsEstimate(20000000),
-    authDialog(nullptr), updateTimer(this, &CConn::handleUpdateTimeout)
+    updateTimer(this, &CConn::handleUpdateTimeout)
 {
   setShared(::shared);
   sock = socket;
@@ -169,6 +170,9 @@ CConn::~CConn()
   close();
 
   OptionsDialog::removeCallback(handleOptions);
+
+  delete authDialog;
+  delete verifyDialog;
 
   if (desktop)
     delete desktop;
@@ -304,6 +308,10 @@ void CConn::processNextMsg()
     again = processMsg();
   } catch (rdr::EndOfStream& e) {
     recursing = false;
+    if (authDialog)
+      authDialog->hide();
+    if (verifyDialog)
+      verifyDialog->hide();
     vlog.info("%s", e.str());
     if (!desktop) {
       vlog.error(_("The connection was dropped by the server before "
@@ -315,6 +323,10 @@ void CConn::processNextMsg()
     }
   } catch (rdr::Exception& e) {
     recursing = false;
+    if (authDialog)
+      authDialog->hide();
+    if (verifyDialog)
+      verifyDialog->hide();
     abort_connection_unexpected(e);
   }
 
@@ -387,6 +399,7 @@ void CConn::credentialsRequested(bool secure, bool needsUser,
     return;
   }
 
+  assert(authDialog == nullptr);
   authDialog = new AuthDialog(secure, needsUser, needsPassword);
   QObject::connect(authDialog, &QDialog::accepted,
                    [this]() { this->handleAuthOK(); });
@@ -420,7 +433,6 @@ void CConn::certificateReceived(unsigned int status,
 
   const char *hostsDir;
   gnutls_datum_t info_datum;
-  std::string info;
   size_t len;
 
   assert(status != 0);
@@ -500,6 +512,11 @@ void CConn::certificateReceived(unsigned int status,
     return;
   }
 
+  if (known == GNUTLS_E_NO_CERTIFICATE_FOUND)
+    vlog.info(_("Server host is not previously known"));
+  else
+    vlog.info(_("Server host certificate has changed"));
+
   gnutls_x509_crt_init(&crt);
   err = gnutls_x509_crt_import(crt, &cert_datum, GNUTLS_X509_FMT_DER);
   if (err != GNUTLS_E_SUCCESS) {
@@ -525,289 +542,17 @@ void CConn::certificateReceived(unsigned int status,
       info_datum.data[i] = '\n';
   }
 
-  info = (const char*)info_datum.data;
+  vlog.info("%s", info_datum.data);
 
   gnutls_free(info_datum.data);
 
-  /* New host */
-  if (known == GNUTLS_E_NO_CERTIFICATE_FOUND) {
-    std::string text;
+  pendingCertificateStatus = status;
+  pendingCertificateNew = (known == GNUTLS_E_NO_CERTIFICATE_FOUND);
+  pendingCertificate.resize(length);
+  memcpy(pendingCertificate.data(), certificate, length);
 
-    vlog.info(_("Server host is not previously known"));
-    vlog.info("%s", info.c_str());
-
-    if (status & (GNUTLS_CERT_INVALID |
-                  GNUTLS_CERT_SIGNER_NOT_FOUND |
-                  GNUTLS_CERT_SIGNER_NOT_CA)) {
-      text = format(_("This certificate has been signed by an unknown "
-                      "authority:\n"
-                      "\n"
-                      "%s\n"
-                      "\n"
-                      "Someone could be trying to impersonate the site "
-                      "and you should not continue.\n"
-                      "\n"
-                      "Do you want to make an exception for this "
-                      "server?"), info.c_str());
-
-      if (!showMsgBox(MsgBoxFlags::M_YESNO,
-                      _("Unknown certificate issuer"),
-                      text.c_str())) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~(GNUTLS_CERT_INVALID |
-                  GNUTLS_CERT_SIGNER_NOT_FOUND |
-                  GNUTLS_CERT_SIGNER_NOT_CA);
-    }
-
-    if (status & GNUTLS_CERT_NOT_ACTIVATED) {
-      text = format(_("This certificate is not yet valid:\n"
-                      "\n"
-                      "%s\n"
-                      "\n"
-                      "Someone could be trying to impersonate the site "
-                      "and you should not continue.\n"
-                      "\n"
-                      "Do you want to make an exception for this "
-                      "server?"), info.c_str());
-      if (!showMsgBox(MsgBoxFlags::M_YESNO,
-                      _("Certificate is not yet valid"),
-                      text.c_str())) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_NOT_ACTIVATED;
-    }
-
-    if (status & GNUTLS_CERT_EXPIRED) {
-      text = format(_("This certificate has expired:\n"
-                      "\n"
-                      "%s\n"
-                      "\n"
-                      "Someone could be trying to impersonate the site "
-                      "and you should not continue.\n"
-                      "\n"
-                      "Do you want to make an exception for this "
-                      "server?"), info.c_str());
-
-      if (!showMsgBox(MsgBoxFlags::M_YESNO,
-                      _("Expired certificate"),
-                      text.c_str())) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_EXPIRED;
-    }
-
-    if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
-      text = format(_("This certificate uses an insecure algorithm:\n"
-                      "\n"
-                      "%s\n"
-                      "\n"
-                      "Someone could be trying to impersonate the site "
-                      "and you should not continue.\n"
-                      "\n"
-                      "Do you want to make an exception for this "
-                      "server?"), info.c_str());
-
-      if (!showMsgBox(MsgBoxFlags::M_YESNO,
-                      _("Insecure certificate algorithm"),
-                      text.c_str())) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
-    }
-
-    if (status & GNUTLS_CERT_UNEXPECTED_OWNER) {
-      text = format(_("The specified hostname \"%s\" does not match the "
-                      "certificate provided by the server:\n"
-                      "\n"
-                      "%s\n"
-                      "\n"
-                      "Someone could be trying to impersonate the site "
-                      "and you should not continue.\n"
-                      "\n"
-                      "Do you want to make an exception for this "
-                      "server?"), getServerName(), info.c_str());
-
-      if (!showMsgBox(MsgBoxFlags::M_YESNO,
-                      _("Certificate hostname mismatch"),
-                      text.c_str())) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
-    }
-
-    if (status != 0) {
-      vlog.error(_("Unhandled server certificate problems: 0x%x"),
-                 status);
-      abort_connection_unexpected(_("Unhandled server certificate "
-                                    "problems"));
-      return;
-    }
-  } else if (known == GNUTLS_E_CERTIFICATE_KEY_MISMATCH) {
-    std::string text;
-
-    vlog.info(_("Server host certificate has changed"));
-    vlog.info("%s", info.c_str());
-
-    if (status & (GNUTLS_CERT_INVALID |
-                  GNUTLS_CERT_SIGNER_NOT_FOUND |
-                  GNUTLS_CERT_SIGNER_NOT_CA)) {
-      text = format(_("This host is previously known with a different "
-                      "certificate, and the new certificate has been "
-                      "signed by an unknown authority:\n"
-                      "\n"
-                      "%s\n"
-                      "\n"
-                      "Someone could be trying to impersonate the site "
-                      "and you should not continue.\n"
-                      "\n"
-                      "Do you want to make an exception for this "
-                      "server?"), info.c_str());
-
-      if (!showMsgBox(MsgBoxFlags::M_YESNO,
-                      _("Unexpected server certificate"),
-                      text.c_str())) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~(GNUTLS_CERT_INVALID |
-                  GNUTLS_CERT_SIGNER_NOT_FOUND |
-                  GNUTLS_CERT_SIGNER_NOT_CA);
-    }
-
-    if (status & GNUTLS_CERT_NOT_ACTIVATED) {
-      text = format(_("This host is previously known with a different "
-                      "certificate, and the new certificate is not yet "
-                      "valid:\n"
-                      "\n"
-                      "%s\n"
-                      "\n"
-                      "Someone could be trying to impersonate the site "
-                      "and you should not continue.\n"
-                      "\n"
-                      "Do you want to make an exception for this "
-                      "server?"), info.c_str());
-
-      if (!showMsgBox(MsgBoxFlags::M_YESNO,
-                      _("Unexpected server certificate"),
-                      text.c_str())) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_NOT_ACTIVATED;
-    }
-
-    if (status & GNUTLS_CERT_EXPIRED) {
-      text = format(_("This host is previously known with a different "
-                      "certificate, and the new certificate has "
-                      "expired:\n"
-                      "\n"
-                      "%s\n"
-                      "\n"
-                      "Someone could be trying to impersonate the site "
-                      "and you should not continue.\n"
-                      "\n"
-                      "Do you want to make an exception for this "
-                      "server?"), info.c_str());
-
-      if (!showMsgBox(MsgBoxFlags::M_YESNO,
-                      _("Unexpected server certificate"),
-                      text.c_str())) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_EXPIRED;
-    }
-
-    if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
-      text = format(_("This host is previously known with a different "
-                      "certificate, and the new certificate uses an "
-                      "insecure algorithm:\n"
-                      "\n"
-                      "%s\n"
-                      "\n"
-                      "Someone could be trying to impersonate the site "
-                      "and you should not continue.\n"
-                      "\n"
-                      "Do you want to make an exception for this "
-                      "server?"), info.c_str());
-
-      if (!showMsgBox(MsgBoxFlags::M_YESNO,
-                      _("Unexpected server certificate"),
-                      text.c_str())) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
-    }
-
-    if (status & GNUTLS_CERT_UNEXPECTED_OWNER) {
-      text = format(_("This host is previously known with a different "
-                      "certificate, and the specified hostname \"%s\" "
-                      "does not match the new certificate provided by "
-                      "the server:\n"
-                      "\n"
-                      "%s\n"
-                      "\n"
-                      "Someone could be trying to impersonate the site "
-                      "and you should not continue.\n"
-                      "\n"
-                      "Do you want to make an exception for this "
-                      "server?"), getServerName(), info.c_str());
-
-      if (!showMsgBox(MsgBoxFlags::M_YESNO,
-                      _("Unexpected server certificate"),
-                      text.c_str())) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
-    }
-
-    if (status != 0) {
-      vlog.error(_("Unhandled server certificate problems: 0x%x"),
-                 status);
-      abort_connection_unexpected(_("Unhandled server certificate "
-                                    "problems"));
-      return;
-    }
-  }
-
-  if (gnutls_store_pubkey(dbPath.c_str(), nullptr,
-                          getServerName(), nullptr,
-                          GNUTLS_CRT_X509, &cert_datum, 0, 0))
-    vlog.error(_("Failed to store server certificate to list of "
-                 "servers with a security exception"));
-
-  vlog.info(_("Security exception added for server host"));
-
-  approveCertificate();
-  startProcessing();
+  assert(verifyDialog == nullptr);
+  handleCertificateOK();
 #endif
 }
 
@@ -1229,3 +974,275 @@ void CConn::handleAuthCancel()
   vlog.info(_("Authentication cancelled"));
   disconnect();
 }
+
+#ifdef HAVE_GNUTLS
+void CConn::handleCertificateOK()
+{
+  gnutls_datum_t cert_datum;
+  gnutls_x509_crt_t crt;
+  int err;
+
+  gnutls_datum_t info_datum;
+  std::string info;
+  size_t len;
+
+  std::string title, text;
+
+  cert_datum.data = pendingCertificate.data();
+  cert_datum.size = pendingCertificate.size();
+
+  // This will be empty on the first run
+  if (verifyDialog != nullptr) {
+    verifyDialog->deleteLater();
+    verifyDialog = nullptr;
+
+    if (pendingCertificateStatus == 0) {
+      const char *hostsDir;
+
+      hostsDir = os::getvncstatedir();
+      if (hostsDir == nullptr) {
+        abort_connection_unexpected(_("Could not determine VNC state "
+                                      "directory path"));
+        return;
+      }
+
+      std::string dbPath;
+      dbPath = (std::string)hostsDir + "/x509_known_hosts";
+
+      if (gnutls_store_pubkey(dbPath.c_str(), nullptr,
+                              getServerName(), nullptr,
+                              GNUTLS_CRT_X509, &cert_datum, 0, 0))
+        vlog.error(_("Failed to store server certificate to list of "
+                    "servers with a security exception"));
+
+      vlog.info(_("Security exception added for server host"));
+
+      approveCertificate();
+      startProcessing();
+      return;
+    }
+  }
+
+  gnutls_x509_crt_init(&crt);
+  err = gnutls_x509_crt_import(crt, &cert_datum, GNUTLS_X509_FMT_DER);
+  if (err != GNUTLS_E_SUCCESS) {
+    abort_connection_unexpected(_("Failed to decode server "
+                                  "certificate: %s"),
+                                gnutls_strerror(err));
+    return;
+  }
+
+  err = gnutls_x509_crt_print(crt, GNUTLS_CRT_PRINT_ONELINE,
+                              &info_datum);
+  gnutls_x509_crt_deinit(crt);
+  if (err != GNUTLS_E_SUCCESS) {
+    abort_connection_unexpected(_("Failed to format server "
+                                  "certificate for display: %s"),
+                                gnutls_strerror(err));
+    return;
+  }
+
+  len = strlen((char*)info_datum.data);
+  for (size_t i = 0; i < len - 1; i++) {
+    if (info_datum.data[i] == ',' && info_datum.data[i + 1] == ' ')
+      info_datum.data[i] = '\n';
+  }
+
+  info = (const char*)info_datum.data;
+
+  gnutls_free(info_datum.data);
+
+  /* New host */
+  if (pendingCertificateNew) {
+    if (pendingCertificateStatus & (GNUTLS_CERT_INVALID |
+                                    GNUTLS_CERT_SIGNER_NOT_FOUND |
+                                    GNUTLS_CERT_SIGNER_NOT_CA)) {
+      title = _("Unknown certificate issuer");
+      text = format(_("This certificate has been signed by an unknown "
+                      "authority:\n"
+                      "\n"
+                      "%s\n"
+                      "\n"
+                      "Someone could be trying to impersonate the site "
+                      "and you should not continue.\n"
+                      "\n"
+                      "Do you want to make an exception for this "
+                      "server?"), info.c_str());
+
+      pendingCertificateStatus &= ~(GNUTLS_CERT_INVALID |
+                                    GNUTLS_CERT_SIGNER_NOT_FOUND |
+                                    GNUTLS_CERT_SIGNER_NOT_CA);
+    } else if (pendingCertificateStatus & GNUTLS_CERT_NOT_ACTIVATED) {
+      title = _("Certificate is not yet valid");
+      text = format(_("This certificate is not yet valid:\n"
+                      "\n"
+                      "%s\n"
+                      "\n"
+                      "Someone could be trying to impersonate the site "
+                      "and you should not continue.\n"
+                      "\n"
+                      "Do you want to make an exception for this "
+                      "server?"), info.c_str());
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_NOT_ACTIVATED;
+    } else if (pendingCertificateStatus & GNUTLS_CERT_EXPIRED) {
+      title = _("Expired certificate");
+      text = format(_("This certificate has expired:\n"
+                      "\n"
+                      "%s\n"
+                      "\n"
+                      "Someone could be trying to impersonate the site "
+                      "and you should not continue.\n"
+                      "\n"
+                      "Do you want to make an exception for this "
+                      "server?"), info.c_str());
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_EXPIRED;
+    } else if (pendingCertificateStatus & GNUTLS_CERT_INSECURE_ALGORITHM) {
+      title = _("Insecure certificate algorithm");
+      text = format(_("This certificate uses an insecure algorithm:\n"
+                      "\n"
+                      "%s\n"
+                      "\n"
+                      "Someone could be trying to impersonate the site "
+                      "and you should not continue.\n"
+                      "\n"
+                      "Do you want to make an exception for this "
+                      "server?"), info.c_str());
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
+    } else if (pendingCertificateStatus & GNUTLS_CERT_UNEXPECTED_OWNER) {
+      title = _("Certificate hostname mismatch");
+      text = format(_("The specified hostname \"%s\" does not match the "
+                      "certificate provided by the server:\n"
+                      "\n"
+                      "%s\n"
+                      "\n"
+                      "Someone could be trying to impersonate the site "
+                      "and you should not continue.\n"
+                      "\n"
+                      "Do you want to make an exception for this "
+                      "server?"), getServerName(), info.c_str());
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
+    } else if (pendingCertificateStatus != 0) {
+      vlog.error(_("Unhandled server certificate problems: 0x%x"),
+                 pendingCertificateStatus);
+      abort_connection_unexpected(_("Unhandled server certificate "
+                                    "problems"));
+      return;
+    }
+  } else  {
+    if (pendingCertificateStatus & (GNUTLS_CERT_INVALID |
+                                    GNUTLS_CERT_SIGNER_NOT_FOUND |
+                                    GNUTLS_CERT_SIGNER_NOT_CA)) {
+      title = _("Unexpected server certificate");
+      text = format(_("This host is previously known with a different "
+                      "certificate, and the new certificate has been "
+                      "signed by an unknown authority:\n"
+                      "\n"
+                      "%s\n"
+                      "\n"
+                      "Someone could be trying to impersonate the site "
+                      "and you should not continue.\n"
+                      "\n"
+                      "Do you want to make an exception for this "
+                      "server?"), info.c_str());
+
+      pendingCertificateStatus &= ~(GNUTLS_CERT_INVALID |
+                                    GNUTLS_CERT_SIGNER_NOT_FOUND |
+                                    GNUTLS_CERT_SIGNER_NOT_CA);
+    } else if (pendingCertificateStatus & GNUTLS_CERT_NOT_ACTIVATED) {
+      title = _("Unexpected server certificate");
+      text = format(_("This host is previously known with a different "
+                      "certificate, and the new certificate is not yet "
+                      "valid:\n"
+                      "\n"
+                      "%s\n"
+                      "\n"
+                      "Someone could be trying to impersonate the site "
+                      "and you should not continue.\n"
+                      "\n"
+                      "Do you want to make an exception for this "
+                      "server?"), info.c_str());
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_NOT_ACTIVATED;
+    } else if (pendingCertificateStatus & GNUTLS_CERT_EXPIRED) {
+      title = _("Unexpected server certificate");
+      text = format(_("This host is previously known with a different "
+                      "certificate, and the new certificate has "
+                      "expired:\n"
+                      "\n"
+                      "%s\n"
+                      "\n"
+                      "Someone could be trying to impersonate the site "
+                      "and you should not continue.\n"
+                      "\n"
+                      "Do you want to make an exception for this "
+                      "server?"), info.c_str());
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_EXPIRED;
+    } else if (pendingCertificateStatus & GNUTLS_CERT_INSECURE_ALGORITHM) {
+      title = _("Unexpected server certificate");
+      text = format(_("This host is previously known with a different "
+                      "certificate, and the new certificate uses an "
+                      "insecure algorithm:\n"
+                      "\n"
+                      "%s\n"
+                      "\n"
+                      "Someone could be trying to impersonate the site "
+                      "and you should not continue.\n"
+                      "\n"
+                      "Do you want to make an exception for this "
+                      "server?"), info.c_str());
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
+    } else if (pendingCertificateStatus & GNUTLS_CERT_UNEXPECTED_OWNER) {
+      title = _("Unexpected server certificate");
+      text = format(_("This host is previously known with a different "
+                      "certificate, and the specified hostname \"%s\" "
+                      "does not match the new certificate provided by "
+                      "the server:\n"
+                      "\n"
+                      "%s\n"
+                      "\n"
+                      "Someone could be trying to impersonate the site "
+                      "and you should not continue.\n"
+                      "\n"
+                      "Do you want to make an exception for this "
+                      "server?"), getServerName(), info.c_str());
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
+    } else if (pendingCertificateStatus != 0) {
+      vlog.error(_("Unhandled server certificate problems: 0x%x"),
+                 pendingCertificateStatus);
+      abort_connection_unexpected(_("Unhandled server certificate "
+                                    "problems"));
+      return;
+    }
+  }
+
+  assert(verifyDialog == nullptr);
+  verifyDialog = new QMessageBox(QMessageBox::Warning,
+                                 title.c_str(), text.c_str());
+  verifyDialog->addButton(_("Add exception"), QMessageBox::AcceptRole);
+  verifyDialog->addButton(QMessageBox::Cancel);
+  verifyDialog->setDefaultButton(QMessageBox::Cancel);
+
+  QObject::connect(verifyDialog, &QDialog::accepted,
+                   [this]() { this->handleCertificateOK(); });
+  QObject::connect(verifyDialog, &QDialog::rejected,
+                   [this]() { this->handleCertificateCancel(); });
+
+  verifyDialog->open();
+}
+
+void CConn::handleCertificateCancel()
+{
+  verifyDialog->deleteLater();
+  verifyDialog = nullptr;
+
+  vlog.info(_("Authentication cancelled"));
+  disconnect();
+}
+#endif

@@ -22,8 +22,11 @@
 
 #include <rfb/CConnection.h>
 
+class Fl_Choice_Box;
+
 namespace network { class Socket; }
 
+class QMessageBox;
 class QSocketNotifier;
 class QTimer;
 
@@ -105,6 +108,9 @@ private:
   void handleAuthOK();
   void handleAuthCancel();
 
+  void handleCertificateOK();
+  void handleCertificateCancel();
+
 private:
   std::string serverHost;
   int serverPort;
@@ -112,6 +118,12 @@ private:
   QSocketNotifier* socketReadNotifier;
   QSocketNotifier* socketWriteNotifier;
   QTimer* processTimer;
+
+  AuthDialog* authDialog;
+  QMessageBox* verifyDialog;
+  unsigned int pendingCertificateStatus;
+  bool pendingCertificateNew;
+  std::vector<uint8_t> pendingCertificate;
 
   DesktopWindow *desktop;
 
@@ -129,8 +141,6 @@ private:
 
   static std::string savedUsername;
   static std::string savedPassword;
-
-  AuthDialog* authDialog;
 
   rfb::MethodTimer<CConn> updateTimer;
 };
