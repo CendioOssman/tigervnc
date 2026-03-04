@@ -593,8 +593,8 @@ void CConn::certificateReceived(unsigned int status,
 #endif
 }
 
-bool CConn::verifyHostKey(const uint8_t* key, size_t length,
-                          const char* fingerprint)
+void CConn::hostKeyReceived(const uint8_t* key, size_t length,
+                            const char* fingerprint)
 {
   std::string text = core::format(
     _("The server has provided the following identifying information:\n"
@@ -616,14 +616,18 @@ bool CConn::verifyHostKey(const uint8_t* key, size_t length,
   int choice = dlg->result();
   delete dlg;
 
-  if (choice != 2)
-    return false;
+  if (choice != 2) {
+    vlog.info(_("Authentication cancelled"));
+    disconnect();
+    return;
+  }
 
   // FIXME: Should save this for TOFU
   (void)key;
   (void)length;
 
-  return true;
+  approveHostKey();
+  resumeProcessing();
 }
 
 void CConn::setExtendedDesktopSize(unsigned reason, unsigned result,

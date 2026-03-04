@@ -110,6 +110,10 @@ namespace rfb {
     // certificate and the client has verified it.
     void approveCertificate();
 
+    // approveHostKey() is called when the server has sent us a host
+    // authentication key and the client has verified it.
+    void approveHostKey();
+
     // requestClipboard() will result in a request to the server to
     // transfer its clipboard data. A call to handleClipboardData()
     // will be made once the data is available.
@@ -205,11 +209,12 @@ namespace rfb {
     bool verifyCertificate(unsigned int status,
                            const uint8_t* certificate, size_t length);
 
-    // verifyHostKey() is called when a host authentication key is
-    // received from the server. Return true if the key should be
-    // accepted, and false if it should be rejected.
-    virtual bool verifyHostKey(const uint8_t* key, size_t length,
-                               const char* fingerprint) = 0;
+    // verifyHostKey() is called when the server has sent us a host key
+    // and we need to have it verified. It returns true if the key has
+    // been approved by the user, and false is the user hasn't
+    // responeded yet.
+    bool verifyHostKey(const uint8_t* key, size_t length,
+                       const char* fingerprint);
 
   protected:
 
@@ -283,6 +288,12 @@ namespace rfb {
     virtual void certificateReceived(unsigned int status,
                                      const uint8_t* certificate,
                                      size_t length) = 0;
+
+    // hostKeyReceived() is called when a host authentication key is
+    // received from the server. Call approveHostKey() once the key has
+    // been verified to continue communication.
+    virtual void hostKeyReceived(const uint8_t* key, size_t length,
+                                 const char* fingerprint) = 0;
 
     // initDone() is called when the connection is fully established
     // and standard messages can be sent. This is called before the
@@ -360,6 +371,7 @@ namespace rfb {
 
     void handleCredentialsTimer(core::Timer*);
     void handleCertificateTimer(core::Timer*);
+    void handleHostKeyTimer(core::Timer*);
 
     void requestAudio();
 
@@ -388,6 +400,11 @@ namespace rfb {
     unsigned int serverCertificateStatus;
     std::vector<uint8_t> serverCertificate;
     bool serverCertificateApproved;
+
+    core::MethodTimer<CConnection> hostKeyTimer;
+    std::vector<uint8_t> serverHostKey;
+    std::string serverHostKeyFingerprint;
+    bool serverHostKeyApproved;
 
     std::string serverName;
 

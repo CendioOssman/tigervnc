@@ -51,7 +51,7 @@ namespace rfb {
     void cleanup();
     void writePublicKey();
     bool readPublicKey();
-    void verifyServer();
+    bool verifyServer();
     void writeRandom();
     bool readRandom();
     void setCipher();
