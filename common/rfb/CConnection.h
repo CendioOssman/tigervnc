@@ -149,11 +149,11 @@ namespace rfb {
                                      const uint8_t* certificate,
                                      size_t length) = 0;
 
-    // verifyHostKey() is called when a host authentication key is
-    // received from the server. Return true if the key should be
-    // accepted, and false if it should be rejected.
-    virtual bool verifyHostKey(const uint8_t* key, size_t length,
-                               const char* fingerprint) = 0;
+    // hostKeyReceived() is called when a host authentication key is
+    // received from the server. Call approveHostKey() once the key has
+    // been verified to continue communication.
+    virtual void hostKeyReceived(const uint8_t* key, size_t length,
+                                 const char* fingerprint) = 0;
 
     // showMsgBox() displays a message box with the specified style and
     // contents.  The return value is true if the user clicked OK/Yes.
@@ -205,6 +205,10 @@ namespace rfb {
     // approveCertificate() is called when the server has sent us a
     // certificate and the client has verified it.
     void approveCertificate();
+
+    // approveHostKey() is called when the server has sent us a host
+    // authentication key and the client has verified it.
+    void approveHostKey();
 
     // requestClipboard() will result in a request to the server to
     // transfer its clipboard data. A call to handleClipboardData()
@@ -300,6 +304,13 @@ namespace rfb {
     bool verifyCertificate(unsigned int status,
                            const uint8_t* certificate, size_t length);
 
+    // verifyHostKey() is called when the server has sent us a host key
+    // and we need to have it verified. It returns true if the key has
+    // been approved by the user, and false is the user hasn't
+    // responeded yet.
+    bool verifyHostKey(const uint8_t* key, size_t length,
+                       const char* fingerprint);
+
   protected:
     CSecurity *csecurity;
     SecurityClient security;
@@ -339,6 +350,7 @@ namespace rfb {
 
     void handleCredentialsTimer(Timer*);
     void handleCertificateTimer(Timer*);
+    void handleHostKeyTimer(Timer*);
 
     void requestNewUpdate();
     void updateEncodings();
@@ -365,6 +377,11 @@ namespace rfb {
     unsigned int serverCertificateStatus;
     std::vector<uint8_t> serverCertificate;
     bool serverCertificateApproved;
+
+    MethodTimer<CConnection> hostKeyTimer;
+    std::vector<uint8_t> serverHostKey;
+    std::string serverHostKeyFingerprint;
+    bool serverHostKeyApproved;
 
     std::string serverName;
 

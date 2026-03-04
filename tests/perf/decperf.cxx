@@ -79,8 +79,8 @@ public:
   void certificateReceived(unsigned int status,
                            const uint8_t* certificate,
                            size_t length) override;
-  bool verifyHostKey(const uint8_t* key, size_t length,
-                     const char* fingerprint) override;
+  void hostKeyReceived(const uint8_t* key, size_t length,
+                       const char* fingerprint) override;
   virtual bool showMsgBox(rfb::MsgBoxFlags flags, const char *title, const char *text) override;
 
 public:
@@ -190,9 +190,8 @@ void CConn::certificateReceived(unsigned int, const uint8_t*, size_t)
 {
 }
 
-bool CConn::verifyHostKey(const uint8_t*, size_t, const char*)
+void CConn::hostKeyReceived(const uint8_t*, size_t, const char*)
 {
-  return true;
 }
 
 bool CConn::showMsgBox(rfb::MsgBoxFlags, const char *, const char *)
