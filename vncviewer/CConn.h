@@ -25,6 +25,8 @@
 #include <rfb/CConnection.h>
 #include <rfb/Timer.h>
 
+class Fl_Choice_Box;
+
 namespace network { class Socket; }
 
 class DesktopWindow;
@@ -101,6 +103,7 @@ private:
   static void handleUpdateTimeout(void *data);
 
   void handleAuthFinished();
+  void handleCertificateFinished();
 
   void resumeProcessing();
 
@@ -111,6 +114,10 @@ private:
   rfb::MethodTimer<CConn> msgTimer;
 
   AuthDialog* authDialog;
+  Fl_Choice_Box* verifyDialog;
+  unsigned int pendingCertificateStatus;
+  bool pendingCertificateNew;
+  std::vector<uint8_t> pendingCertificate;
 
   DesktopWindow *desktop;
 
