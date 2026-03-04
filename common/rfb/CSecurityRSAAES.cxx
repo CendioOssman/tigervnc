@@ -46,6 +46,7 @@
 
 enum {
   ReadPublicKey,
+  VerifyServer,
   ReadRandom,
   ReadHash,
   ReadSubtype,
@@ -104,7 +105,11 @@ bool CSecurityRSAAES::processMsg()
     case ReadPublicKey:
       if (!readPublicKey())
         return false;
-      verifyServer();
+      state = VerifyServer;
+      /* fall through */
+    case VerifyServer:
+      if (!verifyServer())
+        return false;
       writePublicKey();
       writeRandom();
       state = ReadRandom;
@@ -201,7 +206,7 @@ bool CSecurityRSAAES::readPublicKey()
   return true;
 }
 
-void CSecurityRSAAES::verifyServer()
+bool CSecurityRSAAES::verifyServer()
 {
   rdr::MemOutStream key(4 + serverKey.size * 2);
 
@@ -223,7 +228,9 @@ void CSecurityRSAAES::verifyServer()
                        f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7]);
 
   if (!cc->verifyHostKey(key.data(), key.length(), fingerprint.c_str()))
-    throw AuthCancelledException();
+    return false;
+
+  return true;
 }
 
 void CSecurityRSAAES::writeRandom()

@@ -64,6 +64,8 @@ CConnection::CConnection()
     requestedUser(false), requestedPassword(false),
     certificateTimer(this, &CConnection::handleCertificateTimer),
     serverCertificateApproved(false),
+    hostKeyTimer(this, &CConnection::handleHostKeyTimer),
+    serverHostKeyApproved(false),
     pendingPFChange(false), preferredEncoding(encodingTight),
     compressLevel(2), qualityLevel(-1),
     formatChange(false), encodingChange(false),
@@ -678,6 +680,11 @@ void CConnection::approveCertificate()
   serverCertificateApproved = true;
 }
 
+void CConnection::approveHostKey()
+{
+  serverHostKeyApproved = true;
+}
+
 void CConnection::requestClipboard()
 {
   if (hasRemoteClipboard) {
@@ -942,6 +949,33 @@ bool CConnection::verifyCertificate(unsigned int status,
   return false;
 }
 
+bool CConnection::verifyHostKey(const uint8_t* key, size_t length,
+                                const char* fingerprint)
+{
+  // Have we already approved this?
+  if (serverHostKeyApproved &&
+      (serverHostKey.size() == length) &&
+      (memcmp(serverHostKey.data(), key, length) == 0))
+    return true;
+
+  // Have we already requested this?
+  if (serverHostKey.size() == length &&
+      memcmp(serverHostKey.data(), key, length) == 0)
+    return false;
+
+  serverHostKey.resize(length);
+  memcpy(serverHostKey.data(), key, length);
+  serverHostKeyFingerprint = fingerprint;
+  serverHostKeyApproved = false;
+
+  // Postpone request to the next event loop iteration to avoid
+  // recursive behaviour and prevent potential conflicts with ongoing
+  // event handling
+  hostKeyTimer.start(0);
+
+  return false;
+}
+
 void CConnection::fence(uint32_t flags, unsigned len, const uint8_t data[])
 {
   CMsgHandler::fence(flags, len, data);
@@ -965,6 +999,12 @@ void CConnection::handleCertificateTimer(Timer*)
   certificateReceived(serverCertificateStatus,
                       serverCertificate.data(),
                       serverCertificate.size());
+}
+
+void CConnection::handleHostKeyTimer(Timer*)
+{
+  hostKeyReceived(serverHostKey.data(), serverHostKey.size(),
+                  serverHostKeyFingerprint.c_str());
 }
 
 // requestNewUpdate() requests an update from the server, having set the

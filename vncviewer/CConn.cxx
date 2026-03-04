@@ -811,8 +811,8 @@ void CConn::certificateReceived(unsigned int status,
 #endif
 }
 
-bool CConn::verifyHostKey(const uint8_t* key, size_t length,
-                          const char* fingerprint)
+void CConn::hostKeyReceived(const uint8_t* key, size_t length,
+                            const char* fingerprint)
 {
   const char *title = "Server key fingerprint";
   std::string text = format(
@@ -820,14 +820,18 @@ bool CConn::verifyHostKey(const uint8_t* key, size_t length,
     "Fingerprint: %s\n"
     "Please verify that the information is correct and press \"Yes\". "
     "Otherwise press \"No\"", fingerprint);
-  if (!showMsgBox(MsgBoxFlags::M_YESNO, title, text.c_str()))
-    return false;
+  if (!showMsgBox(MsgBoxFlags::M_YESNO, title, text.c_str())) {
+    vlog.info(_("Authentication cancelled"));
+    disconnect();
+    return;
+  }
 
   // FIXME: Should save this for TOFU
   (void)key;
   (void)length;
 
-  return true;
+  approveHostKey();
+  startProcessing();
 }
 
 bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
