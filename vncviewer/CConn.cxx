@@ -742,6 +742,25 @@ bool CConn::verifyCertificate(unsigned int status,
 #endif
 }
 
+bool CConn::verifyHostKey(const uint8_t* key, size_t length,
+                          const char* fingerprint)
+{
+  const char *title = "Server key fingerprint";
+  std::string text = format(
+    "The server has provided the following identifying information:\n"
+    "Fingerprint: %s\n"
+    "Please verify that the information is correct and press \"Yes\". "
+    "Otherwise press \"No\"", fingerprint);
+  if (!showMsgBox(MsgBoxFlags::M_YESNO, title, text.c_str()))
+    return false;
+
+  // FIXME: Should save this for TOFU
+  (void)key;
+  (void)length;
+
+  return true;
+}
+
 bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
                        const char *text)
 {
