@@ -94,7 +94,7 @@ static const unsigned bpsEstimateWindow = 1000;
 CConn::CConn()
   : serverPort(0), sock(nullptr),
     msgTimer(this, &CConn::processNextMsg),
-    authDialog(nullptr), desktop(nullptr),
+    authDialog(nullptr), verifyDialog(nullptr), desktop(nullptr),
     audioOutput(nullptr),
     updateCount(0), pixelCount(0),
     lastServerEncoding((unsigned int)-1), bpsEstimate(20000000)
@@ -132,6 +132,7 @@ CConn::~CConn()
   Fl::remove_timeout(handleUpdateTimeout, this);
 
   delete authDialog;
+  delete verifyDialog;
 
   if (desktop)
     delete desktop;
@@ -309,6 +310,8 @@ void CConn::processNextMsg(core::Timer*)
   } catch (rdr::end_of_stream& e) {
     if (authDialog)
       authDialog->hide();
+    if (verifyDialog)
+      verifyDialog->hide();
     vlog.info("%s", e.what());
     if (!desktop) {
       vlog.error(_("The connection was dropped by the server before "
@@ -324,6 +327,8 @@ void CConn::processNextMsg(core::Timer*)
   } catch (rfb::auth_error& e) {
     if (authDialog)
       authDialog->hide();
+    if (verifyDialog)
+      verifyDialog->hide();
     savedUsername.clear();
     savedPassword.clear();
     vlog.error(_("Authentication failed: %s"), e.what());
@@ -332,6 +337,8 @@ void CConn::processNextMsg(core::Timer*)
   } catch (std::exception& e) {
     if (authDialog)
       authDialog->hide();
+    if (verifyDialog)
+      verifyDialog->hide();
     vlog.error("%s", e.what());
     abort_connection_unexpected(e);
   }
@@ -464,8 +471,8 @@ void CConn::certificateReceived(unsigned int status,
   int err, known;
 
   const char *hostsDir;
+
   gnutls_datum_t info_datum;
-  std::string info;
   size_t len;
 
   assert(status != 0);
@@ -542,6 +549,11 @@ void CConn::certificateReceived(unsigned int status,
     return;
   }
 
+  if (known == GNUTLS_E_NO_CERTIFICATE_FOUND)
+    vlog.info(_("Server host is not previously known"));
+  else
+    vlog.info(_("Server host certificate has changed"));
+
   gnutls_x509_crt_init(&crt);
   err = gnutls_x509_crt_import(crt, &cert_datum, GNUTLS_X509_FMT_DER);
   if (err != GNUTLS_E_SUCCESS) {
@@ -567,379 +579,17 @@ void CConn::certificateReceived(unsigned int status,
       info_datum.data[i] = '\n';
   }
 
-  info = (const char*)info_datum.data;
+  vlog.info("%s", info_datum.data);
 
   gnutls_free(info_datum.data);
 
-  /* New host */
-  if (known == GNUTLS_E_NO_CERTIFICATE_FOUND) {
-    std::string text;
+  pendingCertificateStatus = status;
+  pendingCertificateNew = (known == GNUTLS_E_NO_CERTIFICATE_FOUND);
+  pendingCertificate.resize(length);
+  memcpy(pendingCertificate.data(), certificate, length);
 
-    vlog.info(_("Server host is not previously known"));
-    vlog.info("%s", info.c_str());
-
-    if (status & (GNUTLS_CERT_INVALID |
-                  GNUTLS_CERT_SIGNER_NOT_FOUND |
-                  GNUTLS_CERT_SIGNER_NOT_CA)) {
-      text = core::format(
-        "%s\n\n%s\n\n%s\n\n%s",
-        _("This certificate has been signed by an unknown authority:"),
-        info.c_str(),
-        _("Someone could be trying to impersonate the site and you "
-          "should not continue."),
-        _("Do you want to make an exception for this server?"));
-
-      Fl_Choice_Box* dlg;
-
-      dlg = new Fl_Choice_Box(_("Unknown certificate issuer"),
-                              "%s", nullptr, fl_cancel,
-                              _("Add exception"),
-                              fltk_escape(text).c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      int choice = dlg->result();
-      delete dlg;
-
-      if (choice != 2) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~(GNUTLS_CERT_INVALID |
-                  GNUTLS_CERT_SIGNER_NOT_FOUND |
-                  GNUTLS_CERT_SIGNER_NOT_CA);
-    }
-
-    if (status & GNUTLS_CERT_NOT_ACTIVATED) {
-      text = core::format(
-        "%s\n\n%s\n\n%s\n\n%s",
-        _("This certificate is not yet valid:"),
-        info.c_str(),
-        _("Someone could be trying to impersonate the site and you "
-          "should not continue."),
-        _("Do you want to make an exception for this server?"));
-
-      Fl_Choice_Box* dlg;
-
-      dlg = new Fl_Choice_Box(_("Certificate is not yet valid"),
-                              "%s", nullptr, fl_cancel,
-                              _("Add exception"),
-                              fltk_escape(text).c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      int choice = dlg->result();
-      delete dlg;
-
-      if (choice != 2) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_NOT_ACTIVATED;
-    }
-
-    if (status & GNUTLS_CERT_EXPIRED) {
-      text = core::format(
-        "%s\n\n%s\n\n%s\n\n%s",
-        _("This certificate has expired:"),
-        info.c_str(),
-        _("Someone could be trying to impersonate the site and you "
-          "should not continue."),
-        _("Do you want to make an exception for this server?"));
-
-      Fl_Choice_Box* dlg;
-
-      dlg = new Fl_Choice_Box(_("Expired certificate"),
-                              "%s", nullptr, fl_cancel,
-                              _("Add exception"),
-                              fltk_escape(text).c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      int choice = dlg->result();
-      delete dlg;
-
-      if (choice != 2) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_EXPIRED;
-    }
-
-    if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
-      text = core::format(
-        "%s\n\n%s\n\n%s\n\n%s",
-        _("This certificate uses an insecure algorithm:"),
-        info.c_str(),
-        _("Someone could be trying to impersonate the site and you "
-          "should not continue."),
-        _("Do you want to make an exception for this server?"));
-
-      Fl_Choice_Box* dlg;
-
-      dlg = new Fl_Choice_Box(_("Insecure certificate algorithm"),
-                              "%s", nullptr, fl_cancel,
-                              _("Add exception"),
-                              fltk_escape(text).c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      int choice = dlg->result();
-      delete dlg;
-
-      if (choice != 2) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
-    }
-
-    if (status & GNUTLS_CERT_UNEXPECTED_OWNER) {
-      text = core::format(
-        "%s\n\n%s\n\n%s\n\n%s",
-        core::format(
-          _("The specified hostname \"%s\" does not match the "
-            "certificate provided by the server:"),
-          getServerName()).c_str(),
-        info.c_str(),
-        _("Someone could be trying to impersonate the site and you "
-          "should not continue."),
-        _("Do you want to make an exception for this server?"));
-
-      Fl_Choice_Box* dlg;
-
-      dlg = new Fl_Choice_Box(_("Certificate hostname mismatch"),
-                              "%s", nullptr, fl_cancel,
-                              _("Add exception"),
-                              fltk_escape(text).c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      int choice = dlg->result();
-      delete dlg;
-
-      if (choice != 2) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
-    }
-
-    if (status != 0) {
-      vlog.error("Unhandled server certificate problems: 0x%x",
-                 status);
-      abort_connection_unexpected(_("Unhandled server certificate "
-                                    "problems"));
-      return;
-    }
-  } else if (known == GNUTLS_E_CERTIFICATE_KEY_MISMATCH) {
-    std::string text;
-
-    vlog.info(_("Server host certificate has changed"));
-    vlog.info("%s", info.c_str());
-
-    if (status & (GNUTLS_CERT_INVALID |
-                  GNUTLS_CERT_SIGNER_NOT_FOUND |
-                  GNUTLS_CERT_SIGNER_NOT_CA)) {
-      text = core::format(
-        "%s\n\n%s\n\n%s\n\n%s",
-        _("This host is previously known with a different certificate, "
-          "and the new certificate has been signed by an unknown "
-          "authority:"),
-        info.c_str(),
-        _("Someone could be trying to impersonate the site and you "
-          "should not continue."),
-        _("Do you want to make an exception for this server?"));
-
-      Fl_Choice_Box* dlg;
-
-      dlg = new Fl_Choice_Box(_("Unexpected server certificate"),
-                              "%s", nullptr, fl_cancel,
-                              _("Add exception"),
-                              fltk_escape(text).c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      int choice = dlg->result();
-      delete dlg;
-
-      if (choice != 2) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~(GNUTLS_CERT_INVALID |
-                  GNUTLS_CERT_SIGNER_NOT_FOUND |
-                  GNUTLS_CERT_SIGNER_NOT_CA);
-    }
-
-    if (status & GNUTLS_CERT_NOT_ACTIVATED) {
-      text = core::format(
-        "%s\n\n%s\n\n%s\n\n%s",
-        _("This host is previously known with a different certificate, "
-          "and the new certificate is not yet valid:"),
-        info.c_str(),
-        _("Someone could be trying to impersonate the site and you "
-          "should not continue."),
-        _("Do you want to make an exception for this server?"));
-
-      Fl_Choice_Box* dlg;
-
-      dlg = new Fl_Choice_Box(_("Unexpected server certificate"),
-                              "%s", nullptr, fl_cancel,
-                              _("Add exception"),
-                              fltk_escape(text).c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      int choice = dlg->result();
-      delete dlg;
-
-      if (choice != 2) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_NOT_ACTIVATED;
-    }
-
-    if (status & GNUTLS_CERT_EXPIRED) {
-      text = core::format(
-        "%s\n\n%s\n\n%s\n\n%s",
-        _("This host is previously known with a different certificate, "
-          "and the new certificate has expired:"),
-        info.c_str(),
-        _("Someone could be trying to impersonate the site and you "
-          "should not continue."),
-        _("Do you want to make an exception for this server?"));
-
-      Fl_Choice_Box* dlg;
-
-      dlg = new Fl_Choice_Box(_("Unexpected server certificate"),
-                              "%s", nullptr, fl_cancel,
-                              _("Add exception"),
-                              fltk_escape(text).c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      int choice = dlg->result();
-      delete dlg;
-
-      if (choice != 2) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_EXPIRED;
-    }
-
-    if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
-      text = core::format(
-        "%s\n\n%s\n\n%s\n\n%s",
-        _("This host is previously known with a different certificate, "
-          "and the new certificate uses an insecure algorithm:"),
-        info.c_str(),
-        _("Someone could be trying to impersonate the site and you "
-          "should not continue."),
-        _("Do you want to make an exception for this server?"));
-
-      Fl_Choice_Box* dlg;
-
-      dlg = new Fl_Choice_Box(_("Unexpected server certificate"),
-                              "%s", nullptr, fl_cancel,
-                              _("Add exception"),
-                              fltk_escape(text).c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      int choice = dlg->result();
-      delete dlg;
-
-      if (choice != 2) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
-    }
-
-    if (status & GNUTLS_CERT_UNEXPECTED_OWNER) {
-      text = core::format(
-        "%s\n\n%s\n\n%s\n\n%s",
-        core::format(
-          _("This host is previously known with a different "
-            "certificate, and the specified hostname \"%s\" does not "
-            "match the new certificate provided by the server:"),
-          getServerName()).c_str(),
-        info.c_str(),
-        _("Someone could be trying to impersonate the site and you "
-          "should not continue."),
-        _("Do you want to make an exception for this server?"));
-
-      Fl_Choice_Box* dlg;
-
-      dlg = new Fl_Choice_Box(_("Unexpected server certificate"),
-                              "%s", nullptr, fl_cancel,
-                              _("Add exception"),
-                              fltk_escape(text).c_str());
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      int choice = dlg->result();
-      delete dlg;
-
-      if (choice != 2) {
-        vlog.info(_("Authentication cancelled"));
-        disconnect();
-        return;
-      }
-
-      status &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
-    }
-
-    if (status != 0) {
-      vlog.error("Unhandled server certificate problems: 0x%x",
-                 status);
-      abort_connection_unexpected(_("Unhandled server certificate "
-                                    "problems"));
-      return;
-    }
-  }
-
-  if (gnutls_store_pubkey(dbPath.c_str(), nullptr,
-                          getServerName(), nullptr,
-                          GNUTLS_CRT_X509, &cert_datum, 0, 0))
-    vlog.error(_("Failed to store server certificate to list of "
-                 "servers with a security exception"));
-
-  vlog.info(_("Security exception added for server host"));
-
-  approveCertificate();
-  resumeProcessing();
+  assert(verifyDialog == nullptr);
+  handleCertificateFinished();
 #endif
 }
 
@@ -1291,6 +941,255 @@ void CConn::handleAuthFinished()
   setCredentials(user, password);
   resumeProcessing();
 }
+
+#ifdef HAVE_GNUTLS
+void CConn::handleCertificateFinished()
+{
+  gnutls_datum_t cert_datum;
+  gnutls_x509_crt_t crt;
+  int err;
+
+  gnutls_datum_t info_datum;
+  std::string info;
+  size_t len;
+
+  std::string title, text;
+
+  cert_datum.data = pendingCertificate.data();
+  cert_datum.size = pendingCertificate.size();
+
+  // This will be empty on the first run
+  if (verifyDialog != nullptr) {
+    int result;
+
+    result = verifyDialog->result();
+
+    Fl::delete_widget(verifyDialog);
+    verifyDialog = nullptr;
+
+    if (result != 2) {
+      vlog.info(_("Authentication cancelled"));
+      disconnect();
+      return;
+    }
+
+    if (pendingCertificateStatus == 0) {
+      const char *hostsDir;
+
+      hostsDir = core::getvncstatedir();
+      if (hostsDir == nullptr) {
+        abort_connection_unexpected(_("Could not determine VNC state "
+                                      "directory path"));
+        return;
+      }
+
+      std::string dbPath;
+      dbPath = (std::string)hostsDir + "/x509_known_hosts";
+
+      if (gnutls_store_pubkey(dbPath.c_str(), nullptr,
+                              getServerName(), nullptr,
+                              GNUTLS_CRT_X509, &cert_datum, 0, 0))
+        vlog.error(_("Failed to store server certificate to list of "
+                    "servers with a security exception"));
+
+      vlog.info(_("Security exception added for server host"));
+
+      approveCertificate();
+      resumeProcessing();
+      return;
+    }
+  }
+
+  gnutls_x509_crt_init(&crt);
+  err = gnutls_x509_crt_import(crt, &cert_datum, GNUTLS_X509_FMT_DER);
+  if (err != GNUTLS_E_SUCCESS) {
+    abort_connection_unexpected(_("Failed to decode server "
+                                  "certificate: %s"),
+                                gnutls_strerror(err));
+    return;
+  }
+
+  err = gnutls_x509_crt_print(crt, GNUTLS_CRT_PRINT_ONELINE,
+                              &info_datum);
+  gnutls_x509_crt_deinit(crt);
+  if (err != GNUTLS_E_SUCCESS) {
+    abort_connection_unexpected(_("Failed to format server "
+                                  "certificate for display: %s"),
+                                gnutls_strerror(err));
+    return;
+  }
+
+  len = strlen((char*)info_datum.data);
+  for (size_t i = 0; i < len - 1; i++) {
+    if (info_datum.data[i] == ',' && info_datum.data[i + 1] == ' ')
+      info_datum.data[i] = '\n';
+  }
+
+  info = (const char*)info_datum.data;
+
+  gnutls_free(info_datum.data);
+
+  /* New host */
+  if (pendingCertificateNew) {
+    if (pendingCertificateStatus & (GNUTLS_CERT_INVALID |
+                                    GNUTLS_CERT_SIGNER_NOT_FOUND |
+                                    GNUTLS_CERT_SIGNER_NOT_CA)) {
+      title = _("Unknown certificate issuer");
+      text = core::format(
+        "%s\n\n%s\n\n%s\n\n%s",
+        _("This certificate has been signed by an unknown authority:"),
+        info.c_str(),
+        _("Someone could be trying to impersonate the site and you "
+          "should not continue."),
+        _("Do you want to make an exception for this server?"));
+
+      pendingCertificateStatus &= ~(GNUTLS_CERT_INVALID |
+                                    GNUTLS_CERT_SIGNER_NOT_FOUND |
+                                    GNUTLS_CERT_SIGNER_NOT_CA);
+    } else if (pendingCertificateStatus & GNUTLS_CERT_NOT_ACTIVATED) {
+      title = _("Certificate is not yet valid");
+      text = core::format(
+        "%s\n\n%s\n\n%s\n\n%s",
+        _("This certificate is not yet valid:"),
+        info.c_str(),
+        _("Someone could be trying to impersonate the site and you "
+          "should not continue."),
+        _("Do you want to make an exception for this server?"));
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_NOT_ACTIVATED;
+    } else if (pendingCertificateStatus & GNUTLS_CERT_EXPIRED) {
+      title = _("Expired certificate");
+      text = core::format(
+        "%s\n\n%s\n\n%s\n\n%s",
+        _("This certificate has expired:"),
+        info.c_str(),
+        _("Someone could be trying to impersonate the site and you "
+          "should not continue."),
+        _("Do you want to make an exception for this server?"));
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_EXPIRED;
+    } else if (pendingCertificateStatus & GNUTLS_CERT_INSECURE_ALGORITHM) {
+      title = _("Insecure certificate algorithm");
+      text = core::format(
+        "%s\n\n%s\n\n%s\n\n%s",
+        _("This certificate uses an insecure algorithm:"),
+        info.c_str(),
+        _("Someone could be trying to impersonate the site and you "
+          "should not continue."),
+        _("Do you want to make an exception for this server?"));
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
+    } else if (pendingCertificateStatus & GNUTLS_CERT_UNEXPECTED_OWNER) {
+      title = _("Certificate hostname mismatch");
+      text = core::format(
+        "%s\n\n%s\n\n%s\n\n%s",
+        core::format(
+          _("The specified hostname \"%s\" does not match the "
+            "certificate provided by the server:"),
+          getServerName()).c_str(),
+        info.c_str(),
+        _("Someone could be trying to impersonate the site and you "
+          "should not continue."),
+        _("Do you want to make an exception for this server?"));
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
+    } else if (pendingCertificateStatus != 0) {
+      vlog.error(_("Unhandled server certificate problems: 0x%x"),
+                 pendingCertificateStatus);
+      abort_connection_unexpected(_("Unhandled server certificate "
+                                    "problems"));
+      return;
+    }
+  } else  {
+    if (pendingCertificateStatus & (GNUTLS_CERT_INVALID |
+                                    GNUTLS_CERT_SIGNER_NOT_FOUND |
+                                    GNUTLS_CERT_SIGNER_NOT_CA)) {
+      title = _("Unexpected server certificate");
+      text = core::format(
+        "%s\n\n%s\n\n%s\n\n%s",
+        _("This host is previously known with a different certificate, "
+          "and the new certificate has been signed by an unknown "
+          "authority:"),
+        info.c_str(),
+        _("Someone could be trying to impersonate the site and you "
+          "should not continue."),
+        _("Do you want to make an exception for this server?"));
+
+      pendingCertificateStatus &= ~(GNUTLS_CERT_INVALID |
+                                    GNUTLS_CERT_SIGNER_NOT_FOUND |
+                                    GNUTLS_CERT_SIGNER_NOT_CA);
+    } else if (pendingCertificateStatus & GNUTLS_CERT_NOT_ACTIVATED) {
+      title = _("Unexpected server certificate");
+      text = core::format(
+        "%s\n\n%s\n\n%s\n\n%s",
+        _("This host is previously known with a different certificate, "
+          "and the new certificate is not yet valid:"),
+        info.c_str(),
+        _("Someone could be trying to impersonate the site and you "
+          "should not continue."),
+        _("Do you want to make an exception for this server?"));
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_NOT_ACTIVATED;
+    } else if (pendingCertificateStatus & GNUTLS_CERT_EXPIRED) {
+      title = _("Unexpected server certificate");
+      text = core::format(
+        "%s\n\n%s\n\n%s\n\n%s",
+        _("This host is previously known with a different certificate, "
+          "and the new certificate has expired:"),
+        info.c_str(),
+        _("Someone could be trying to impersonate the site and you "
+          "should not continue."),
+        _("Do you want to make an exception for this server?"));
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_EXPIRED;
+    } else if (pendingCertificateStatus & GNUTLS_CERT_INSECURE_ALGORITHM) {
+      title = _("Unexpected server certificate");
+      text = core::format(
+        "%s\n\n%s\n\n%s\n\n%s",
+        _("This host is previously known with a different certificate, "
+          "and the new certificate uses an insecure algorithm:"),
+        info.c_str(),
+        _("Someone could be trying to impersonate the site and you "
+          "should not continue."),
+        _("Do you want to make an exception for this server?"));
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_INSECURE_ALGORITHM;
+    } else if (pendingCertificateStatus & GNUTLS_CERT_UNEXPECTED_OWNER) {
+      title = _("Unexpected server certificate");
+      text = core::format(
+        "%s\n\n%s\n\n%s\n\n%s",
+        core::format(
+          _("This host is previously known with a different "
+            "certificate, and the specified hostname \"%s\" does not "
+            "match the new certificate provided by the server:"),
+          getServerName()).c_str(),
+        info.c_str(),
+        _("Someone could be trying to impersonate the site and you "
+          "should not continue."),
+        _("Do you want to make an exception for this server?"));
+
+      pendingCertificateStatus &= ~GNUTLS_CERT_UNEXPECTED_OWNER;
+    } else if (pendingCertificateStatus != 0) {
+      vlog.error(_("Unhandled server certificate problems: 0x%x"),
+                 pendingCertificateStatus);
+      abort_connection_unexpected(_("Unhandled server certificate "
+                                    "problems"));
+      return;
+    }
+  }
+
+  assert(verifyDialog == nullptr);
+  verifyDialog = new Fl_Choice_Box(title.c_str(), "%s", nullptr,
+                                   fl_cancel, _("Add exception"),
+                                   fltk_escape(text).c_str());
+  verifyDialog->finished(
+    [](Fl_Widget*, void* data) {
+      ((CConn*)data)->handleCertificateFinished();
+    },
+    this);
+  verifyDialog->show();
+}
+#endif
 
 void CConn::resumeProcessing()
 {
