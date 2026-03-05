@@ -588,45 +588,6 @@ void CConn::hostKeyReceived(const uint8_t* key, size_t length,
   verifyDialog->open();
 }
 
-bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
-                       const char *text)
-{
-  QMessageBox* dlg;
-  QMessageBox::StandardButtons buttons;
-  QMessageBox::Icon icon;
-
-  switch (flags & 0xf) {
-  case rfb::M_OKCANCEL:
-    buttons = QMessageBox::Ok | QMessageBox::Cancel;
-    break;
-  case rfb::M_YESNO:
-    buttons = QMessageBox::Yes | QMessageBox::No;
-    break;
-  case rfb::M_OK:
-    buttons = QMessageBox::Ok;
-    break;
-  default:
-    buttons = QMessageBox::Close;
-  }
-
-  switch (flags & 0xf0) {
-  case rfb::M_ICONERROR:
-    icon = QMessageBox::Critical;
-    break;
-  case rfb::M_ICONWARNING:
-    icon = QMessageBox::Warning;
-    break;
-  default:
-    icon = QMessageBox::Information;
-  }
-
-  dlg = new QMessageBox(icon, title, text, buttons);
-  AppManager::instance()->openDialog(dlg);
-
-  return (dlg->result() == QMessageBox::Ok) ||
-         (dlg->result() == QMessageBox::Yes);
-}
-
 // initDone() is called when the serverInit message has been received.  At
 // this point we create the desktop window and display it.  We also tell the
 // server the pixel format and encodings to use and request the first update.
