@@ -559,12 +559,14 @@ void CConn::certificateReceived(unsigned int status,
 void CConn::hostKeyReceived(const uint8_t* key, size_t length,
                             const char* fingerprint)
 {
-  const char *title = "Server key fingerprint";
+  const char *title = _("Verify server key");
   std::string text = format(
-    "The server has provided the following identifying information:\n"
-    "Fingerprint: %s\n"
-    "Please verify that the information is correct and press \"Yes\". "
-    "Otherwise press \"No\"", fingerprint);
+    _("The server has provided the following identifying information:\n"
+      "\n"
+      "Fingerprint: %s\n"
+      "\n"
+      "Do you want to continue connecting to this server?"),
+    fingerprint);
   if (!showMsgBox(MsgBoxFlags::M_YESNO, title, text.c_str())) {
     vlog.info(_("Authentication cancelled"));
     disconnect();
