@@ -596,7 +596,13 @@ void CConn::certificateReceived(unsigned int status,
 void CConn::hostKeyReceived(const uint8_t* key, size_t length,
                             const char* fingerprint)
 {
-  std::string text = core::format(
+  std::string text;
+
+  // FIXME: Should save this for TOFU
+  (void)key;
+  (void)length;
+
+  text = core::format(
     _("The server has provided the following identifying information:\n"
       "\n"
       "Fingerprint: %s\n"
@@ -604,30 +610,16 @@ void CConn::hostKeyReceived(const uint8_t* key, size_t length,
       "Do you want to continue connecting to this server?"),
     fingerprint);
 
-  Fl_Choice_Box* dlg;
-
-  dlg = new Fl_Choice_Box(_("Verify server key"),
-                          "%s", nullptr, fl_cancel, _("Continue"),
-                          fltk_escape(text).c_str());
-  dlg->set_modal();
-  dlg->show();
-  while (dlg->shown())
-    Fl::wait();
-  int choice = dlg->result();
-  delete dlg;
-
-  if (choice != 2) {
-    vlog.info(_("Authentication cancelled"));
-    disconnect();
-    return;
-  }
-
-  // FIXME: Should save this for TOFU
-  (void)key;
-  (void)length;
-
-  approveHostKey();
-  resumeProcessing();
+  assert(verifyDialog == nullptr);
+  verifyDialog = new Fl_Choice_Box(_("Verify server key"), "%s",
+                                   nullptr, fl_cancel, _("Continue"),
+                                   fltk_escape(text).c_str());
+  verifyDialog->finished(
+    [](Fl_Widget*, void* data) {
+      ((CConn*)data)->handleHostKeyFinished();
+    },
+    this);
+  verifyDialog->show();
 }
 
 void CConn::setExtendedDesktopSize(unsigned reason, unsigned result,
@@ -1194,6 +1186,27 @@ void CConn::handleCertificateFinished()
   verifyDialog->show();
 }
 #endif
+
+void CConn::handleHostKeyFinished()
+{
+  int result;
+
+  assert(verifyDialog);
+
+  result = verifyDialog->result();
+
+  Fl::delete_widget(verifyDialog);
+  verifyDialog = nullptr;
+
+  if (result != 2) {
+    vlog.info(_("Authentication cancelled"));
+    disconnect();
+    return;
+  }
+
+  approveHostKey();
+  resumeProcessing();
+}
 
 void CConn::resumeProcessing()
 {
