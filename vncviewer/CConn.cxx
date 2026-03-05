@@ -51,7 +51,6 @@
 #include <FL/fl_ask.H>
 
 #include "fltk/Fl_Message_Box.h"
-#include "fltk/layout.h"
 #include "fltk/util.h"
 #include "AuthDialog.h"
 #include "CConn.h"
@@ -577,66 +576,6 @@ void CConn::hostKeyReceived(const uint8_t* key, size_t length,
     },
     this);
   verifyDialog->show();
-}
-
-bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
-                       const char *text)
-{
-  char buffer[1024];
-
-  if (fltk_escape(text, buffer, sizeof(buffer)) >= sizeof(buffer))
-    return 0;
-
-  // FLTK doesn't give us a flexible choice of the icon, so we ignore those
-  // bits for now.
-
-  if ((flags & 0xf) == M_OKCANCEL) {
-    Fl_Choice_Box* dlg;
-    int ret;
-
-    dlg = new Fl_Choice_Box(title, "%s",
-                            nullptr, fl_ok, fl_cancel, buffer);
-    dlg->set_modal();
-    dlg->show();
-    while (dlg->shown())
-      Fl::wait();
-    ret = dlg->result();
-    delete dlg;
-
-    return ret == 1;
-  } else if ((flags & 0xf) == M_YESNO) {
-    Fl_Choice_Box* dlg;
-    int ret;
-
-    dlg = new Fl_Choice_Box(title, "%s",
-                            nullptr, fl_yes, fl_no, buffer);
-    dlg->set_modal();
-    dlg->show();
-    while (dlg->shown())
-      Fl::wait();
-    ret = dlg->result();
-    delete dlg;
-
-    return ret == 1;
-  } else {
-    Fl_Window* dlg;
-
-    if (((flags & 0xf0) == M_ICONERROR) ||
-        ((flags & 0xf0) == M_ICONWARNING))
-      dlg = new Fl_Alert_Box(title, "%s", buffer);
-    else
-      dlg = new Fl_Message_Box(title, "%s", buffer);
-
-    dlg->set_modal();
-    dlg->show();
-    while (dlg->shown())
-      Fl::wait();
-    delete dlg;
-
-    return true;
-  }
-
-  return false;
 }
 
 // initDone() is called when the serverInit message has been received.  At

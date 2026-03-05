@@ -81,7 +81,6 @@ public:
                            size_t length) override;
   void hostKeyReceived(const uint8_t* key, size_t length,
                        const char* fingerprint) override;
-  virtual bool showMsgBox(rfb::MsgBoxFlags flags, const char *title, const char *text) override;
 
 public:
   double cpuTime;
@@ -192,11 +191,6 @@ void CConn::certificateReceived(unsigned int, const uint8_t*, size_t)
 
 void CConn::hostKeyReceived(const uint8_t*, size_t, const char*)
 {
-}
-
-bool CConn::showMsgBox(rfb::MsgBoxFlags, const char *, const char *)
-{
-    return true;
 }
 
 struct stats

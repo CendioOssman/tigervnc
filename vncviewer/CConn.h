@@ -59,8 +59,6 @@ protected:
                            size_t length) override;
   void hostKeyReceived(const uint8_t* key, size_t length,
                        const char* fingerprint) override;
-  bool showMsgBox(rfb::MsgBoxFlags flags, const char *title,
-                  const char *text) override;
 
   void initDone() override;
 
