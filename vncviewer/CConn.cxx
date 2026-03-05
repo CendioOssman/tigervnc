@@ -559,26 +559,33 @@ void CConn::certificateReceived(unsigned int status,
 void CConn::hostKeyReceived(const uint8_t* key, size_t length,
                             const char* fingerprint)
 {
-  const char *title = _("Verify server key");
-  std::string text = format(
+  std::string text;
+
+  // FIXME: Should save this for TOFU
+  (void)key;
+  (void)length;
+
+  text = format(
     _("The server has provided the following identifying information:\n"
       "\n"
       "Fingerprint: %s\n"
       "\n"
       "Do you want to continue connecting to this server?"),
     fingerprint);
-  if (!showMsgBox(MsgBoxFlags::M_YESNO, title, text.c_str())) {
-    vlog.info(_("Authentication cancelled"));
-    disconnect();
-    return;
-  }
 
-  // FIXME: Should save this for TOFU
-  (void)key;
-  (void)length;
+  assert(verifyDialog == nullptr);
+  verifyDialog = new QMessageBox(QMessageBox::Warning,
+                                 _("Verify server key"), text.c_str());
+  verifyDialog->addButton(_("Continue"), QMessageBox::AcceptRole);
+  verifyDialog->addButton(QMessageBox::Cancel);
+  verifyDialog->setDefaultButton(QMessageBox::Cancel);
 
-  approveHostKey();
-  startProcessing();
+  QObject::connect(verifyDialog, &QDialog::accepted,
+                   [this]() { this->handleHostKeyOK(); });
+  QObject::connect(verifyDialog, &QDialog::rejected,
+                   [this]() { this->handleHostKeyCancel(); });
+
+  verifyDialog->open();
 }
 
 bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
@@ -957,6 +964,8 @@ void CConn::handleAuthOK()
   std::string user;
   std::string password;
 
+  assert(authDialog);
+
   user = authDialog->getUser();
   password = authDialog->getPassword();
 
@@ -970,6 +979,8 @@ void CConn::handleAuthOK()
 
 void CConn::handleAuthCancel()
 {
+  assert(authDialog);
+
   authDialog->deleteLater();
   authDialog = nullptr;
 
@@ -1241,6 +1252,8 @@ void CConn::handleCertificateOK()
 
 void CConn::handleCertificateCancel()
 {
+  assert(verifyDialog);
+
   verifyDialog->deleteLater();
   verifyDialog = nullptr;
 
@@ -1248,3 +1261,25 @@ void CConn::handleCertificateCancel()
   disconnect();
 }
 #endif
+
+void CConn::handleHostKeyOK()
+{
+  assert(verifyDialog);
+
+  verifyDialog->deleteLater();
+  verifyDialog = nullptr;
+
+  approveHostKey();
+  startProcessing();
+}
+
+void CConn::handleHostKeyCancel()
+{
+  assert(verifyDialog);
+
+  verifyDialog->deleteLater();
+  verifyDialog = nullptr;
+
+  vlog.info(_("Authentication cancelled"));
+  disconnect();
+}

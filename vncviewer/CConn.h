@@ -111,6 +111,9 @@ private:
   void handleCertificateOK();
   void handleCertificateCancel();
 
+  void handleHostKeyOK();
+  void handleHostKeyCancel();
+
 private:
   std::string serverHost;
   int serverPort;
