@@ -544,26 +544,39 @@ void CConn::certificateReceived(unsigned int status,
 void CConn::hostKeyReceived(const uint8_t* key, size_t length,
                             const char* fingerprint)
 {
-  const char *title = _("Verify server key");
-  std::string text = format(
+  std::string text;
+  char buffer[1024];
+
+  // FIXME: Should save this for TOFU
+  (void)key;
+  (void)length;
+
+  text = format(
     _("The server has provided the following identifying information:\n"
       "\n"
       "Fingerprint: %s\n"
       "\n"
       "Do you want to continue connecting to this server?"),
     fingerprint);
-  if (!showMsgBox(MsgBoxFlags::M_YESNO, title, text.c_str())) {
-    vlog.info(_("Authentication cancelled"));
-    disconnect();
+
+  if (fltk_escape(text.c_str(), buffer,
+                  sizeof(buffer)) >= sizeof(buffer)) {
+    abort_connection_unexpected(_("Failed to format server "
+                                  "host key for display: %s"),
+                                _("Host key fingerprint is too long"));
     return;
   }
 
-  // FIXME: Should save this for TOFU
-  (void)key;
-  (void)length;
-
-  approveHostKey();
-  resumeProcessing();
+  assert(verifyDialog == nullptr);
+  verifyDialog = new Fl_Choice_Box(_("Verify server key"), "%s",
+                                   nullptr, _("Cancel"), _("Continue"),
+                                   buffer);
+  verifyDialog->finished(
+    [](Fl_Widget*, void* data) {
+      ((CConn*)data)->handleHostKeyFinished();
+    },
+    this);
+  verifyDialog->show();
 }
 
 bool CConn::showMsgBox(MsgBoxFlags flags, const char *title,
@@ -1254,6 +1267,27 @@ void CConn::handleCertificateFinished()
   verifyDialog->show();
 }
 #endif
+
+void CConn::handleHostKeyFinished()
+{
+  int result;
+
+  assert(verifyDialog);
+
+  result = verifyDialog->result();
+
+  Fl::delete_widget(verifyDialog);
+  verifyDialog = nullptr;
+
+  if (result != 2) {
+    vlog.info(_("Authentication cancelled"));
+    disconnect();
+    return;
+  }
+
+  approveHostKey();
+  resumeProcessing();
+}
 
 void CConn::resumeProcessing()
 {

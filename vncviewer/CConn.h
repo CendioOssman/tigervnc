@@ -106,6 +106,7 @@ private:
 
   void handleAuthFinished();
   void handleCertificateFinished();
+  void handleHostKeyFinished();
 
   void resumeProcessing();
 
