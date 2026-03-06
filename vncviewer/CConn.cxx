@@ -321,9 +321,6 @@ void CConn::processNextMsg(core::Timer*)
     } else {
       disconnect();
     }
-  } catch (rfb::auth_cancelled& e) {
-    vlog.info("%s", e.what());
-    disconnect();
   } catch (rfb::auth_error& e) {
     if (authDialog)
       authDialog->hide();
