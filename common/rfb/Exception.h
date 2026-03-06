@@ -26,9 +26,5 @@ namespace rfb {
     AuthFailureException(const char* reason)
       : Exception("%s", reason) {}
   };
-  struct AuthCancelledException : public rfb::Exception {
-    AuthCancelledException()
-      : Exception("Authentication cancelled") {}
-  };
 }
 #endif
