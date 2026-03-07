@@ -61,6 +61,7 @@ CConnection::CConnection()
     shared(false),
     state_(RFBSTATE_UNINITIALISED),
     credentialsTimer(this, &CConnection::handleCredentialsTimer),
+    requestedUser(false), requestedPassword(false),
     pendingPFChange(false), preferredEncoding(encodingTight),
     compressLevel(2), qualityLevel(-1),
     formatChange(false), encodingChange(false),
@@ -404,11 +405,6 @@ void CConnection::securityCompleted()
   writer_->writeClientInit(shared);
 }
 
-void CConnection::handleCredentialsTimer(Timer*)
-{
-  credentialsRequested(isSecure(), requestedUser, requestedPassword);
-}
-
 void CConnection::close()
 {
   state_ = RFBSTATE_CLOSING;
@@ -671,31 +667,8 @@ void CConnection::setCredentials(const std::string& user,
 {
   credentials.username = user;
   credentials.password = password;
-}
-
-bool CConnection::requestCredentials(bool needsUser, bool needsPassword)
-{
-  if ((needsUser && credentials.username.empty()) ||
-      (needsPassword && credentials.password.empty())) {
-    requestedUser = needsUser;
-    requestedPassword = needsPassword;
-    // Postpone credentials requests to the next event loop iteration to
-    // avoid recursive behaviour and prevent potential conflicts with
-    // ongoing event handling
-    credentialsTimer.start(0);
-    return false;
-  }
-  return true;
-}
-
-std::string CConnection::getUsername()
-{
-  return credentials.username;
-}
-
-std::string CConnection::getPassword()
-{
-  return credentials.password;
+  requestedUser = false;
+  requestedPassword = false;
 }
 
 void CConnection::requestClipboard()
@@ -891,6 +864,43 @@ void CConnection::setPF(const PixelFormat& pf)
   formatChange = true;
 }
 
+bool CConnection::requestCredentials(bool needsUser, bool needsPassword)
+{
+  // Anything needed?
+  if (!needsUser && !needsPassword)
+    return true;
+
+  // Have what we need?
+  if ((!needsUser || !credentials.username.empty()) &&
+      (!needsPassword || !credentials.password.empty()))
+    return true;
+
+  // Already requested what's needed?
+  if ((requestedUser || !needsUser) &&
+      (requestedPassword || !needsPassword))
+    return false;
+
+  requestedUser = needsUser;
+  requestedPassword = needsPassword;
+
+  // Postpone request to the next event loop iteration to avoid
+  // recursive behaviour and prevent potential conflicts with ongoing
+  // event handling
+  credentialsTimer.start(0);
+
+  return false;
+}
+
+std::string CConnection::getUsername()
+{
+  return credentials.username;
+}
+
+std::string CConnection::getPassword()
+{
+  return credentials.password;
+}
+
 void CConnection::fence(uint32_t flags, unsigned len, const uint8_t data[])
 {
   CMsgHandler::fence(flags, len, data);
@@ -902,6 +912,11 @@ void CConnection::fence(uint32_t flags, unsigned len, const uint8_t data[])
   flags = 0;
 
   writer()->writeFence(flags, len, data);
+}
+
+void CConnection::handleCredentialsTimer(Timer*)
+{
+  credentialsRequested(isSecure(), requestedUser, requestedPassword);
 }
 
 // requestNewUpdate() requests an update from the server, having set the

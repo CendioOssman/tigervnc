@@ -200,17 +200,6 @@ namespace rfb {
     // and the client has credentials available.
     void setCredentials(const std::string& user,
                         const std::string& password);
-    // requestCredentials() is a non-blocking function that is called
-    // when the server requires authentication. It immediately returns
-    // true if credentials are available, and false otherwise.
-    bool requestCredentials(bool needsUser, bool needsPassword);
-
-    // Note: getUsername() should only be used if requestCredentials()
-    // returned true.
-    std::string getUsername();
-    // Note: getPassword() should only be used if requestCredentials()
-    //returned true.
-    std::string getPassword();
 
     // requestClipboard() will result in a request to the server to
     // transfer its clipboard data. A call to handleClipboardData()
@@ -284,8 +273,25 @@ namespace rfb {
 
     stateEnum state() { return state_; }
 
+  public:
+    // Methods for CSecurity objects
+
+    // requestCredentials() is a non-blocking function that is called
+    // when the server requires authentication. It immediately returns
+    // true if credentials are available, and false otherwise.
+    bool requestCredentials(bool needsUser, bool needsPassword);
+
+    // Note: getUsername() should only be used if requestCredentials()
+    // returned true.
+    std::string getUsername();
+    // Note: getPassword() should only be used if requestCredentials()
+    //returned true.
+    std::string getPassword();
+
+  protected:
     CSecurity *csecurity;
     SecurityClient security;
+
   protected:
     void setState(stateEnum s) { state_ = s; }
 
