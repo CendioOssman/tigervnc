@@ -315,7 +315,7 @@ void CConn::processNextMsg()
     }
   } catch (rdr::Exception& e) {
     recursing = false;
-    abort_connection_with_unexpected_error(e);
+    abort_connection_unexpected(e);
   }
 
   recursing = false;
@@ -373,8 +373,11 @@ void CConn::credentialsRequested(bool secure, bool needsUser,
     FILE* fp;
 
     fp = fopen(passwordFileName, "rb");
-    if (!fp)
-      throw rdr::SystemException(_("Opening password file failed"), errno);
+    if (!fp) {
+      abort_connection_unexpected(_("Opening password file failed: %s"),
+                                  strerror(errno));
+      return;
+    }
 
     obfPwd.resize(fread(obfPwd.data(), 1, obfPwd.size(), fp));
     fclose(fp);

@@ -163,9 +163,22 @@ void abort_connection(const char *error, ...)
   qApp->quit();
 }
 
-void abort_connection_with_unexpected_error(const rdr::Exception &e) {
+void abort_connection_unexpected(const rdr::Exception &e)
+{
+  abort_connection_unexpected("%s", e.str());
+}
+
+void abort_connection_unexpected(const char *error, ...)
+{
+  va_list ap;
+  std::string error_str;
+
+  va_start(ap, error);
+  error_str = vformat(error, ap);
+  va_end(ap);
+
   abort_connection(_("An unexpected error occurred when communicating "
-                     "with the server:\n\n%s"), e.str());
+                     "with the server:\n\n%s"), error_str.c_str());
 }
 
 void disconnect()

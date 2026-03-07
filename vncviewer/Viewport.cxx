@@ -259,7 +259,7 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
     try {
       cc->writer()->writePointerEvent(lastPointerPos, lastButtonMask);
     } catch (rdr::Exception& e) {
-      abort_connection_with_unexpected_error(e);
+      abort_connection_unexpected(e);
     }
   });
 
@@ -563,7 +563,7 @@ void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
     try {
       cc->writer()->writePointerEvent(pos, buttonMask);
     } catch (rdr::Exception& e) {
-      abort_connection_with_unexpected_error(e);
+      abort_connection_unexpected(e);
     }
   } else {
     if (!mousePointerTimer->isActive()) {
