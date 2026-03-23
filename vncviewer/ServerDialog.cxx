@@ -30,6 +30,7 @@
 #include "vncviewer.h"
 #include "os/os.h"
 #include "rfb/Exception.h"
+#include <rfb/Hostname.h>
 #include "rfb/LogWriter.h"
 #include "rfb/util.h"
 
@@ -40,7 +41,6 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QStringListModel>
-#include <QTextStream>
 #include <QVBoxLayout>
 #include <QKeyEvent>
 #include <QMessageBox>
@@ -111,8 +111,11 @@ ServerDialog::ServerDialog(QWidget* parent)
     AppManager::instance()->openDialog(dlg);
   }
 
+  QStringList strList;
+  for (const std::string& s : serverHistory)
+    strList.append(s.c_str());
   QStringListModel* model = new QStringListModel();
-  model->setStringList(serverHistory);
+  model->setStringList(strList);
   comboBox->setModel(model);
 }
 
@@ -133,28 +136,17 @@ void ServerDialog::connectTo()
   try {
     saveViewerParameters(nullptr, text.toStdString().c_str());
   } catch (rfb::Exception& e) {
-    vlog.error("%s", e.str());
-    std::string msg;
-    msg = rfb::format(_("Unable to save the default configuration:\n\n%s"), e.str());
-    QMessageBox* dlg = new QMessageBox(QMessageBox::Critical,
-                                       _("Error saving configuration"),
-                                       msg.c_str(), QMessageBox::Close);
-    AppManager::instance()->openDialog(dlg);
+    vlog.error(_("Unable to save the default configuration: %s"), e.str());
   }
 
-  serverHistory.removeOne(text);
-  serverHistory.push_front(text);
+  // avoid duplicates in the history
+  serverHistory.remove(text.toStdString());
+  serverHistory.push_front(text.toStdString());
 
   try {
     saveServerHistory();
   } catch (rfb::Exception& e) {
-    vlog.error("%s", e.str());
-    std::string msg;
-    msg = rfb::format(_("Unable to save the server history:\n\n%s"), e.str());
-    QMessageBox* dlg = new QMessageBox(QMessageBox::Critical,
-                                       _("Error loading server history"),
-                                       msg.c_str(), QMessageBox::Close);
-    AppManager::instance()->openDialog(dlg);
+    vlog.error(_("Unable to save the server history: %s"), e.str());
   }
 
   accept();
@@ -270,24 +262,48 @@ void ServerDialog::handleSaveAs(const QFileDialog* filechooser)
   }
 }
 
+static bool same_server(const std::string& a, const std::string& b)
+{
+  std::string hostA, hostB;
+  int portA, portB;
+
+#ifndef WIN32
+  if ((a.find("/") != std::string::npos) || (b.find("/") != std::string::npos))
+    return a == b;
+#endif
+
+  try {
+    rfb::getHostAndPort(a.c_str(), &hostA, &portA);
+    rfb::getHostAndPort(b.c_str(), &hostB, &portB);
+  } catch (rfb::Exception& e) {
+    return false;
+  }
+
+  if (hostA != hostB)
+    return false;
+
+  if (portA != portB)
+    return false;
+
+  return true;
+}
+
 void ServerDialog::loadServerHistory()
 {
+  std::list<std::string> rawHistory;
+
   serverHistory.clear();
 
 #ifdef _WIN32
-  std::list<std::string> history;
-  history = ::loadHistoryFromRegKey();
-  for (auto const& s : history)
-    serverHistory.push_back(s.c_str());
-  return;
-#endif
+  rawHistory = loadHistoryFromRegKey();
+#else
 
-  const char* homeDir = os::getvncconfigdir();
-  if (homeDir == nullptr)
-    throw rdr::Exception("%s", _("Could not obtain the home directory path"));
+  const char* stateDir = os::getvncstatedir();
+  if (stateDir == nullptr)
+    throw rdr::Exception(_("Could not determine VNC state directory path"));
 
   char filepath[PATH_MAX];
-  snprintf(filepath, sizeof(filepath), "%s/%s", homeDir, SERVER_HISTORY);
+  snprintf(filepath, sizeof(filepath), "%s/%s", stateDir, SERVER_HISTORY);
 
   /* Read server history from file */
   FILE* f = fopen(filepath, "r");
@@ -310,61 +326,73 @@ void ServerDialog::loadServerHistory()
         break;
 
       fclose(f);
-      throw rdr::Exception(_("Failed to read line %d in file %s: %s"), lineNr, filepath, strerror(errno));
+      std::string msg = rfb::format(_("Failed to read line %d in "
+                                      "file \"%s\""), lineNr, filepath);
+      throw rdr::SystemException(msg.c_str(), errno);
     }
 
     int len = strlen(line);
 
     if (len == (sizeof(line) - 1)) {
       fclose(f);
-      throw rdr::Exception(_("Failed to read line %d in file %s: %s"), lineNr, filepath, _("Line too long"));
+      throw rdr::Exception(_("Failed to read line %d in file %s: %s"),
+                           lineNr, filepath, _("Line too long"));
     }
 
-    if ((len > 0) && (line[len - 1] == '\n')) {
-      line[len - 1] = '\0';
+    if ((len > 0) && (line[len-1] == '\n')) {
+      line[len-1] = '\0';
       len--;
     }
-    if ((len > 0) && (line[len - 1] == '\r')) {
-      line[len - 1] = '\0';
+    if ((len > 0) && (line[len-1] == '\r')) {
+      line[len-1] = '\0';
       len--;
     }
 
     if (len == 0)
       continue;
 
-    serverHistory.push_back(line);
+    rawHistory.push_back(line);
   }
 
   fclose(f);
+#endif
+
+  // Filter out duplicates, even if they have different formats
+  for (const std::string& entry : rawHistory) {
+    if (std::find_if(serverHistory.begin(), serverHistory.end(),
+                     [&entry](const std::string& s) { return same_server(s, entry); }) != serverHistory.end())
+      continue;
+    serverHistory.push_back(entry);
+  }
 }
 
 void ServerDialog::saveServerHistory()
 {
 #ifdef _WIN32
-  std::list<std::string> history;
-  for (auto const& s : qAsConst(serverHistory))
-    history.push_back(s.toStdString());
-  ::saveHistoryToRegKey(history);
-#else
-  const char* homeDir = os::getvncconfigdir();
-  if (homeDir == nullptr) {
-    throw rdr::Exception("%s", _("Could not obtain the home directory path"));
-  }
+  saveHistoryToRegKey(serverHistory);
+  return;
+#endif
+  const char* stateDir = os::getvncstatedir();
+  if (stateDir == nullptr)
+    throw rdr::Exception(_("Could not determine VNC state directory path"));
+
   char filepath[PATH_MAX];
-  snprintf(filepath, sizeof(filepath), "%s/%s", homeDir, SERVER_HISTORY);
+  snprintf(filepath, sizeof(filepath), "%s/%s", stateDir, SERVER_HISTORY);
 
   /* Write server history to file */
-  FILE* f = fopen(filepath, "w");
+  FILE* f = fopen(filepath, "w+");
   if (!f) {
-    throw rdr::Exception(_("Could not open \"%s\": %s"), filepath, strerror(errno));
+    std::string msg = rfb::format(_("Could not open \"%s\""), filepath);
+    throw rdr::SystemException(msg.c_str(), errno);
   }
-  QTextStream stream(f, QIODevice::WriteOnly | QIODevice::WriteOnly);
 
   // Save the last X elements to the config file.
-  for (int i = 0; i < serverHistory.size() && i <= SERVER_HISTORY_SIZE; i++) {
-    stream << serverHistory[i] << "\n";
+  size_t count = 0;
+  for (const std::string& entry : serverHistory) {
+    if (++count > SERVER_HISTORY_SIZE)
+      break;
+    fprintf(f, "%s\n", entry.c_str());
   }
-  stream.flush();
+
   fclose(f);
-#endif
 }

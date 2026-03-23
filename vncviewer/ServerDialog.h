@@ -33,7 +33,7 @@ private:
 
 private:
   QComboBox* comboBox;
-  QStringList serverHistory;
+  std::list<std::string> serverHistory;
 
 protected:
   QFileDialog *fileChooser;
