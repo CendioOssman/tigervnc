@@ -29,6 +29,23 @@
 
 using namespace core;
 
+signal::signal()
+{
+}
+
+void signal::connect(const emitter_t& emitter)
+{
+  receivers.push_back(emitter);
+}
+
+void signal::emit()
+{
+  ReceiverList::iterator iter;
+
+  for (iter = receivers.begin(); iter != receivers.end(); ++iter)
+    (*iter)();
+}
+
 Object::Object()
 {
 }
@@ -37,39 +54,7 @@ Object::~Object()
 {
 }
 
-void Object::registerSignal(const char* name)
+void Object::emitSignal(signal& signal)
 {
-  assert(name);
-
-  if (signalReceivers.count(name) != 0)
-    throw std::logic_error(format("Signal %s is already registered", name));
-
-  // Just to force it being created
-  signalReceivers[name].clear();
-}
-
-void Object::emitSignal(const char* name)
-{
-  ReceiverList::iterator iter;
-
-  assert(name);
-
-  if (signalReceivers.count(name) == 0)
-    throw std::logic_error(format("Cannot emit unknown signal %s", name));
-
-  for (iter = signalReceivers[name].begin();
-       iter != signalReceivers[name].end(); ++iter)
-    (*iter)();
-}
-
-void Object::connectSignal(const char* name, const emitter_t& emitter)
-{
-  ReceiverList::iterator iter;
-
-  assert(name);
-
-  if (signalReceivers.count(name) == 0)
-    throw std::logic_error(format("Cannot connect to unknown signal %s", name));
-
-  signalReceivers[name].push_back(emitter);
+  signal.emit();
 }

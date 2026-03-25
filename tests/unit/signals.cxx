@@ -30,13 +30,11 @@ class Sender : public core::Object {
 public:
   Sender() {}
 
-  void registerSignal(const char* name)
+  core::signal gsignal;
+
+  void emitSignal(core::signal& signal)
   {
-    core::Object::registerSignal(name);
-  }
-  void emitSignal(const char* name)
-  {
-    core::Object::emitSignal(name);
+    core::Object::emitSignal(signal);
   }
 };
 
@@ -44,27 +42,8 @@ class Receiver : public core::Object {
 public:
   Receiver() {}
 
-  void genericHandler(Object*, const char*) { callCount++; }
+  void genericHandler(Object*) { callCount++; }
 };
-
-TEST(Signals, doubleRegister)
-{
-  Sender s;
-
-  s.registerSignal("signal");
-  EXPECT_THROW({
-    s.registerSignal("signal");
-  }, std::logic_error);
-}
-
-TEST(Signals, emitUnknown)
-{
-  Sender s;
-
-  EXPECT_THROW({
-    s.emitSignal("nosignal");
-  }, std::logic_error);
-}
 
 TEST(Signals, connectSignal)
 {
@@ -73,20 +52,9 @@ TEST(Signals, connectSignal)
 
   /* Generic handler */
   callCount = 0;
-  s.registerSignal("gsignal");
-  s.connectSignal("gsignal", &r, &Receiver::genericHandler);
-  s.emitSignal("gsignal");
+  s.connectSignal(s.gsignal, &r, &Receiver::genericHandler);
+  s.emitSignal(s.gsignal);
   EXPECT_EQ(callCount, 1);
-}
-
-TEST(Signals, connectUnknown)
-{
-  Sender s;
-  Receiver r;
-
-  EXPECT_THROW({
-    s.connectSignal("nosignal", &r, &Receiver::genericHandler);
-  }, std::logic_error);
 }
 
 int main(int argc, char** argv)
