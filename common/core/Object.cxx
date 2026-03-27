@@ -76,33 +76,6 @@ void Object::registerSignal(const char* name,
   signalArgTypes[name] = argTypes;
 }
 
-void Object::emitSignal(const char* name)
-{
-  ReceiverList siglist;
-  ReceiverList::iterator iter;
-
-  assert(name);
-
-  if (signalReceivers.count(name) == 0)
-    throw std::logic_error(format("Cannot emit unknown signal %s", name));
-
-  if (!signalArgTypes[name].empty())
-    throw std::logic_error(format("Missing data when emitting signal %s", name));
-
-  // Convoluted iteration so that we safely handle changes to
-  // the list
-  siglist = signalReceivers[name];
-  for (iter = siglist.begin(); iter != siglist.end(); ++iter) {
-    if (std::find_if(signalReceivers[name].begin(),
-                     signalReceivers[name].end(),
-                     [iter](const SignalReceiver& recv) {
-                       return recv.connection == iter->connection;
-                     }) == signalReceivers[name].end())
-      continue;
-    iter->emitter({});
-  }
-}
-
 void Object::emitSignal(const char* name, const std::vector<any>& info)
 {
   ReceiverList siglist;
@@ -112,9 +85,6 @@ void Object::emitSignal(const char* name, const std::vector<any>& info)
 
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot emit unknown signal %s", name));
-
-  if (signalArgTypes[name].empty())
-    throw std::logic_error(format("Unexpected data emitting signal %s", name));
 
   if (signalArgTypes[name].size() != info.size())
     throw std::logic_error(format("Wrong number of arguments emitting signal %s", name));
@@ -135,31 +105,6 @@ void Object::emitSignal(const char* name, const std::vector<any>& info)
       continue;
     iter->emitter(info);
   }
-}
-
-Connection Object::connectSignal(const char* name, void (*callback)())
-{
-  emitter_t emitter = [callback](std::vector<any> info) {
-    assert(info.empty());
-    callback();
-  };
-  // It's not guaranteed if we get unique or identical addresses for
-  // otherwise identical lambdas. Treat each as unique for consistent
-  // behaviour by omitting any tracking information.
-  return connectSignal(name, nullptr, emitter, {});
-}
-
-Connection Object::connectSignal(const char* name, Object* obj,
-                                 const std::function<void()>& callback)
-{
-  emitter_t emitter = [callback](std::vector<any> info) {
-    assert(info.empty());
-    callback();
-  };
-  assert(obj);
-  // Lambdas cannot be compared, so we cannot tell if it's an identical
-  // lambda, or just the same body but with different captures.
-  return connectSignal(name, obj, emitter, {});
 }
 
 Connection Object::connectSignal(const char* name, Object* obj,
