@@ -20,80 +20,15 @@
 #include <config.h>
 #endif
 
-#include <algorithm>
-#include <stdexcept>
-
 #include <core/Object.h>
 #include <core/string.h>
 
 using namespace core;
 
-static bool operator==(const Connection& a, const Connection& b)
+bool core::operator==(const Connection& a, const Connection& b)
 {
   return a.sig == b.sig && a.src == b.src && a.dst == b.dst &&
          a.callback == b.callback;
-}
-
-template<typename... Is>
-core::signal<Is...>::signal()
-{
-}
-
-template<typename... Is>
-Connection core::signal<Is...>::connect(Object* src, Object* dst,
-                                  const comp_any& callback,
-                                  const emitter_t& emitter)
-{
-  typename ReceiverList::iterator iter;
-  Connection connection;
-
-  assert(src);
-  assert(dst);
-
-  connection = {this, src, dst, callback};
-
-  for (iter = receivers.begin(); iter != receivers.end(); ++iter) {
-    if (iter->connection == connection)
-      throw std::logic_error("Signal is already connected");
-  }
-
-  receivers.push_back({connection, emitter});
-
-  return connection;
-}
-
-template<typename... Is>
-void core::signal<Is...>::disconnect(const Connection connection)
-{
-  typename ReceiverList::iterator iter;
-
-  assert(connection.sig == this);
-
-  for (iter = receivers.begin(); iter != receivers.end(); ++iter) {
-    if (iter->connection == connection) {
-      receivers.erase(iter);
-      break;
-    }
-  }
-}
-
-template<typename... Is>
-void core::signal<Is...>::emit(const Is&... args)
-{
-  ReceiverList siglist;
-  typename ReceiverList::iterator iter;
-
-  // Convoluted iteration so that we safely handle changes to
-  // the list
-  siglist = receivers;
-  for (iter = siglist.begin(); iter != siglist.end(); ++iter) {
-    if (std::find_if(receivers.begin(), receivers.end(),
-                     [iter](const SignalReceiver& recv) {
-                       return recv.connection == iter->connection;
-                     }) == receivers.end())
-      continue;
-    iter->emitter(args...);
-  }
 }
 
 Object::Object()
@@ -145,11 +80,6 @@ void Object::disconnectSignal(const Connection connection)
     connection.dst->connectedObjects.erase(this);
 }
 
-void Object::emitSignal(signal<>& signal)
-{
-  signal.emit();
-}
-
 void Object::disconnectSignals(Object* obj)
 {
   bool done;
@@ -166,17 +96,4 @@ void Object::disconnectSignals(Object* obj)
       }
     }
   } while (!done);
-}
-
-Connection Object::connectSignal(signal<>& signal, class Object* obj,
-                                 const comp_any& callback,
-                                 const core::signal<>::emitter_t& emitter)
-{
-  Connection connection;
-
-  connection = signal.connect(this, obj, callback, emitter);
-  connections.push_back(connection);
-  obj->connectedObjects.insert(this);
-
-  return connection;
 }
