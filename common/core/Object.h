@@ -33,6 +33,7 @@
 #include <stdexcept>
 #include <string>
 #include <typeinfo>
+#include <vector>
 
 #include <core/any.h>
 
@@ -123,20 +124,21 @@ namespace core {
 
   private:
     // Wrapper to contain member function pointers
-    typedef std::function<void(const any&)> emitter_t;
+    typedef std::function<void(const std::vector<any>&)> emitter_t;
 
-    void registerSignal(const char* name, size_t argType);
+    void registerSignal(const char* name,
+                        const std::vector<size_t>& argTypes);
 
-    void emitSignal(const char* name, const any& info);
+    void emitSignal(const char* name, const std::vector<any>& info);
 
     Connection connectSignal(const char* name, Object* obj,
                              const emitter_t& emitter,
-                             size_t argType);
+                             const std::vector<size_t>& argTypes);
     Connection connectSignal(const char* name, Object* obj,
                              const any& callback,
                              bool (*comparer)(const any&, const any&),
                              const emitter_t& emitter,
-                             size_t argType);
+                             const std::vector<size_t>& argTypes);
 
     // Compares two any objects, returning true if they are both type T
     // and have the same value
@@ -156,7 +158,7 @@ namespace core {
     // Mapping between signal names and the methods receiving them
     std::map<std::string, ReceiverList> signalReceivers;
     // Signal argument type information (void if no argument)
-    std::map<std::string, size_t> signalArgTypes;
+    std::map<std::string, std::vector<size_t>> signalArgTypes;
 
     // Other objects that we have connected to signals on
     std::set<Object*> connectedObjects;
@@ -185,14 +187,13 @@ namespace core {
   Connection Object::connectSignal(const char* name, T* obj,
                                    void (T::*callback)())
   {
-    emitter_t emitter = [obj, callback](const any& info) {
-      assert(!info.has_value());
+    emitter_t emitter = [obj, callback](const std::vector<any>& info) {
+      assert(info.empty());
       (obj->*callback)();
     };
     assert(obj);
     return connectSignal(name, obj, callback,
-                         compareAny<typeof(callback)>, emitter,
-                         typeid(void).hash_code());
+                         compareAny<typeof(callback)>, emitter, {});
   }
 
   template<class T, class S>
@@ -202,29 +203,29 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Incompatible signal callback");
-    emitter_t emitter = [sender, name, obj, callback](const any& info) {
-      assert(!info.has_value());
+    emitter_t emitter = [sender, name, obj,
+                         callback](const std::vector<any>& info) {
+      assert(info.empty());
       (obj->*callback)(sender, name);
     };
     assert(obj);
     return connectSignal(name, obj, callback,
-                         compareAny<typeof(callback)>, emitter,
-                         typeid(void).hash_code());
+                         compareAny<typeof(callback)>, emitter, {});
   }
 
   template<class T, typename I>
   Connection Object::connectSignal(const char* name, T* obj,
                                    void (T::*callback)(I))
   {
-    emitter_t emitter = [obj, callback](const any& info) {
-      assert(info.has_value());
+    emitter_t emitter = [obj, callback](const std::vector<any>& info) {
+      assert(!info.empty());
       using I_d = typename std::decay<I>::type;
-      (obj->*callback)(any_cast<I_d>(info));
+      (obj->*callback)(any_cast<I_d>(info.front()));
     };
     assert(obj);
     return connectSignal(name, obj, callback,
                          compareAny<typeof(callback)>, emitter,
-                         typeid(I).hash_code());
+                         {typeid(I).hash_code()});
   }
 
   template<class T, class S, typename I>
@@ -234,45 +235,47 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Incompatible signal callback");
-    emitter_t emitter = [sender, name, obj, callback](const any& info) {
-      assert(info.has_value());
+    emitter_t emitter = [sender, name, obj,
+                         callback](const std::vector<any>& info) {
+      assert(!info.empty());
       using I_d = typename std::decay<I>::type;
-      (obj->*callback)(sender, name, any_cast<I_d>(info));
+      (obj->*callback)(sender, name, any_cast<I_d>(info.front()));
     };
     assert(obj);
     return connectSignal(name, obj, callback,
                          compareAny<typeof(callback)>, emitter,
-                         typeid(I).hash_code());
+                         {typeid(I).hash_code()});
   }
 
   template<typename I>
   Connection Object::connectSignal(const char* name,
                                    void (*callback)(I))
   {
-    emitter_t emitter = [callback](const any& info) {
-      assert(info.has_value());
+    emitter_t emitter = [callback](const std::vector<any>& info) {
+      assert(!info.empty());
       using I_d = typename std::decay<I>::type;
-      callback(any_cast<I_d>(info));
+      callback(any_cast<I_d>(info.front()));
     };
     // It's not guaranteed if we get unique or identical addresses for
     // otherwise identical lambdas. Treat each as unique for consistent
     // behaviour by omitting any tracking information.
-    return connectSignal(name, nullptr, emitter, typeid(I).hash_code());
+    return connectSignal(name, nullptr, emitter,
+                         {typeid(I).hash_code()});
   }
 
   template<typename I>
   Connection Object::connectSignal(const char* name, Object* obj,
                                    const std::function<void(I)>& callback)
   {
-    emitter_t emitter = [callback](const any& info) {
-      assert(info.has_value());
+    emitter_t emitter = [callback](const std::vector<any>& info) {
+      assert(!info.empty());
       using I_d = typename std::decay<I>::type;
-      callback(any_cast<I_d>(info));
+      callback(any_cast<I_d>(info.front()));
     };
     assert(obj);
     // Lambdas cannot be compared, so we cannot tell if it's an identical
     // lambda, or just the same body but with different captures.
-    return connectSignal(name, obj, emitter, typeid(I).hash_code());
+    return connectSignal(name, obj, emitter, {typeid(I).hash_code()});
   }
 
   template<class T>
@@ -309,19 +312,19 @@ namespace core {
 
   inline void Object::registerSignal(const char* name)
   {
-    registerSignal(name, typeid(void).hash_code());
+    registerSignal(name, {});
   }
 
   template<typename I>
   void Object::registerSignal(const char* name)
   {
-    registerSignal(name, typeid(I).hash_code());
+    registerSignal(name, {typeid(I).hash_code()});
   }
 
   template<typename I>
   void Object::emitSignal(const char* name, const I& info)
   {
-    emitSignal(name, any(info));
+    emitSignal(name, {any(info)});
   }
 
   template<class T>

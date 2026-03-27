@@ -62,7 +62,8 @@ Object::~Object()
   }
 }
 
-void Object::registerSignal(const char* name, size_t argType)
+void Object::registerSignal(const char* name,
+                            const std::vector<size_t>& argTypes)
 {
   assert(name);
 
@@ -72,7 +73,7 @@ void Object::registerSignal(const char* name, size_t argType)
   // Just to force it being created
   signalReceivers[name].clear();
 
-  signalArgTypes[name] = argType;
+  signalArgTypes[name] = argTypes;
 }
 
 void Object::emitSignal(const char* name)
@@ -85,7 +86,7 @@ void Object::emitSignal(const char* name)
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot emit unknown signal %s", name));
 
-  if (signalArgTypes[name] != typeid(void).hash_code())
+  if (!signalArgTypes[name].empty())
     throw std::logic_error(format("Missing data when emitting signal %s", name));
 
   // Convoluted iteration so that we safely handle changes to
@@ -98,11 +99,11 @@ void Object::emitSignal(const char* name)
                        return recv.connection == iter->connection;
                      }) == signalReceivers[name].end())
       continue;
-    iter->emitter(any());
+    iter->emitter({});
   }
 }
 
-void Object::emitSignal(const char* name, const any& info)
+void Object::emitSignal(const char* name, const std::vector<any>& info)
 {
   ReceiverList siglist;
   ReceiverList::iterator iter;
@@ -112,11 +113,15 @@ void Object::emitSignal(const char* name, const any& info)
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot emit unknown signal %s", name));
 
-  if (signalArgTypes[name] == typeid(void).hash_code())
+  if (signalArgTypes[name].empty())
     throw std::logic_error(format("Unexpected data emitting signal %s", name));
 
-  if (signalArgTypes[name] != info.type().hash_code())
-    throw std::logic_error(format("Incompatible signal data emitting signal %s", name));
+  if (signalArgTypes[name].size() != info.size())
+    throw std::logic_error(format("Wrong number of arguments emitting signal %s", name));
+
+  for (size_t i = 0; i < info.size(); i++)
+    if (signalArgTypes[name][i] != info[i].type().hash_code())
+      throw std::logic_error(format("Incompatible signal data emitting signal %s", name));
 
   // Convoluted iteration so that we safely handle changes to
   // the list
@@ -134,45 +139,45 @@ void Object::emitSignal(const char* name, const any& info)
 
 Connection Object::connectSignal(const char* name, void (*callback)())
 {
-  emitter_t emitter = [callback](const any& info) {
-    assert(!info.has_value());
+  emitter_t emitter = [callback](std::vector<any> info) {
+    assert(info.empty());
     callback();
   };
   // It's not guaranteed if we get unique or identical addresses for
   // otherwise identical lambdas. Treat each as unique for consistent
   // behaviour by omitting any tracking information.
-  return connectSignal(name, nullptr, emitter, typeid(void).hash_code());
+  return connectSignal(name, nullptr, emitter, {});
 }
 
 Connection Object::connectSignal(const char* name, Object* obj,
                                  const std::function<void()>& callback)
 {
-  emitter_t emitter = [callback](const any& info) {
-    assert(!info.has_value());
+  emitter_t emitter = [callback](std::vector<any> info) {
+    assert(info.empty());
     callback();
   };
   assert(obj);
   // Lambdas cannot be compared, so we cannot tell if it's an identical
   // lambda, or just the same body but with different captures.
-  return connectSignal(name, obj, emitter, typeid(void).hash_code());
+  return connectSignal(name, obj, emitter, {});
 }
 
 Connection Object::connectSignal(const char* name, Object* obj,
                                  const emitter_t& emitter,
-                                 size_t argType)
+                                 const std::vector<size_t>& argTypes)
 {
   static uint64_t index = 0;
   // This callback is not possible to check for uniqueness, so instead
   // we assume every call is unique and track them using an index.
   return connectSignal(name, obj, index++, compareAny<typeof(index)>,
-                       emitter, argType);
+                       emitter, argTypes);
 }
 
 Connection Object::connectSignal(const char* name, Object* obj,
                                  const any& callback,
                                  bool (*comparer)(const any&, const any&),
                                  const emitter_t& emitter,
-                                 size_t argType)
+                                 const std::vector<size_t>& argTypes)
 {
   ReceiverList::iterator iter;
   Connection connection;
@@ -182,17 +187,17 @@ Connection Object::connectSignal(const char* name, Object* obj,
   if (signalReceivers.count(name) == 0)
     throw std::logic_error(format("Cannot connect to unknown signal %s", name));
 
-  if (signalArgTypes[name] == typeid(void).hash_code()) {
-    if (argType != typeid(void).hash_code())
-      throw std::logic_error(format("Unexpected callback data argument "
-                                    "for signal %s", name));
+  if (signalArgTypes[name].empty()) {
+    if (!argTypes.empty())
+      throw std::logic_error(format("Unexpected callback data "
+                                    "arguments for signal %s", name));
   } else {
-    if (argType == typeid(void).hash_code())
-      throw std::logic_error(format("Missing callback data argument "
+    if (argTypes.empty())
+      throw std::logic_error(format("Missing callback data arguments "
                                     "for signal %s", name));
-    if (argType != signalArgTypes[name])
+    if (argTypes != signalArgTypes[name])
       throw std::logic_error(format("Incompatible callback data "
-                                    "argument for signal %s", name));
+                                    "arguments for signal %s", name));
   }
 
   connection = {name, this, obj, callback, comparer};
