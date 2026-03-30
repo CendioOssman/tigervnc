@@ -682,7 +682,7 @@ int main(int argc, char** argv)
       if (dlg.result() != QDialog::Accepted)
         return 1;
 
-      vncServerName = dlg.getServerName().toStdString();
+      vncServerName = dlg.getServerName();
     }
 
     if (strlen(via) > 0) {
