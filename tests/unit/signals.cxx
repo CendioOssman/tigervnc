@@ -1060,8 +1060,6 @@ TYPED_TEST(SignalsArgs, emitConstConversion)
 
   TypeParam value = TestFixture::value;
 
-  GTEST_SKIP() << "Currently broken";
-
   /* Receiver adds pointer const qualifier */
   callCount = 0;
   s.registerSignal<TypeParam*>("consthandler");
