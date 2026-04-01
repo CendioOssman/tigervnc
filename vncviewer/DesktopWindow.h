@@ -104,14 +104,11 @@ private:
 
   void repositionWidgets();
 
-  static void handleClose(Fl_Widget *wnd, void *data);
-
   static void handleOptions(void *data);
 
   static void handleFullscreenTimeout(void *data);
 
   void scrollTo(int x, int y);
-  static void handleScroll(Fl_Widget *wnd, void *data);
   static void handleEdgeScroll(void *data);
 
   static void handleStatsTimeout(void *data);

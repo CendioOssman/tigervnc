@@ -128,7 +128,10 @@ CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
     }
   }
 
-  Fl::add_fd(sock->getFd(), FL_READ | FL_EXCEPT, socketEvent, this);
+  Fl::add_fd(sock->getFd(), FL_READ | FL_EXCEPT,
+             [](FL_SOCKET, void* data) {
+               ((CConn*)data)->socketEvent();
+             }, this);
 
   setServerName(serverHost.c_str());
   setStreams(&sock->inStream(), &sock->outStream());
@@ -241,20 +244,15 @@ unsigned CConn::getPosition()
   return sock->inStream().pos();
 }
 
-void CConn::socketEvent(FL_SOCKET fd, void *data)
+void CConn::socketEvent()
 {
-  CConn *cc;
-
-  assert(data);
-  cc = (CConn*)data;
-
   // Stop monitoring the socket for now and start processing incoming
   // data asynchronously
-  Fl::remove_fd(fd);
-  cc->msgTimer.start(0);
+  Fl::remove_fd(sock->getFd());
+  msgTimer.start(0);
 
   // Coalesce data until we're fully done processing things
-  cc->getOutStream()->cork(true);
+  getOutStream()->cork(true);
 }
 
 void CConn::processNextMsg(Timer*)
@@ -322,7 +320,10 @@ void CConn::processNextMsg(Timer*)
   if (sock->outStream().hasBufferedData())
     when |= FL_WRITE;
 
-  Fl::add_fd(sock->getFd(), when, socketEvent, this);
+  Fl::add_fd(sock->getFd(), when,
+             [](FL_SOCKET, void* data) {
+               ((CConn*)data)->socketEvent();
+             }, this);
 }
 
 ////////////////////// CConnection callback methods //////////////////////
@@ -1227,5 +1228,5 @@ void CConn::handleHostKeyFinished()
 
 void CConn::resumeProcessing()
 {
-  socketEvent(sock->getFd(), this);
+  socketEvent();
 }

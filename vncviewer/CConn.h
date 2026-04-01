@@ -20,8 +20,6 @@
 #ifndef __CCONN_H__
 #define __CCONN_H__
 
-#include <FL/Fl.H>
-
 #include <rfb/CConnection.h>
 #include <rfb/Timer.h>
 
@@ -46,7 +44,7 @@ public:
 
 protected:
   // Callback when socket is ready (or broken)
-  static void socketEvent(FL_SOCKET fd, void *data);
+  void socketEvent();
 
   void processNextMsg(rfb::Timer*);
 

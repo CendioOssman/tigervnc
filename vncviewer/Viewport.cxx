@@ -54,6 +54,7 @@
 
 #include <FL/fl_draw.H>
 
+#include <FL/Fl.H>
 #include <FL/Fl_Menu.H>
 #include <FL/Fl_Menu_Button.H>
 #include <FL/x.H>

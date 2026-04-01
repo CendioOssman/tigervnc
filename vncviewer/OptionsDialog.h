@@ -57,19 +57,19 @@ protected:
   void createDisplayPage(int tx, int ty, int tw, int th);
   void createMiscPage(int tx, int ty, int tw, int th);
 
-  static void handleAutoselect(Fl_Widget *widget, void *data);
-  static void handleCompression(Fl_Widget *widget, void *data);
-  static void handleJpeg(Fl_Widget *widget, void *data);
+  void handleAutoselect();
+  void handleCompression();
+  void handleJpeg();
 
-  static void handleX509(Fl_Widget *widget, void *data);
-  static void handleRSAAES(Fl_Widget *widget, void *data);
+  void handleX509();
+  void handleRSAAES();
 
-  static void handleClipboard(Fl_Widget *widget, void *data);
+  void handleClipboard();
 
-  static void handleFullScreenMode(Fl_Widget *widget, void *data);
+  void handleFullScreenMode();
 
-  static void handleCancel(Fl_Widget *widget, void *data);
-  static void handleOK(Fl_Widget *widget, void *data);
+  void handleCancel();
+  void handleOK();
 
 protected:
   static std::map<OptionsCallback*, void*> callbacks;
