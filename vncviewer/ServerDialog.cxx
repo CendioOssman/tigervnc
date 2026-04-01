@@ -55,6 +55,8 @@ const char* SERVER_HISTORY="tigervnc.history";
 
 ServerDialog::ServerDialog()
   : Fl_Window(450, 0, _("VNC Viewer: Connection Details")),
+  serverName(nullptr), fileChooser(nullptr),
+  saveConflictDialog(nullptr),
   finishedCallback(nullptr), finishedUserData(nullptr)
 {
   int x, y, x2;
@@ -150,6 +152,8 @@ ServerDialog::ServerDialog()
 
 ServerDialog::~ServerDialog()
 {
+  delete fileChooser;
+  delete saveConflictDialog;
 }
 
 
@@ -192,24 +196,33 @@ void ServerDialog::handleLoad()
   if (usedDir.empty())
     usedDir = os::getuserhomedir();
 
-  Fl_File_Chooser* file_chooser = new Fl_File_Chooser(usedDir.c_str(),
-                                                      _("TigerVNC configuration (*.tigervnc)"),
-                                                      0, _("Select a TigerVNC configuration file"));
-  file_chooser->preview(0);
-  file_chooser->previewButton->hide();
-  file_chooser->show();
-  
-  // Block until user picks something.
-  while(file_chooser->shown())
-    Fl::wait();
-  
-  // Did the user hit cancel?
-  if (file_chooser->value() == nullptr) {
-    delete(file_chooser);
-    return;
-  }
-  
-  const char* filename = file_chooser->value();
+  delete fileChooser;
+
+  fileChooser = new Fl_File_Chooser(usedDir.c_str(),
+                                    _("TigerVNC configuration (*.tigervnc)"),
+                                    0, _("Select a TigerVNC configuration file"));
+  fileChooser->preview(0);
+  fileChooser->previewButton->hide();
+  // Fl_File_Chooser is buggy and calls the callback before hiding
+  // when closing on Fl_Enter, hence this convoluted handling
+  fileChooser->callback(
+    [](Fl_File_Chooser*, void* data_) {
+      Fl::add_timeout(
+        0,
+        [](void* data__) {
+          ServerDialog* dialog_ = (ServerDialog*)data__;
+          if (!dialog_->fileChooser->shown())
+            dialog_->handleLoadSelected();
+        },
+        data_);
+    },
+    this);
+  fileChooser->show();
+}
+
+void ServerDialog::handleLoadSelected()
+{
+  const char* filename = fileChooser->value();
   updateUsedDir(filename);
 
   try {
@@ -224,74 +237,89 @@ void ServerDialog::handleLoad()
                              "configuration file:\n\n"
                              "%s"), e.str());
     dlg->set_modal();
+    dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
     dlg->show();
-    while (dlg->shown())
-      Fl::wait();
-    delete dlg;
   }
-
-  delete(file_chooser);
 }
 
 
 void ServerDialog::handleSaveAs()
 { 
-  const char* servername = serverName->value();
-  const char* filename;
   if (usedDir.empty())
     usedDir = os::getuserhomedir();
+
+  delete fileChooser;
+
+  fileChooser = new Fl_File_Chooser(usedDir.c_str(),
+                                    _("TigerVNC configuration (*.tigervnc)"),
+                                    2, _("Save the TigerVNC configuration to file"));
   
-  Fl_File_Chooser* file_chooser = new Fl_File_Chooser(usedDir.c_str(),
-                                                      _("TigerVNC configuration (*.tigervnc)"),
-                                                      2, _("Save the TigerVNC configuration to file"));
-  
-  file_chooser->preview(0);
-  file_chooser->previewButton->hide();
-  file_chooser->show();
-  
-  while(1) {
-    
-    // Block until user picks something.
-    while(file_chooser->shown())
-      Fl::wait();
-    
-    // Did the user hit cancel?
-    if (file_chooser->value() == nullptr) {
-      delete(file_chooser);
-      return;
-    }
-    
-    filename = file_chooser->value();
-    updateUsedDir(filename);
-    
-    FILE* f = fopen(filename, "r");
-    if (f) {
-      // The file already exists.
-      fclose(f);
+  fileChooser->preview(0);
+  fileChooser->previewButton->hide();
+  // Fl_File_Chooser is buggy and calls the callback before hiding
+  // when closing on Fl_Enter, hence this convoluted handling
+  fileChooser->callback(
+    [](Fl_File_Chooser*, void* data_) {
+      Fl::add_timeout(
+        0,
+        [](void* data__) {
+          ServerDialog* dialog_ = (ServerDialog*)data__;
+          if (!dialog_->fileChooser->shown())
+            dialog_->handleSaveAsSelected();
+        },
+        data_);
+    },
+    this);
+  fileChooser->show();
+}
 
-      Fl_Choice_Box* dlg;
+void ServerDialog::handleSaveAsSelected()
+{
+  const char* filename = fileChooser->value();
+  updateUsedDir(filename);
 
-      dlg = new Fl_Choice_Box(_("File already exists"),
-                              _("%s already exists. Do you want to "
-                                "overwrite?"), _("Overwrite"), _("No"),
-                              nullptr, filename);
-      dlg->set_modal();
-      dlg->show();
-      while (dlg->shown())
-        Fl::wait();
-      int overwrite_choice = dlg->result();
-      delete dlg;
+  FILE* f = fopen(filename, "r");
+  if (f) {
+    // The file already exists.
+    fclose(f);
 
-      if (overwrite_choice == 1) {
-        // If the user doesn't want to overwrite:
-        file_chooser->show();
-        continue;
-      }
-    }
-
-    break;
+    saveConflictDialog =
+      new Fl_Choice_Box(_("File already exists"),
+                        _("%s already exists. Do you want to "
+                          "overwrite?"), _("Overwrite"), _("No"),
+                        nullptr, filename);
+    saveConflictDialog->set_modal();
+    saveConflictDialog->finished(
+      [](Fl_Widget*, void* data) {
+        ((ServerDialog*)data)->handleSaveConflict();
+      },
+      this);
+    saveConflictDialog->show();
+    return;
   }
-  
+
+  finishSaveAs();
+}
+
+
+void ServerDialog::handleSaveConflict()
+{
+  Fl::delete_widget(saveConflictDialog);
+
+  if (saveConflictDialog->result() == 1) {
+    // If the user doesn't want to overwrite:
+    fileChooser->show();
+  } else {
+    finishSaveAs();
+  }
+}
+
+
+void ServerDialog::finishSaveAs()
+{
+  const char* servername = serverName->value();
+  const char* filename = fileChooser->value();
+
   try {
     saveViewerParameters(filename, servername);
   } catch (rfb::Exception& e) {
@@ -304,13 +332,9 @@ void ServerDialog::handleSaveAs()
                              "configuration file:\n\n"
                              "%s"), e.str());
     dlg->set_modal();
+    dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
     dlg->show();
-    while (dlg->shown())
-      Fl::wait();
-    delete dlg;
   }
-  
-  delete(file_chooser);
 }
 
 

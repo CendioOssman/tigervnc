@@ -24,6 +24,8 @@
 #include <list>
 
 class Fl_Widget;
+class Fl_Choice_Box;
+class Fl_File_Chooser;
 class Fl_Input_Choice;
 
 class ServerDialog : public Fl_Window {
@@ -42,7 +44,10 @@ public:
 
 protected:
   void handleLoad();
+  void handleLoadSelected();
   void handleSaveAs();
+  void handleSaveAsSelected();
+  void handleSaveConflict();
   void finishSaveAs();
   void handleCancel();
   void handleConnect();
@@ -54,6 +59,8 @@ private:
 
 protected:
   Fl_Input_Choice *serverName;
+  Fl_File_Chooser* fileChooser;
+  Fl_Choice_Box* saveConflictDialog;
   std::list<std::string> serverHistory;
   std::string usedDir;
 
