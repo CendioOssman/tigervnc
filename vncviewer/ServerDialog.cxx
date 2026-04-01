@@ -297,8 +297,8 @@ void ServerDialog::handleSaveAsSelected()
     saveConflictDialog =
       new Fl_Choice_Box(_("File already exists"),
                         _("%s already exists. Do you want to "
-                          "overwrite?"), _("Overwrite"), _("No"),
-                        nullptr, filename);
+                          "overwrite?"), nullptr, _("No"),
+                        _("Overwrite"), filename);
     saveConflictDialog->set_modal();
     saveConflictDialog->finished(
       [](Fl_Widget*, void* data) {
@@ -317,7 +317,7 @@ void ServerDialog::handleSaveConflict()
 {
   Fl::delete_widget(saveConflictDialog);
 
-  if (saveConflictDialog->result() == 1) {
+  if (saveConflictDialog->result() != 2) {
     // If the user doesn't want to overwrite:
     fileChooser->show();
   } else {
