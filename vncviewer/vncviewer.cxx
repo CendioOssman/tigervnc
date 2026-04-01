@@ -285,16 +285,6 @@ potentiallyLoadConfigurationFile(const char *filename)
 }
 
 static void
-migrateDeprecatedOptions()
-{
-  if (fullScreenAllMonitors) {
-    vlog.info(_("FullScreenAllMonitors is deprecated, set FullScreenMode to 'all' instead"));
-
-    fullScreenMode.setParam("all");
-  }
-}
-
-static void
 create_base_dirs()
 {
   const char *dir;
@@ -443,6 +433,9 @@ int main(int argc, char** argv)
     i++;
   }
 
+  // Handle any old settings specified on the command line
+  migrateDeprecatedOptions();
+
 #if !defined(WIN32) && !defined(__APPLE__)
   Display* dpy;
 
@@ -457,8 +450,6 @@ int main(int argc, char** argv)
 
   // Check if the server name in reality is a configuration file
   potentiallyLoadConfigurationFile(vncServerName.c_str());
-
-  migrateDeprecatedOptions();
 
   create_base_dirs();
 

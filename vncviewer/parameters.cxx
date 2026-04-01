@@ -622,6 +622,8 @@ static char* loadFromReg() {
   if (res != ERROR_SUCCESS)
     throw rdr::SystemException(_("Failed to close registry key"), res);
 
+  migrateDeprecatedOptions();
+
   return servername;
 }
 #endif // _WIN32
@@ -853,5 +855,16 @@ char* loadViewerParameters(const char *filename) {
   fclose(f);
   f = nullptr;
 
+  migrateDeprecatedOptions();
+
   return servername;
+}
+
+void migrateDeprecatedOptions()
+{
+  if (fullScreenAllMonitors) {
+    vlog.info(_("FullScreenAllMonitors is deprecated, set FullScreenMode to 'all' instead"));
+
+    fullScreenMode.setParam("all");
+  }
 }
