@@ -41,7 +41,6 @@
 #include <rfb/LogWriter.h>
 #include <rfb/util.h>
 
-#include "appmanager.h"
 #include "ServerDialog.h"
 #include "OptionsDialog.h"
 #include "i18n.h"
@@ -75,8 +74,9 @@ ServerDialog::ServerDialog(QWidget* parent)
   QHBoxLayout* row2 = new QHBoxLayout;
   QPushButton* optionsBtn = new QPushButton(_("Options..."));
   connect(optionsBtn, &QPushButton::clicked, this, [this]() {
-    OptionsDialog* d = new OptionsDialog(isFullScreen(), this);
-    AppManager::instance()->openDialog(d);
+    OptionsDialog* dlg = new OptionsDialog(isFullScreen(), this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->open();
   });
   row2->addWidget(optionsBtn);
   QPushButton* loadBtn = new QPushButton(_("Load..."));

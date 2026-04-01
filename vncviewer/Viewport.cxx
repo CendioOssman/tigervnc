@@ -17,7 +17,6 @@
 #endif
 #include "EmulateMB.h"
 #include "PlatformPixelBuffer.h"
-#include "appmanager.h"
 #include "i18n.h"
 #include "locale.h"
 #include "menukey.h"
@@ -776,8 +775,9 @@ void Viewport::createContextMenu()
     action = new QAction(p_("ContextMenu|", "&Options..."), contextMenu);
     connect(action, &QAction::triggered, this,
             [this]() {
-              OptionsDialog* dlg = new OptionsDialog(isFullScreen(), this);
-              AppManager::instance()->openDialog(dlg);
+              OptionsDialog* dlg = new OptionsDialog(isFullScreen(), window());
+              dlg->setAttribute(Qt::WA_DeleteOnClose);
+              dlg->open();
             });
     contextMenu->addAction(action);
 
@@ -789,7 +789,8 @@ void Viewport::createContextMenu()
                                     _("VNC connection info"),
                                     cc->connectionInfo(),
                                     QMessageBox::Close, this);
-              AppManager::instance()->openDialog(dlg);
+              dlg->setAttribute(Qt::WA_DeleteOnClose);
+              dlg->open();
             });
     contextMenu->addAction(action);
 
