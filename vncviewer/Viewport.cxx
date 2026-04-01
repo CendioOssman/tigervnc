@@ -19,6 +19,7 @@
 #include "PlatformPixelBuffer.h"
 #include "i18n.h"
 #include "locale.h"
+#include "mainloop.h"
 #include "menukey.h"
 #include "vncviewer.h"
 #include "rdr/Exception.h"

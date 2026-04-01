@@ -15,8 +15,8 @@
 #include "OptionsDialog.h"
 #include "toast.h"
 #include "CConn.h"
+#include "mainloop.h"
 #include "viewerconfig.h"
-#include "vncviewer.h"
 
 #include <QApplication>
 #include <QMoveEvent>

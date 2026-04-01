@@ -67,7 +67,7 @@
 #include "i18n.h"
 #include "parameters.h"
 #include "appmanager.h"
-#include "vncviewer.h"
+#include "mainloop.h"
 
 #ifdef __APPLE__
 #include "cocoa.h"

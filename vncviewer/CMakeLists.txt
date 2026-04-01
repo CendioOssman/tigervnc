@@ -79,6 +79,8 @@ set(PROJECT_SOURCES
         keysym2ucs.c
         keysym2ucs.h
         gettext.h
+        mainloop.h
+        mainloop.cxx
         parameters.h
         parameters.cxx
         tunnelfactory.cxx
