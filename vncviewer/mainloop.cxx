@@ -28,6 +28,7 @@
 #include <stdexcept>
 #include <string>
 
+#include <FL/Fl.H>
 #include <FL/fl_ask.H>
 
 #include <core/Exception.h>

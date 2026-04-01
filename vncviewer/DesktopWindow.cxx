@@ -105,12 +105,16 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
   hscroll = new Fl_Scrollbar(0, 0, 0, 0);
   vscroll = new Fl_Scrollbar(0, 0, 0, 0);
   hscroll->type(FL_HORIZONTAL);
+  Fl_Callback* handleScroll = [](Fl_Widget* /*widget*/, void *data) {
+    DesktopWindow *self = (DesktopWindow *)data;
+    self->scrollTo(self->hscroll->value(), self->vscroll->value());
+  };
   hscroll->callback(handleScroll, this);
   vscroll->callback(handleScroll, this);
 
   group->end();
 
-  callback(handleClose, this);
+  callback([](Fl_Widget*, void*) { disconnect(); });
 
   updateCaption();
 
@@ -1569,11 +1573,6 @@ void DesktopWindow::repositionWidgets()
   vscroll->value(vscroll->clamp(vscroll->value()));
 }
 
-void DesktopWindow::handleClose(Fl_Widget* /*wnd*/, void* /*data*/)
-{
-  disconnect();
-}
-
 
 void DesktopWindow::handleOptions(void *data)
 {
@@ -1619,13 +1618,6 @@ void DesktopWindow::scrollTo(int x, int y)
 
   viewport->position(x, y);
   damage(FL_DAMAGE_SCROLL);
-}
-
-void DesktopWindow::handleScroll(Fl_Widget* /*widget*/, void *data)
-{
-  DesktopWindow *self = (DesktopWindow *)data;
-
-  self->scrollTo(self->hscroll->value(), self->vscroll->value());
 }
 
 void DesktopWindow::handleEdgeScroll(void *data)

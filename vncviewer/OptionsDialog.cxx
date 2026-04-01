@@ -105,14 +105,26 @@ OptionsDialog::OptionsDialog()
   y = h() - BUTTON_HEIGHT - OUTER_MARGIN;
 
   button = new Fl_Button(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Cancel"));
-  button->callback(this->handleCancel, this);
+  button->callback(
+    [](Fl_Widget*, void* data) {
+      ((OptionsDialog*)data)->handleCancel();
+    },
+    this);
 
   x += BUTTON_WIDTH + INNER_MARGIN;
 
   button = new Fl_Return_Button(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("OK"));
-  button->callback(this->handleOK, this);
+  button->callback(
+    [](Fl_Widget*, void* data) {
+      ((OptionsDialog*)data)->handleOK();
+    },
+    this);
 
-  callback(this->handleCancel, this);
+  callback(
+    [](Fl_Widget*, void* data) {
+      ((OptionsDialog*)data)->handleCancel();
+    },
+    this);
 
   set_modal();
 
@@ -212,8 +224,8 @@ void OptionsDialog::loadOptions(void)
   digit[0] = '0' + qualityLevel;
   jpegInput->value(digit);
 
-  handleAutoselect(autoselectCheckbox, this);
-  handleCompression(compressionCheckbox, this);
+  handleAutoselect();
+  handleCompression();
 
 #if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
   /* Security */
@@ -308,7 +320,7 @@ void OptionsDialog::loadOptions(void)
   caInput->value(rfb::CSecurityTLS::X509CA);
   crlInput->value(rfb::CSecurityTLS::X509CRL);
 
-  handleX509(encX509Checkbox, this);
+  handleX509();
 #endif
 #endif
 
@@ -337,7 +349,7 @@ void OptionsDialog::loadOptions(void)
   altButton->value(modifierMask & ShortcutHandler::Alt);
   superButton->value(modifierMask & ShortcutHandler::Super);
 
-  handleModifier(nullptr, this);
+  handleModifier();
 
   /* Display */
   if (!fullScreen) {
@@ -354,7 +366,7 @@ void OptionsDialog::loadOptions(void)
 
   monitorArrangement->value(fullScreenSelectedMonitors.getMonitors());
 
-  handleFullScreenMode(selectedMonitorsButton, this);
+  handleFullScreenMode();
 
   /* Misc. */
   sharedCheckbox->value(shared);
@@ -369,7 +381,7 @@ void OptionsDialog::loadOptions(void)
     // Default
     cursorTypeChoice->value(0);
   }
-  handleAlwaysCursor(alwaysCursorCheckbox, this);
+  handleAlwaysCursor();
 }
 
 
@@ -556,7 +568,11 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                                      CHECK_MIN_WIDTH,
                                                      CHECK_HEIGHT,
                                                      _("Auto select")));
-  autoselectCheckbox->callback(handleAutoselect, this);
+  autoselectCheckbox->callback(
+    [](Fl_Widget*, void* data) {
+      ((OptionsDialog*)data)->handleAutoselect();
+    },
+    this);
   ty += CHECK_HEIGHT + INNER_MARGIN;
 
   jpegCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
@@ -697,7 +713,11 @@ void OptionsDialog::createCompressionPage(int tx, int ty, int tw, int th)
                                                        CHECK_HEIGHT,
                                                        _("Custom compression level")));
   compressionCheckbox->labelfont(FL_BOLD);
-  compressionCheckbox->callback(handleCompression, this);
+  compressionCheckbox->callback(
+    [](Fl_Widget*, void* data) {
+      ((OptionsDialog*)data)->handleCompression();
+    },
+    this);
   ty += CHECK_HEIGHT;
   compressionGroup = new Fl_Group(tx, ty, full_width, 0);
   compressionGroup->box(FL_FLAT_BOX);
@@ -802,7 +822,11 @@ void OptionsDialog::createSecurityPage(int tx, int ty, int tw, int th)
                                                    CHECK_MIN_WIDTH,
                                                    CHECK_HEIGHT,
                                                    _("TLS with X509 certificates")));
-    encX509Checkbox->callback(handleX509, this);
+    encX509Checkbox->callback(
+      [](Fl_Widget*, void* data) {
+        ((OptionsDialog*)data)->handleX509();
+      },
+      this);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
 
     ty += INPUT_LABEL_OFFSET;
@@ -824,7 +848,11 @@ void OptionsDialog::createSecurityPage(int tx, int ty, int tw, int th)
                                                      CHECK_MIN_WIDTH,
                                                      CHECK_HEIGHT,
                                                      "RSA-AES"));
-    encRSAAESCheckbox->callback(handleRSAAES, this);
+    encRSAAESCheckbox->callback(
+      [](Fl_Widget*, void* data) {
+        ((OptionsDialog*)data)->handleRSAAES();
+      },
+      this);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
 #endif
   }
@@ -934,7 +962,11 @@ void OptionsDialog::createInputPage(int tx, int ty, int tw, int th)
                                                        CHECK_MIN_WIDTH,
                                                        CHECK_HEIGHT,
                                                        _("Show local cursor when not provided by server")));
-    alwaysCursorCheckbox->callback(handleAlwaysCursor, this);
+    alwaysCursorCheckbox->callback(
+      [](Fl_Widget*, void* data) {
+        ((OptionsDialog*)data)->handleAlwaysCursor();
+      },
+      this);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
 
     /* Cursor type */
@@ -973,7 +1005,11 @@ void OptionsDialog::createInputPage(int tx, int ty, int tw, int th)
     systemKeysCheckbox = new Fl_Check_Button(
       LBLRIGHT(tx, ty, CHECK_MIN_WIDTH, CHECK_HEIGHT,
                _("Always send all keyboard input in full screen")));
-    systemKeysCheckbox->callback(handleSystemKeys, this);
+    systemKeysCheckbox->callback(
+      [](Fl_Widget*, void* data) {
+        ((OptionsDialog*)data)->handleSystemKeys();
+      },
+      this);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
   }
   ty -= TIGHT_MARGIN;
@@ -1002,7 +1038,11 @@ void OptionsDialog::createInputPage(int tx, int ty, int tw, int th)
                                                            CHECK_MIN_WIDTH,
                                                            CHECK_HEIGHT,
                                                            _("Accept clipboard from server")));
-    acceptClipboardCheckbox->callback(handleClipboard, this);
+    acceptClipboardCheckbox->callback(
+      [](Fl_Widget*, void* data) {
+        ((OptionsDialog*)data)->handleClipboard();
+      },
+      this);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
 
 #if !defined(WIN32) && !defined(__APPLE__)
@@ -1017,7 +1057,11 @@ void OptionsDialog::createInputPage(int tx, int ty, int tw, int th)
                                                          CHECK_MIN_WIDTH,
                                                          CHECK_HEIGHT,
                                                          _("Send clipboard to server")));
-    sendClipboardCheckbox->callback(handleClipboard, this);
+    sendClipboardCheckbox->callback(
+      [](Fl_Widget*, void* data) {
+        ((OptionsDialog*)data)->handleClipboard();
+      },
+      this);
     ty += CHECK_HEIGHT + TIGHT_MARGIN;
 
 #if !defined(WIN32) && !defined(__APPLE__)
@@ -1067,7 +1111,11 @@ void OptionsDialog::createShortcutsPage(int tx, int ty, int tw, int th)
                                      * */
                                     width, BUTTON_HEIGHT, _("Ctrl"));
   ctrlButton->selection_color(FL_SELECTION_COLOR);
-  ctrlButton->callback(handleModifier, this);
+  ctrlButton->callback(
+    [](Fl_Widget*, void* data) {
+      ((OptionsDialog*)data)->handleModifier();
+    },
+    this);
   shiftButton = new Fl_Toggle_Button(tx + width + INNER_MARGIN, ty,
                                      /*
                                       * TRANSLATORS: This refers to the
@@ -1075,7 +1123,11 @@ void OptionsDialog::createShortcutsPage(int tx, int ty, int tw, int th)
                                       * */
                                      width, BUTTON_HEIGHT, _("Shift"));
   shiftButton->selection_color(FL_SELECTION_COLOR);
-  shiftButton->callback(handleModifier, this);
+  shiftButton->callback(
+    [](Fl_Widget*, void* data) {
+      ((OptionsDialog*)data)->handleModifier();
+    },
+    this);
   altButton = new Fl_Toggle_Button(tx + width * 2 + INNER_MARGIN * 2, ty,
                                     /*
                                      * TRANSLATORS: This refers to the
@@ -1083,7 +1135,11 @@ void OptionsDialog::createShortcutsPage(int tx, int ty, int tw, int th)
                                      * */
                                    width, BUTTON_HEIGHT, _("Alt"));
   altButton->selection_color(FL_SELECTION_COLOR);
-  altButton->callback(handleModifier, this);
+  altButton->callback(
+    [](Fl_Widget*, void* data) {
+      ((OptionsDialog*)data)->handleModifier();
+    },
+    this);
   superButton = new Fl_Toggle_Button(tx + width * 3 + INNER_MARGIN * 3, ty,
                                      /*
                                       * TRANSLATORS: This refers to the
@@ -1091,7 +1147,11 @@ void OptionsDialog::createShortcutsPage(int tx, int ty, int tw, int th)
                                       * */
                                      width, BUTTON_HEIGHT, _("Win"));
   superButton->selection_color(FL_SELECTION_COLOR);
-  superButton->callback(handleModifier, this);
+  superButton->callback(
+    [](Fl_Widget*, void* data) {
+      ((OptionsDialog*)data)->handleModifier();
+    },
+    this);
 
 #ifdef __APPLE__
   /* TRANSLATORS: This refers to the keyboard key */
@@ -1144,7 +1204,11 @@ void OptionsDialog::createDisplayPage(int tx, int ty, int tw, int th)
                                                   RADIO_HEIGHT,
                                                   _("Windowed")));
     windowedButton->type(FL_RADIO_BUTTON);
-    windowedButton->callback(handleFullScreenMode, this);
+    windowedButton->callback(
+      [](Fl_Widget*, void* data) {
+        ((OptionsDialog*)data)->handleFullScreenMode();
+      },
+      this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
 
     currentMonitorButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
@@ -1152,7 +1216,11 @@ void OptionsDialog::createDisplayPage(int tx, int ty, int tw, int th)
                                                         RADIO_HEIGHT,
                                                         _("Full screen on current monitor")));
     currentMonitorButton->type(FL_RADIO_BUTTON);
-    currentMonitorButton->callback(handleFullScreenMode, this);
+    currentMonitorButton->callback(
+      [](Fl_Widget*, void* data) {
+        ((OptionsDialog*)data)->handleFullScreenMode();
+      },
+      this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
 
     allMonitorsButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
@@ -1160,7 +1228,11 @@ void OptionsDialog::createDisplayPage(int tx, int ty, int tw, int th)
                                             RADIO_HEIGHT,
                                             _("Full screen on all monitors")));
     allMonitorsButton->type(FL_RADIO_BUTTON);
-    allMonitorsButton->callback(handleFullScreenMode, this);
+    allMonitorsButton->callback(
+      [](Fl_Widget*, void* data) {
+        ((OptionsDialog*)data)->handleFullScreenMode();
+      },
+      this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
 
     selectedMonitorsButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
@@ -1168,7 +1240,11 @@ void OptionsDialog::createDisplayPage(int tx, int ty, int tw, int th)
                                                  RADIO_HEIGHT,
                                                  _("Full screen on selected monitor(s)")));
     selectedMonitorsButton->type(FL_RADIO_BUTTON);
-    selectedMonitorsButton->callback(handleFullScreenMode, this);
+    selectedMonitorsButton->callback(
+      [](Fl_Widget*, void* data) {
+        ((OptionsDialog*)data)->handleFullScreenMode();
+      },
+      this);
     ty += RADIO_HEIGHT + TIGHT_MARGIN;
 
     monitorArrangement = new Fl_Monitor_Arrangement(
@@ -1268,44 +1344,38 @@ void OptionsDialog::createMiscPage(int tx, int ty, int tw, int th)
 }
 
 
-void OptionsDialog::handleAutoselect(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleAutoselect()
 {
-  OptionsDialog *dialog = (OptionsDialog*)data;
-
-  if (dialog->autoselectCheckbox->value()) {
-    dialog->encodingGroup->deactivate();
-    dialog->colorlevelGroup->deactivate();
-    dialog->qualityGroup->deactivate();
+  if (autoselectCheckbox->value()) {
+    encodingGroup->deactivate();
+    colorlevelGroup->deactivate();
+    qualityGroup->deactivate();
   } else {
-    dialog->encodingGroup->activate();
-    dialog->colorlevelGroup->activate();
-    dialog->qualityGroup->activate();
+    encodingGroup->activate();
+    colorlevelGroup->activate();
+    qualityGroup->activate();
   }
 }
 
 
-void OptionsDialog::handleCompression(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleCompression()
 {
-  OptionsDialog *dialog = (OptionsDialog*)data;
-
-  if (dialog->compressionCheckbox->value())
-    dialog->compressionInput->activate();
+  if (compressionCheckbox->value())
+    compressionInput->activate();
   else
-    dialog->compressionInput->deactivate();
+    compressionInput->deactivate();
 }
 
 
-void OptionsDialog::handleX509(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleX509()
 {
 #ifdef HAVE_GNUTLS
-  OptionsDialog *dialog = (OptionsDialog*)data;
-
-  if (dialog->encX509Checkbox->value()) {
-    dialog->caInput->activate();
-    dialog->crlInput->activate();
+  if (encX509Checkbox->value()) {
+    caInput->activate();
+    crlInput->activate();
   } else {
-    dialog->caInput->deactivate();
-    dialog->crlInput->deactivate();
+    caInput->deactivate();
+    crlInput->deactivate();
   }
 #else
   (void)data;
@@ -1313,14 +1383,12 @@ void OptionsDialog::handleX509(Fl_Widget* /*widget*/, void *data)
 }
 
 
-void OptionsDialog::handleRSAAES(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleRSAAES()
 {
 #ifdef HAVE_NETTLE
-  OptionsDialog *dialog = (OptionsDialog*)data;
-
-  if (dialog->encRSAAESCheckbox->value()) {
-    dialog->authVncCheckbox->value(true);
-    dialog->authPlainCheckbox->value(true);
+  if (encRSAAESCheckbox->value()) {
+    authVncCheckbox->value(true);
+    authPlainCheckbox->value(true);
   }
 #else
   (void)data;
@@ -1328,54 +1396,46 @@ void OptionsDialog::handleRSAAES(Fl_Widget* /*widget*/, void *data)
 }
 
 
-void OptionsDialog::handleSystemKeys(Fl_Widget* /*widget*/, void* data)
+void OptionsDialog::handleSystemKeys()
 {
 #ifdef __APPLE__
-  OptionsDialog* dialog = (OptionsDialog*)data;
-
   // Pop up the access dialog if needed
-  if (dialog->systemKeysCheckbox->value())
+  if (systemKeysCheckbox->value())
     cocoa_is_trusted(true);
-#else
-  (void)data;
 #endif
 }
 
 
-void OptionsDialog::handleClipboard(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleClipboard()
 {
-  (void)data;
 #if !defined(WIN32) && !defined(__APPLE__)
-  OptionsDialog *dialog = (OptionsDialog*)data;
-
-  if (dialog->acceptClipboardCheckbox->value())
-    dialog->setPrimaryCheckbox->activate();
+  if (acceptClipboardCheckbox->value())
+    setPrimaryCheckbox->activate();
   else
-    dialog->setPrimaryCheckbox->deactivate();
-  if (dialog->sendClipboardCheckbox->value())
-    dialog->sendPrimaryCheckbox->activate();
+    setPrimaryCheckbox->deactivate();
+  if (sendClipboardCheckbox->value())
+    sendPrimaryCheckbox->activate();
   else
-    dialog->sendPrimaryCheckbox->deactivate();
+    sendPrimaryCheckbox->deactivate();
 #endif
 }
 
-void OptionsDialog::handleModifier(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleModifier()
 {
-  OptionsDialog *dialog = (OptionsDialog*)data;
   unsigned mask;
 
   mask = 0;
-  if (dialog->ctrlButton->value())
+  if (ctrlButton->value())
     mask |= ShortcutHandler::Control;
-  if (dialog->shiftButton->value())
+  if (shiftButton->value())
     mask |= ShortcutHandler::Shift;
-  if (dialog->altButton->value())
+  if (altButton->value())
     mask |= ShortcutHandler::Alt;
-  if (dialog->superButton->value())
+  if (superButton->value())
     mask |= ShortcutHandler::Super;
 
   if (mask == 0) {
-    dialog->shortcutsText->copy_label(
+    shortcutsText->copy_label(
       _("All keyboard shortcuts are disabled."));
   } else {
     char prefix[256];
@@ -1410,36 +1470,30 @@ void OptionsDialog::handleModifier(Fl_Widget* /*widget*/, void *data)
         "releasing %s, and press the desired key."),
       prefix_noplus, prefix, prefix_noplus);
 
-    dialog->shortcutsText->copy_label(label.c_str());
+    shortcutsText->copy_label(label.c_str());
   }
 }
 
-void OptionsDialog::handleFullScreenMode(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleFullScreenMode()
 {
-  OptionsDialog *dialog = (OptionsDialog*)data;
-
-  if (dialog->selectedMonitorsButton->value()) {
-    dialog->monitorArrangement->activate();
+  if (selectedMonitorsButton->value()) {
+    monitorArrangement->activate();
   } else {
-    dialog->monitorArrangement->deactivate();
+    monitorArrangement->deactivate();
   }
 }
 
-void OptionsDialog::handleCancel(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleCancel()
 {
-  OptionsDialog *dialog = (OptionsDialog*)data;
-
-  dialog->hide();
+  hide();
 }
 
 
-void OptionsDialog::handleOK(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleOK()
 {
-  OptionsDialog *dialog = (OptionsDialog*)data;
+  hide();
 
-  dialog->hide();
-
-  dialog->storeOptions();
+  storeOptions();
 }
 
 int OptionsDialog::fltk_event_handler(int event)
@@ -1467,13 +1521,11 @@ void OptionsDialog::handleScreenConfigTimeout(void *data)
     self->monitorArrangement->value(fullScreenSelectedMonitors.getMonitors());
 }
 
-void OptionsDialog::handleAlwaysCursor(Fl_Widget* /*widget*/, void *data)
+void OptionsDialog::handleAlwaysCursor()
 {
-  OptionsDialog *dialog = (OptionsDialog*)data;
-
-  if (dialog->alwaysCursorCheckbox->value()) {
-    dialog->cursorTypeChoice->activate();
+  if (alwaysCursorCheckbox->value()) {
+    cursorTypeChoice->activate();
   } else {
-    dialog->cursorTypeChoice->deactivate();
+    cursorTypeChoice->deactivate();
   }
 }

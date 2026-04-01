@@ -43,19 +43,18 @@ public:
   void setServerName(const char* servername);
 
 protected:
-  static void handleOptions(Fl_Widget *widget, void *data);
-  static void handleLoad(Fl_Widget *widget, void *data);
-  static void handleSaveAs(Fl_Widget *widget, void *data);
-  static void handleAbout(Fl_Widget *widget, void *data);
-  static void handleCancel(Fl_Widget *widget, void *data);
-  static void handleConnect(Fl_Widget *widget, void *data);
+  void handleLoad();
+  void handleSaveAs();
+  void finishSaveAs();
+  void handleCancel();
+  void handleConnect();
 
 private:
   void loadServerHistory();
   void saveServerHistory();
   void updateUsedDir(const char* filename);
 
-  static void onServerHistoryRemove(Fl_Widget*, std::string s, void* data);
+  void onServerHistoryRemove(std::string s);
   static std::string serverHistoryNormalize(const std::string s);
 
 protected:

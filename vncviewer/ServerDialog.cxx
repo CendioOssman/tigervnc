@@ -76,7 +76,11 @@ ServerDialog::ServerDialog()
   serverName = new Fl_Suggestion_Input(
     LBLLEFT(x, y, w() - OUTER_MARGIN*2, INPUT_HEIGHT, _("VNC server:")), {}
   );
-  serverName->call_on_remove(onServerHistoryRemove, this);
+  serverName->call_on_remove(
+    [](Fl_Widget*, std::string s, void* data) {
+      ((ServerDialog*)data)->onServerHistoryRemove(s);
+    },
+    this);
   serverName->call_to_normalize(serverHistoryNormalize);
 
   y += INPUT_HEIGHT + INNER_MARGIN;
@@ -84,15 +88,24 @@ ServerDialog::ServerDialog()
   x2 = x;
 
   button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Options..."));
-  button->callback(this->handleOptions, this);
+  button->callback(
+    [](Fl_Widget*, void*) { OptionsDialog::showDialog(); }, this);
   x2 += BUTTON_WIDTH + INNER_MARGIN;
 
   button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Load..."));
-  button->callback(this->handleLoad, this);
+  button->callback(
+    [](Fl_Widget*, void* data) {
+      ((ServerDialog*)data)->handleLoad();
+    },
+    this);
   x2 += BUTTON_WIDTH + INNER_MARGIN;
 
   button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Save as..."));
-  button->callback(this->handleSaveAs, this);
+  button->callback(
+    [](Fl_Widget*, void* data) {
+      ((ServerDialog*)data)->handleSaveAs();
+    },
+    this);
   x2 += BUTTON_WIDTH + INNER_MARGIN;
 
   y += BUTTON_HEIGHT + INNER_MARGIN;
@@ -106,16 +119,24 @@ ServerDialog::ServerDialog()
   y += OUTER_MARGIN - INNER_MARGIN;
 
   button = new Fl_Button(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("About..."));
-  button->callback(this->handleAbout, this);
+  button->callback([](Fl_Widget*, void*) { about_vncviewer(); }, this);
 
   x2 = w() - OUTER_MARGIN - BUTTON_WIDTH*2 - INNER_MARGIN*1;
 
   button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Cancel"));
-  button->callback(this->handleCancel, this);
+  button->callback(
+    [](Fl_Widget*, void* data) {
+      ((ServerDialog*)data)->handleCancel();
+    },
+    this);
   x2 += BUTTON_WIDTH + INNER_MARGIN;
 
   button = new Fl_Return_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Connect"));
-  button->callback(this->handleConnect, this);
+  button->callback(
+    [](Fl_Widget*, void* data) {
+      ((ServerDialog*)data)->handleConnect();
+    },
+    this);
   x2 += BUTTON_WIDTH + INNER_MARGIN;
 
   y += BUTTON_HEIGHT + INNER_MARGIN;
@@ -124,7 +145,10 @@ ServerDialog::ServerDialog()
   resizable(nullptr);
   h(y-INNER_MARGIN+OUTER_MARGIN);
 
-  callback(this->handleCancel, this);
+  callback(
+    [](Fl_Widget*, void* data) {
+      ((ServerDialog*)data)->handleCancel();
+    }, this);
 
   try {
     loadServerHistory();
@@ -174,20 +198,12 @@ void ServerDialog::setServerName(const char* servername)
 }
 
 
-void ServerDialog::handleOptions(Fl_Widget* /*widget*/, void* /*data*/)
+void ServerDialog::handleLoad()
 {
-  OptionsDialog::showDialog();
-}
+  if (usedDir.empty())
+    usedDir = core::getuserhomedir();
 
-
-void ServerDialog::handleLoad(Fl_Widget* /*widget*/, void* data)
-{
-  ServerDialog *dialog = (ServerDialog*)data;
-
-  if (dialog->usedDir.empty())
-    dialog->usedDir = core::getuserhomedir();
-
-  Fl_File_Chooser* file_chooser = new Fl_File_Chooser(dialog->usedDir.c_str(),
+  Fl_File_Chooser* file_chooser = new Fl_File_Chooser(usedDir.c_str(),
                                                       _("TigerVNC configuration (*.tigervnc)"),
                                                       0, _("Select a TigerVNC configuration file"));
   file_chooser->preview(0);
@@ -205,10 +221,10 @@ void ServerDialog::handleLoad(Fl_Widget* /*widget*/, void* data)
   }
   
   const char* filename = file_chooser->value();
-  dialog->updateUsedDir(filename);
+  updateUsedDir(filename);
 
   try {
-    dialog->serverName->value(loadViewerParameters(filename).c_str());
+    serverName->value(loadViewerParameters(filename).c_str());
   } catch (std::exception& e) {
     Fl_Alert_Box* dlg;
 
@@ -229,15 +245,14 @@ void ServerDialog::handleLoad(Fl_Widget* /*widget*/, void* data)
 }
 
 
-void ServerDialog::handleSaveAs(Fl_Widget* /*widget*/, void* data)
+void ServerDialog::handleSaveAs()
 { 
-  ServerDialog *dialog = (ServerDialog*)data;
-  const char* servername = dialog->serverName->value();
+  const char* servername = serverName->value();
   const char* filename;
-  if (dialog->usedDir.empty())
-    dialog->usedDir = core::getuserhomedir();
+  if (usedDir.empty())
+    usedDir = core::getuserhomedir();
   
-  Fl_File_Chooser* file_chooser = new Fl_File_Chooser(dialog->usedDir.c_str(),
+  Fl_File_Chooser* file_chooser = new Fl_File_Chooser(usedDir.c_str(),
                                                       _("TigerVNC configuration (*.tigervnc)"),
                                                       2, _("Save the TigerVNC configuration to file"));
   
@@ -258,7 +273,7 @@ void ServerDialog::handleSaveAs(Fl_Widget* /*widget*/, void* data)
     }
     
     filename = file_chooser->value();
-    dialog->updateUsedDir(filename);
+    updateUsedDir(filename);
     
     FILE* f = fopen(filename, "r");
     if (f) {
@@ -310,27 +325,18 @@ void ServerDialog::handleSaveAs(Fl_Widget* /*widget*/, void* data)
 }
 
 
-void ServerDialog::handleAbout(Fl_Widget* /*widget*/, void* /*data*/)
+void ServerDialog::handleCancel()
 {
-  about_vncviewer();
+  result_ = 0;
+  hide();
 }
 
 
-void ServerDialog::handleCancel(Fl_Widget* /*widget*/, void* data)
+void ServerDialog::handleConnect()
 {
-  ServerDialog *dialog = (ServerDialog*)data;
+  const char* servername = serverName->value();
 
-  dialog->result_ = 0;
-  dialog->hide();
-}
-
-
-void ServerDialog::handleConnect(Fl_Widget* /*widget*/, void *data)
-{
-  ServerDialog *dialog = (ServerDialog*)data;
-  const char* servername = dialog->serverName->value();
-
-  dialog->result_ = 1;
+  result_ = 1;
 
   try {
     saveViewerParameters(nullptr, servername);
@@ -340,16 +346,16 @@ void ServerDialog::handleConnect(Fl_Widget* /*widget*/, void *data)
   }
 
   // avoid duplicates in the history
-  dialog->serverHistory.remove(servername);
-  dialog->serverHistory.insert(dialog->serverHistory.begin(), servername);
+  serverHistory.remove(servername);
+  serverHistory.insert(serverHistory.begin(), servername);
 
   try {
-    dialog->saveServerHistory();
+    saveServerHistory();
   } catch (std::exception& e) {
     vlog.error(_("Unable to save the server history: %s"), e.what());
   }
 
-  dialog->hide();
+  hide();
 }
 
 
@@ -505,11 +511,10 @@ void ServerDialog::updateUsedDir(const char* filename)
   free(name);
 }
 
-void ServerDialog::onServerHistoryRemove(Fl_Widget*, std::string s, void* data)
+void ServerDialog::onServerHistoryRemove(std::string s)
 {
-  ServerDialog *dialog = (ServerDialog*)data;
-  dialog->serverHistory.remove(s);
-  dialog->saveServerHistory();
+  serverHistory.remove(s);
+  saveServerHistory();
 }
 
 std::string ServerDialog::serverHistoryNormalize(const std::string s)
