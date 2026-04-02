@@ -401,18 +401,6 @@ int main(int argc, char** argv)
   // Handle any old settings specified on the command line
   migrateDeprecatedOptions();
 
-#if !defined(WIN32) && !defined(__APPLE__)
-  Display* dpy;
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  dpy = QX11Info::display();
-#else
-  dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
-#endif
-
-  XkbSetDetectableAutoRepeat(dpy, True, nullptr);
-#endif
-
   create_base_dirs();
 
   return mainloop(configServerName.c_str(), cmdlineServerName.c_str());
