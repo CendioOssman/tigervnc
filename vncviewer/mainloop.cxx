@@ -197,11 +197,6 @@ static void stop_connection()
   qApp->quit();
 }
 
-static void run_mainloop()
-{
-  qApp->exec();
-}
-
 static bool is_path(const char *maybe)
 {
   if (strchr(maybe, '/') != nullptr)
@@ -390,7 +385,7 @@ int mainloop(const char* configServerName_,
 
   QTimer::singleShot(0, load_cmdline_config);
 
-  run_mainloop();
+  qApp->exec();
 
   // Clean up CConn on fatal errors
   if (cc != nullptr)
