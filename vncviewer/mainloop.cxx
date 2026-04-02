@@ -27,6 +27,7 @@
 
 #include <QApplication>
 #include <QMessageBox>
+#include <QSocketNotifier>
 #include <QTimer>
 
 #include <rdr/Exception.h>
@@ -40,7 +41,6 @@
 
 #include "CConn.h"
 #include "ServerDialog.h"
-#include "appmanager.h"
 #include "i18n.h"
 #include "mainloop.h"
 #include "parameters.h"
@@ -49,24 +49,36 @@
 using namespace network;
 using namespace rfb;
 
-static bool inMainloop = false;
 static std::string exitError;
-static bool fatalError = false;
 static bool disconnecting = false;
+
+static std::string configServerName;
+static std::string cmdlineServerName;
 
 static std::string vncServerName;
 static network::Socket* sock = nullptr;
 static CConn* cc = nullptr;
 
+static std::list<SocketListener*> listeners;
+static std::list<QSocketNotifier*> listenNotifiers;
+
+static TunnelFactory* tunnelFactory = nullptr;
+
 static rfb::LogWriter vlog("mainloop");
+
+static void abort_startup(const char *error, ...)
+  __attribute__((__format__ (__printf__, 1, 2)));
 
 static void start_connection();
 static void stop_connection();
 
-void abort_vncviewer(const char *error, ...)
-{
-  fatalError = true;
+static void load_cmdline_config();
+static void setup_listen();
+static void start_server_dialog();
+static void setup_via();
 
+static void abort_startup(const char *error, ...)
+{
   // Prioritise the first error we get as that is probably the most
   // relevant one.
   if (exitError.empty()) {
@@ -77,25 +89,21 @@ void abort_vncviewer(const char *error, ...)
     va_end(ap);
   }
 
-  if (inMainloop) {
-    qApp->quit();
+  if (alertOnFatalError) {
+    QMessageBox* dlg;
+
+    dlg = new QMessageBox(QMessageBox::Critical, _("Error"),
+                          exitError.c_str(), QMessageBox::Close);
+    QObject::connect(dlg, &QDialog::finished, []() { qApp->quit(); });
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->open();
   } else {
-    // We're early in the startup. Assume we can just exit().
-    if (alertOnFatalError) {
-      QMessageBox* d = new QMessageBox(QMessageBox::Critical,
-                                      _("Error"),
-                                      exitError.c_str(),
-                                      QMessageBox::Close);
-      AppManager::instance()->openDialog(d);
-    }
-    exit(EXIT_FAILURE);
+    qApp->quit();
   }
 }
 
 void abort_connection(const char *error, ...)
 {
-  assert(inMainloop);
-
   // Prioritise the first error we get as that is probably the most
   // relevant one.
   if (exitError.empty()) {
@@ -160,36 +168,30 @@ static void stop_connection()
 
   if(reconnectOnError && (sock == nullptr)) {
     std::string text;
+    QMessageBox* dlg;
+
     text = format(_("%s\n\nAttempt to reconnect?"),
                   exitError.c_str());
-
-    QMessageBox* d = new QMessageBox(QMessageBox::Critical,
-                                      _("Connection error"),
-                                      text.c_str(),
-                                      QMessageBox::NoButton);
-    d->addButton(_("Reconnect"), QMessageBox::AcceptRole);
-    d->addButton(QMessageBox::Close);
-
-    d->exec();
-    QMessageBox::ButtonRole clickedButtonRole = d->buttonRole(d->clickedButton());
-    delete d;
-    exitError.clear();
-    if (clickedButtonRole == QMessageBox::AcceptRole) {
-      QTimer::singleShot(0, start_connection);
-      return;
-    } else {
-      qApp->quit();
-      return;
-    }
+    dlg = new QMessageBox(QMessageBox::Critical, _("Connection error"),
+                          text.c_str(), QMessageBox::NoButton);
+    dlg->addButton(_("Reconnect"), QMessageBox::AcceptRole);
+    dlg->addButton(QMessageBox::Close);
+    QObject::connect(dlg, &QDialog::accepted, start_connection);
+    QObject::connect(dlg, &QDialog::rejected, []() { qApp->quit(); });
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->open();
+    return;
   }
 
   if (alertOnFatalError) {
-    QMessageBox* d = new QMessageBox(QMessageBox::Critical,
-                                    _("Connection error"),
-                                    exitError.c_str(),
-                                    QMessageBox::Close);
-    d->exec();
-    delete d;
+    QMessageBox* dlg;
+
+    dlg = new QMessageBox(QMessageBox::Critical, _("Connection error"),
+                          exitError.c_str(), QMessageBox::Close);
+    QObject::connect(dlg, &QDialog::finished, []() { qApp->quit(); });
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->open();
+    return;
   }
 
   qApp->quit();
@@ -197,157 +199,196 @@ static void stop_connection()
 
 static void run_mainloop()
 {
-  inMainloop = true;
-
   qApp->exec();
-
-  if (fatalError) {
-    assert(!exitError.empty());
-    if (alertOnFatalError) {
-      QMessageBox* d = new QMessageBox(QMessageBox::Critical,
-                                      _("Connection error"),
-                                      exitError.c_str(),
-                                      QMessageBox::Close);
-      d->exec();
-      delete d;
-    }
-  }
-
-  inMainloop = false;
 }
 
-static void
-potentiallyLoadConfigurationFile(const char *filename)
+static bool is_path(const char *maybe)
 {
-  const bool hasPathSeparator = (strchr(filename, '/') != nullptr ||
-                                 (strchr(filename, '\\')) != nullptr);
+  if (strchr(maybe, '/') != nullptr)
+    return true;
+  if (strchr(maybe, '\\') != nullptr)
+    return true;
 
-  if (hasPathSeparator) {
+  return false;
+}
+
+static bool is_unix_socket(const char *filename)
+{
 #ifndef WIN32
-    struct stat sb;
+  struct stat sb;
 
-    // This might be a UNIX socket, we need to check
-    if (stat(filename, &sb) == -1) {
-      // Some access problem; let loadViewerParameters() deal with it...
-    } else {
-      if ((sb.st_mode & S_IFMT) == S_IFSOCK)
-        return;
-    }
+  // This might be a UNIX socket, we need to check
+  if (stat(filename, &sb) == -1) {
+    // Some access problem; let loadViewerParameters() deal with it...
+  } else {
+    if ((sb.st_mode & S_IFMT) == S_IFSOCK)
+      return true;
+  }
+#else
+  (void)filename;
 #endif
 
-    try {
-      // The server name might be empty, but we still need to clear it
-      // so we don't try to connect to the filename
-      vncServerName = loadViewerParameters(filename);
-    } catch (rfb::Exception& e) {
-      vlog.error("%s", e.str());
-      abort_vncviewer(_("Unable to load the specified configuration "
-                        "file:\n\n%s"), e.str());
-    }
-  }
+  return false;
 }
 
-int mainloop(const char* configServerName,
-             const char* cmdlineServerName)
+static void load_cmdline_config()
 {
-  vncServerName = cmdlineServerName;
+  // Check if the server name in reality is a configuration file
+  if (is_path(cmdlineServerName.c_str()) &&
+      !is_unix_socket(cmdlineServerName.c_str())) {
+    try {
+      vncServerName = loadViewerParameters(cmdlineServerName.c_str());
+    } catch (rfb::Exception& e) {
+      vlog.error("%s", e.str());
+      abort_startup(_("Unable to load the specified configuration "
+                      "file:\n\n%s"), e.str());
+      return;
+    }
+  } else {
+    vncServerName = cmdlineServerName;
+  }
 
-  potentiallyLoadConfigurationFile(vncServerName.c_str());
+  if (listenMode)
+    QTimer::singleShot(0, setup_listen);
+  else if (vncServerName.empty())
+    QTimer::singleShot(0, start_server_dialog);
+  else if (strlen(via) > 0)
+    QTimer::singleShot(0, setup_via);
+  else
+    QTimer::singleShot(0, start_connection);
+}
+
+static void handle_connection(int socket)
+{
+  SocketListener* listener = nullptr;
+
+  for (SocketListener* l : listeners) {
+    if (l->getFd() == socket) {
+      listener = l;
+      break;
+    }
+  }
+
+  assert(listener);
+
+  try {
+    sock = listener->accept();
+    if (!sock)
+      return;
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_startup(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str());
+    /* Continue for cleanup */
+  }
+
+  while (!listenNotifiers.empty()) {
+    delete listenNotifiers.back();
+    listenNotifiers.pop_back();
+  }
+
+  while (!listeners.empty()) {
+    delete listeners.back();
+    listeners.pop_back();
+  }
+
+  if (sock)
+    QTimer::singleShot(0, start_connection);
+}
+
+static void setup_listen()
+{
+  assert(listenMode);
 
   /* Specifying -via and -listen together is nonsense */
-  if (listenMode && strlen(via) > 0) {
+  if (strlen(via) > 0) {
     // TRANSLATORS: "Parameters" are command line arguments, or settings
     // from a file or the Windows registry.
     vlog.error(_("Parameters -listen and -via are incompatible"));
-    abort_vncviewer(_("Parameters -listen and -via are incompatible"));
-    return 1; /* Not reached */
+    abort_startup(_("Parameters -listen and -via are incompatible"));
+    return;
   }
 
-  TunnelFactory* tunnelFactory = nullptr;
+  try {
+    int port = 5500;
+    if (!cmdlineServerName.empty() &&
+        isdigit(cmdlineServerName[0]))
+      port = atoi(cmdlineServerName.c_str());
 
-  if (listenMode) {
-    std::list<SocketListener*> listeners;
-    try {
-      int port = 5500;
-      if (!vncServerName.empty() && isdigit(vncServerName[0]))
-        port = atoi(vncServerName.c_str());
+    createTcpListeners(&listeners, nullptr, port);
+    if (listeners.empty())
+      throw Exception(_("Unable to listen for incoming connections"));
 
-      createTcpListeners(&listeners, nullptr, port);
-      if (listeners.empty())
-        throw Exception(_("Unable to listen for incoming connections"));
-
-      vlog.info(_("Listening on port %d"), port);
-
-      /* Wait for a connection */
-      while (sock == nullptr) {
-        fd_set rfds;
-        FD_ZERO(&rfds);
-        for (SocketListener* listener : listeners)
-          FD_SET(listener->getFd(), &rfds);
-
-        int n = select(FD_SETSIZE, &rfds, nullptr, nullptr, nullptr);
-        if (n < 0) {
-          if (errno == EINTR) {
-            vlog.debug("Interrupted select() system call");
-            continue;
-          } else {
-            throw rdr::SystemException("select", errno);
-          }
-        }
-
-        for (SocketListener* listener : listeners)
-          if (FD_ISSET(listener->getFd(), &rfds)) {
-            sock = listener->accept();
-            if (sock)
-              /* Got a connection */
-              break;
-          }
-      }
-    } catch (rdr::Exception& e) {
-      vlog.error("%s", e.str());
-      abort_vncviewer(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str());
-      return 1; /* Not reached */
-    }
-
-    while (!listeners.empty()) {
-      delete listeners.back();
-      listeners.pop_back();
-    }
-  } else {
-    if (vncServerName.empty()) {
-      ServerDialog dlg;
-
-      dlg.setServerName(configServerName);
-
-      QObject::connect(&dlg, &ServerDialog::finished, []() { qApp->quit(); });
-      dlg.open();
-
-      qApp->exec();
-
-      if (dlg.result() != QDialog::Accepted)
-        return 1;
-
-      vncServerName = dlg.getServerName();
-    }
-
-    if (strlen(via) > 0) {
-      const char *gatewayHost;
-      std::string remoteHost;
-      int localPort = findFreeTcpPort();
-      int remotePort;
-
-      getHostAndPort(vncServerName.c_str(), &remoteHost, &remotePort);
-      vncServerName = format("localhost::%d", localPort);
-      gatewayHost = (const char*)via;
-
-      tunnelFactory = new TunnelFactory(gatewayHost, remoteHost.c_str(),
-                                        remotePort, localPort);
-      tunnelFactory->start();
-      tunnelFactory->wait(QDeadlineTimer(20000));
-    }
+    vlog.info(_("Listening on port %d"), port);
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_startup(_("Failure waiting for incoming VNC connection:\n\n%s"), e.str());
+    return;
   }
+
+  /* Wait for a connection */
+  for (SocketListener* listener : listeners) {
+    QSocketNotifier* notifier;
+
+    notifier =
+      new QSocketNotifier(listener->getFd(), QSocketNotifier::Read);
+    listenNotifiers.push_back(notifier);
+    QObject::connect(notifier, &QSocketNotifier::activated,
+                     handle_connection);
+  }
+}
+
+static void server_dialog_finished(ServerDialog* dialog)
+{
+  vncServerName = dialog->getServerName();
+
+  if (strlen(via) > 0)
+    QTimer::singleShot(0, setup_via);
+  else
+    QTimer::singleShot(0, start_connection);
+}
+
+static void start_server_dialog()
+{
+  ServerDialog* dialog;
+
+  dialog = new ServerDialog();
+  dialog->setServerName(configServerName.c_str());
+
+  QObject::connect(dialog, &ServerDialog::accepted,
+                   [dialog]() { server_dialog_finished(dialog); });
+  QObject::connect(dialog, &ServerDialog::rejected,
+                   []() { qApp->quit(); });
+
+  dialog->setAttribute(Qt::WA_DeleteOnClose);
+  dialog->open();
+}
+
+static void setup_via()
+{
+  const char *gatewayHost;
+  std::string remoteHost;
+  int localPort = findFreeTcpPort();
+  int remotePort;
+
+  getHostAndPort(vncServerName.c_str(), &remoteHost, &remotePort);
+  vncServerName = format("localhost::%d", localPort);
+  gatewayHost = (const char*)via;
+
+  tunnelFactory = new TunnelFactory(gatewayHost, remoteHost.c_str(),
+                                    remotePort, localPort);
+  tunnelFactory->start();
+  tunnelFactory->wait(QDeadlineTimer(20000));
 
   QTimer::singleShot(0, start_connection);
+}
+
+int mainloop(const char* configServerName_,
+             const char* cmdlineServerName_)
+{
+  configServerName = configServerName_;
+  cmdlineServerName = cmdlineServerName_;
+
+  QTimer::singleShot(0, load_cmdline_config);
 
   run_mainloop();
 
@@ -357,5 +398,5 @@ int mainloop(const char* configServerName,
 
   delete tunnelFactory;
 
-  return 0;
+  return exitError.empty() ? 0 : 1;
 }
