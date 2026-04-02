@@ -3,7 +3,6 @@
 #endif
 
 #include "KeyboardMacOS.h"
-#include "appmanager.h"
 #include "cocoa.h"
 #include "rfb/LogWriter.h"
 #include "vncmacview.h"

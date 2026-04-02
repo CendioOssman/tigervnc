@@ -69,8 +69,6 @@ endif()
 
 set(PROJECT_SOURCES
         vncviewer.cxx
-        appmanager.h
-        appmanager.cxx
         Keyboard.h
         DesktopWindow.cxx
         DesktopWindow.h

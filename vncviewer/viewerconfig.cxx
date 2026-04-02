@@ -28,7 +28,6 @@
 #endif
 #endif
 
-#include "appmanager.h"
 #include "parameters.h"
 #include "rfb/Configuration.h"
 #include "rfb/LogWriter.h"

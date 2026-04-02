@@ -66,7 +66,6 @@
 #include "PlatformPixelBuffer.h"
 #include "i18n.h"
 #include "parameters.h"
-#include "appmanager.h"
 #include "mainloop.h"
 
 #ifdef __APPLE__

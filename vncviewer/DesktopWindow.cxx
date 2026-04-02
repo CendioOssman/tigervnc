@@ -5,7 +5,6 @@
 #endif
 
 #include "Viewport.h"
-#include "appmanager.h"
 #include "i18n.h"
 #include "parameters.h"
 #include "rdr/Exception.h"

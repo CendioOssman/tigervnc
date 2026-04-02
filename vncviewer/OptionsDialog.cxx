@@ -22,7 +22,6 @@
 
 #include "OptionsDialog.h"
 
-#include "appmanager.h"
 #include "OptionsCompression.h"
 #include "OptionsDisplay.h"
 #include "OptionsInput.h"

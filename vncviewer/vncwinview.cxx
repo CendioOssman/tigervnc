@@ -13,7 +13,6 @@
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
 #include "KeyboardWin32.h"
-#include "appmanager.h"
 #include "rfb/LogWriter.h"
 #include "vncwinview.h"
 

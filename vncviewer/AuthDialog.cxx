@@ -30,7 +30,6 @@
 #include <qlayout.h>
 
 #include "AuthDialog.h"
-#include "appmanager.h"
 #include "i18n.h"
 
 AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
