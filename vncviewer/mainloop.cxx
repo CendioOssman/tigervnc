@@ -27,6 +27,7 @@
 
 #include <QApplication>
 #include <QMessageBox>
+#include <QTimer>
 
 #include <rdr/Exception.h>
 
@@ -48,14 +49,19 @@
 using namespace network;
 using namespace rfb;
 
-static std::string vncServerName;
-
 static bool inMainloop = false;
-static bool exitMainloop = false;
 static std::string exitError;
 static bool fatalError = false;
+static bool disconnecting = false;
+
+static std::string vncServerName;
+static network::Socket* sock = nullptr;
+static CConn* cc = nullptr;
 
 static rfb::LogWriter vlog("mainloop");
+
+static void start_connection();
+static void stop_connection();
 
 void abort_vncviewer(const char *error, ...)
 {
@@ -72,7 +78,6 @@ void abort_vncviewer(const char *error, ...)
   }
 
   if (inMainloop) {
-    exitMainloop = true;
     qApp->quit();
   } else {
     // We're early in the startup. Assume we can just exit().
@@ -101,8 +106,10 @@ void abort_connection(const char *error, ...)
     va_end(ap);
   }
 
-  exitMainloop = true;
-  qApp->quit();
+  if (!disconnecting) {
+    disconnecting = true;
+    QTimer::singleShot(0, stop_connection);
+  }
 }
 
 void abort_connection_unexpected(const rdr::Exception &e)
@@ -125,64 +132,77 @@ void abort_connection_unexpected(const char *error, ...)
 
 void disconnect()
 {
-  exitMainloop = true;
+  if (!disconnecting) {
+    disconnecting = true;
+    QTimer::singleShot(0, stop_connection);
+  }
+}
+
+static void start_connection()
+{
+  assert(cc == nullptr);
+  cc = new CConn(vncServerName.c_str(), sock);
+}
+
+static void stop_connection()
+{
+  assert(cc != nullptr);
+
+  disconnecting = false;
+
+  delete cc;
+  cc = nullptr;
+
+  if (exitError.empty()) {
+    qApp->quit();
+    return;
+  }
+
+  if(reconnectOnError && (sock == nullptr)) {
+    std::string text;
+    text = format(_("%s\n\nAttempt to reconnect?"),
+                  exitError.c_str());
+
+    QMessageBox* d = new QMessageBox(QMessageBox::Critical,
+                                      _("Connection error"),
+                                      text.c_str(),
+                                      QMessageBox::NoButton);
+    d->addButton(_("Reconnect"), QMessageBox::AcceptRole);
+    d->addButton(QMessageBox::Close);
+
+    d->exec();
+    QMessageBox::ButtonRole clickedButtonRole = d->buttonRole(d->clickedButton());
+    delete d;
+    exitError.clear();
+    if (clickedButtonRole == QMessageBox::AcceptRole) {
+      QTimer::singleShot(0, start_connection);
+      return;
+    } else {
+      qApp->quit();
+      return;
+    }
+  }
+
+  if (alertOnFatalError) {
+    QMessageBox* d = new QMessageBox(QMessageBox::Critical,
+                                    _("Connection error"),
+                                    exitError.c_str(),
+                                    QMessageBox::Close);
+    d->exec();
+    delete d;
+  }
+
   qApp->quit();
 }
 
-static void run_mainloop(const char* vncserver, network::Socket* sock)
+static void run_mainloop()
 {
   inMainloop = true;
 
-  while (true) {
-    CConn *cc;
+  qApp->exec();
 
-    exitMainloop = false;
-
-    cc = new CConn(vncserver, sock);
-
-    if (!exitMainloop)
-      qApp->exec();
-
-    delete cc;
-
-    if (fatalError) {
-      assert(!exitError.empty());
-      if (alertOnFatalError) {
-        QMessageBox* d = new QMessageBox(QMessageBox::Critical,
-                                        _("Connection error"),
-                                        exitError.c_str(),
-                                        QMessageBox::Close);
-        d->exec();
-        delete d;
-      }
-      break;
-    }
-
-    if (exitError.empty())
-      break;
-
-    if(reconnectOnError && (sock == nullptr)) {
-      std::string text;
-      text = format(_("%s\n\nAttempt to reconnect?"),
-                    exitError.c_str());
-
-      QMessageBox* d = new QMessageBox(QMessageBox::Critical,
-                                       _("Connection error"),
-                                       text.c_str(),
-                                       QMessageBox::NoButton);
-      d->addButton(_("Reconnect"), QMessageBox::AcceptRole);
-      d->addButton(QMessageBox::Close);
-
-      d->exec();
-      QMessageBox::ButtonRole clickedButtonRole = d->buttonRole(d->clickedButton());
-      delete d;
-      exitError.clear();
-      if (clickedButtonRole == QMessageBox::AcceptRole)
-        continue;
-      else
-        break;
-    }
-
+  if (fatalError) {
+    assert(!exitError.empty());
     if (alertOnFatalError) {
       QMessageBox* d = new QMessageBox(QMessageBox::Critical,
                                       _("Connection error"),
@@ -191,8 +211,6 @@ static void run_mainloop(const char* vncserver, network::Socket* sock)
       d->exec();
       delete d;
     }
-
-    break;
   }
 
   inMainloop = false;
@@ -229,12 +247,9 @@ potentiallyLoadConfigurationFile(const char *filename)
   }
 }
 
-// Establish a connection and run it until completion
 int mainloop(const char* configServerName,
              const char* cmdlineServerName)
 {
-  Socket *sock = nullptr;
-
   vncServerName = cmdlineServerName;
 
   potentiallyLoadConfigurationFile(vncServerName.c_str());
@@ -332,7 +347,13 @@ int mainloop(const char* configServerName,
     }
   }
 
-  run_mainloop(vncServerName.c_str(), sock);
+  QTimer::singleShot(0, start_connection);
+
+  run_mainloop();
+
+  // Clean up CConn on fatal errors
+  if (cc != nullptr)
+    delete cc;
 
   delete tunnelFactory;
 
