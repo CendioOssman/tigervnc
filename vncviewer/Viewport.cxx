@@ -1,4 +1,21 @@
-#include "Viewport.h"
+/* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
+ * Copyright 2011-2021 Pierre Ossman for Cendio AB
+ * 
+ * This is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this software; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+ * USA.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -10,31 +27,6 @@
 // QAction must be included before X headers to avoid symbol comflicts.
 #include <QAction>
 // clang-format on
-
-#include "Keyboard.h"
-#ifdef __APPLE__
-#include "KeyboardMacOS.h"
-#endif
-#include "EmulateMB.h"
-#include "PlatformPixelBuffer.h"
-#include "i18n.h"
-#include "locale.h"
-#include "mainloop.h"
-#include "menukey.h"
-#include "vncviewer.h"
-#include "rdr/Exception.h"
-#include "rfb/CMsgWriter.h"
-#include "rfb/LogWriter.h"
-#include "rfb/ServerParams.h"
-#include "rfb/ledStates.h"
-#include "rfb/util.h"
-#include "CConn.h"
-#include "clicksalternativegesture.h"
-#include "clicksalternativegesturerecognizer.h"
-#include "panzoomgesture.h"
-#include "panzoomgesturerecognizer.h"
-#include "tapdraggesture.h"
-#include "tapdraggesturerecognizer.h"
 
 #include <QAbstractEventDispatcher>
 #include <QApplication>
@@ -53,22 +45,50 @@
 #include <QMimeData>
 #include <QGestureRecognizer>
 #include <QGesture>
-#include "parameters.h"
-#include "DesktopWindow.h"
-#include "OptionsDialog.h"
+
+#include <rfb/CMsgWriter.h>
+#include <rfb/LogWriter.h>
+#include <rfb/Exception.h>
+#include <rfb/ServerParams.h>
+#include <rfb/ledStates.h>
+#include <rfb/util.h>
 
 #define XK_LATIN1
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
-#include "rfb/keysymdef.h"
+#include <rfb/keysymdef.h>
+
+#include "Viewport.h"
+#include "CConn.h"
+#include "OptionsDialog.h"
+#include "DesktopWindow.h"
+#include "Keyboard.h"
+#ifdef __APPLE__
+#include "KeyboardMacOS.h"
+#endif
+#include "EmulateMB.h"
+#include "i18n.h"
+#include "locale.h"
+#include "mainloop.h"
+#include "parameters.h"
+#include "menukey.h"
+#include "vncviewer.h"
+#include "clicksalternativegesture.h"
+#include "clicksalternativegesturerecognizer.h"
+#include "panzoomgesture.h"
+#include "panzoomgesturerecognizer.h"
+#include "tapdraggesture.h"
+#include "tapdraggesturerecognizer.h"
+
+#include "PlatformPixelBuffer.h"
 
 #undef KeyPress
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
 #include "cocoa.h"
 #endif
 
-static rfb::LogWriter vlog("VNCView");
+static rfb::LogWriter vlog("Viewport");
 
 // Used for fake key presses from the menu
 static const int FAKE_CTRL_KEY_CODE = 0x10001;
@@ -83,10 +103,18 @@ static const int FAKE_GESTURE_KEY_CODE = 0x20001;
 
 Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
   : QWidget(parent, f)
-  , mousePointerTimer(new QTimer(this))
-  , cursor(nullptr)
   , cc(cc_)
+  , firstUpdate(true)
   , delayedInitializeTimer(new QTimer(this))
+  , lastButtonMask(0)
+  , mousePointerTimer(new QTimer(this))
+  , keyboard(nullptr)
+  , firstLEDState(true)
+  , pendingClientClipboard(false)
+  , contextMenu(nullptr)
+  , menuCtrlKey(false)
+  , menuAltKey(false)
+  , cursor(nullptr)
 #ifdef QT_DEBUG
   , fpsTimer(this)
 #endif
@@ -283,9 +311,10 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
 
 Viewport::~Viewport()
 {
-  removeKeyboardHandler();
-  delete contextMenu;
   delete cursor;
+
+  removeKeyboardHandler();
+
   for (auto gr : gestureRecognizers.keys()) {
     QGestureRecognizer::unregisterRecognizer(gr);
   }
@@ -315,6 +344,16 @@ void Viewport::updateWindow()
   }
 }
 
+static const char * dotcursor_xpm[] = {
+  "5 5 2 1",
+  ".	c #000000",
+  " 	c #FFFFFF",
+  "     ",
+  " ... ",
+  " ... ",
+  " ... ",
+  "     "};
+
 void Viewport::setCursor(int width, int height,
                          const rfb::Point& hotspot,
                          const uint8_t* pixels)
@@ -328,15 +367,6 @@ void Viewport::setCursor(int width, int height,
   }
   if (emptyCursor) {
     if (::dotWhenNoCursor) {
-      static const char * dotcursor_xpm[] = {
-        "5 5 2 1",
-        ".	c #000000",
-        " 	c #FFFFFF",
-        "     ",
-        " ... ",
-        " ... ",
-        " ... ",
-        "     "};
       delete cursor;
       cursor = new QCursor(QPixmap(dotcursor_xpm), 2, 2);
     }
@@ -358,6 +388,19 @@ void Viewport::setCursor(int width, int height,
   QWidget::setCursor(*cursor);
 }
 
+void Viewport::setCursorPos(const rfb::Point& pos)
+{
+  vlog.debug("Viewport::setCursorPos mouseGrabbed=%d", mouseGrabbed);
+  if (!mouseGrabbed) {
+    // Do nothing if we do not have the mouse captured.
+    return;
+  }
+  QPoint gp = mapToGlobal(localPointAdjust(QPoint(pos.x, pos.y)));
+  vlog.debug("Viewport::setCursorPos local x=%d y=%d", pos.x, pos.y);
+  vlog.debug("Viewport::setCursorPos screen x=%d y=%d", gp.x(), gp.y());
+  QCursor::setPos(gp.x(), gp.y());
+}
+
 void Viewport::handleClipboardRequest()
 {
   vlog.debug("Viewport::handleClipboardRequest: %s", pendingClientData.toStdString().c_str());
@@ -368,25 +411,21 @@ void Viewport::handleClipboardRequest()
 
 void Viewport::handleClipboardAnnounce(bool available)
 {
-  vlog.debug("Viewport::handleClipboardAnnounce: available=%d", available);
-
-  if (!::acceptClipboard)
+  if (!acceptClipboard)
     return;
 
   if (!available) {
     vlog.debug("Clipboard is no longer available on server");
-    pendingServerClipboard = false;
+    return;
+  }
+
+  if (!hasFocus()) {
+    vlog.debug("Got notification of new clipboard on server whilst not focused, ignoring");
     return;
   }
 
   pendingClientClipboard = false;
   pendingClientData = "";
-
-  if (!hasFocus()) {
-    vlog.debug("Got notification of new clipboard on server whilst not focused, will request data later");
-    pendingServerClipboard = true;
-    return;
-  }
 
   vlog.debug("Got notification of new clipboard on server, requesting data");
   cc->requestClipboard();
@@ -394,69 +433,152 @@ void Viewport::handleClipboardAnnounce(bool available)
 
 void Viewport::handleClipboardData(const char* cbdata)
 {
-  vlog.debug("Viewport::handleClipboardData: %s", cbdata);
-  vlog.debug("Got clipboard data (%d bytes)", (int)strlen(cbdata));
+  size_t len;
+
+  if (!hasFocus())
+    return;
+
+  len = strlen(cbdata);
+
+  vlog.debug("Got clipboard data (%d bytes)", (int)len);
+
+  // RFB doesn't have separate selection and clipboard concepts, so we
+  // dump the data into both variants.
 #ifdef __APPLE__
   serverReceivedData = cbdata;
 #endif
   QGuiApplication::clipboard()->setText(cbdata);
 #if !defined(WIN32) && !defined(__APPLE__)
-  if (::setPrimary)
+  if (setPrimary)
     QGuiApplication::clipboard()->setText(cbdata, QClipboard::Mode::Selection);
 #endif
 }
 
-void Viewport::setLEDState(unsigned int state)
+void Viewport::setLEDState(unsigned int ledState)
 {
-  vlog.debug("QVNCConnection::ledStateChanged");
+  vlog.debug("Got server LED state: 0x%08x", ledState);
+
   // The first message is just considered to be the server announcing
   // support for this extension. We will push our state to sync up the
   // server when we get focus. If we already have focus we need to push
   // it here though.
   if (firstLEDState) {
     firstLEDState = false;
-    if (hasFocus()) {
-      vlog.debug("KeyboardHandler::pushLEDState");
+    if (hasFocus())
       pushLEDState();
-    }
-  } else if (hasFocus()) {
-    vlog.debug("KeyboardHandler::setLEDState");
-    keyboardHandler->setLEDState(state);
+    return;
   }
+
+  if (!hasFocus())
+    return;
+
+  keyboard->setLEDState(ledState);
 }
 
 void Viewport::pushLEDState()
 {
-  unsigned int state;
+  unsigned int ledState;
 
   // Server support?
   if (cc->server.ledState() == rfb::ledUnknown)
     return;
 
-  state = keyboardHandler->getLEDState();
-  if (state == rfb::ledUnknown)
+  ledState = keyboard->getLEDState();
+  if (ledState == rfb::ledUnknown)
     return;
 
 #if defined(__APPLE__)
   // No support for Scroll Lock //
-  state |= (cc->server.ledState() & rfb::ledScrollLock);
+  ledState |= (cc->server.ledState() & rfb::ledScrollLock);
 #endif
 
-  if ((state & rfb::ledCapsLock) != (cc->server.ledState() & rfb::ledCapsLock)) {
+  if ((ledState & rfb::ledCapsLock) != (cc->server.ledState() & rfb::ledCapsLock)) {
     vlog.debug("Inserting fake CapsLock to get in sync with server");
     handleKeyPress(FAKE_KEY_CODE, 0x3a, XK_Caps_Lock);
     handleKeyRelease(FAKE_KEY_CODE);
   }
-  if ((state & rfb::ledNumLock) != (cc->server.ledState() & rfb::ledNumLock)) {
+  if ((ledState & rfb::ledNumLock) != (cc->server.ledState() & rfb::ledNumLock)) {
     vlog.debug("Inserting fake NumLock to get in sync with server");
     handleKeyPress(FAKE_KEY_CODE, 0x45, XK_Num_Lock);
     handleKeyRelease(FAKE_KEY_CODE);
   }
-  if ((state & rfb::ledScrollLock) != (cc->server.ledState() & rfb::ledScrollLock)) {
+  if ((ledState & rfb::ledScrollLock) != (cc->server.ledState() & rfb::ledScrollLock)) {
     vlog.debug("Inserting fake ScrollLock to get in sync with server");
     handleKeyPress(FAKE_KEY_CODE, 0x46, XK_Scroll_Lock);
     handleKeyRelease(FAKE_KEY_CODE);
   }
+}
+
+void Viewport::resize(int width, int height)
+{
+  vlog.debug("Viewport::resize size=(%d, %d)", width, height);
+  if (this->width() == width && this->height() == height) {
+    vlog.debug("Viewport::resize ignored");
+    return;
+  }
+  QWidget::resize(width, height);
+}
+
+void Viewport::resizeFramebuffer(int new_w, int new_h)
+{
+  pixmap = QPixmap(new_w, new_h);
+  damage = QRegion(0, 0, pixmap.width(), pixmap.height());
+  vlog.debug("Viewport::bufferResized pixmapSize=(%d, %d) size=(%d, %d)",
+              pixmap.size().width(), pixmap.size().height(), width(), height());
+  emit bufferResized(width(), height(), new_w, new_h);
+  resize(new_w, new_h);
+}
+
+void Viewport::giveKeyboardFocus()
+{
+  vlog.debug("Viewport::giveKeyboardFocus");
+  if (qApp->activeModalWidget()) {
+    vlog.debug("Viewport::giveKeyboardFocus activeModalWidget=%s", qApp->activeModalWidget()->metaObject()->className());
+  }
+  if (keyboard && !qApp->activeModalWidget()) {
+    installKeyboardHandler();
+
+    flushPendingClipboard();
+
+    // We may have gotten our lock keys out of sync with the server
+    // whilst we didn't have focus. Try to sort this out.
+    vlog.debug("KeyboardHandler::pushLEDState");
+    pushLEDState();
+
+    // Resend Ctrl/Alt if needed
+    if (menuCtrlKey)
+      handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+    if (menuAltKey)
+      handleKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+  }
+}
+
+QPoint Viewport::localPointAdjust(QPoint p)
+{
+  p.rx() += (width() - pixmap.width()) / 2;
+  p.ry() += (height() - pixmap.height()) / 2;
+  return p;
+}
+
+QRect Viewport::localRectAdjust(QRect r)
+{
+  return r.adjusted((width() - pixmap.width()) / 2,
+                    (height() - pixmap.height()) / 2,
+                    (width() - pixmap.width()) / 2,
+                    (height() - pixmap.height()) / 2);
+}
+
+QRect Viewport::remoteRectAdjust(QRect r)
+{
+  return r.adjusted(-(width() - pixmap.width()) / 2,
+                    -(height() - pixmap.height()) / 2,
+                    -(width() - pixmap.width()) / 2,
+                    -(height() - pixmap.height()) / 2);
+}
+
+rfb::Point Viewport::remotePointAdjust(const rfb::Point& pos)
+{
+  return rfb::Point(pos.x - (width() - pixmap.width()) / 2, pos.y - (height() - pixmap.height()) / 2);
 }
 
 void Viewport::paintEvent(QPaintEvent* event)
@@ -518,473 +640,6 @@ void Viewport::paintEvent(QPaintEvent* event)
 #endif
 
   setAttribute(Qt::WA_OpaquePaintEvent, true);
-}
-
-void Viewport::resize(int width, int height)
-{
-  vlog.debug("Viewport::resize size=(%d, %d)", width, height);
-  if (this->width() == width && this->height() == height) {
-    vlog.debug("Viewport::resize ignored");
-    return;
-  }
-  QWidget::resize(width, height);
-}
-
-bool Viewport::event(QEvent *event)
-{
-  switch (event->type()) {
-  case QEvent::WindowActivate:
-    vlog.debug("Viewport::WindowActivate");
-    break;
-  case QEvent::WindowDeactivate:
-    vlog.debug("Viewport::WindowDeactivate");
-    ungrabPointer();
-    break;
-  case QEvent::CursorChange:
-    event->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
-    return true;
-  case QEvent::Gesture:
-    return gestureEvent(reinterpret_cast<QGestureEvent*>(event));
-  default:
-    break;
-  }
-  return QWidget::event(event);
-}
-
-void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
-{
-  if (::viewOnly) {
-    return;
-  }
-  bool instantPosting = ::pointerEventInterval == 0 || (buttonMask != lastButtonMask);
-  lastPointerPos = remotePointAdjust(pos);
-  lastButtonMask = buttonMask;
-  if (instantPosting) {
-    try {
-      cc->writer()->writePointerEvent(pos, buttonMask);
-    } catch (rdr::Exception& e) {
-      abort_connection_unexpected(e);
-    }
-  } else {
-    if (!mousePointerTimer->isActive()) {
-      mousePointerTimer->start();
-    }
-  }
-}
-
-bool Viewport::hasFocus()
-{
-  return QWidget::hasFocus() || isActiveWindow();
-}
-
-void Viewport::handleClipboardChange(QClipboard::Mode mode)
-{
-  vlog.debug("Viewport::handleClipboardChange: mode=%d", mode);
-  vlog.debug("Viewport::handleClipboardChange: text=%s", QGuiApplication::clipboard()->text(mode).toStdString().c_str());
-  vlog.debug("Viewport::handleClipboardChange: ownsClipboard=%d", QGuiApplication::clipboard()->ownsClipboard());
-  vlog.debug("Viewport::handleClipboardChange: hasText=%d", QGuiApplication::clipboard()->mimeData(mode)->hasText());
-
-  if (!::sendClipboard) {
-    return;
-  }
-
-#if !defined(WIN32) && !defined(__APPLE__)
-  if (mode == QClipboard::Mode::Selection && !::sendPrimary) {
-    return;
-  }
-#endif
-
-  if(mode == QClipboard::Mode::Clipboard && QGuiApplication::clipboard()->ownsClipboard()) {
-    return;
-  }
-
-  if(mode == QClipboard::Mode::Selection && QGuiApplication::clipboard()->ownsSelection()) {
-    return;
-  }
-
-  if (!QGuiApplication::clipboard()->mimeData(mode)->hasText()) {
-    return;
-  }
-
-#ifdef __APPLE__
-  if (QGuiApplication::clipboard()->text(mode) == serverReceivedData) {
-    serverReceivedData = "";
-    return;
-  }
-#endif
-
-  pendingServerClipboard = false;
-  pendingClientData = QGuiApplication::clipboard()->text(mode);
-
-  if (!hasFocus()) {
-    vlog.debug("Local clipboard changed whilst not focused, will notify server later");
-    pendingClientClipboard = true;
-    // Clear any older client clipboard from the server
-    cc->announceClipboard(false);
-    return;
-  }
-
-  vlog.debug("Local clipboard changed, notifying server");
-  cc->announceClipboard(true);
-}
-
-void Viewport::flushPendingClipboard()
-{
-  if (pendingServerClipboard) {
-    vlog.debug("Focus regained after remote clipboard change, requesting data");
-    cc->requestClipboard();
-  }
-
-  if (pendingClientClipboard) {
-    vlog.debug("Focus regained after local clipboard change, notifying server");
-    cc->announceClipboard(true);
-  }
-
-  pendingServerClipboard = false;
-  pendingClientClipboard = false;
-}
-
-void Viewport::resetKeyboard()
-{
-  cc->releaseAllKeys();
-  if (keyboardHandler)
-    keyboardHandler->reset();
-}
-
-void Viewport::handleKeyPress(int systemKeyCode,
-                              uint32_t keyCode, uint32_t keySym)
-{
-  static bool menuRecursion = false;
-  int menuKeyCode;
-  quint32 menuKeySym;
-  ::getMenuKey(&menuKeyCode, &menuKeySym);
-
-  // Prevent recursion if the menu wants to send its own
-  // activation key.
-  if (menuKeySym && keySym == menuKeySym && !menuRecursion) {
-    menuRecursion = true;
-    toggleContextMenu();
-    menuRecursion = false;
-    return;
-  }
-
-  if (viewOnly)
-    return;
-
-  cc->sendKeyPress(systemKeyCode, keyCode, keySym);
-}
-
-void Viewport::handleKeyRelease(int systemKeyCode)
-{
-  if (viewOnly)
-    return;
-
-  cc->sendKeyRelease(systemKeyCode);
-}
-
-void Viewport::createContextMenu()
-{
-  if (!contextMenu) {
-    QAction* action;
-
-    contextMenu = new QMenu(this);
-
-    action = new QAction(p_("ContextMenu|", "Dis&connect"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            []() {
-              QApplication::quit();
-            });
-    contextMenu->addAction(action);
-
-    contextMenu->addSeparator();
-
-    action = new QAction(p_("ContextMenu|", "&Full screen"), contextMenu);
-    action->setCheckable(true);
-    connect(action, &QAction::triggered, this,
-            [this](bool checked) {
-              ((DesktopWindow*)window())->fullscreen(checked);
-            });
-    action->setChecked(::fullScreen);
-    connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      action->setChecked(((DesktopWindow*)window())->isFullscreenEnabled());
-    });
-    contextMenu->addAction(action);
-
-    action = new QAction(p_("ContextMenu|", "Minimi&ze"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              window()->showMinimized();
-            });
-    contextMenu->addAction(action);
-
-    action = new QAction(p_("ContextMenu|", "Resize &window to session"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              window()->resize(pixmapSize().width(), pixmapSize().height());
-            });
-    contextMenu->addAction(action);
-
-    contextMenu->addSeparator();
-
-    action = new QAction(p_("ContextMenu|", "&Ctrl"), contextMenu);
-    action->setCheckable(true);
-    connect(action, &QAction::triggered, this,
-            [this](bool checked) {
-              toggleKey(checked, FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-            });
-    contextMenu->addAction(action);
-
-    action = new QAction(p_("ContextMenu|", "&Alt"), contextMenu);
-    action->setCheckable(true);
-    connect(action, &QAction::triggered, this,
-            [this](bool checked) {
-              toggleKey(checked, FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-            });
-    contextMenu->addAction(action);
-
-    action = new QAction(contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              sendContextMenuKey();
-            });
-    connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      std::string text;
-      text = rfb::format(p_("ContextMenu|", "Send %s"),
-                         ::menuKey.getValueStr().c_str());
-      action->setText(text.c_str());
-    });
-    contextMenu->addAction(action);
-
-    action = new QAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              sendCtrlAltDel();
-            });
-    contextMenu->addAction(action);
-
-    contextMenu->addSeparator();
-
-    action = new QAction(p_("ContextMenu|", "&Refresh screen"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              cc->refreshFramebuffer();
-            });
-    contextMenu->addAction(action);
-
-    contextMenu->addSeparator();
-
-    action = new QAction(p_("ContextMenu|", "&Options..."), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              OptionsDialog* dlg = new OptionsDialog(isFullScreen(), window());
-              dlg->setAttribute(Qt::WA_DeleteOnClose);
-              dlg->open();
-            });
-    contextMenu->addAction(action);
-
-    action = new QAction(p_("ContextMenu|", "Connection &info..."), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              QMessageBox* dlg;
-              dlg = new QMessageBox(QMessageBox::Information,
-                                    _("VNC connection info"),
-                                    cc->connectionInfo(),
-                                    QMessageBox::Close, this);
-              dlg->setAttribute(Qt::WA_DeleteOnClose);
-              dlg->open();
-            });
-    contextMenu->addAction(action);
-
-    action = new QAction(p_("ContextMenu|", "About &TigerVNC viewer..."), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              about_vncviewer(this);
-            });
-    contextMenu->addAction(action);
-
-    contextMenu->installEventFilter(this);
-  }
-}
-
-bool Viewport::isVisibleContextMenu() const
-{
-  return contextMenu && contextMenu->isVisible();
-}
-
-void Viewport::sendContextMenuKey()
-{
-  vlog.debug("Viewport::sendContextMenuKey");
-  if (::viewOnly) {
-    return;
-  }
-  int keyCode;
-  quint32 keySym;
-  ::getMenuKey(&keyCode, &keySym);
-  handleKeyPress(FAKE_KEY_CODE, keyCode, keySym);
-  handleKeyRelease(FAKE_KEY_CODE);
-  contextMenu->hide();
-}
-
-void Viewport::toggleContextMenu()
-{
-  if (isVisibleContextMenu()) {
-    contextMenu->hide();
-  } else {
-    createContextMenu();
-    contextMenu->exec(QCursor::pos());
-    contextMenu->setFocus();
-  }
-}
-
-void Viewport::sendCtrlAltDel()
-{
-  handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-  handleKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-  handleKeyPress(FAKE_DEL_KEY_CODE, 0xd3, XK_Delete);
-  handleKeyRelease(FAKE_DEL_KEY_CODE);
-  handleKeyRelease(FAKE_ALT_KEY_CODE);
-  handleKeyRelease(FAKE_CTRL_KEY_CODE);
-}
-
-void Viewport::toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint32 keySym)
-{
-  if (toggle) {
-    handleKeyPress(systemKeyCode, keyCode, keySym);
-  } else {
-    handleKeyRelease(systemKeyCode);
-  }
-  if (keySym == XK_Control_L) {
-    menuCtrlKey = toggle;
-  } else if (keySym == XK_Alt_L) {
-    menuAltKey = toggle;
-  }
-}
-
-// As QMenu eventFilter
-bool Viewport::eventFilter(QObject* obj, QEvent* event)
-{
-  if (event->type() == QEvent::KeyPress) {
-    QKeyEvent* e = static_cast<QKeyEvent*>(event);
-    if (isVisibleContextMenu()) {
-      QString str = ::getMenuKeyQString();
-      if (!str.isEmpty() && QKeySequence(e->key()).toString() == str) {
-        sendContextMenuKey();
-        return true;
-      }
-    }
-  }
-  return QWidget::eventFilter(obj, event);
-}
-
-void Viewport::initKeyboardHandler()
-{
-  installKeyboardHandler();
-}
-
-void Viewport::installKeyboardHandler()
-{
-  vlog.debug("Viewport::installKeyboardHandler");
-  QAbstractEventDispatcher::instance()->installNativeEventFilter(this);
-}
-
-void Viewport::removeKeyboardHandler()
-{
-  vlog.debug("Viewport::removeNativeEventFilter");
-  QAbstractEventDispatcher::instance()->removeNativeEventFilter(this);
-}
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, long*)
-#else
-bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, qintptr*)
-#endif
-{
-  bool consumed;
-
-#ifdef __APPLE__
-  // Special event that means we temporarily lost some input
-  if (KeyboardMacOS::isKeyboardSync(eventType, message)) {
-    resetKeyboard();
-    return true;
-  }
-#endif
-
-  consumed = keyboardHandler->handleEvent(eventType, message);
-  if (consumed)
-    return true;
-
-  return false;
-}
-
-void Viewport::resizeFramebuffer(int new_w, int new_h)
-{
-  pixmap = QPixmap(new_w, new_h);
-  damage = QRegion(0, 0, pixmap.width(), pixmap.height());
-  vlog.debug("Viewport::bufferResized pixmapSize=(%d, %d) size=(%d, %d)",
-              pixmap.size().width(), pixmap.size().height(), width(), height());
-  emit bufferResized(width(), height(), new_w, new_h);
-  resize(new_w, new_h);
-}
-
-void Viewport::setCursorPos(const rfb::Point& pos)
-{
-  vlog.debug("Viewport::setCursorPos mouseGrabbed=%d", mouseGrabbed);
-  if (!mouseGrabbed) {
-    // Do nothing if we do not have the mouse captured.
-    return;
-  }
-  QPoint gp = mapToGlobal(localPointAdjust(QPoint(pos.x, pos.y)));
-  vlog.debug("Viewport::setCursorPos local x=%d y=%d", pos.x, pos.y);
-  vlog.debug("Viewport::setCursorPos screen x=%d y=%d", gp.x(), gp.y());
-  QCursor::setPos(gp.x(), gp.y());
-}
-
-void Viewport::maybeGrabPointer()
-{
-  vlog.debug("Viewport::maybeGrabPointer");
-  if (::fullscreenSystemKeys && ((DesktopWindow*)window())->allowKeyboardGrab() && hasFocus()) {
-    grabPointer();
-  }
-}
-
-void Viewport::grabPointer()
-{
-  vlog.debug("Viewport::grabPointer");
-  activateWindow();
-  mouseGrabbed = true;
-}
-
-void Viewport::ungrabPointer()
-{
-  mouseGrabbed = false;
-}
-
-QPoint Viewport::localPointAdjust(QPoint p)
-{
-  p.rx() += (width() - pixmap.width()) / 2;
-  p.ry() += (height() - pixmap.height()) / 2;
-  return p;
-}
-
-QRect Viewport::localRectAdjust(QRect r)
-{
-  return r.adjusted((width() - pixmap.width()) / 2,
-                    (height() - pixmap.height()) / 2,
-                    (width() - pixmap.width()) / 2,
-                    (height() - pixmap.height()) / 2);
-}
-
-QRect Viewport::remoteRectAdjust(QRect r)
-{
-  return r.adjusted(-(width() - pixmap.width()) / 2,
-                    -(height() - pixmap.height()) / 2,
-                    -(width() - pixmap.width()) / 2,
-                    -(height() - pixmap.height()) / 2);
-}
-
-rfb::Point Viewport::remotePointAdjust(const rfb::Point& pos)
-{
-  return rfb::Point(pos.x - (width() - pixmap.width()) / 2, pos.y - (height() - pixmap.height()) / 2);
 }
 
 #ifdef QT_DEBUG
@@ -1128,32 +783,6 @@ void Viewport::wheelEvent(QWheelEvent* event)
   event->accept();
 }
 
-void Viewport::giveKeyboardFocus()
-{
-  vlog.debug("Viewport::giveKeyboardFocus");
-  if (qApp->activeModalWidget()) {
-    vlog.debug("Viewport::giveKeyboardFocus activeModalWidget=%s", qApp->activeModalWidget()->metaObject()->className());
-  }
-  if (keyboardHandler && !qApp->activeModalWidget()) {
-    installKeyboardHandler();
-
-    flushPendingClipboard();
-
-           // We may have gotten our lock keys out of sync with the server
-           // whilst we didn't have focus. Try to sort this out.
-    vlog.debug("KeyboardHandler::pushLEDState");
-    pushLEDState();
-
-           // Resend Ctrl/Alt if needed
-    if (menuCtrlKey) {
-      handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-    }
-    if (menuAltKey) {
-      handleKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-    }
-  }
-}
-
 void Viewport::focusInEvent(QFocusEvent* event)
 {
   vlog.debug("Viewport::focusInEvent");
@@ -1201,6 +830,141 @@ void Viewport::leaveEvent(QEvent *event)
   QWidget::leaveEvent(event);
 }
 
+bool Viewport::event(QEvent *event)
+{
+  switch (event->type()) {
+  case QEvent::WindowActivate:
+    vlog.debug("Viewport::WindowActivate");
+    break;
+  case QEvent::WindowDeactivate:
+    vlog.debug("Viewport::WindowDeactivate");
+    ungrabPointer();
+    break;
+  case QEvent::CursorChange:
+    event->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
+    return true;
+  case QEvent::Gesture:
+    return gestureEvent(reinterpret_cast<QGestureEvent*>(event));
+  default:
+    break;
+  }
+  return QWidget::event(event);
+}
+
+void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
+{
+  if (viewOnly)
+      return;
+
+  if ((pointerEventInterval == 0) || (buttonMask != lastButtonMask)) {
+    try {
+      cc->writer()->writePointerEvent(pos, buttonMask);
+    } catch (rdr::Exception& e) {
+      vlog.error("%s", e.str());
+      abort_connection_unexpected(e);
+    }
+  } else {
+    if (!mousePointerTimer->isActive()) {
+      mousePointerTimer->start();
+    }
+  }
+  lastPointerPos = remotePointAdjust(pos);
+  lastButtonMask = buttonMask;
+}
+
+bool Viewport::hasFocus()
+{
+  return QWidget::hasFocus() || isActiveWindow();
+}
+
+void Viewport::handleClipboardChange(QClipboard::Mode mode)
+{
+  vlog.debug("Viewport::handleClipboardChange: mode=%d", mode);
+  vlog.debug("Viewport::handleClipboardChange: text=%s", QGuiApplication::clipboard()->text(mode).toStdString().c_str());
+  vlog.debug("Viewport::handleClipboardChange: ownsClipboard=%d", QGuiApplication::clipboard()->ownsClipboard());
+  vlog.debug("Viewport::handleClipboardChange: hasText=%d", QGuiApplication::clipboard()->mimeData(mode)->hasText());
+
+  if (!sendClipboard)
+    return;
+
+#if !defined(WIN32) && !defined(__APPLE__)
+  if (!sendPrimary && (mode == QClipboard::Mode::Selection))
+    return;
+#endif
+
+  if(mode == QClipboard::Mode::Clipboard && QGuiApplication::clipboard()->ownsClipboard()) {
+    return;
+  }
+
+  if(mode == QClipboard::Mode::Selection && QGuiApplication::clipboard()->ownsSelection()) {
+    return;
+  }
+
+  if (!QGuiApplication::clipboard()->mimeData(mode)->hasText()) {
+    return;
+  }
+
+#ifdef __APPLE__
+  if (QGuiApplication::clipboard()->text(mode) == serverReceivedData) {
+    serverReceivedData = "";
+    return;
+  }
+#endif
+
+  pendingClientData = QGuiApplication::clipboard()->text(mode);
+
+  if (!hasFocus()) {
+    vlog.debug("Local clipboard changed whilst not focused, will notify server later");
+    pendingClientClipboard = true;
+    // Clear any older client clipboard from the server
+    cc->announceClipboard(false);
+    return;
+  }
+
+  vlog.debug("Local clipboard changed, notifying server");
+  try {
+    cc->announceClipboard(true);
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_connection_unexpected(e);
+  }
+}
+
+void Viewport::flushPendingClipboard()
+{
+  if (pendingClientClipboard) {
+    vlog.debug("Focus regained after local clipboard change, notifying server");
+    try {
+      cc->announceClipboard(true);
+    } catch (rdr::Exception& e) {
+      vlog.error("%s", e.str());
+      abort_connection_unexpected(e);
+    }
+  }
+
+  pendingClientClipboard = false;
+}
+
+void Viewport::maybeGrabPointer()
+{
+  vlog.debug("Viewport::maybeGrabPointer");
+  if (::fullscreenSystemKeys && ((DesktopWindow*)window())->allowKeyboardGrab() && hasFocus()) {
+    grabPointer();
+  }
+}
+
+void Viewport::grabPointer()
+{
+  vlog.debug("Viewport::grabPointer");
+  activateWindow();
+  mouseGrabbed = true;
+}
+
+void Viewport::ungrabPointer()
+{
+  mouseGrabbed = false;
+}
+
 bool Viewport::gestureEvent(QGestureEvent* event)
 {
   vlog.debug("Viewport::gestureEvent");
@@ -1228,4 +992,291 @@ void Viewport::registerGesture(QGestureRecognizer *gr, GestureCallbackWithType c
 {
   auto type = QGestureRecognizer::registerRecognizer(gr);
   gestureRecognizers.insert(type, QPair<QGestureRecognizer*, GestureCallback>(gr, std::bind(cb, type, std::placeholders::_1)));
+}
+
+void Viewport::initKeyboardHandler()
+{
+  installKeyboardHandler();
+}
+
+void Viewport::installKeyboardHandler()
+{
+  vlog.debug("Viewport::installKeyboardHandler");
+  QAbstractEventDispatcher::instance()->installNativeEventFilter(this);
+}
+
+void Viewport::removeKeyboardHandler()
+{
+  vlog.debug("Viewport::removeNativeEventFilter");
+  QAbstractEventDispatcher::instance()->removeNativeEventFilter(this);
+}
+
+void Viewport::resetKeyboard()
+{
+  try {
+    cc->releaseAllKeys();
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_connection_unexpected(e);
+  }
+  if (keyboard)
+    keyboard->reset();
+}
+
+void Viewport::handleKeyPress(int systemKeyCode,
+                              uint32_t keyCode, uint32_t keySym)
+{
+  static bool menuRecursion = false;
+  int menuKeyCode;
+  quint32 menuKeySym;
+  ::getMenuKey(&menuKeyCode, &menuKeySym);
+
+  // Prevent recursion if the menu wants to send its own
+  // activation key.
+  if (menuKeySym && (keySym == menuKeySym) && !menuRecursion) {
+    menuRecursion = true;
+    toggleContextMenu();
+    menuRecursion = false;
+    return;
+  }
+
+  if (viewOnly)
+    return;
+
+  try {
+    cc->sendKeyPress(systemKeyCode, keyCode, keySym);
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_connection_unexpected(e);
+  }
+}
+
+void Viewport::handleKeyRelease(int systemKeyCode)
+{
+  if (viewOnly)
+    return;
+
+  try {
+    cc->sendKeyRelease(systemKeyCode);
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_connection_unexpected(e);
+  }
+}
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, long*)
+#else
+bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, qintptr*)
+#endif
+{
+  bool consumed;
+
+#ifdef __APPLE__
+  // Special event that means we temporarily lost some input
+  if (KeyboardMacOS::isKeyboardSync(eventType, message)) {
+    resetKeyboard();
+    return true;
+  }
+#endif
+
+  consumed = keyboard->handleEvent(eventType, message);
+  if (consumed)
+    return true;
+
+  return false;
+}
+
+void Viewport::initContextMenu()
+{
+  if (!contextMenu) {
+    QAction* action;
+
+    contextMenu = new QMenu(this);
+
+    action = new QAction(p_("ContextMenu|", "Dis&connect"), contextMenu);
+    connect(action, &QAction::triggered, this,
+            []() {
+              QApplication::quit();
+            });
+    contextMenu->addAction(action);
+
+    contextMenu->addSeparator();
+
+    action = new QAction(p_("ContextMenu|", "&Full screen"), contextMenu);
+    action->setCheckable(true);
+    connect(action, &QAction::triggered, this,
+            [this](bool checked) {
+              ((DesktopWindow*)window())->fullscreen(checked);
+            });
+    action->setChecked(::fullScreen);
+    connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
+      action->setChecked(((DesktopWindow*)window())->isFullscreenEnabled());
+    });
+    contextMenu->addAction(action);
+
+    action = new QAction(p_("ContextMenu|", "Minimi&ze"), contextMenu);
+    connect(action, &QAction::triggered, this,
+            [this]() {
+              window()->showMinimized();
+            });
+    contextMenu->addAction(action);
+
+    action = new QAction(p_("ContextMenu|", "Resize &window to session"), contextMenu);
+    connect(action, &QAction::triggered, this,
+            [this]() {
+              window()->resize(pixmapSize().width(), pixmapSize().height());
+            });
+    contextMenu->addAction(action);
+
+    contextMenu->addSeparator();
+
+    action = new QAction(p_("ContextMenu|", "&Ctrl"), contextMenu);
+    action->setCheckable(true);
+    connect(action, &QAction::triggered, this,
+            [this](bool checked) {
+              toggleKey(checked, FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+            });
+    contextMenu->addAction(action);
+
+    action = new QAction(p_("ContextMenu|", "&Alt"), contextMenu);
+    action->setCheckable(true);
+    connect(action, &QAction::triggered, this,
+            [this](bool checked) {
+              toggleKey(checked, FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+            });
+    contextMenu->addAction(action);
+
+    action = new QAction(contextMenu);
+    connect(action, &QAction::triggered, this,
+            [this]() {
+              sendContextMenuKey();
+            });
+    connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
+      std::string text;
+      text = rfb::format(p_("ContextMenu|", "Send %s"),
+                         ::menuKey.getValueStr().c_str());
+      action->setText(text.c_str());
+    });
+    contextMenu->addAction(action);
+
+    action = new QAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"), contextMenu);
+    connect(action, &QAction::triggered, this,
+            [this]() {
+              sendCtrlAltDel();
+            });
+    contextMenu->addAction(action);
+
+    contextMenu->addSeparator();
+
+    action = new QAction(p_("ContextMenu|", "&Refresh screen"), contextMenu);
+    connect(action, &QAction::triggered, this,
+            [this]() {
+              cc->refreshFramebuffer();
+            });
+    contextMenu->addAction(action);
+
+    contextMenu->addSeparator();
+
+    action = new QAction(p_("ContextMenu|", "&Options..."), contextMenu);
+    connect(action, &QAction::triggered, this,
+            [this]() {
+              OptionsDialog* dlg = new OptionsDialog(isFullScreen(), window());
+              dlg->setAttribute(Qt::WA_DeleteOnClose);
+              dlg->open();
+            });
+    contextMenu->addAction(action);
+
+    action = new QAction(p_("ContextMenu|", "Connection &info..."), contextMenu);
+    connect(action, &QAction::triggered, this,
+            [this]() {
+              QMessageBox* dlg;
+              dlg = new QMessageBox(QMessageBox::Information,
+                                    _("VNC connection info"),
+                                    cc->connectionInfo(),
+                                    QMessageBox::Close, this);
+              dlg->setAttribute(Qt::WA_DeleteOnClose);
+              dlg->open();
+            });
+    contextMenu->addAction(action);
+
+    action = new QAction(p_("ContextMenu|", "About &TigerVNC viewer..."), contextMenu);
+    connect(action, &QAction::triggered, this,
+            [this]() {
+              about_vncviewer(this);
+            });
+    contextMenu->addAction(action);
+
+    contextMenu->installEventFilter(this);
+  }
+}
+
+bool Viewport::isVisibleContextMenu() const
+{
+  return contextMenu && contextMenu->isVisible();
+}
+
+void Viewport::sendContextMenuKey()
+{
+  vlog.debug("Viewport::sendContextMenuKey");
+  if (::viewOnly) {
+    return;
+  }
+  int keyCode;
+  quint32 keySym;
+  ::getMenuKey(&keyCode, &keySym);
+  handleKeyPress(FAKE_KEY_CODE, keyCode, keySym);
+  handleKeyRelease(FAKE_KEY_CODE);
+  contextMenu->hide();
+}
+
+void Viewport::sendCtrlAltDel()
+{
+  handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+  handleKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+  handleKeyPress(FAKE_DEL_KEY_CODE, 0xd3, XK_Delete);
+  handleKeyRelease(FAKE_DEL_KEY_CODE);
+  handleKeyRelease(FAKE_ALT_KEY_CODE);
+  handleKeyRelease(FAKE_CTRL_KEY_CODE);
+}
+
+void Viewport::toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint32 keySym)
+{
+  if (toggle) {
+    handleKeyPress(systemKeyCode, keyCode, keySym);
+  } else {
+    handleKeyRelease(systemKeyCode);
+  }
+  if (keySym == XK_Control_L) {
+    menuCtrlKey = toggle;
+  } else if (keySym == XK_Alt_L) {
+    menuAltKey = toggle;
+  }
+}
+
+void Viewport::toggleContextMenu()
+{
+  if (isVisibleContextMenu()) {
+    contextMenu->hide();
+  } else {
+    initContextMenu();
+    contextMenu->exec(QCursor::pos());
+    contextMenu->setFocus();
+  }
+}
+
+// As QMenu eventFilter
+bool Viewport::eventFilter(QObject* obj, QEvent* event)
+{
+  if (event->type() == QEvent::KeyPress) {
+    QKeyEvent* e = static_cast<QKeyEvent*>(event);
+    if (isVisibleContextMenu()) {
+      QString str = ::getMenuKeyQString();
+      if (!str.isEmpty() && QKeySequence(e->key()).toString() == str) {
+        sendContextMenuKey();
+        return true;
+      }
+    }
+  }
+  return QWidget::eventFilter(obj, event);
 }
