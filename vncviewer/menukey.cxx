@@ -21,36 +21,37 @@
 #include <config.h>
 #endif
 
-// FLTK can pull in the X11 headers on some systems
-#ifndef XK_VoidSymbol
+#include <string.h>
+
+#include <Qt>
+
 #define XK_MISCELLANY
 #include <rfb/keysymdef.h>
-#endif
 
 #include "menukey.h"
 #include "parameters.h"
 
 static const MenuKeySymbol menuSymbols[] = {
-  {"F1",          "F1",         0x3b, XK_F1},
-  {"F2",          "F2",         0x3c, XK_F2},
-  {"F3",          "F3",         0x3d, XK_F3},
-  {"F4",          "F4",         0x3e, XK_F4},
-  {"F5",          "F5",         0x3f, XK_F5},
-  {"F6",          "F6",         0x40, XK_F6},
-  {"F7",          "F7",         0x41, XK_F7},
-  {"F8",          "F8",         0x42, XK_F8},
-  {"F9",          "F9",         0x43, XK_F9},
-  {"F10",         "F10",        0x44, XK_F10},
-  {"F11",         "F11",        0x57, XK_F11},
-  {"F12",         "F12",        0x58, XK_F12},
-  {"Pause",       "Pause",      0xc6, XK_Pause},
-  {"Scroll_Lock", "ScrollLock", 0x46, XK_Scroll_Lock},
-  {"Escape",      "Esc",        0x01, XK_Escape},
-  {"Insert",      "Ins",        0xd2, XK_Insert},
-  {"Delete",      "Del",        0xd3, XK_Delete},
-  {"Home",        "Home",       0xc7, XK_Home},
-  {"Page_Up",     "PgUp",       0xc9, XK_Page_Up},
-  {"Page_Down",   "PgDown",     0xd1, XK_Page_Down},
+  {"F1",          Qt::Key_F1,         0x3b, XK_F1},
+  {"F2",          Qt::Key_F2,         0x3c, XK_F2},
+  {"F3",          Qt::Key_F3,         0x3d, XK_F3},
+  {"F4",          Qt::Key_F4,         0x3e, XK_F4},
+  {"F5",          Qt::Key_F5,         0x3f, XK_F5},
+  {"F6",          Qt::Key_F6,         0x40, XK_F6},
+  {"F7",          Qt::Key_F7,         0x41, XK_F7},
+  {"F8",          Qt::Key_F8,         0x42, XK_F8},
+  {"F9",          Qt::Key_F9,         0x43, XK_F9},
+  {"F10",         Qt::Key_F10,        0x44, XK_F10},
+  {"F11",         Qt::Key_F11,        0x57, XK_F11},
+  {"F12",         Qt::Key_F12,        0x58, XK_F12},
+  {"Pause",       Qt::Key_Pause,      0xc6, XK_Pause},
+  {"Scroll_Lock", Qt::Key_ScrollLock, 0x46, XK_Scroll_Lock},
+  {"Escape",      Qt::Key_Escape,     0x01, XK_Escape},
+  {"Insert",      Qt::Key_Insert,     0xd2, XK_Insert},
+  {"Delete",      Qt::Key_Delete,     0xd3, XK_Delete},
+  {"Home",        Qt::Key_Home,       0xc7, XK_Home},
+  {"Page_Up",     Qt::Key_PageUp,     0xc9, XK_Page_Up},
+  {"Page_Down",   Qt::Key_PageDown,   0xd1, XK_Page_Down},
 };
 
 int getMenuKeySymbolCount()
@@ -63,33 +64,21 @@ const MenuKeySymbol* getMenuKeySymbols()
   return menuSymbols;
 }
 
-void getMenuKey(int *keycode, uint32_t *keysym)
+void getMenuKey(int *qtkey, int *keycode, uint32_t *keysym)
 {
-  QString menuKeyStr;
+  const char *menuKeyStr;
 
-  menuKeyStr = ::menuKey;
+  menuKeyStr = menuKey;
   for(int i = 0; i < getMenuKeySymbolCount(); i++) {
-    if (menuKeyStr == menuSymbols[i].name) {
+    if (!strcmp(menuSymbols[i].name, menuKeyStr)) {
+      *qtkey = menuSymbols[i].qtkey;
       *keycode = menuSymbols[i].keycode;
       *keysym = menuSymbols[i].keysym;
       return;
     }
   }
 
+  *qtkey = 0;
   *keycode = 0;
   *keysym = 0;
-}
-
-QString getMenuKeyQString()
-{
-  QString menuKeyStr;
-
-  menuKeyStr = ::menuKey;
-  for(int i = 0; i < getMenuKeySymbolCount(); i++) {
-    if (menuKeyStr == menuSymbols[i].name) {
-      return menuSymbols[i].qtString;
-    }
-  }
-
-  return {};
 }

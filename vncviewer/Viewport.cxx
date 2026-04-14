@@ -1027,9 +1027,10 @@ void Viewport::handleKeyPress(int systemKeyCode,
                               uint32_t keyCode, uint32_t keySym)
 {
   static bool menuRecursion = false;
+  int menuKeyQt;
   int menuKeyCode;
   quint32 menuKeySym;
-  ::getMenuKey(&menuKeyCode, &menuKeySym);
+  ::getMenuKey(&menuKeyQt, &menuKeyCode, &menuKeySym);
 
   // Prevent recursion if the menu wants to send its own
   // activation key.
@@ -1222,9 +1223,10 @@ void Viewport::sendContextMenuKey()
   if (::viewOnly) {
     return;
   }
+  int qtKey;
   int keyCode;
   quint32 keySym;
-  ::getMenuKey(&keyCode, &keySym);
+  ::getMenuKey(&qtKey, &keyCode, &keySym);
   handleKeyPress(FAKE_KEY_CODE, keyCode, keySym);
   handleKeyRelease(FAKE_KEY_CODE);
   contextMenu->hide();
@@ -1271,8 +1273,10 @@ bool Viewport::eventFilter(QObject* obj, QEvent* event)
   if (event->type() == QEvent::KeyPress) {
     QKeyEvent* e = static_cast<QKeyEvent*>(event);
     if (isVisibleContextMenu()) {
-      QString str = ::getMenuKeyQString();
-      if (!str.isEmpty() && QKeySequence(e->key()).toString() == str) {
+      int menuKeyCode, menuKeyQt;
+      quint32 menuKeySym;
+      ::getMenuKey(&menuKeyQt, &menuKeyCode, &menuKeySym);
+      if ((menuKeyQt != 0) && (e->key() == menuKeyQt)) {
         sendContextMenuKey();
         return true;
       }
