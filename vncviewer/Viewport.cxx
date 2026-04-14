@@ -273,6 +273,10 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
 
   connect(QGuiApplication::clipboard(), &QClipboard::changed, this, &Viewport::handleClipboardChange);
 
+  setMenuKey();
+
+  OptionsDialog::addCallback(handleOptions, this);
+
   delayedInitializeTimer->setInterval(1000);
   delayedInitializeTimer->setSingleShot(true);
   connect(delayedInitializeTimer, &QTimer::timeout, this, [this]() {
@@ -311,6 +315,8 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
 
 Viewport::~Viewport()
 {
+  OptionsDialog::removeCallback(handleOptions);
+
   delete cursor;
 
   removeKeyboardHandler();
@@ -1027,10 +1033,6 @@ void Viewport::handleKeyPress(int systemKeyCode,
                               uint32_t keyCode, uint32_t keySym)
 {
   static bool menuRecursion = false;
-  int menuKeyQt;
-  int menuKeyCode;
-  quint32 menuKeySym;
-  ::getMenuKey(&menuKeyQt, &menuKeyCode, &menuKeySym);
 
   // Prevent recursion if the menu wants to send its own
   // activation key.
@@ -1273,9 +1275,6 @@ bool Viewport::eventFilter(QObject* obj, QEvent* event)
   if (event->type() == QEvent::KeyPress) {
     QKeyEvent* e = static_cast<QKeyEvent*>(event);
     if (isVisibleContextMenu()) {
-      int menuKeyCode, menuKeyQt;
-      quint32 menuKeySym;
-      ::getMenuKey(&menuKeyQt, &menuKeyCode, &menuKeySym);
       if ((menuKeyQt != 0) && (e->key() == menuKeyQt)) {
         sendContextMenuKey();
         return true;
@@ -1283,4 +1282,17 @@ bool Viewport::eventFilter(QObject* obj, QEvent* event)
     }
   }
   return QWidget::eventFilter(obj, event);
+}
+
+void Viewport::setMenuKey()
+{
+  getMenuKey(&menuKeyQt, &menuKeyCode, &menuKeySym);
+}
+
+void Viewport::handleOptions(void *data)
+{
+  Viewport *self = (Viewport*)data;
+
+  self->setMenuKey();
+  // FIXME: Need to recheck cursor for dotWhenNoCursor
 }

@@ -166,6 +166,10 @@ protected:
   // As QMenu eventFilter
   bool eventFilter(QObject* watched, QEvent* event) override;
 
+  void setMenuKey();
+
+  static void handleOptions(void *data);
+
 protected:
   CConn* cc;
 
@@ -190,6 +194,8 @@ protected:
   QString serverReceivedData;
 #endif
 
+  uint32_t menuKeySym;
+  int menuKeyCode, menuKeyQt;
   QMenu* contextMenu;
 
   bool menuCtrlKey;
