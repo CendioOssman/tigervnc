@@ -273,6 +273,8 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
 
   connect(QGuiApplication::clipboard(), &QClipboard::changed, this, &Viewport::handleClipboardChange);
 
+  contextMenu = new QMenu(this);
+
   setMenuKey();
 
   OptionsDialog::addCallback(handleOptions, this);
@@ -1033,7 +1035,7 @@ void Viewport::handleKeyPress(int systemKeyCode,
                               uint32_t keyCode, uint32_t keySym)
 {
   if (menuKeySym && (keySym == menuKeySym)) {
-    toggleContextMenu();
+    popupContextMenu();
     return;
   }
 
@@ -1097,196 +1099,167 @@ bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, qin
 
 void Viewport::initContextMenu()
 {
-  if (!contextMenu) {
-    QAction* action;
+  QAction* action;
 
-    contextMenu = new QMenu(this);
+  contextMenu->clear();
 
-    action = new QAction(p_("ContextMenu|", "Dis&connect"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            []() {
-              QApplication::quit();
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "Dis&connect"), contextMenu);
+  connect(action, &QAction::triggered, this,
+          []() {
+            ::disconnect();
+          });
+  contextMenu->addAction(action);
 
-    contextMenu->addSeparator();
+  contextMenu->addSeparator();
 
-    action = new QAction(p_("ContextMenu|", "&Full screen"), contextMenu);
-    action->setCheckable(true);
-    connect(action, &QAction::triggered, this,
-            [this](bool checked) {
-              ((DesktopWindow*)window())->fullscreen(checked);
-            });
-    action->setChecked(::fullScreen);
-    connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      action->setChecked(((DesktopWindow*)window())->isFullscreenEnabled());
-    });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "&Full screen"), contextMenu);
+  connect(action, &QAction::triggered, this,
+          [this](bool checked) {
+            ((DesktopWindow*)window())->fullscreen(checked);
+          });
+  action->setCheckable(true);
+  action->setChecked(((DesktopWindow*)window())->isFullscreenEnabled());
+  contextMenu->addAction(action);
 
-    action = new QAction(p_("ContextMenu|", "Minimi&ze"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              window()->showMinimized();
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "Minimi&ze"), contextMenu);
+  connect(action, &QAction::triggered, this,
+          [this]() {
+            window()->showMinimized();
+          });
+  contextMenu->addAction(action);
 
-    action = new QAction(p_("ContextMenu|", "Resize &window to session"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              window()->resize(pixmapSize().width(), pixmapSize().height());
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "Resize &window to session"),
+                       contextMenu);
+  connect(action, &QAction::triggered, this,
+          [this]() {
+            if (((DesktopWindow*)window())->isFullscreenEnabled())
+              return;
+            window()->resize(width(), height());
+          });
+  contextMenu->addAction(action);
 
-    contextMenu->addSeparator();
+  contextMenu->addSeparator();
 
-    action = new QAction(p_("ContextMenu|", "&Ctrl"), contextMenu);
-    action->setCheckable(true);
-    connect(action, &QAction::triggered, this,
-            [this](bool checked) {
-              toggleKey(checked, FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "&Ctrl"), contextMenu);
+  connect(action, &QAction::triggered, this,
+          [this](bool checked) {
+            if (checked)
+              sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+            else
+              sendKeyRelease(FAKE_CTRL_KEY_CODE);
+            menuCtrlKey = checked;
+          });
+  action->setCheckable(true);
+  action->setChecked(menuCtrlKey);
+  contextMenu->addAction(action);
 
-    action = new QAction(p_("ContextMenu|", "&Alt"), contextMenu);
-    action->setCheckable(true);
-    connect(action, &QAction::triggered, this,
-            [this](bool checked) {
-              toggleKey(checked, FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-            });
-    contextMenu->addAction(action);
+  action = new QAction(p_("ContextMenu|", "&Alt"), contextMenu);
+  connect(action, &QAction::triggered, this,
+          [this](bool checked) {
+            if (checked)
+              sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+            else
+              sendKeyRelease(FAKE_ALT_KEY_CODE);
+            menuAltKey = checked;
+          });
+  action->setCheckable(true);
+  action->setChecked(menuAltKey);
+  contextMenu->addAction(action);
 
-    action = new QAction(contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              sendContextMenuKey();
-            });
-    connect(contextMenu, &QMenu::aboutToShow, this, [=]() {
-      std::string text;
-      text = rfb::format(p_("ContextMenu|", "Send %s"),
-                         ::menuKey.getValueStr().c_str());
-      action->setText(text.c_str());
-    });
-    contextMenu->addAction(action);
-
-    action = new QAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              sendCtrlAltDel();
-            });
-    contextMenu->addAction(action);
-
-    contextMenu->addSeparator();
-
-    action = new QAction(p_("ContextMenu|", "&Refresh screen"), contextMenu);
+  if (menuKeySym) {
+    QAction* secretAction;
+    char sendMenuKey[64];
+    snprintf(sendMenuKey, 64, p_("ContextMenu|", "Send %s"), (const char *)menuKey);
+    action = new QAction(sendMenuKey, contextMenu);
     connect(action, &QAction::triggered, this,
             [this]() {
-              cc->refreshFramebuffer();
+              sendKeyPress(FAKE_KEY_CODE, menuKeyCode, menuKeySym);
+              sendKeyRelease(FAKE_KEY_CODE);
             });
+    action->setShortcut(QKeySequence(menuKeyQt));
+    action->setShortcutVisibleInContextMenu(false);
     contextMenu->addAction(action);
 
-    contextMenu->addSeparator();
-
-    action = new QAction(p_("ContextMenu|", "&Options..."), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              OptionsDialog* dlg = new OptionsDialog(isFullScreen(), window());
-              dlg->setAttribute(Qt::WA_DeleteOnClose);
-              dlg->open();
+    // FIXME: Qt doesn't respect the shortcut set on a menu entry, but
+    //        it works if we attach it to ourselves
+    secretAction = new QAction(action);
+    connect(secretAction, &QAction::triggered, this,
+            [this, action]() {
+              action->trigger();
+              contextMenu->hide();
             });
-    contextMenu->addAction(action);
-
-    action = new QAction(p_("ContextMenu|", "Connection &info..."), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              QMessageBox* dlg;
-              dlg = new QMessageBox(QMessageBox::Information,
-                                    _("VNC connection info"),
-                                    cc->connectionInfo(),
-                                    QMessageBox::Close, this);
-              dlg->setAttribute(Qt::WA_DeleteOnClose);
-              dlg->open();
-            });
-    contextMenu->addAction(action);
-
-    action = new QAction(p_("ContextMenu|", "About &TigerVNC viewer..."), contextMenu);
-    connect(action, &QAction::triggered, this,
-            [this]() {
-              about_vncviewer(this);
-            });
-    contextMenu->addAction(action);
-
-    contextMenu->installEventFilter(this);
+    secretAction->setShortcut(QKeySequence(menuKeyQt));
+    secretAction->setShortcutContext(Qt::ApplicationShortcut);
+    connect(contextMenu, &QMenu::aboutToShow, secretAction,
+            [this, secretAction]() { addAction(secretAction); });
+    connect(contextMenu, &QMenu::aboutToHide, secretAction,
+            [this, secretAction]() { removeAction(secretAction); });
   }
+
+  action = new QAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"),
+                       contextMenu);
+  connect(action, &QAction::triggered, this,
+          [this]() {
+            sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+            sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+            sendKeyPress(FAKE_DEL_KEY_CODE, 0xd3, XK_Delete);
+            sendKeyRelease(FAKE_DEL_KEY_CODE);
+            sendKeyRelease(FAKE_ALT_KEY_CODE);
+            sendKeyRelease(FAKE_CTRL_KEY_CODE);
+          });
+  contextMenu->addAction(action);
+
+  contextMenu->addSeparator();
+
+  action = new QAction(p_("ContextMenu|", "&Refresh screen"),
+                       contextMenu);
+  connect(action, &QAction::triggered, this,
+          [this]() {
+            cc->refreshFramebuffer();
+          });
+  contextMenu->addAction(action);
+
+  contextMenu->addSeparator();
+
+  action = new QAction(p_("ContextMenu|", "&Options..."), contextMenu);
+  connect(action, &QAction::triggered, this,
+          [this]() {
+            OptionsDialog* dlg = new OptionsDialog(isFullScreen(),
+                                                   window());
+            dlg->setAttribute(Qt::WA_DeleteOnClose);
+            dlg->open();
+          });
+  contextMenu->addAction(action);
+
+  action = new QAction(p_("ContextMenu|", "Connection &info..."),
+                       contextMenu);
+  connect(action, &QAction::triggered, this,
+          [this]() {
+            QMessageBox* dlg;
+            dlg = new QMessageBox(QMessageBox::Information,
+                                  _("VNC connection info"),
+                                  cc->connectionInfo(),
+                                  QMessageBox::Close, this);
+            dlg->setAttribute(Qt::WA_DeleteOnClose);
+            dlg->open();
+          });
+  contextMenu->addAction(action);
+
+  action = new QAction(p_("ContextMenu|", "About &TigerVNC viewer..."),
+                       contextMenu);
+  connect(action, &QAction::triggered, this,
+          [this]() {
+            about_vncviewer(this);
+          });
+  contextMenu->addAction(action);
 }
 
-bool Viewport::isVisibleContextMenu() const
+void Viewport::popupContextMenu()
 {
-  return contextMenu && contextMenu->isVisible();
-}
+  // initialize context menu before display
+  initContextMenu();
 
-void Viewport::sendContextMenuKey()
-{
-  vlog.debug("Viewport::sendContextMenuKey");
-  if (::viewOnly) {
-    return;
-  }
-  int qtKey;
-  int keyCode;
-  quint32 keySym;
-  ::getMenuKey(&qtKey, &keyCode, &keySym);
-  sendKeyPress(FAKE_KEY_CODE, keyCode, keySym);
-  sendKeyRelease(FAKE_KEY_CODE);
-  contextMenu->hide();
-}
-
-void Viewport::sendCtrlAltDel()
-{
-  sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-  sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-  sendKeyPress(FAKE_DEL_KEY_CODE, 0xd3, XK_Delete);
-  sendKeyRelease(FAKE_DEL_KEY_CODE);
-  sendKeyRelease(FAKE_ALT_KEY_CODE);
-  sendKeyRelease(FAKE_CTRL_KEY_CODE);
-}
-
-void Viewport::toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint32 keySym)
-{
-  if (toggle) {
-    sendKeyPress(systemKeyCode, keyCode, keySym);
-  } else {
-    sendKeyRelease(systemKeyCode);
-  }
-  if (keySym == XK_Control_L) {
-    menuCtrlKey = toggle;
-  } else if (keySym == XK_Alt_L) {
-    menuAltKey = toggle;
-  }
-}
-
-void Viewport::toggleContextMenu()
-{
-  if (isVisibleContextMenu()) {
-    contextMenu->hide();
-  } else {
-    initContextMenu();
-    contextMenu->exec(QCursor::pos());
-    contextMenu->setFocus();
-  }
-}
-
-// As QMenu eventFilter
-bool Viewport::eventFilter(QObject* obj, QEvent* event)
-{
-  if (event->type() == QEvent::KeyPress) {
-    QKeyEvent* e = static_cast<QKeyEvent*>(event);
-    if (isVisibleContextMenu()) {
-      if ((menuKeyQt != 0) && (e->key() == menuKeyQt)) {
-        sendContextMenuKey();
-        return true;
-      }
-    }
-  }
-  return QWidget::eventFilter(obj, event);
+  contextMenu->popup(QCursor::pos());
 }
 
 void Viewport::setMenuKey()

@@ -161,13 +161,7 @@ protected:
   void pushLEDState();
 
   void initContextMenu();
-  bool isVisibleContextMenu() const;
-  void sendContextMenuKey();
-  void sendCtrlAltDel();
-  void toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint32 keySym);
-  void toggleContextMenu();
-  // As QMenu eventFilter
-  bool eventFilter(QObject* watched, QEvent* event) override;
+  void popupContextMenu();
 
   void setMenuKey();
 
