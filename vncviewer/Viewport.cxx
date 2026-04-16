@@ -788,7 +788,14 @@ void Viewport::popupContextMenu()
     cc->refreshFramebuffer();
     break;
   case ID_OPTIONS:
-    OptionsDialog::showDialog();
+    {
+      OptionsDialog* dlg;
+
+      dlg = new OptionsDialog();
+      dlg->set_modal();
+      dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
+      dlg->show();
+    }
     break;
   case ID_INFO:
     if (fltk_escape(cc->connectionInfo(), buffer, sizeof(buffer)) < sizeof(buffer)) {

@@ -29,17 +29,16 @@ class OptionsPage;
 typedef void (OptionsCallback)(void*);
 
 class OptionsDialog : public Fl_Window {
-protected:
+public:
   OptionsDialog();
   ~OptionsDialog();
-
-public:
-  static void showDialog(void);
 
   static void addCallback(OptionsCallback *cb, void *data = nullptr);
   static void removeCallback(OptionsCallback *cb);
 
-  void show(void) override;
+  void finished(Fl_Callback* cb, void* p=nullptr);
+
+  void hide(void) override;
 
 protected:
   void loadOptions(void);
@@ -52,6 +51,9 @@ protected:
   static std::map<OptionsCallback*, void*> callbacks;
 
   std::list<OptionsPage*> pages;
+
+  Fl_Callback* finishedCallback;
+  void* finishedUserData;
 };
 
 #endif

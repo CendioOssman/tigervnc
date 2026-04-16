@@ -77,7 +77,14 @@ ServerDialog::ServerDialog()
 
   button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Options..."));
   button->callback(
-    [](Fl_Widget*, void*) { OptionsDialog::showDialog(); }, this);
+    [](Fl_Widget*, void*) {
+      OptionsDialog* dlg;
+
+      dlg = new OptionsDialog();
+      dlg->set_modal();
+      dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
+      dlg->show();
+    }, this);
   x2 += BUTTON_WIDTH + INNER_MARGIN;
 
   button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Load..."));

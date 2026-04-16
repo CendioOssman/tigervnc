@@ -38,7 +38,8 @@
 std::map<OptionsCallback*, void*> OptionsDialog::callbacks;
 
 OptionsDialog::OptionsDialog()
-  : Fl_Window(580, 420, _("TigerVNC Options"))
+  : Fl_Window(580, 420, _("TigerVNC Options")),
+    finishedCallback(nullptr), finishedUserData(nullptr)
 {
   int x, y;
   Fl_Navigation *navigation;
@@ -95,26 +96,12 @@ OptionsDialog::OptionsDialog()
     },
     this);
 
-  set_modal();
+  loadOptions();
 }
 
 
 OptionsDialog::~OptionsDialog()
 {
-}
-
-
-void OptionsDialog::showDialog(void)
-{
-  static OptionsDialog *dialog = nullptr;
-
-  if (!dialog)
-    dialog = new OptionsDialog();
-
-  if (dialog->shown())
-    return;
-
-  dialog->show();
 }
 
 
@@ -130,13 +117,19 @@ void OptionsDialog::removeCallback(OptionsCallback *cb)
 }
 
 
-void OptionsDialog::show(void)
+void OptionsDialog::finished(Fl_Callback* cb, void* p)
 {
-  /* show() gets called for raise events as well */
-  if (!shown())
-    loadOptions();
+  finishedCallback = cb;
+  finishedUserData = p;
+}
 
-  Fl_Window::show();
+
+void OptionsDialog::hide()
+{
+  Fl_Window::hide();
+
+  if (finishedCallback != nullptr)
+    finishedCallback(this, finishedUserData);
 }
 
 
