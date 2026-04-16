@@ -61,8 +61,8 @@ else()
       vncx11view.h
       KeyboardX11.cxx
       KeyboardX11.h
-      x11utils.h
-      x11utils.cxx
+      x11.h
+      x11.cxx
       xkb_to_qnum.c
   )
 endif()

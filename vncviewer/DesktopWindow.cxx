@@ -33,7 +33,7 @@
 #endif
 #ifdef Q_OS_LINUX
 #include <X11/Xlib.h>
-#include "x11utils.h"
+#include "x11.h"
 #include "viewerconfig.h"
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)

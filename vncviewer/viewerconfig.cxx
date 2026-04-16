@@ -18,7 +18,7 @@
 #include <Carbon/Carbon.h>
 #endif
 #ifdef Q_OS_LINUX
-#include "x11utils.h"
+#include "x11.h"
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QX11Info>

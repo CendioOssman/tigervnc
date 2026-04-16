@@ -1,5 +1,5 @@
-#ifndef X11UTILS_H
-#define X11UTILS_H
+#ifndef X11_H
+#define X11_H
 
 #include <X11/Xatom.h>
 #include <X11/Xcursor/Xcursor.h>
@@ -21,4 +21,4 @@ void fullscreen(Display* display, int screen, Window window, bool enabled);
 
 };
 
-#endif // X11UTILS_H
+#endif // X11_H
