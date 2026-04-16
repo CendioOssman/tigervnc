@@ -99,8 +99,6 @@ set(PROJECT_SOURCES
         CConn.cxx
         toast.cxx
         toast.h
-        viewerconfig.cxx
-        viewerconfig.h
         ServerDialog.cxx
         ServerDialog.h
         OptionsDialog.cxx

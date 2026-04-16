@@ -6,7 +6,6 @@
 #if !defined(WIN32)
 #include <QCoreApplication>
 #endif
-#include "viewerconfig.h"
 #include "tunnelfactory.h"
 
 TunnelFactory::TunnelFactory(const char *gatewayHost_,

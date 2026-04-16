@@ -22,7 +22,6 @@
 
 #include "OptionsCompression.h"
 #include "parameters.h"
-#include "viewerconfig.h"
 #include "rfb/encodings.h"
 #include "i18n.h"
 

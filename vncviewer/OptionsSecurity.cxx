@@ -22,7 +22,6 @@
 
 #include "OptionsSecurity.h"
 
-#include "viewerconfig.h"
 #include "rfb/Security.h"
 #include "rfb/SecurityClient.h"
 #ifdef HAVE_GNUTLS
