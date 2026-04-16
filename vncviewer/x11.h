@@ -30,4 +30,6 @@ void x11_fullscreen(QWidget* window, bool enabled);
 bool x11_grab_keyboard(QWidget* win);
 void x11_ungrab_keyboard();
 
+void x11_bell();
+
 #endif

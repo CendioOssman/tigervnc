@@ -32,16 +32,6 @@
 #include <QSocketNotifier>
 #include <QMessageBox>
 
-#if !defined(__APPLE__) && !defined(WIN32)
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <QX11Info>
-#else
-#include <QGuiApplication>
-#include <xcb/xcb.h>
-#endif
-#include <X11/Xlib.h>
-#endif
-
 #ifdef HAVE_GNUTLS
 #include <gnutls/x509.h>
 #endif
@@ -70,6 +60,10 @@
 
 #ifdef __APPLE__
 #include "cocoa.h"
+#endif
+
+#if !defined(__APPLE__) && !defined(WIN32)
+#include "x11.h"
 #endif
 
 std::string CConn::savedUsername;
@@ -711,15 +705,7 @@ void CConn::bell()
 #elif defined(WIN32)
   MessageBeep(0xFFFFFFFF); // cf. fltk/src/drivers/WinAPI/Fl_WinAPI_Screen_Driver.cxx:245
 #else
-  Display* dpy;
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  dpy = QX11Info::display();
-#else
-  dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
-#endif
-
-  XBell(dpy, 0 /* volume */);
+  x11_bell();
 #endif
 }
 

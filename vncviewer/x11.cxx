@@ -177,3 +177,8 @@ void x11_ungrab_keyboard()
 {
   XUngrabKeyboard(qt_display(), CurrentTime);
 }
+
+void x11_bell()
+{
+  XBell(qt_display(), 0 /* volume */);
+}
