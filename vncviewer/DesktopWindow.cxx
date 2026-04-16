@@ -32,16 +32,8 @@
 #include <windows.h>
 #endif
 #ifdef Q_OS_LINUX
-#include <X11/Xlib.h>
 #include "x11.h"
 #include "viewerconfig.h"
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <QX11Info>
-#else
-#include <QGuiApplication>
-#include <xcb/xcb.h>
-#endif
 #endif
 #ifdef WIN32
 #include "win32.h"
@@ -133,7 +125,6 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   , cc(cc_)
   , resizeTimer(new QTimer(this))
   , devicePixelRatio(devicePixelRatioF())
-  , keyboardGrabberTimer(this, &DesktopWindow::handleGrab)
 {
   setAttribute(Qt::WA_NativeWindow, true);
   setFocusPolicy(Qt::StrongFocus);
@@ -919,24 +910,11 @@ void DesktopWindow::grabKeyboard()
       return;
   }
 #else
-  keyboardGrabberTimer.stop();
-  Display* dpy;
+  bool ret;
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  dpy = QX11Info::display();
-#else
-  dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
-#endif
-
-  int ret = XGrabKeyboard(dpy, winId(), True, GrabModeAsync, GrabModeAsync, CurrentTime);
-  if (ret) {
-    if (ret == AlreadyGrabbed) {
-      // It seems like we can race with the WM in some cases.
-      // Try again in a bit.
-      keyboardGrabberTimer.start(500);
-    } else {
-      vlog.error(_("Failure grabbing keyboard"));
-    }
+  ret = x11_grab_keyboard(this);
+  if (!ret) {
+    vlog.error(_("Failure grabbing control of the keyboard"));
     return;
   }
 #endif
@@ -958,14 +936,7 @@ void DesktopWindow::ungrabKeyboard()
 #elif defined(__APPLE__)
   cocoa_release_displays();
 #else
-  Display* dpy;
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  dpy = QX11Info::display();
-#else
-  dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
-#endif
-  keyboardGrabberTimer.stop();
-  XUngrabKeyboard(dpy, CurrentTime);
+  x11_ungrab_keyboard();
 #endif
 }
 
@@ -977,11 +948,6 @@ void DesktopWindow::grabPointer()
 void DesktopWindow::ungrabPointer()
 {
 
-}
-
-void DesktopWindow::handleGrab(rfb::Timer*)
-{
-  maybeGrabKeyboard();
 }
 
 void DesktopWindow::handleOptions(void *data)

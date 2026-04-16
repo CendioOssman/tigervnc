@@ -60,8 +60,8 @@ bool ViewerConfig::canFullScreenOnMultiDisplays()
 #if defined(__APPLE__)
   return !cocoa_displays_have_separate_spaces();
 #elif defined(Q_OS_LINUX)
-  bool supported = x11_is_ewmh_supported();
-  vlog.debug("x11_is_ewmh_supported %d", supported);
+  bool supported = x11_wm_supports("_NET_WM_FULLSCREEN_MONITORS");
+  vlog.debug("x11_wm_supports %d", supported);
   bool wm = x11_has_wm();
   return supported || !wm;
 #else

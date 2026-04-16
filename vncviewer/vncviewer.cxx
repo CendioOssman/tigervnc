@@ -48,22 +48,8 @@
 #include <QMessageBox>
 #include <QTimer>
 
-#if !defined(WIN32) && !defined(__APPLE__)
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <QX11Info>
-#else
-#include <QGuiApplication>
-#endif
-#endif
-
 #if defined(__APPLE__)
 #include <QMenuBar>
-#endif
-
-#if !defined(WIN32) && !defined(__APPLE__)
-#include <X11/XKBlib.h>
-// Qt breaks if this is defined
-#undef None
 #endif
 
 #include <rfb/Logger_stdio.h>

@@ -91,7 +91,6 @@ public:
   void ungrabKeyboard();
   void grabPointer();
   void ungrabPointer();
-  void handleGrab(rfb::Timer*);
 
 private:
   CConn* cc;
@@ -104,8 +103,6 @@ private:
 
   QScreen* previousScreen;
   QByteArray previousGeometry;
-
-  rfb::MethodTimer<DesktopWindow> keyboardGrabberTimer;
 
   Toast* toast;
   ScrollArea* scrollArea = nullptr;

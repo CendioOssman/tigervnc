@@ -1,4 +1,27 @@
-#include <climits>
+/* Copyright 2011-2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
+ * 
+ * This is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this software; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+ * USA.
+ */
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <limits.h>
+#include <unistd.h>
 
 #include <QtGlobal>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -22,85 +45,64 @@ static Display* qt_display()
 #endif
 }
 
-static unsigned long x11_get_window_property(Display* display, Window window, Atom property, Atom type, unsigned char** prop_return)
-{
-  Atom actual_type_return;
-  int actual_format_return;
-  unsigned long nitems_return;
-  unsigned long bytes_after_return;
-
-  XGetWindowProperty(display,
-                     window,
-                     property,
-                     0,
-                     LONG_MAX,
-                     false,
-                     type,
-                     &actual_type_return,
-                     &actual_format_return,
-                     &nitems_return,
-                     &bytes_after_return,
-                     prop_return);
-
-  return nitems_return;
-}
-
 bool x11_has_wm()
 {
   Display* display = qt_display();
-  int screen = DefaultScreen(display);
 
-  Window rootWindow = RootWindow(display, screen);
+  Window* wmWindow;
 
-  Atom supportingWMCheck = XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", false);
+  Atom actual_type;
+  int actual_format;
+  unsigned long nitems, bytes_after;
 
-  Window* windowFromRoot = nullptr;
-  auto supportingWMCheckOk = x11_get_window_property(display,
-                                                     rootWindow,
-                                                     supportingWMCheck,
-                                                     XA_WINDOW,
-                                                     (unsigned char**) &windowFromRoot);
-
-  if (!supportingWMCheckOk) {
+  XGetWindowProperty(display, XRootWindow(display, DefaultScreen(display)),
+                     XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", False),
+                     0, 1, False, XA_WINDOW,
+                     &actual_type, &actual_format, &nitems,
+                     &bytes_after, (unsigned char**)&wmWindow);
+  if ((actual_type != XA_WINDOW) || (actual_format != 32) ||
+      (nitems != 1) || (bytes_after != 0))
     return false;
-  }
+
+  // Confirm WM is alive
+  XGetWindowProperty(display, *wmWindow,
+                     XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", False),
+                     0, 1, False, XA_WINDOW,
+                     &actual_type, &actual_format, &nitems,
+                     &bytes_after, (unsigned char**)&wmWindow);
+  if ((actual_type != XA_WINDOW) || (actual_format != 32) ||
+      (nitems != 1) || (bytes_after != 0))
+    return false;
 
   return true;
 }
 
-bool x11_is_ewmh_supported()
+bool x11_wm_supports(const char* atom)
 {
   Display* display = qt_display();
-  int screen = DefaultScreen(display);
 
-  Window rootWindow = RootWindow(display, screen);
+  Atom* supported;
+  Atom desired;
 
-  Atom supportingWMCheck = XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", false);
+  Atom actual_type;
+  int actual_format;
+  unsigned long nitems, bytes_after;
 
-  Window* windowFromRoot = nullptr;
-  auto supportingWMCheckOk = x11_get_window_property(display,
-                                                     rootWindow,
-                                                     supportingWMCheck,
-                                                     XA_WINDOW,
-                                                     (unsigned char**) &windowFromRoot);
-
-  if (!supportingWMCheckOk) {
+  if (!x11_has_wm())
     return false;
-  }
 
-  Atom netSupported = XInternAtom(display, "_NET_SUPPORTED", false);
+  XGetWindowProperty(display,
+                     XRootWindow(display, DefaultScreen(display)),
+                     XInternAtom(display, "_NET_SUPPORTED", False),
+                     0, LONG_MAX, False, XA_ATOM,
+                     &actual_type, &actual_format, &nitems,
+                     &bytes_after, (unsigned char**)&supported);
+  if ((actual_type != XA_ATOM) || (actual_format != 32))
+    return false;
 
-  Atom* supportedAtoms = nullptr;
-  auto atomCount = x11_get_window_property(display,
-                                           rootWindow,
-                                           netSupported,
-                                           XA_ATOM,
-                                           (unsigned char**) &supportedAtoms);
-
-  Atom fullscreenMonitors = XInternAtom(display, "_NET_WM_FULLSCREEN_MONITORS", false);
-
-  for (unsigned long i = 0;  i < atomCount;  i++) {
-    if (supportedAtoms[i] == fullscreenMonitors)
+  desired = XInternAtom(display, atom, False);
+  for (unsigned long n = 0; n < nitems; n++) {
+    if (supported[n] == desired)
       return true;
   }
 
@@ -142,4 +144,36 @@ void x11_fullscreen(QWidget* window, bool enabled)
   XSendEvent(display, RootWindow(display, screen),
              0, SubstructureNotifyMask | SubstructureRedirectMask,
              &event);
+}
+
+bool x11_grab_keyboard(QWidget* win)
+{
+  Display* display = qt_display();
+  int ret;
+
+  ret = XGrabKeyboard(display, win->winId(), True,
+                      GrabModeAsync, GrabModeAsync, CurrentTime);
+  if (ret) {
+    if (ret == AlreadyGrabbed) {
+      // It seems like we can race with the WM in some cases, e.g. when
+      // the WM holds the keyboard as part of handling Alt+Tab.
+      // Repeat the request a few times and see if we get it...
+      for (int attempt = 0; attempt < 5; attempt++) {
+        usleep(100000);
+        // Also throttle based on how busy the X server is
+        XSync(display, False);
+        ret = XGrabKeyboard(display, win->winId(), True,
+                            GrabModeAsync, GrabModeAsync, CurrentTime);
+        if (ret != AlreadyGrabbed)
+          break;
+      }
+    }
+  }
+
+  return ret == Success;
+}
+
+void x11_ungrab_keyboard()
+{
+  XUngrabKeyboard(qt_display(), CurrentTime);
 }
