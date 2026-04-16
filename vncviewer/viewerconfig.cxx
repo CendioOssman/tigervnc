@@ -65,9 +65,9 @@ bool ViewerConfig::canFullScreenOnMultiDisplays()
 #else
   auto dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
 #endif
-  bool supported = X11Utils::isEWMHsupported(dpy);
-  vlog.debug("isEWMHsupported %d", supported);
-  bool wm = X11Utils::hasWM(dpy);
+  bool supported = x11_is_ewmh_supported(dpy);
+  vlog.debug("x11_is_ewmh_supported %d", supported);
+  bool wm = x11_has_wm(dpy);
   return supported || !wm;
 #else
   return true;

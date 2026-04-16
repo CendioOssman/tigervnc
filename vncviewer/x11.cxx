@@ -3,9 +3,7 @@
 
 #include <X11/Xlib.h>
 
-namespace X11Utils {
-
-unsigned long getWindowPropertyX11(Display* display, Window window, Atom property, Atom type, unsigned char** prop_return)
+unsigned long x11_get_window_property(Display* display, Window window, Atom property, Atom type, unsigned char** prop_return)
 {
   Atom actual_type_return;
   int actual_format_return;
@@ -28,7 +26,7 @@ unsigned long getWindowPropertyX11(Display* display, Window window, Atom propert
   return nitems_return;
 }
 
-bool hasWM(Display* display)
+bool x11_has_wm(Display* display)
 {
   int screen = DefaultScreen(display);
 
@@ -37,11 +35,11 @@ bool hasWM(Display* display)
   Atom supportingWMCheck = XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", false);
 
   Window* windowFromRoot = nullptr;
-  auto supportingWMCheckOk = getWindowPropertyX11(display,
-                                                  rootWindow,
-                                                  supportingWMCheck,
-                                                  XA_WINDOW,
-                                                  (unsigned char**) &windowFromRoot);
+  auto supportingWMCheckOk = x11_get_window_property(display,
+                                                     rootWindow,
+                                                     supportingWMCheck,
+                                                     XA_WINDOW,
+                                                     (unsigned char**) &windowFromRoot);
 
   if (!supportingWMCheckOk) {
     return false;
@@ -50,7 +48,7 @@ bool hasWM(Display* display)
   return true;
 }
 
-bool isEWMHsupported(Display* display)
+bool x11_is_ewmh_supported(Display* display)
 {
   int screen = DefaultScreen(display);
 
@@ -59,11 +57,11 @@ bool isEWMHsupported(Display* display)
   Atom supportingWMCheck = XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", false);
 
   Window* windowFromRoot = nullptr;
-  auto supportingWMCheckOk = getWindowPropertyX11(display,
-                                                  rootWindow,
-                                                  supportingWMCheck,
-                                                  XA_WINDOW,
-                                                  (unsigned char**) &windowFromRoot);
+  auto supportingWMCheckOk = x11_get_window_property(display,
+                                                     rootWindow,
+                                                     supportingWMCheck,
+                                                     XA_WINDOW,
+                                                     (unsigned char**) &windowFromRoot);
 
   if (!supportingWMCheckOk) {
     return false;
@@ -72,11 +70,11 @@ bool isEWMHsupported(Display* display)
   Atom netSupported = XInternAtom(display, "_NET_SUPPORTED", false);
 
   Atom* supportedAtoms = nullptr;
-  auto atomCount = getWindowPropertyX11(display,
-                                        rootWindow,
-                                        netSupported,
-                                        XA_ATOM,
-                                        (unsigned char**) &supportedAtoms);
+  auto atomCount = x11_get_window_property(display,
+                                           rootWindow,
+                                           netSupported,
+                                           XA_ATOM,
+                                           (unsigned char**) &supportedAtoms);
 
   Atom fullscreenMonitors = XInternAtom(display, "_NET_WM_FULLSCREEN_MONITORS", false);
 
@@ -88,7 +86,7 @@ bool isEWMHsupported(Display* display)
   return false;
 }
 
-void fullscreen_screens(Display* display, int screen, Window window, int top, int bottom, int left, int right)
+void x11_fullscreen_screens(Display* display, int screen, Window window, int top, int bottom, int left, int right)
 {
   XEvent event;
   event.xany.type = ClientMessage;
@@ -105,7 +103,7 @@ void fullscreen_screens(Display* display, int screen, Window window, int top, in
              &event);
 }
 
-void fullscreen(Display* display, int screen, Window window, bool enabled)
+void x11_fullscreen(Display* display, int screen, Window window, bool enabled)
 {
   XEvent event;
   event.xany.type = ClientMessage;
@@ -118,5 +116,3 @@ void fullscreen(Display* display, int screen, Window window, bool enabled)
              0, SubstructureNotifyMask | SubstructureRedirectMask,
              &event);
 }
-
-};
