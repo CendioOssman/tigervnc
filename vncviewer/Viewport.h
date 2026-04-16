@@ -147,7 +147,10 @@ protected:
 
   void handleKeyPress(int systemKeyCode,
                       uint32_t keyCode, uint32_t keySym) override;
+  void sendKeyPress(int systemKeyCode,
+                    uint32_t keyCode, uint32_t keySym);
   void handleKeyRelease(int systemKeyCode) override;
+  void sendKeyRelease(int systemKeyCode);
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   bool nativeEventFilter(QByteArray const& eventType, void* message, long*) override;

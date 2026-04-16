@@ -130,7 +130,7 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
     if (ClicksAlternativeGesture *gesture = static_cast<ClicksAlternativeGesture *>(event->gesture(type))) {
       if (gesture->state() == Qt::GestureFinished) {
         QPoint pos = gesture->getPosition();
-        handleKeyRelease(FAKE_GESTURE_KEY_CODE); // Prevents non handling of PanZoomGesture Finished
+        sendKeyRelease(FAKE_GESTURE_KEY_CODE); // Prevents non handling of PanZoomGesture Finished
         if (gesture->getType() == ClicksAlternativeGesture::TwoPoints) {
           vlog.debug("Cendio Right click alternative gesture");
           filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 4 /* RightButton */);
@@ -193,7 +193,7 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
             wheelMask |= 16;
           }
           vlog.debug("Cendio Zoom gesture %d %f", wheelMask, gesture->getScaleFactor());
-          handleKeyPress(FAKE_GESTURE_KEY_CODE, 0x1d, XK_Control_L);
+          sendKeyPress(FAKE_GESTURE_KEY_CODE, 0x1d, XK_Control_L);
           if (!panZoomGesture) {
             panZoomGesture = true;
             QTimer::singleShot(100, this, [=](){
@@ -211,7 +211,7 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
         }
       } else {
         event->accept();
-        handleKeyRelease(FAKE_GESTURE_KEY_CODE);
+        sendKeyRelease(FAKE_GESTURE_KEY_CODE);
         return true;
       }
     }
@@ -500,18 +500,18 @@ void Viewport::pushLEDState()
 
   if ((ledState & rfb::ledCapsLock) != (cc->server.ledState() & rfb::ledCapsLock)) {
     vlog.debug("Inserting fake CapsLock to get in sync with server");
-    handleKeyPress(FAKE_KEY_CODE, 0x3a, XK_Caps_Lock);
-    handleKeyRelease(FAKE_KEY_CODE);
+    sendKeyPress(FAKE_KEY_CODE, 0x3a, XK_Caps_Lock);
+    sendKeyRelease(FAKE_KEY_CODE);
   }
   if ((ledState & rfb::ledNumLock) != (cc->server.ledState() & rfb::ledNumLock)) {
     vlog.debug("Inserting fake NumLock to get in sync with server");
-    handleKeyPress(FAKE_KEY_CODE, 0x45, XK_Num_Lock);
-    handleKeyRelease(FAKE_KEY_CODE);
+    sendKeyPress(FAKE_KEY_CODE, 0x45, XK_Num_Lock);
+    sendKeyRelease(FAKE_KEY_CODE);
   }
   if ((ledState & rfb::ledScrollLock) != (cc->server.ledState() & rfb::ledScrollLock)) {
     vlog.debug("Inserting fake ScrollLock to get in sync with server");
-    handleKeyPress(FAKE_KEY_CODE, 0x46, XK_Scroll_Lock);
-    handleKeyRelease(FAKE_KEY_CODE);
+    sendKeyPress(FAKE_KEY_CODE, 0x46, XK_Scroll_Lock);
+    sendKeyRelease(FAKE_KEY_CODE);
   }
 }
 
@@ -553,9 +553,9 @@ void Viewport::giveKeyboardFocus()
 
     // Resend Ctrl/Alt if needed
     if (menuCtrlKey)
-      handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+      sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
     if (menuAltKey)
-      handleKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+      sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
   }
 }
 
@@ -1032,17 +1032,17 @@ void Viewport::resetKeyboard()
 void Viewport::handleKeyPress(int systemKeyCode,
                               uint32_t keyCode, uint32_t keySym)
 {
-  static bool menuRecursion = false;
-
-  // Prevent recursion if the menu wants to send its own
-  // activation key.
-  if (menuKeySym && (keySym == menuKeySym) && !menuRecursion) {
-    menuRecursion = true;
+  if (menuKeySym && (keySym == menuKeySym)) {
     toggleContextMenu();
-    menuRecursion = false;
     return;
   }
 
+  sendKeyPress(systemKeyCode, keyCode, keySym);
+}
+
+void Viewport::sendKeyPress(int systemKeyCode,
+                            uint32_t keyCode, uint32_t keySym)
+{
   if (viewOnly)
     return;
 
@@ -1055,6 +1055,11 @@ void Viewport::handleKeyPress(int systemKeyCode,
 }
 
 void Viewport::handleKeyRelease(int systemKeyCode)
+{
+  sendKeyRelease(systemKeyCode);
+}
+
+void Viewport::sendKeyRelease(int systemKeyCode)
 {
   if (viewOnly)
     return;
@@ -1229,27 +1234,27 @@ void Viewport::sendContextMenuKey()
   int keyCode;
   quint32 keySym;
   ::getMenuKey(&qtKey, &keyCode, &keySym);
-  handleKeyPress(FAKE_KEY_CODE, keyCode, keySym);
-  handleKeyRelease(FAKE_KEY_CODE);
+  sendKeyPress(FAKE_KEY_CODE, keyCode, keySym);
+  sendKeyRelease(FAKE_KEY_CODE);
   contextMenu->hide();
 }
 
 void Viewport::sendCtrlAltDel()
 {
-  handleKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-  handleKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-  handleKeyPress(FAKE_DEL_KEY_CODE, 0xd3, XK_Delete);
-  handleKeyRelease(FAKE_DEL_KEY_CODE);
-  handleKeyRelease(FAKE_ALT_KEY_CODE);
-  handleKeyRelease(FAKE_CTRL_KEY_CODE);
+  sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+  sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+  sendKeyPress(FAKE_DEL_KEY_CODE, 0xd3, XK_Delete);
+  sendKeyRelease(FAKE_DEL_KEY_CODE);
+  sendKeyRelease(FAKE_ALT_KEY_CODE);
+  sendKeyRelease(FAKE_CTRL_KEY_CODE);
 }
 
 void Viewport::toggleKey(bool toggle, int systemKeyCode, quint32 keyCode, quint32 keySym)
 {
   if (toggle) {
-    handleKeyPress(systemKeyCode, keyCode, keySym);
+    sendKeyPress(systemKeyCode, keyCode, keySym);
   } else {
-    handleKeyRelease(systemKeyCode);
+    sendKeyRelease(systemKeyCode);
   }
   if (keySym == XK_Control_L) {
     menuCtrlKey = toggle;
