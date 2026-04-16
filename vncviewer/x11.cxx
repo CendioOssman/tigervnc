@@ -1,9 +1,28 @@
-#include "x11.h"
 #include <climits>
 
-#include <X11/Xlib.h>
+#include <QtGlobal>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QX11Info>
+#else
+#include <QGuiApplication>
+#endif
+#include <QWidget>
 
-unsigned long x11_get_window_property(Display* display, Window window, Atom property, Atom type, unsigned char** prop_return)
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+
+#include "x11.h"
+
+static Display* qt_display()
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    return QX11Info::display();
+#else
+    return qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+}
+
+static unsigned long x11_get_window_property(Display* display, Window window, Atom property, Atom type, unsigned char** prop_return)
 {
   Atom actual_type_return;
   int actual_format_return;
@@ -26,8 +45,9 @@ unsigned long x11_get_window_property(Display* display, Window window, Atom prop
   return nitems_return;
 }
 
-bool x11_has_wm(Display* display)
+bool x11_has_wm()
 {
+  Display* display = qt_display();
   int screen = DefaultScreen(display);
 
   Window rootWindow = RootWindow(display, screen);
@@ -48,8 +68,9 @@ bool x11_has_wm(Display* display)
   return true;
 }
 
-bool x11_is_ewmh_supported(Display* display)
+bool x11_is_ewmh_supported()
 {
+  Display* display = qt_display();
   int screen = DefaultScreen(display);
 
   Window rootWindow = RootWindow(display, screen);
@@ -86,11 +107,14 @@ bool x11_is_ewmh_supported(Display* display)
   return false;
 }
 
-void x11_fullscreen_screens(Display* display, int screen, Window window, int top, int bottom, int left, int right)
+void x11_fullscreen_screens(QWidget* window, int top, int bottom, int left, int right)
 {
+  Display* display = qt_display();
+  int screen = DefaultScreen(display);
   XEvent event;
+
   event.xany.type = ClientMessage;
-  event.xany.window = window;
+  event.xany.window = window->winId();
   event.xclient.message_type = XInternAtom(display, "_NET_WM_FULLSCREEN_MONITORS", 0);
   event.xclient.format = 32;
   event.xclient.data.l[0] = top;
@@ -103,11 +127,14 @@ void x11_fullscreen_screens(Display* display, int screen, Window window, int top
              &event);
 }
 
-void x11_fullscreen(Display* display, int screen, Window window, bool enabled)
+void x11_fullscreen(QWidget* window, bool enabled)
 {
+  Display* display = qt_display();
+  int screen = DefaultScreen(display);
   XEvent event;
+
   event.xany.type = ClientMessage;
-  event.xany.window = window;
+  event.xany.window = window->winId();
   event.xclient.message_type = XInternAtom(display, "_NET_WM_STATE", 0);
   event.xclient.format = 32;
   event.xclient.data.l[0] = enabled;

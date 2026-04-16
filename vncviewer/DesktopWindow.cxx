@@ -341,12 +341,7 @@ void DesktopWindow::fullscreen(bool enabled)
     }
 
 #if defined(Q_OS_LINUX)
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    auto dpy = QX11Info::display();
-#else
-    auto dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
-#endif
-    bool hasWM = x11_has_wm(dpy);
+    bool hasWM = x11_has_wm();
 #endif
 
     bool allMonitors = !strcasecmp(fullScreenMode, "all");
@@ -489,15 +484,8 @@ void DesktopWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int
   show();
 
   QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    auto dpy = QX11Info::display();
-#else
-    auto dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
-#endif
-    int screen = DefaultScreen(dpy);
-
-    x11_fullscreen_screens(dpy, screen, winId(), top, bottom, left, right);
-    x11_fullscreen(dpy, screen, winId(), true);
+    x11_fullscreen_screens(this, top, bottom, left, right);
+    x11_fullscreen(this, true);
     QApplication::sync();
 
     view->setFocus();
@@ -539,14 +527,7 @@ void DesktopWindow::exitFullscreen()
   vlog.debug("DesktopWindow::exitFullscreen");
   ungrabKeyboard();
 #ifdef Q_OS_LINUX
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  auto dpy = QX11Info::display();
-#else
-  auto dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
-#endif
-  int screen = DefaultScreen(dpy);
-
-  x11_fullscreen(dpy, screen, winId(), false);
+  x11_fullscreen(this, false);
   QApplication::sync();
   if (QString(getenv("DESKTOP_SESSION")).isEmpty()) {
     move(0, 0);

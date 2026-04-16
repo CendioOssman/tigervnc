@@ -60,14 +60,9 @@ bool ViewerConfig::canFullScreenOnMultiDisplays()
 #if defined(__APPLE__)
   return !cocoa_displays_have_separate_spaces();
 #elif defined(Q_OS_LINUX)
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  auto dpy = QX11Info::display();
-#else
-  auto dpy = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
-#endif
-  bool supported = x11_is_ewmh_supported(dpy);
+  bool supported = x11_is_ewmh_supported();
   vlog.debug("x11_is_ewmh_supported %d", supported);
-  bool wm = x11_has_wm(dpy);
+  bool wm = x11_has_wm();
   return supported || !wm;
 #else
   return true;
