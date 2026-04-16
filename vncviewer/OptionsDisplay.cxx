@@ -24,12 +24,20 @@
 
 #include "parameters.h"
 #include "QMonitorArrangement.h"
-#include "viewerconfig.h"
 #include "i18n.h"
 
 #include <QGroupBox>
+#include <QLabel>
 #include <QRadioButton>
 #include <QVBoxLayout>
+
+#ifdef __APPLE__
+#include "cocoa.h"
+#endif
+
+#if !defined(WIN32) && !defined(__APPLE__)
+#include "x11.h"
+#endif
 
 OptionsDisplay::OptionsDisplay(QWidget* parent)
   : OptionsPage{parent}
@@ -43,7 +51,6 @@ OptionsDisplay::OptionsDisplay(QWidget* parent)
   currentMonitorButton = new QRadioButton(_("Full screen on current monitor"));
   vbox1->addWidget(currentMonitorButton);
   allMonitorsButton = new QRadioButton(_("Full screen on all monitors"));
-  allMonitorsButton->setEnabled(ViewerConfig::canFullScreenOnMultiDisplays());
   vbox1->addWidget(allMonitorsButton);
   selectedMonitorsButton = new QRadioButton(_("Full screen on selected monitor(s)"));
   vbox1->addWidget(selectedMonitorsButton);
@@ -57,6 +64,47 @@ OptionsDisplay::OptionsDisplay(QWidget* parent)
   layout->addWidget(groupBox1, 1);
 
   setLayout(layout);
+
+  bool supportsMultihead;
+
+#if defined(WIN32)
+  supportsMultihead = true;
+#elif defined(__APPLE__)
+  supportsMultihead = !cocoa_screens_have_separate_spaces();
+#else
+  // We will emulate multihead support without a WM
+  // FIXME: check this behaviour
+  if (!x11_has_wm())
+    supportsMultihead = true;
+  else
+    supportsMultihead = x11_wm_supports("_NET_WM_FULLSCREEN_MONITORS");
+#endif
+
+  if (!supportsMultihead) {
+    QLabel* widget;
+    const char* label;
+
+#if defined(WIN32)
+    assert(false);
+#elif defined(__APPLE__)
+    label = _("Full screen on multiple monitors is not supported when "
+              "the system setting \"Displays have separate Spaces\" "
+              "is enabled");
+#else
+    label = _("Full screen on multiple monitors is not supported by "
+              "the current desktop environment");
+#endif
+
+    widget = new QLabel();
+    widget->setWordWrap(true);
+    widget->setTextFormat(Qt::PlainText);
+    widget->setText(label);
+    vbox1->addWidget(widget);
+
+    allMonitorsButton->setEnabled(false);
+    selectedMonitorsButton->setEnabled(false);
+    monitorArrangement->setEnabled(false);
+  }
 
   connect(selectedMonitorsButton, &QRadioButton::toggled, this, [=](bool checked) {
     monitorArrangement->setEnabled(checked);
@@ -83,9 +131,8 @@ void OptionsDisplay::reset()
   bool selectedMonitors = !strcasecmp(fullScreenMode, "selected");
   windowedButton->setChecked(!::fullScreen);
   currentMonitorButton->setChecked(::fullScreen
-                                                && ((!allMonitors && !selectedMonitors)
-                                                    || (allMonitors && !ViewerConfig::canFullScreenOnMultiDisplays())));
-  allMonitorsButton->setChecked(::fullScreen && allMonitors && ViewerConfig::canFullScreenOnMultiDisplays());
+                                                && ((!allMonitors && !selectedMonitors)));
+  allMonitorsButton->setChecked(::fullScreen && allMonitors);
   selectedMonitorsButton->setChecked(::fullScreen && selectedMonitors);
   monitorArrangement->reset();
 }
