@@ -25,7 +25,6 @@ private:
   void updatePartiallyChecked();
 
   QList<QCheckBox*> checkBoxes;
-  QButtonGroup* exclusiveButtons;
   QRect selectedRect;
 };
 

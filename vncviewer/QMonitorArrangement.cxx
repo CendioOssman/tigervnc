@@ -1,7 +1,6 @@
 #include "QMonitorArrangement.h"
 
 #include "parameters.h"
-#include "viewerconfig.h"
 
 #include <QApplication>
 #include <QButtonGroup>
@@ -75,7 +74,6 @@ QMonitorArrangement::QMonitorArrangement(QWidget* parent)
 {
   setMinimumSize(200, 100);
   setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
-  exclusiveButtons = new QButtonGroup(this);
 
   QList<QScreen*> screens = qApp->screens();
   for(auto& screen : screens) {
@@ -184,9 +182,6 @@ void QMonitorArrangement::reset()
     });
 
     checkBoxes.append(newCheckBox);
-    if (!ViewerConfig::canFullScreenOnMultiDisplays()) {
-      exclusiveButtons->addButton(newCheckBox);
-    }
   }
 }
 
@@ -247,10 +242,6 @@ void QMonitorArrangement::moveCheckBoxes()
 
 void QMonitorArrangement::updatePartiallyChecked()
 {
-  if (!ViewerConfig::canFullScreenOnMultiDisplays()) {
-    return;
-  }
-
   for (auto& checkBox : checkBoxes) {
     if (checkBox->property("included").toBool()) {
       checkBox->setProperty("included", false);

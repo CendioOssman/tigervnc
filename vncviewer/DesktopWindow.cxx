@@ -15,7 +15,6 @@
 #include "toast.h"
 #include "CConn.h"
 #include "mainloop.h"
-#include "viewerconfig.h"
 
 #include <QApplication>
 #include <QMoveEvent>
@@ -33,7 +32,6 @@
 #endif
 #ifdef Q_OS_LINUX
 #include "x11.h"
-#include "viewerconfig.h"
 #endif
 #ifdef WIN32
 #include "win32.h"
@@ -275,13 +273,8 @@ QList<int> DesktopWindow::fullscreenScreens() const
   } else if (!strcasecmp(fullScreenMode, "selected")) {
     for (int const& id : ::fullScreenSelectedMonitors.getParam()) {
       int i = id - 1; // Screen ID in config is 1-origin.
-      if (i < screens.length()) {
+      if (i < screens.length())
         applicableScreens << i;
-        if (!ViewerConfig::canFullScreenOnMultiDisplays()) {
-          // To have the same behavior as in screenselectionwidget and taking the last of the list
-          applicableScreens = {i};
-        }
-      }
     }
   } else {
     QScreen* cscreen = getCurrentScreen();
@@ -373,28 +366,20 @@ void DesktopWindow::fullscreen(bool enabled)
 
       if (selectedScreens.length() == 1) { // Fullscreen on the selected single display.
 #ifdef Q_OS_LINUX
-        if (ViewerConfig::canFullScreenOnMultiDisplays()) {
-          if (hasWM) {
-            fullscreenOnSelectedDisplaysIndices(top, top, top, top);
-          } else {
-            fullscreenOnSelectedDisplaysPixels(xmin, ymin, w, h);
-          }
+        if (hasWM) {
+          fullscreenOnSelectedDisplaysIndices(top, top, top, top);
         } else {
-          fullscreenOnSelectedDisplay(selectedPrimaryScreen);
+          fullscreenOnSelectedDisplaysPixels(xmin, ymin, w, h);
         }
 #else
         fullscreenOnSelectedDisplay(selectedPrimaryScreen);
 #endif
       } else { // Fullscreen on multiple displays.
 #ifdef Q_OS_LINUX
-        if (ViewerConfig::canFullScreenOnMultiDisplays()) {
-          if (hasWM) {
-            fullscreenOnSelectedDisplaysIndices(top, bottom, left, right);
-          } else {
-            fullscreenOnSelectedDisplaysPixels(xmin, ymin, w, h);
-          }
+        if (hasWM) {
+          fullscreenOnSelectedDisplaysIndices(top, bottom, left, right);
         } else {
-          fullscreenOnSelectedDisplay(selectedPrimaryScreen);
+          fullscreenOnSelectedDisplaysPixels(xmin, ymin, w, h);
         }
 #else
         (void)top;
@@ -406,17 +391,13 @@ void DesktopWindow::fullscreen(bool enabled)
       }
     } else { // Fullscreen on the current single display.
 #ifdef Q_OS_LINUX
-      if (ViewerConfig::canFullScreenOnMultiDisplays()) {
-        if (hasWM) {
-          fullscreenOnSelectedDisplaysIndices(top, top, top, top);
-        } else {
-          fullscreenOnSelectedDisplaysPixels(selectedPrimaryScreen->geometry().x(),
-                                             selectedPrimaryScreen->geometry().y(),
-                                             selectedPrimaryScreen->geometry().width(),
-                                             selectedPrimaryScreen->geometry().height());
-        }
+      if (hasWM) {
+        fullscreenOnSelectedDisplaysIndices(top, top, top, top);
       } else {
-        fullscreenOnSelectedDisplay(selectedPrimaryScreen);
+        fullscreenOnSelectedDisplaysPixels(selectedPrimaryScreen->geometry().x(),
+                                            selectedPrimaryScreen->geometry().y(),
+                                            selectedPrimaryScreen->geometry().width(),
+                                            selectedPrimaryScreen->geometry().height());
       }
 #else
       fullscreenOnSelectedDisplay(selectedPrimaryScreen);
