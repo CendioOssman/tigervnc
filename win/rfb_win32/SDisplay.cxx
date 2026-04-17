@@ -120,6 +120,13 @@ void SDisplay::start()
   // Start the SDisplay core
   startCore();
 
+  server->connectSignal(&rfb::VNCServer::clipboardRequested, this,
+                        &SDisplay::handleClipboardRequest);
+  server->connectSignal(&rfb::VNCServer::clipboardAnnounced, this,
+                        &SDisplay::handleClipboardAnnounce);
+  server->connectSignal(&rfb::VNCServer::clipboardData, this,
+                        &SDisplay::handleClipboardData);
+
   vlog.debug("Started");
 
   if (statusLocation) *statusLocation = true;
@@ -148,6 +155,7 @@ void SDisplay::stop()
 
   // Stop the SDisplayCore
   server->setPixelBuffer(nullptr);
+  server->disconnectSignals(this);
   stopCore();
 
   vlog.debug("Stopped");

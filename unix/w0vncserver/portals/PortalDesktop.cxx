@@ -59,6 +59,13 @@ PortalDesktop::~PortalDesktop()
 void PortalDesktop::init(rfb::VNCServer* vs)
 {
   server = vs;
+
+  server->connectSignal(&rfb::VNCServer::clipboardRequested, this,
+                        &PortalDesktop::handleClipboardRequest);
+  server->connectSignal(&rfb::VNCServer::clipboardAnnounced, this,
+                        &PortalDesktop::handleClipboardAnnounce);
+  server->connectSignal(&rfb::VNCServer::clipboardData, this,
+                        &PortalDesktop::handleClipboardData);
 }
 
 void PortalDesktop::start()

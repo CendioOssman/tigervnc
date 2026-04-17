@@ -55,12 +55,14 @@ public:
                         const char* userName) override;
   void terminate() override;
 
-  virtual void handleClipboardRequest() override;
-  virtual void handleClipboardAnnounce(bool available) override;
-  virtual void handleClipboardData(const char* data) override;
-
   // Check if necessary wayland protocols are available
   static bool available();
+
+protected:
+  // Signal handlers
+  void handleClipboardRequest();
+  void handleClipboardAnnounce(bool available);
+  void handleClipboardData(const char* data);
 
 private:
   void setLEDState(unsigned int state);

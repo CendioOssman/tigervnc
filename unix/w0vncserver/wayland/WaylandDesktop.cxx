@@ -77,6 +77,13 @@ WaylandDesktop::~WaylandDesktop()
 void WaylandDesktop::init(rfb::VNCServer* vs)
 {
   server = vs;
+
+  server->connectSignal(&rfb::VNCServer::clipboardRequested, this,
+                        &WaylandDesktop::handleClipboardRequest);
+  server->connectSignal(&rfb::VNCServer::clipboardAnnounced, this,
+                        &WaylandDesktop::handleClipboardAnnounce);
+  server->connectSignal(&rfb::VNCServer::clipboardData, this,
+                        &WaylandDesktop::handleClipboardData);
 }
 
 void WaylandDesktop::start()

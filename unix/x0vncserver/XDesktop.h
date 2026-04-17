@@ -48,8 +48,7 @@ struct AddedKeySym
 
 class XDesktop : public rfb::SDesktop,
                  public TXGlobalEventHandler,
-                 public QueryResultCallback,
-                 public XSelectionHandler
+                 public QueryResultCallback
 {
 public:
   XDesktop(Display* dpy_, Geometry *geometry);
@@ -68,13 +67,6 @@ public:
   void keyEvent(uint32_t keysym, uint32_t xtcode, bool down) override;
   unsigned int setScreenLayout(int fb_width, int fb_height,
                                const rfb::ScreenSet& layout) override;
-  void handleClipboardRequest() override;
-  void handleClipboardAnnounce(bool available) override;
-  void handleClipboardData(const char* data) override;
-
-  // -=- XSelectionHandler interface
-  void handleXSelectionAnnounce(bool available) override;
-  void handleXSelectionData(const char* data) override;
 
   // -=- TXGlobalEventHandler interface
   bool handleGlobalEvent(XEvent* ev) override;
