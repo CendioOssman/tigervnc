@@ -121,6 +121,8 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
                              CConn* cc_, QWidget* parent)
   : QWidget(parent)
   , cc(cc_)
+  , keyboardGrabbed(false)
+  , mouseGrabbed(false)
   , resizeTimer(new QTimer(this))
   , devicePixelRatio(devicePixelRatioF())
 {
@@ -239,6 +241,7 @@ DesktopWindow::~DesktopWindow()
 {
   // Don't leave any dangling grabs as they are not automatically
   // cleaned up on all platforms
+  ungrabPointer();
   ungrabKeyboard();
 
   OptionsDialog::removeCallback(handleOptions);
@@ -733,7 +736,19 @@ void DesktopWindow::setCursor(int width, int height,
 
 void DesktopWindow::setCursorPos(const rfb::Point& pos)
 {
-  view->setCursorPos(pos);
+  vlog.debug("DesktopWindow::setCursorPos mouseGrabbed=%d", mouseGrabbed);
+  if (!mouseGrabbed) {
+    // Do nothing if we do not have the mouse captured.
+    return;
+  }
+  QPoint gp = mapToGlobal(QPoint(pos.x, pos.y) + view->pos());
+  vlog.debug("DesktopWindow::setCursorPos local x=%d y=%d", pos.x, pos.y);
+  vlog.debug("DesktopWindow::setCursorPos screen x=%d y=%d", gp.x(), gp.y());
+#if defined(__APPLE__)
+  cocoa_set_cursor_pos(gp.x(), gp.y());
+#else
+  QCursor::setPos(gp.x(), gp.y());
+#endif
 }
 
 void DesktopWindow::setLEDState(unsigned int state)
@@ -846,6 +861,25 @@ void DesktopWindow::focusOutEvent(QFocusEvent*)
   vlog.debug("DesktopWindow::focusOutEvent");
 }
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+void DesktopWindow::enterEvent(QEvent *event)
+#else
+void DesktopWindow::enterEvent(QEnterEvent *event)
+#endif
+{
+  vlog.debug("DesktopWindow::enterEvent");
+  if (keyboardGrabbed)
+    grabPointer();
+  QWidget::enterEvent(event);
+}
+
+void DesktopWindow::leaveEvent(QEvent *event)
+{
+  vlog.debug("DesktopWindow::leaveEvent");
+  ungrabPointer();
+  QWidget::leaveEvent(event);
+}
+
 void DesktopWindow::closeEvent(QCloseEvent* e)
 {
   QWidget::closeEvent(e);
@@ -907,6 +941,8 @@ void DesktopWindow::grabKeyboard()
   }
 #endif
 
+  keyboardGrabbed = true;
+
   QPoint gpos = QCursor::pos();
   QPoint lpos = mapFromGlobal(gpos);
   QRect r = rect();
@@ -917,6 +953,8 @@ void DesktopWindow::grabKeyboard()
 
 void DesktopWindow::ungrabKeyboard()
 {
+  keyboardGrabbed = false;
+
   ungrabPointer();
 
 #if defined(WIN32)
@@ -930,12 +968,26 @@ void DesktopWindow::ungrabKeyboard()
 
 void DesktopWindow::grabPointer()
 {
+#if !defined(WIN32) && !defined(__APPLE__)
+  // We also need to grab the pointer as some WMs like to grab buttons
+  // combined with modifies (e.g. Alt+Button0 in metacity).
 
+  // Having a button pressed prevents us from grabbing, we make
+  // a new attempt in fltkHandle()
+  if (!x11_grab_pointer(this))
+    return;
+#endif
+
+  mouseGrabbed = true;
 }
 
 void DesktopWindow::ungrabPointer()
 {
+  mouseGrabbed = false;
 
+#if !defined(WIN32) && !defined(__APPLE__)
+  x11_ungrab_pointer();
+#endif
 }
 
 void DesktopWindow::handleOptions(void *data)

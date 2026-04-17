@@ -80,6 +80,12 @@ protected:
   void changeEvent(QEvent* e) override;
   void focusInEvent(QFocusEvent*) override;
   void focusOutEvent(QFocusEvent*) override;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  void enterEvent(QEvent* event) override;
+#else
+  void enterEvent(QEnterEvent* event) override;
+#endif
+  void leaveEvent(QEvent* event) override;
   void closeEvent(QCloseEvent* e) override;
   bool event(QEvent* event) override;
 
@@ -95,6 +101,9 @@ public:
 private:
   CConn* cc;
   Viewport* view;
+
+  bool keyboardGrabbed;
+  bool mouseGrabbed;
 
   QTimer* resizeTimer;
   bool fullscreenEnabled = false;

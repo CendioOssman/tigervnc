@@ -12,10 +12,6 @@ class QVNCX11View : public Viewport
 public:
   QVNCX11View(CConn* cc, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
 
-public slots:
-  void grabPointer() override;
-  void ungrabPointer() override;
-
 signals:
   void message(const QString& msg, int timeout);
 

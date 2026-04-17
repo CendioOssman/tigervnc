@@ -396,19 +396,6 @@ void Viewport::setCursor(int width, int height,
   QWidget::setCursor(*cursor);
 }
 
-void Viewport::setCursorPos(const rfb::Point& pos)
-{
-  vlog.debug("Viewport::setCursorPos mouseGrabbed=%d", mouseGrabbed);
-  if (!mouseGrabbed) {
-    // Do nothing if we do not have the mouse captured.
-    return;
-  }
-  QPoint gp = mapToGlobal(localPointAdjust(QPoint(pos.x, pos.y)));
-  vlog.debug("Viewport::setCursorPos local x=%d y=%d", pos.x, pos.y);
-  vlog.debug("Viewport::setCursorPos screen x=%d y=%d", gp.x(), gp.y());
-  QCursor::setPos(gp.x(), gp.y());
-}
-
 void Viewport::handleClipboardRequest()
 {
   vlog.debug("Viewport::handleClipboardRequest: %s", pendingClientData.toStdString().c_str());
@@ -820,24 +807,6 @@ void Viewport::focusOutEvent(QFocusEvent* event)
 #endif
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-void Viewport::enterEvent(QEvent *event)
-#else
-void Viewport::enterEvent(QEnterEvent *event)
-#endif
-{
-  vlog.debug("Viewport::enterEvent");
-  maybeGrabPointer();
-  QWidget::enterEvent(event);
-}
-
-void Viewport::leaveEvent(QEvent *event)
-{
-  vlog.debug("Viewport::leaveEvent");
-  ungrabPointer();
-  QWidget::leaveEvent(event);
-}
-
 bool Viewport::event(QEvent *event)
 {
   switch (event->type()) {
@@ -846,7 +815,6 @@ bool Viewport::event(QEvent *event)
     break;
   case QEvent::WindowDeactivate:
     vlog.debug("Viewport::WindowDeactivate");
-    ungrabPointer();
     break;
   case QEvent::CursorChange:
     event->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
@@ -951,26 +919,6 @@ void Viewport::flushPendingClipboard()
   }
 
   pendingClientClipboard = false;
-}
-
-void Viewport::maybeGrabPointer()
-{
-  vlog.debug("Viewport::maybeGrabPointer");
-  if (::fullscreenSystemKeys && ((DesktopWindow*)window())->allowKeyboardGrab() && hasFocus()) {
-    grabPointer();
-  }
-}
-
-void Viewport::grabPointer()
-{
-  vlog.debug("Viewport::grabPointer");
-  activateWindow();
-  mouseGrabbed = true;
-}
-
-void Viewport::ungrabPointer()
-{
-  mouseGrabbed = false;
 }
 
 bool Viewport::gestureEvent(QGestureEvent* event)

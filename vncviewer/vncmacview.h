@@ -19,9 +19,6 @@ public:
   QVNCMacView(CConn* cc, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
   virtual ~QVNCMacView();
 
-public slots:
-  void setCursorPos(const rfb::Point& pos) override;
-
 protected:
   bool event(QEvent* e) override;
 };

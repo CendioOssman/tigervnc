@@ -73,8 +73,6 @@ public:
   void setCursor(int width, int height, const rfb::Point& hotspot,
                  const uint8_t* data);
 
-  virtual void setCursorPos(const rfb::Point& pos);
-
   // Change client LED state
   void setLEDState(unsigned int state);
 
@@ -112,12 +110,6 @@ protected:
   void wheelEvent(QWheelEvent* event) override;
   void focusInEvent(QFocusEvent* event) override;
   void focusOutEvent(QFocusEvent* event) override;
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-  void enterEvent(QEvent* event) override;
-#else
-  void enterEvent(QEnterEvent* event) override;
-#endif
-  void leaveEvent(QEvent* event) override;
   bool event(QEvent* event) override;
 
   void sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask) override;
@@ -128,10 +120,6 @@ protected:
   void handleClipboardChange(QClipboard::Mode mode);
 
   void flushPendingClipboard();
-
-  virtual void maybeGrabPointer();
-  virtual void grabPointer();
-  virtual void ungrabPointer();
 
   typedef std::function<bool(QGestureEvent*)> GestureCallback;
   typedef std::function<bool(Qt::GestureType, QGestureEvent*)> GestureCallbackWithType;
@@ -176,7 +164,6 @@ protected:
   QPixmap pixmap;
   QRegion damage;
 
-  bool mouseGrabbed = false;
   rfb::Point lastPointerPos;
   uint8_t lastButtonMask;
   QTimer* mousePointerTimer;
