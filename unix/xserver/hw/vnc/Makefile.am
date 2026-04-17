@@ -14,7 +14,7 @@ AM_CPPFLAGS = \
 	-I$(TIGERVNC_SRCDIR)/unix/common \
 	$(DIX_CFLAGS) $(LIBXCVT_CFLAGS)
 
-AM_CXXFLAGS = -std=gnu++11
+AM_CXXFLAGS = -std=gnu++17
 
 noinst_LTLIBRARIES = libvnccommon.la
 

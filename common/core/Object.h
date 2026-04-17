@@ -39,8 +39,17 @@
 
 namespace core {
 
+  // Identifier for a signal
+  template<typename... Args>
+  class signal {};
+
   // Opaque identifier for tracking a connection to a signal
   struct Connection;
+
+  template<std::size_t A, std::size_t B>
+  using IsEqual = std::enable_if_t<A == B, bool>;
+  template<typename Functor, typename... Args>
+  using IsInvocable = std::enable_if_t<std::is_invocable_v<Functor, Args...>, bool>;
 
   class Object {
   protected:
@@ -63,6 +72,16 @@ namespace core {
                              void (T::*callback)(S*, const char*,
                                                  Args...));
 
+    template<class T, typename... SigArgs, typename... Args,
+             IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
+    Connection connectSignal(const signal<SigArgs...>* signal, T* obj,
+                             void (T::*callback)(Args...));
+    template<class T, class S, typename... SigArgs, typename... Args,
+             IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
+    Connection connectSignal(const signal<SigArgs...>* signal, T* obj,
+                             void (T::*callback)(S*, const char*,
+                                                 Args...));
+
     // Lambda friendly versions to register a signal callback. If the
     // lambda has a capture list, then an object must also be specified
     // to control the lifetime.
@@ -70,6 +89,14 @@ namespace core {
     Connection connectSignal(const char* name, Functor f);
     template<typename... Args, typename Functor>
     Connection connectSignal(const char* name, Object* obj,
+                             Functor callback);
+
+    template<typename... Args, typename Functor,
+             IsInvocable<Functor, Args...> = true>
+    Connection connectSignal(const signal<Args...>* signal, Functor f);
+    template<typename... Args, typename Functor,
+             IsInvocable<Functor, Args...> = true>
+    Connection connectSignal(const signal<Args...>* signal, Object* obj,
                              Functor callback);
 
     // disconnectSignal() unregisters a method that was previously
@@ -83,6 +110,16 @@ namespace core {
                           void (T::*callback)(Args...));
     template<class T, class S, typename... Args>
     void disconnectSignal(const char* name, T* obj,
+                          void (T::*callback)(S*, const char*,
+                                              Args...));
+
+    template<class T, typename... SigArgs, typename... Args,
+             IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
+    void disconnectSignal(const signal<SigArgs...>* signal, T* obj,
+                          void (T::*callback)(Args...));
+    template<class T, class S, typename... SigArgs, typename... Args,
+             IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
+    void disconnectSignal(const signal<SigArgs...>* signal, T* obj,
                           void (T::*callback)(S*, const char*,
                                               Args...));
 
@@ -107,6 +144,9 @@ namespace core {
     template<typename... Args>
     void emitSignal(const char* name, Args... args);
 
+    template<typename... SigArgs, typename... Args>
+    void emitSignal(const signal<SigArgs...>* signal, Args... args);
+
   private:
     // Wrapper to contain member function pointers
     typedef std::function<void(const std::vector<any>&)> emitter_t;
@@ -116,6 +156,8 @@ namespace core {
 
     void emitSignal(const char* name, const std::vector<any>& info);
 
+    void emitSignal(const void* signal, const std::vector<any>& info);
+
     Connection connectSignal(const char* name, Object* obj,
                              const emitter_t& emitter,
                              const std::vector<size_t>& argTypes);
@@ -124,6 +166,13 @@ namespace core {
                              bool (*comparer)(const any&, const any&),
                              const emitter_t& emitter,
                              const std::vector<size_t>& argTypes);
+
+    Connection connectSignal(const void* signal, Object* obj,
+                             const emitter_t& emitter);
+    Connection connectSignal(const void* signal, Object* obj,
+                             const any& callback,
+                             bool (*comparer)(const any&, const any&),
+                             const emitter_t& emitter);
 
     // Compares two any objects, returning true if they are both type T
     // and have the same value
@@ -142,6 +191,7 @@ namespace core {
 
     // Mapping between signal names and the methods receiving them
     std::map<std::string, ReceiverList> signalReceivers;
+    std::map<const void*, ReceiverList> signalReceiversEx;
     // Signal argument type information (void if no argument)
     std::map<std::string, std::vector<size_t>> signalArgTypes;
 
@@ -157,6 +207,7 @@ namespace core {
   // Visible to everyone so it can be copied
   struct Connection {
     std::string name;
+    const void* signal;
     Object* src;
     Object* dst;
     any callback;
@@ -169,19 +220,18 @@ namespace core {
   //
 
   // Call a function with the specified vector of arguments
-  template<typename... Args>
-  void invoke_any(const std::function<void(Args...)>& f,
-                  const std::vector<any>& info);
+  template<typename... Args, typename Functor>
+  void invoke_any(Functor f, const std::vector<any>& info);
 
   template<class T, typename... Args>
   Connection Object::connectSignal(const char* name, T* obj,
                                    void (T::*callback)(Args...))
   {
-    std::function<void(Args...)> memfn = [obj, callback](Args... args) {
+    auto memfn = [obj, callback](Args... args) {
       (obj->*callback)(args...);
     };
     emitter_t emitter = [memfn](const std::vector<any>& info) {
-      invoke_any(memfn, info);
+      invoke_any<Args...>(memfn, info);
     };
     assert(obj);
     return connectSignal(name, obj, callback,
@@ -197,12 +247,11 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Incompatible signal callback");
-    std::function<void(Args...)> memfn = [sender, name, obj,
-                                          callback](Args... args) {
+    auto memfn = [sender, name, obj, callback](Args... args) {
       (obj->*callback)(sender, name, args...);
     };
     emitter_t emitter = [memfn](const std::vector<any>& info) {
-      invoke_any(memfn, info);
+      invoke_any<Args...>(memfn, info);
     };
     assert(obj);
     return connectSignal(name, obj, callback,
@@ -210,14 +259,81 @@ namespace core {
                          {typeid(Args).hash_code()...});
   }
 
+  template<class T, typename... SigArgs, typename... Args,
+           IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
+  Connection Object::connectSignal(const signal<SigArgs...>* signal,
+                                   T* obj, void (T::*callback)(Args...))
+  {
+    static_assert(sizeof...(SigArgs) == sizeof...(Args),
+                  "Wrong number of arguments for signal callback");
+    static_assert((std::is_convertible_v<SigArgs, Args> && ...),
+                  "Incompatible callback data arguments for signal");
+    auto memfn = [obj, callback](SigArgs... args) {
+      (obj->*callback)(args...);
+    };
+    emitter_t emitter = [memfn](const std::vector<any>& info) {
+      invoke_any<SigArgs...>(memfn, info);
+    };
+    assert(obj);
+    return connectSignal(signal, obj, callback,
+                         compareAny<typeof(callback)>, emitter);
+  }
+
+  template<class T, class S, typename... SigArgs, typename... Args,
+           IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
+  Connection Object::connectSignal(const signal<SigArgs...>* signal, T* obj,
+                                   void (T::*callback)(S*, const char*,
+                                                       Args...))
+  {
+    static_assert(sizeof...(SigArgs) == sizeof...(Args),
+                  "Wrong number of arguments for signal callback");
+    static_assert((std::is_convertible_v<SigArgs, Args> && ...),
+                  "Incompatible callback data arguments for signal");
+    S* sender = dynamic_cast<S*>(this);
+    if (!sender)
+      throw std::logic_error("Incompatible signal callback");
+    auto memfn = [sender, obj, callback](SigArgs... args) {
+      (obj->*callback)(sender, "FIXME", args...);
+    };
+    emitter_t emitter = [memfn](const std::vector<any>& info) {
+      invoke_any<SigArgs...>(memfn, info);
+    };
+    assert(obj);
+    return connectSignal(signal, obj, callback,
+                         compareAny<typeof(callback)>, emitter);
+  }
+
+  // Determine if a lambda has a capture list by using the fact that
+  // the unary plus operator only exists without captures
+  template<typename Functor>
+  constexpr auto _test_captures(Functor* f)
+    -> decltype(+(*f), void(), false)
+  {
+    return false;
+  }
+  constexpr bool _test_captures(void*) {
+      return true;
+  }
+  template<typename Functor>
+  struct has_captures
+      : std::bool_constant<_test_captures((Functor*)nullptr)> {};
+  template<typename Functor>
+  constexpr bool has_captures_v = has_captures<Functor>::value;
+
   template<typename... Args, typename Functor>
   Connection Object::connectSignal(const char* name,
                                    Functor callback)
   {
-    static_assert(std::is_convertible<Functor, void(*)(Args...)>::value,
+    static_assert(std::is_invocable_v<Functor, Args...>,
                   "Incompatible signal callback");
-    emitter_t emitter = [callback](const std::vector<any>& info) {
-      invoke_any((std::function<void(Args...)>)(void(*)(Args...))callback, info);
+    static_assert(!has_captures_v<Functor>,
+                  "Lambdas with captures not allowed as callbacks "
+                  "unless connected to the lifetime of an object");
+    auto wrapper = [callback](Args... args) {
+      callback(args...);
+    };
+    emitter_t emitter = [wrapper](const std::vector<any>& info) {
+      invoke_any<Args...>(wrapper, info);
     };
     // It's not guaranteed if we get unique or identical addresses for
     // otherwise identical lambdas. Treat each as unique for consistent
@@ -230,10 +346,13 @@ namespace core {
   Connection Object::connectSignal(const char* name, Object* obj,
                                    Functor callback)
   {
-    static_assert(std::is_convertible<Functor, std::function<void(Args...)>>::value,
+    static_assert(std::is_invocable_v<Functor, Args...>,
                   "Incompatible signal callback");
-    emitter_t emitter = [callback](const std::vector<any>& info) {
-      invoke_any((std::function<void(Args...)>)callback, info);
+    auto wrapper = [callback](Args... args) {
+      callback(args...);
+    };
+    emitter_t emitter = [wrapper](const std::vector<any>& info) {
+      invoke_any<Args...>(wrapper, info);
     };
     assert(obj);
     // Lambdas cannot be compared, so we cannot tell if it's an identical
@@ -242,11 +361,52 @@ namespace core {
                          {typeid(Args).hash_code()...});
   }
 
+  template<typename... Args, typename Functor,
+           IsInvocable<Functor, Args...>>
+  Connection Object::connectSignal(const signal<Args...>* signal,
+                                   Functor callback)
+  {
+    static_assert(std::is_invocable_v<Functor, Args...>,
+                  "Incompatible signal callback");
+    static_assert(!has_captures_v<Functor>,
+                  "Lambdas with captures not allowed as callbacks "
+                  "unless connected to the lifetime of an object");
+    auto wrapper = [callback](Args... args) {
+      callback(args...);
+    };
+    emitter_t emitter = [wrapper](const std::vector<any>& info) {
+      invoke_any<Args...>(wrapper, info);
+    };
+    // It's not guaranteed if we get unique or identical addresses for
+    // otherwise identical lambdas. Treat each as unique for consistent
+    // behaviour by omitting any tracking information.
+    return connectSignal((const void*)signal, nullptr, emitter);
+  }
+
+  template<typename... Args, typename Functor,
+           IsInvocable<Functor, Args...>>
+  Connection Object::connectSignal(const signal<Args...>* signal,
+                                   Object* obj, Functor callback)
+  {
+    static_assert(std::is_invocable_v<Functor, Args...>,
+                  "Incompatible signal callback");
+    auto wrapper = [callback](Args... args) {
+      callback(args...);
+    };
+    emitter_t emitter = [wrapper](const std::vector<any>& info) {
+      invoke_any<Args...>(wrapper, info);
+    };
+    assert(obj);
+    // Lambdas cannot be compared, so we cannot tell if it's an identical
+    // lambda, or just the same body but with different captures.
+    return connectSignal((const void*)signal, obj, emitter);
+  }
+
   template<class T, typename... Args>
   void Object::disconnectSignal(const char* name, T* obj,
                                 void (T::*callback)(Args...))
   {
-    disconnectSignal({name, this, obj, callback,
+    disconnectSignal({name, nullptr, this, obj, callback,
                       compareAny<typeof(callback)>});
   }
 
@@ -255,7 +415,34 @@ namespace core {
                                 void (T::*callback)(S*, const char*,
                                                     Args...))
   {
-    disconnectSignal({name, this, obj, callback,
+    disconnectSignal({name, nullptr, this, obj, callback,
+                      compareAny<typeof(callback)>});
+  }
+
+  template<class T, typename... SigArgs, typename... Args,
+           IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
+  void Object::disconnectSignal(const signal<SigArgs...>* signal, T* obj,
+                                void (T::*callback)(Args...))
+  {
+    static_assert(sizeof...(SigArgs) == sizeof...(Args),
+                  "Wrong number of arguments for signal callback");
+    static_assert((std::is_convertible_v<SigArgs, Args> && ...),
+                  "Incompatible callback data arguments for signal");
+    disconnectSignal({"", (void*)signal, this, obj, callback,
+                      compareAny<typeof(callback)>});
+  }
+
+  template<class T, class S, typename... SigArgs, typename... Args,
+           IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
+  void Object::disconnectSignal(const signal<SigArgs...>* signal, T* obj,
+                                void (T::*callback)(S*, const char*,
+                                                    Args...))
+  {
+    static_assert(sizeof...(SigArgs) == sizeof...(Args),
+                  "Wrong number of arguments for signal callback");
+    static_assert((std::is_convertible_v<SigArgs, Args> && ...),
+                  "Incompatible callback data arguments for signal");
+    disconnectSignal({"", (void*)signal, this, obj, callback,
                       compareAny<typeof(callback)>});
   }
 
@@ -276,6 +463,17 @@ namespace core {
     emitSignal(name, {any(args)...});
   }
 
+  template<typename... SigArgs, typename... Args>
+  void Object::emitSignal(const signal<SigArgs...>* signal,
+                          Args... args)
+  {
+    static_assert(sizeof...(SigArgs) == sizeof...(Args),
+                  "Wrong number of arguments emitting signal");
+    static_assert((std::is_convertible_v<Args, SigArgs> && ...),
+                  "Incompatible signal data emitting signal");
+    emitSignal(signal, {any((SigArgs)args)...});
+  }
+
   template<class T>
   bool Object::compareAny(const any& a, const any& b)
   {
@@ -288,19 +486,19 @@ namespace core {
     }
   }
 
-  template<typename... Args, std::size_t... idx>
-  void _invoke_any_impl(const std::function<void(Args...)>& f,
-                        const std::vector<any>& info,
-                         std::index_sequence<idx...>)
+  template<typename... Args, std::size_t... idx, typename Functor>
+  void _invoke_any_impl(Functor f, const std::vector<any>& info,
+                        std::index_sequence<idx...>)
   {
+    static_assert(std::is_invocable_v<Functor, Args...>);
     f(any_cast<typename std::decay<Args>::type>(info[idx])...);
   }
-  template<typename... Args>
-  void invoke_any(const std::function<void(Args...)>& f,
-                  const std::vector<any>& info)
+  template<typename... Args, typename Functor>
+  void invoke_any(Functor f, const std::vector<any>& info)
   {
     assert(info.size() == sizeof...(Args));
-    _invoke_any_impl(f, info, std::index_sequence_for<Args...>{});
+    _invoke_any_impl<Args...>(f, info,
+                              std::index_sequence_for<Args...>{});
   }
 
 }
