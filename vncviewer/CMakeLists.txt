@@ -38,8 +38,6 @@ add_definitions("-DQT_DEPRECATED_WARNINGS_SINCE=0x050f00")
 
 if (WIN32)
   set(OS_DEP_SOURCES
-      vncwinview.cxx
-      vncwinview.h
       KeyboardWin32.cxx
       KeyboardWin32.h
       win32.c
@@ -47,8 +45,6 @@ if (WIN32)
   )
 elseif(APPLE)
   set(OS_DEP_SOURCES
-      vncmacview.cxx
-      vncmacview.h
       KeyboardMacOS.mm
       KeyboardMacOS.h
       cocoa.h
@@ -57,8 +53,6 @@ elseif(APPLE)
   )
 else()
   set(OS_DEP_SOURCES
-      vncx11view.cxx
-      vncx11view.h
       KeyboardX11.cxx
       KeyboardX11.h
       x11.h

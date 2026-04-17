@@ -40,14 +40,6 @@
 #include "cocoa.h"
 #endif
 
-#if defined(WIN32)
-#include "vncwinview.h"
-#elif defined(__APPLE__)
-#include "vncmacview.h"
-#elif defined(Q_OS_UNIX)
-#include "vncx11view.h"
-#endif
-
 static rfb::LogWriter vlog("VNCWindow");
 
 #ifdef __APPLE__
@@ -146,22 +138,7 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   setPalette(p);
   setBackgroundRole(QPalette::Window);
 
-#if defined(WIN32)
-  view = new QVNCWinView(cc, scrollArea);
-#elif defined(__APPLE__)
-  view = new QVNCMacView(cc, scrollArea);
-#elif defined(Q_OS_UNIX)
-  QString platform = QApplication::platformName();
-  if (platform == "xcb") {
-    view = new QVNCX11View(cc, scrollArea);
-  } else if (platform == "wayland") {
-    ;
-  }
-#endif
-
-  if (!view) {
-    throw rdr::Exception(_("Platform not supported."));
-  }
+  view = new Viewport(cc, scrollArea);
   connect(view, &Viewport::bufferResized, this, &DesktopWindow::fromBufferResize, Qt::QueuedConnection);
   connect(view,
           &Viewport::remoteResizeRequest,

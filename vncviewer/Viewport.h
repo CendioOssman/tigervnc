@@ -115,8 +115,6 @@ protected:
   void sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask) override;
 
 protected:
-  bool hasFocus();
-
   void handleClipboardChange(QClipboard::Mode mode);
 
   void flushPendingClipboard();
@@ -126,10 +124,6 @@ protected:
   QMap<Qt::GestureType, QPair<QGestureRecognizer*, GestureCallback>> gestureRecognizers;
   bool gestureEvent(QGestureEvent *event);
   void registerGesture(QGestureRecognizer* gr, GestureCallbackWithType cb);
-
-  void initKeyboardHandler();
-  void installKeyboardHandler();
-  void removeKeyboardHandler();
 
   void resetKeyboard();
 

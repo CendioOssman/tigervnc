@@ -63,9 +63,6 @@
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"
 #include "Keyboard.h"
-#ifdef __APPLE__
-#include "KeyboardMacOS.h"
-#endif
 #include "EmulateMB.h"
 #include "i18n.h"
 #include "locale.h"
@@ -82,7 +79,13 @@
 
 #include "PlatformPixelBuffer.h"
 
-#undef KeyPress
+#if defined(WIN32)
+#include "KeyboardWin32.h"
+#elif defined(__APPLE__)
+#include "KeyboardMacOS.h"
+#else
+#include "KeyboardX11.h"
+#endif
 
 #ifdef __APPLE__
 #include "cocoa.h"
@@ -124,6 +127,14 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
   setContentsMargins(0, 0, 0, 0);
+
+#if defined(WIN32)
+  keyboard = new KeyboardWin32(this);
+#elif defined(__APPLE__)
+  keyboard = new KeyboardMacOS(this);
+#else
+  keyboard = new KeyboardX11(this);
+#endif
 
   // 257
   registerGesture(new ClicksAlternativeGestureRecognizer, [=](Qt::GestureType type, QGestureEvent* event){
@@ -273,6 +284,9 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
 
   connect(QGuiApplication::clipboard(), &QClipboard::changed, this, &Viewport::handleClipboardChange);
 
+  // We need to intercept keyboard events early
+  QAbstractEventDispatcher::instance()->installNativeEventFilter(this);
+
   contextMenu = new QMenu(this);
 
   setMenuKey();
@@ -317,11 +331,11 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
 
 Viewport::~Viewport()
 {
+  QAbstractEventDispatcher::instance()->removeNativeEventFilter(this);
+
   OptionsDialog::removeCallback(handleOptions);
 
   delete cursor;
-
-  removeKeyboardHandler();
 
   for (auto gr : gestureRecognizers.keys()) {
     QGestureRecognizer::unregisterRecognizer(gr);
@@ -531,8 +545,6 @@ void Viewport::giveKeyboardFocus()
     vlog.debug("Viewport::giveKeyboardFocus activeModalWidget=%s", qApp->activeModalWidget()->metaObject()->className());
   }
   if (keyboard && !qApp->activeModalWidget()) {
-    installKeyboardHandler();
-
     flushPendingClipboard();
 
     // We may have gotten our lock keys out of sync with the server
@@ -797,7 +809,6 @@ void Viewport::focusOutEvent(QFocusEvent* event)
   vlog.debug("Viewport::focusOutEvent");
   // We won't get more key events, so reset our knowledge about keys
   resetKeyboard();
-  removeKeyboardHandler();
   QWidget::focusOutEvent(event);
 #ifdef __APPLE__
   vlog.debug("cocoa_update_window_level hasFocus=%d", hasFocus());
@@ -846,11 +857,6 @@ void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
   }
   lastPointerPos = remotePointAdjust(pos);
   lastButtonMask = buttonMask;
-}
-
-bool Viewport::hasFocus()
-{
-  return QWidget::hasFocus() || isActiveWindow();
 }
 
 void Viewport::handleClipboardChange(QClipboard::Mode mode)
@@ -950,23 +956,6 @@ void Viewport::registerGesture(QGestureRecognizer *gr, GestureCallbackWithType c
   gestureRecognizers.insert(type, QPair<QGestureRecognizer*, GestureCallback>(gr, std::bind(cb, type, std::placeholders::_1)));
 }
 
-void Viewport::initKeyboardHandler()
-{
-  installKeyboardHandler();
-}
-
-void Viewport::installKeyboardHandler()
-{
-  vlog.debug("Viewport::installKeyboardHandler");
-  QAbstractEventDispatcher::instance()->installNativeEventFilter(this);
-}
-
-void Viewport::removeKeyboardHandler()
-{
-  vlog.debug("Viewport::removeNativeEventFilter");
-  QAbstractEventDispatcher::instance()->removeNativeEventFilter(this);
-}
-
 void Viewport::resetKeyboard()
 {
   try {
@@ -1029,6 +1018,9 @@ bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, qin
 #endif
 {
   bool consumed;
+
+  if (!hasFocus())
+    return false;
 
 #ifdef __APPLE__
   // Special event that means we temporarily lost some input
