@@ -29,8 +29,8 @@ using namespace core;
 
 static bool operator==(const Connection& a, const Connection& b)
 {
-  return a.name == b.name && a.signal == b.signal && a.src == b.src &&
-         a.dst == b.dst && a.comparer(a.callback, b.callback);
+  return a.signal == b.signal && a.src == b.src && a.dst == b.dst &&
+         a.comparer(a.callback, b.callback);
 }
 
 struct Object::SignalReceiver {
@@ -44,8 +44,7 @@ Object::Object()
 
 Object::~Object()
 {
-  std::map<std::string, ReceiverList>::iterator sigiter;
-  std::map<const void*, ReceiverList>::iterator sigiterex;
+  std::map<const void*, ReceiverList>::iterator sigiter;
 
   // Disconnect from any signals we might have subscribed to
   while (!connectedObjects.empty())
@@ -61,59 +60,6 @@ Object::~Object()
     while (!siglist->empty())
       disconnectSignal(siglist->front().connection);
   }
-  for (sigiterex = signalReceiversEx.begin();
-       sigiterex != signalReceiversEx.end(); ++sigiterex) {
-    ReceiverList* siglist;
-
-    siglist = &sigiterex->second;
-    while (!siglist->empty())
-      disconnectSignal(siglist->front().connection);
-  }
-}
-
-void Object::registerSignal(const char* name,
-                            const std::vector<size_t>& argTypes)
-{
-  assert(name);
-
-  if (signalReceivers.count(name) != 0)
-    throw std::logic_error(format("Signal %s is already registered", name));
-
-  // Just to force it being created
-  signalReceivers[name].clear();
-
-  signalArgTypes[name] = argTypes;
-}
-
-void Object::emitSignal(const char* name, const std::vector<any>& info)
-{
-  ReceiverList siglist;
-  ReceiverList::iterator iter;
-
-  assert(name);
-
-  if (signalReceivers.count(name) == 0)
-    throw std::logic_error(format("Cannot emit unknown signal %s", name));
-
-  if (signalArgTypes[name].size() != info.size())
-    throw std::logic_error(format("Wrong number of arguments emitting signal %s", name));
-
-  for (size_t i = 0; i < info.size(); i++)
-    if (signalArgTypes[name][i] != info[i].type().hash_code())
-      throw std::logic_error(format("Incompatible signal data emitting signal %s", name));
-
-  // Convoluted iteration so that we safely handle changes to
-  // the list
-  siglist = signalReceivers[name];
-  for (iter = siglist.begin(); iter != siglist.end(); ++iter) {
-    if (std::find_if(signalReceivers[name].begin(),
-                     signalReceivers[name].end(),
-                     [iter](const SignalReceiver& recv) {
-                       return recv.connection == iter->connection;
-                     }) == signalReceivers[name].end())
-      continue;
-    iter->emitter(info);
-  }
 }
 
 void Object::emitSignal(const void* signal,
@@ -124,75 +70,21 @@ void Object::emitSignal(const void* signal,
 
   assert(signal);
 
-  if (signalReceiversEx.count(signal) == 0)
+  if (signalReceivers.count(signal) == 0)
     return;
 
   // Convoluted iteration so that we safely handle changes to
   // the list
-  siglist = signalReceiversEx[signal];
+  siglist = signalReceivers[signal];
   for (iter = siglist.begin(); iter != siglist.end(); ++iter) {
-    if (std::find_if(signalReceiversEx[signal].begin(),
-                     signalReceiversEx[signal].end(),
+    if (std::find_if(signalReceivers[signal].begin(),
+                     signalReceivers[signal].end(),
                      [iter](const SignalReceiver& recv) {
                        return recv.connection == iter->connection;
-                     }) == signalReceiversEx[signal].end())
+                     }) == signalReceivers[signal].end())
       continue;
     iter->emitter(info);
   }
-}
-
-Connection Object::connectSignal(const char* name, Object* obj,
-                                 const emitter_t& emitter,
-                                 const std::vector<size_t>& argTypes)
-{
-  static uint64_t index = 0;
-  // This callback is not possible to check for uniqueness, so instead
-  // we assume every call is unique and track them using an index.
-  return connectSignal(name, obj, index++, compareAny<typeof(index)>,
-                       emitter, argTypes);
-}
-
-Connection Object::connectSignal(const char* name, Object* obj,
-                                 const any& callback,
-                                 bool (*comparer)(const any&, const any&),
-                                 const emitter_t& emitter,
-                                 const std::vector<size_t>& argTypes)
-{
-  ReceiverList::iterator iter;
-  Connection connection;
-
-  assert(name);
-
-  if (signalReceivers.count(name) == 0)
-    throw std::logic_error(format("Cannot connect to unknown signal %s", name));
-
-  if (signalArgTypes[name].empty()) {
-    if (!argTypes.empty())
-      throw std::logic_error(format("Unexpected callback data "
-                                    "arguments for signal %s", name));
-  } else {
-    if (argTypes.empty())
-      throw std::logic_error(format("Missing callback data arguments "
-                                    "for signal %s", name));
-    if (argTypes != signalArgTypes[name])
-      throw std::logic_error(format("Incompatible callback data "
-                                    "arguments for signal %s", name));
-  }
-
-  connection = {name, nullptr, this, obj, callback, comparer};
-
-  for (iter = signalReceivers[name].begin();
-       iter != signalReceivers[name].end(); ++iter) {
-    if (iter->connection == connection)
-      throw std::logic_error(format("Signal %s is already connected", name));
-  }
-
-  signalReceivers[name].push_back({connection, emitter});
-
-  if (obj)
-    obj->connectedObjects.insert(this);
-
-  return connection;
 }
 
 Connection Object::connectSignal(const void* signal, Object* obj,
@@ -215,18 +107,18 @@ Connection Object::connectSignal(const void* signal, Object* obj,
 
   assert(signal);
 
-  if (signalReceiversEx.count(signal) == 0)
-    signalReceiversEx[signal].clear();
+  if (signalReceivers.count(signal) == 0)
+    signalReceivers[signal].clear();
 
-  connection = {"", signal, this, obj, callback, comparer};
+  connection = {signal, this, obj, callback, comparer};
 
-  for (iter = signalReceiversEx[signal].begin();
-       iter != signalReceiversEx[signal].end(); ++iter) {
+  for (iter = signalReceivers[signal].begin();
+       iter != signalReceivers[signal].end(); ++iter) {
     if (iter->connection == connection)
       throw std::logic_error("Signal is already connected");
   }
 
-  signalReceiversEx[signal].push_back({connection, emitter});
+  signalReceivers[signal].push_back({connection, emitter});
 
   if (obj)
     obj->connectedObjects.insert(this);
@@ -240,30 +132,17 @@ void Object::disconnectSignal(const Connection connection)
 
   if (connection.src != this)
     throw std::logic_error("Disconnecting signal from wrong object");
-  if ((connection.signal == nullptr) &&
-      (signalReceivers.count(connection.name) == 0))
-    throw std::logic_error(format("Cannot disconnect unknown signal %s",
-                                  connection.name.c_str()));
 
-  for (iter = signalReceivers[connection.name].begin();
-       iter != signalReceivers[connection.name].end(); ++iter) {
+  for (iter = signalReceivers[connection.signal].begin();
+       iter != signalReceivers[connection.signal].end(); ++iter) {
     if (iter->connection == connection) {
-      signalReceivers[connection.name].erase(iter);
-      break;
-    }
-  }
-
-  for (iter = signalReceiversEx[connection.signal].begin();
-       iter != signalReceiversEx[connection.signal].end(); ++iter) {
-    if (iter->connection == connection) {
-      signalReceiversEx[connection.signal].erase(iter);
+      signalReceivers[connection.signal].erase(iter);
       break;
     }
   }
 
   if (connection.dst) {
-    std::map<std::string, ReceiverList>::iterator sigiter;
-    std::map<const void*, ReceiverList>::iterator sigiterex;
+    std::map<const void*, ReceiverList>::iterator sigiter;
     bool hasOthers;
 
     hasOthers = false;
@@ -283,19 +162,6 @@ void Object::disconnectSignal(const Connection connection)
         break;
     }
 
-    for (sigiterex = signalReceiversEx.begin();
-         sigiterex != signalReceiversEx.end(); ++sigiterex) {
-      for (iter = sigiterex->second.begin();
-           iter != sigiterex->second.end(); ++iter) {
-        if (iter->connection.dst == connection.dst) {
-          hasOthers = true;
-          break;
-        }
-      }
-      if (hasOthers)
-        break;
-    }
-
     if (!hasOthers)
       connection.dst->connectedObjects.erase(this);
   }
@@ -303,8 +169,7 @@ void Object::disconnectSignal(const Connection connection)
 
 void Object::disconnectSignals(Object* obj)
 {
-  std::map<std::string, ReceiverList>::iterator sigiter;
-  std::map<const void*, ReceiverList>::iterator sigiterex;
+  std::map<const void*, ReceiverList>::iterator sigiter;
 
   assert(obj);
 
@@ -314,21 +179,6 @@ void Object::disconnectSignals(Object* obj)
     ReceiverList::iterator iter;
 
     siglist = &sigiter->second;
-    iter = siglist->begin();
-    while (iter != siglist->end()) {
-      if (iter->connection.dst == obj)
-        siglist->erase(iter++);
-      else
-        ++iter;
-    }
-  }
-
-  for (sigiterex = signalReceiversEx.begin();
-       sigiterex != signalReceiversEx.end(); ++sigiterex) {
-    ReceiverList* siglist;
-    ReceiverList::iterator iter;
-
-    siglist = &sigiterex->second;
     iter = siglist->begin();
     while (iter != siglist->end()) {
       if (iter->connection.dst == obj)

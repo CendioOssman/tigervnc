@@ -31,8 +31,6 @@
 #include <map>
 #include <set>
 #include <stdexcept>
-#include <string>
-#include <typeinfo>
 #include <vector>
 
 #include <core/any.h>
@@ -61,17 +59,8 @@ namespace core {
     // connectSignal() registers an object and method on that object to
     // be called whenever a signal of the specified name is emitted.
     // Inclusion of signal arguments must match how the signal is
-    // emitted, or an exception will be thrown. Any method registered
-    // will automatically be unregistered when the method's object is
-    // destroyed.
-    template<class T, typename... Args>
-    Connection connectSignal(const char* name, T* obj,
-                             void (T::*callback)(Args...));
-    template<class T, class S, typename... Args>
-    Connection connectSignal(const char* name, T* obj,
-                             void (T::*callback)(S*, const char*,
-                                                 Args...));
-
+    // emitted. Any method registered will automatically be unregistered
+    // when the method's object is destroyed.
     template<class T, typename... SigArgs, typename... Args,
              IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
     Connection connectSignal(const signal<SigArgs...>* signal, T* obj,
@@ -85,12 +74,6 @@ namespace core {
     // Lambda friendly versions to register a signal callback. If the
     // lambda has a capture list, then an object must also be specified
     // to control the lifetime.
-    template<typename... Args, typename Functor>
-    Connection connectSignal(const char* name, Functor f);
-    template<typename... Args, typename Functor>
-    Connection connectSignal(const char* name, Object* obj,
-                             Functor callback);
-
     template<typename... Args, typename Functor,
              IsInvocable<Functor, Args...> = true>
     Connection connectSignal(const signal<Args...>* signal, Functor f);
@@ -105,14 +88,6 @@ namespace core {
 
     // Methods can be disconneced by reference, rather than tracking
     // the connection object.
-    template<class T, typename... Args>
-    void disconnectSignal(const char* name, T* obj,
-                          void (T::*callback)(Args...));
-    template<class T, class S, typename... Args>
-    void disconnectSignal(const char* name, T* obj,
-                          void (T::*callback)(S*, const char*,
-                                              Args...));
-
     template<class T, typename... SigArgs, typename... Args,
              IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
     void disconnectSignal(const signal<SigArgs...>* signal, T* obj,
@@ -129,21 +104,9 @@ namespace core {
     void disconnectSignals(Object* obj);
 
   protected:
-    // registerSignal() registers a new signal type with the specified
-    // name. This must always be done before connectSignal() or
-    // emitSignal() is used. If the signal will include signal
-    // information, then the typed version must be called with the
-    // intended types that will be used with emitSignal().
-    void registerSignal(const char* name);
-    template<typename... Args>
-    void registerSignal(const char* name);
-
     // emitSignal() calls all the registered object methods for the
-    // specified name. Inclusion of signal information must match the
-    // types from registerSignal() or an exception will be thrown.
-    template<typename... Args>
-    void emitSignal(const char* name, Args... args);
-
+    // specified signal. Inclusion of signal information must match the
+    // types from the signal.
     template<typename... SigArgs, typename... Args>
     void emitSignal(const signal<SigArgs...>* signal, Args... args);
 
@@ -151,21 +114,7 @@ namespace core {
     // Wrapper to contain member function pointers
     typedef std::function<void(const std::vector<any>&)> emitter_t;
 
-    void registerSignal(const char* name,
-                        const std::vector<size_t>& argTypes);
-
-    void emitSignal(const char* name, const std::vector<any>& info);
-
     void emitSignal(const void* signal, const std::vector<any>& info);
-
-    Connection connectSignal(const char* name, Object* obj,
-                             const emitter_t& emitter,
-                             const std::vector<size_t>& argTypes);
-    Connection connectSignal(const char* name, Object* obj,
-                             const any& callback,
-                             bool (*comparer)(const any&, const any&),
-                             const emitter_t& emitter,
-                             const std::vector<size_t>& argTypes);
 
     Connection connectSignal(const void* signal, Object* obj,
                              const emitter_t& emitter);
@@ -189,11 +138,8 @@ namespace core {
     struct SignalReceiver;
     typedef std::list<SignalReceiver> ReceiverList;
 
-    // Mapping between signal names and the methods receiving them
-    std::map<std::string, ReceiverList> signalReceivers;
-    std::map<const void*, ReceiverList> signalReceiversEx;
-    // Signal argument type information (void if no argument)
-    std::map<std::string, std::vector<size_t>> signalArgTypes;
+    // Mapping between signal objects and the methods receiving them
+    std::map<const void*, ReceiverList> signalReceivers;
 
     // Other objects that we have connected to signals on
     std::set<Object*> connectedObjects;
@@ -206,7 +152,6 @@ namespace core {
 
   // Visible to everyone so it can be copied
   struct Connection {
-    std::string name;
     const void* signal;
     Object* src;
     Object* dst;
@@ -222,42 +167,6 @@ namespace core {
   // Call a function with the specified vector of arguments
   template<typename... Args, typename Functor>
   void invoke_any(Functor f, const std::vector<any>& info);
-
-  template<class T, typename... Args>
-  Connection Object::connectSignal(const char* name, T* obj,
-                                   void (T::*callback)(Args...))
-  {
-    auto memfn = [obj, callback](Args... args) {
-      (obj->*callback)(args...);
-    };
-    emitter_t emitter = [memfn](const std::vector<any>& info) {
-      invoke_any<Args...>(memfn, info);
-    };
-    assert(obj);
-    return connectSignal(name, obj, callback,
-                         compareAny<typeof(callback)>, emitter,
-                         {typeid(Args).hash_code()...});
-  }
-
-  template<class T, class S, typename... Args>
-  Connection Object::connectSignal(const char* name, T* obj,
-                                   void (T::*callback)(S*, const char*,
-                                                       Args...))
-  {
-    S* sender = dynamic_cast<S*>(this);
-    if (!sender)
-      throw std::logic_error("Incompatible signal callback");
-    auto memfn = [sender, name, obj, callback](Args... args) {
-      (obj->*callback)(sender, name, args...);
-    };
-    emitter_t emitter = [memfn](const std::vector<any>& info) {
-      invoke_any<Args...>(memfn, info);
-    };
-    assert(obj);
-    return connectSignal(name, obj, callback,
-                         compareAny<typeof(callback)>, emitter,
-                         {typeid(Args).hash_code()...});
-  }
 
   template<class T, typename... SigArgs, typename... Args,
            IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
@@ -320,47 +229,6 @@ namespace core {
   template<typename Functor>
   constexpr bool has_captures_v = has_captures<Functor>::value;
 
-  template<typename... Args, typename Functor>
-  Connection Object::connectSignal(const char* name,
-                                   Functor callback)
-  {
-    static_assert(std::is_invocable_v<Functor, Args...>,
-                  "Incompatible signal callback");
-    static_assert(!has_captures_v<Functor>,
-                  "Lambdas with captures not allowed as callbacks "
-                  "unless connected to the lifetime of an object");
-    auto wrapper = [callback](Args... args) {
-      callback(args...);
-    };
-    emitter_t emitter = [wrapper](const std::vector<any>& info) {
-      invoke_any<Args...>(wrapper, info);
-    };
-    // It's not guaranteed if we get unique or identical addresses for
-    // otherwise identical lambdas. Treat each as unique for consistent
-    // behaviour by omitting any tracking information.
-    return connectSignal(name, nullptr, emitter,
-                         {typeid(Args).hash_code()...});
-  }
-
-  template<typename... Args, typename Functor>
-  Connection Object::connectSignal(const char* name, Object* obj,
-                                   Functor callback)
-  {
-    static_assert(std::is_invocable_v<Functor, Args...>,
-                  "Incompatible signal callback");
-    auto wrapper = [callback](Args... args) {
-      callback(args...);
-    };
-    emitter_t emitter = [wrapper](const std::vector<any>& info) {
-      invoke_any<Args...>(wrapper, info);
-    };
-    assert(obj);
-    // Lambdas cannot be compared, so we cannot tell if it's an identical
-    // lambda, or just the same body but with different captures.
-    return connectSignal(name, obj, emitter,
-                         {typeid(Args).hash_code()...});
-  }
-
   template<typename... Args, typename Functor,
            IsInvocable<Functor, Args...>>
   Connection Object::connectSignal(const signal<Args...>* signal,
@@ -402,23 +270,6 @@ namespace core {
     return connectSignal((const void*)signal, obj, emitter);
   }
 
-  template<class T, typename... Args>
-  void Object::disconnectSignal(const char* name, T* obj,
-                                void (T::*callback)(Args...))
-  {
-    disconnectSignal({name, nullptr, this, obj, callback,
-                      compareAny<typeof(callback)>});
-  }
-
-  template<class T, class S, typename... Args>
-  void Object::disconnectSignal(const char* name, T* obj,
-                                void (T::*callback)(S*, const char*,
-                                                    Args...))
-  {
-    disconnectSignal({name, nullptr, this, obj, callback,
-                      compareAny<typeof(callback)>});
-  }
-
   template<class T, typename... SigArgs, typename... Args,
            IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
   void Object::disconnectSignal(const signal<SigArgs...>* signal, T* obj,
@@ -428,7 +279,7 @@ namespace core {
                   "Wrong number of arguments for signal callback");
     static_assert((std::is_convertible_v<SigArgs, Args> && ...),
                   "Incompatible callback data arguments for signal");
-    disconnectSignal({"", (void*)signal, this, obj, callback,
+    disconnectSignal({(void*)signal, this, obj, callback,
                       compareAny<typeof(callback)>});
   }
 
@@ -442,25 +293,8 @@ namespace core {
                   "Wrong number of arguments for signal callback");
     static_assert((std::is_convertible_v<SigArgs, Args> && ...),
                   "Incompatible callback data arguments for signal");
-    disconnectSignal({"", (void*)signal, this, obj, callback,
+    disconnectSignal({(void*)signal, this, obj, callback,
                       compareAny<typeof(callback)>});
-  }
-
-  inline void Object::registerSignal(const char* name)
-  {
-    registerSignal(name, {});
-  }
-
-  template<typename... Args>
-  void Object::registerSignal(const char* name)
-  {
-    registerSignal(name, {typeid(Args).hash_code()...});
-  }
-
-  template<typename... Args>
-  void Object::emitSignal(const char* name, Args... args)
-  {
-    emitSignal(name, {any(args)...});
   }
 
   template<typename... SigArgs, typename... Args>

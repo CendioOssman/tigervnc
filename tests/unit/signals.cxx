@@ -30,25 +30,6 @@ class SenderBase : public core::Object {
 public:
   SenderBase() {}
 
-  void registerSignal(const char* name)
-  {
-    core::Object::registerSignal(name);
-  }
-  template<typename... Args>
-  void registerSignal(const char* name)
-  {
-    core::Object::registerSignal<Args...>(name);
-  }
-
-  void emitSignal(const char* name)
-  {
-    core::Object::emitSignal(name);
-  }
-  template<typename... Args>
-  void emitSignal(const char* name, Args... args)
-  {
-    core::Object::emitSignal(name, args...);
-  }
   template<typename... SigArgs, typename... Args>
   void emitSignal(const core::signal<SigArgs...>* sig, Args... args)
   {
@@ -97,92 +78,6 @@ template<>
 int* SignalsArgs<int*>::value = &_intvalue;
 template<>
 std::string SignalsArgs<std::string>::value = "data";
-
-TEST(Signals, doubleRegister)
-{
-  class Sender : public SenderBase {};
-
-  Sender s;
-
-  s.registerSignal("signal");
-  EXPECT_THROW({
-    s.registerSignal("signal");
-  }, std::logic_error);
-}
-
-TEST(Signals, doubleRegisterArg)
-{
-  class Sender : public SenderBase {};
-
-  Sender s;
-
-  s.registerSignal<const char*>("signal");
-  EXPECT_THROW({
-    // Doesn't matter that the type differs
-    s.registerSignal<int>("signal");
-  }, std::logic_error);
-}
-
-TEST(Signals, emitUnknown)
-{
-  class Sender : public SenderBase {};
-
-  Sender s;
-
-  EXPECT_THROW({
-    s.emitSignal("nosignal");
-  }, std::logic_error);
-
-  EXPECT_THROW({
-    s.emitSignal("nosignal", "data");
-  }, std::logic_error);
-}
-
-TEST(Signals, emitUnexpectedData)
-{
-  class Sender : public SenderBase {};
-
-  Sender s;
-
-  s.registerSignal("signal");
-  EXPECT_THROW({
-    s.emitSignal("signal", "data");
-  }, std::logic_error);
-}
-
-TEST(Signals, emitMissingData)
-{
-  class Sender : public SenderBase {};
-
-  Sender s;
-
-  s.registerSignal<const char*>("signal");
-  EXPECT_THROW({
-    s.emitSignal("signal");
-  }, std::logic_error);
-
-  s.registerSignal<const char*, int>("signal2");
-  EXPECT_THROW({
-    s.emitSignal("signal2", "data");
-  }, std::logic_error);
-}
-
-TEST(Signals, emitWrongData)
-{
-  class Sender : public SenderBase {};
-
-  Sender s;
-
-  s.registerSignal<const char*>("signal");
-  EXPECT_THROW({
-    s.emitSignal("signal", 1234);
-  }, std::logic_error);
-
-  s.registerSignal<const char*, const char*>("signal2");
-  EXPECT_THROW({
-    s.emitSignal("signal2", "data", 1234);
-  }, std::logic_error);
-}
 
 TEST(Signals, connectSignal)
 {
@@ -459,31 +354,6 @@ TYPED_TEST(SignalsArgs, connectSignalLambdaMultiArgs)
   EXPECT_EQ(callCount, 2);
 }
 
-TEST(Signals, connectUnknown)
-{
-  class Sender : public SenderBase {};
-
-  Sender s;
-  Receiver r;
-
-  EXPECT_THROW({
-    s.connectSignal("nosignal", &r, &Receiver::genericHandler);
-  }, std::logic_error);
-}
-
-TYPED_TEST(SignalsArgs, connectUnknownArg)
-{
-  class Sender : public SenderBase {};
-
-  Sender s;
-  Receiver r;
-
-  EXPECT_THROW({
-    s.connectSignal("nosignal", &r,
-                    &Receiver::genericTypeHandler<TypeParam>);
-  }, std::logic_error);
-}
-
 TEST(Signals, doubleConnect)
 {
   class Sender : public SenderBase {
@@ -756,23 +626,6 @@ TEST(Signals, disconnectWrongObject)
   }, std::logic_error);
 }
 
-TEST(Signals, disconnectWrongSignal)
-{
-  class Sender : public SenderBase {};
-
-  Sender s;
-  Receiver r;
-  core::Connection c;
-
-  /* Incorrect signal name (should be impossible) */
-  s.registerSignal("renamesignal");
-  c = s.connectSignal("renamesignal", &r, &Receiver::genericHandler);
-  c.name = "badname";
-  EXPECT_THROW({
-    s.disconnectSignal(c);
-  }, std::logic_error);
-}
-
 TEST(Signals, disconnectHelper)
 {
   class Sender : public SenderBase {
@@ -939,31 +792,6 @@ TYPED_TEST(SignalsArgs, disconnectSimilarMultiArg)
                      &Receiver::genericTypeHandler<TypeParam, double>);
   s.emitSignal(&s.osignal, TestFixture::value, 1.2);
   EXPECT_EQ(callCount, 1);
-}
-
-TEST(Signals, disconnectUnknown)
-{
-  class Sender : public SenderBase {};
-
-  Sender s;
-  Receiver r;
-
-  EXPECT_THROW({
-    s.disconnectSignal("nosignal", &r, &Receiver::genericHandler);
-  }, std::logic_error);
-}
-
-TYPED_TEST(SignalsArgs, disconnectUnknownArg)
-{
-  class Sender : public SenderBase {};
-
-  Sender s;
-  Receiver r;
-
-  EXPECT_THROW({
-    s.disconnectSignal("nosignal", &r,
-                       &Receiver::genericTypeHandler<TypeParam>);
-  }, std::logic_error);
 }
 
 TEST(Signals, disconnectAll)
