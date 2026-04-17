@@ -237,6 +237,10 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
 
 DesktopWindow::~DesktopWindow()
 {
+  // Don't leave any dangling grabs as they are not automatically
+  // cleaned up on all platforms
+  ungrabKeyboard();
+
   OptionsDialog::removeCallback(handleOptions);
 }
 
@@ -878,15 +882,18 @@ void DesktopWindow::maybeGrabKeyboard()
 void DesktopWindow::grabKeyboard()
 {
 #if defined(WIN32)
-  int ret = win32_enable_lowlevel_keyboard((HWND)winId());
-  if (ret != 0)
-  {
+  int ret;
+
+  ret = win32_enable_lowlevel_keyboard((HWND)winId());
+  if (ret != 0) {
       vlog.error(_("Failure grabbing keyboard"));
       return;
   }
 #elif defined(__APPLE__)
-  int ret = cocoa_capture_displays(fullscreenScreens());
-  if (ret == 1) {
+  int ret;
+
+  ret = cocoa_capture_displays(fullscreenScreens());
+  if (ret != 0) {
       vlog.error(_("Failure grabbing keyboard"));
       return;
   }
@@ -933,17 +940,17 @@ void DesktopWindow::ungrabPointer()
 
 void DesktopWindow::handleOptions(void *data)
 {
-  DesktopWindow *window = (DesktopWindow*)data;
+  DesktopWindow *self = (DesktopWindow*)data;
 
-  if (::fullscreenSystemKeys)
-    window->maybeGrabKeyboard();
+  if (fullscreenSystemKeys)
+    self->maybeGrabKeyboard();
   else
-    window->ungrabKeyboard();
+    self->ungrabKeyboard();
 
   // Call fullscreen_on even if active since it handles
   // fullScreenMode
-  if (::fullScreen)
-    window->fullscreen(true);
-  else if (!::fullScreen && window->isFullscreenEnabled())
-    window->fullscreen(false);
+  if (fullScreen)
+    self->fullscreen(true);
+  else if (!fullScreen && self->isFullscreenEnabled())
+    self->fullscreen(false);
 }
