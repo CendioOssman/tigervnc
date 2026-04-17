@@ -289,6 +289,14 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
 
   contextMenu = new QMenu(this);
 
+  // Set the default mouse pointer whilst the context menu is open, as
+  // it is annoying if the pointer disappears when you move it outside
+  // the menu
+  connect(contextMenu, &QMenu::aboutToShow, this,
+          [this]() { QWidget::setCursor(Qt::ArrowCursor); });
+  connect(contextMenu, &QMenu::aboutToHide, this,
+          [this]() { QWidget::setCursor(*cursor); });
+
   setMenuKey();
 
   OptionsDialog::addCallback(handleOptions, this);
