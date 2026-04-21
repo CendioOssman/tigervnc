@@ -894,6 +894,7 @@ void DesktopWindow::maybeGrabKeyboard()
 
 void DesktopWindow::grabKeyboard()
 {
+  // FIXME: Investigate QWidget::grabKeyboard()
 #if defined(WIN32)
   int ret;
 
@@ -947,6 +948,8 @@ void DesktopWindow::ungrabKeyboard()
 
 void DesktopWindow::grabPointer()
 {
+  // FIXME: Investigate QWidget::grabMouse()
+
 #if !defined(WIN32) && !defined(__APPLE__)
   // We also need to grab the pointer as some WMs like to grab buttons
   // combined with modifies (e.g. Alt+Button0 in metacity).
