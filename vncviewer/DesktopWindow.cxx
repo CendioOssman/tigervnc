@@ -935,6 +935,15 @@ void DesktopWindow::ungrabKeyboard()
 #elif defined(__APPLE__)
   cocoa_release_displays();
 #else
+  // Qt has a grab so lets not mess with it
+  if (keyboardGrabber() != nullptr)
+    return;
+  // Popups have an implicit grab that keyboardGrabber() doesn't show
+  QWindow* focused = qApp->focusWindow();
+  if ((focused != nullptr) &&
+      (focused->flags() & Qt::WindowType_Mask) == Qt::Popup)
+    return;
+
   x11_ungrab_keyboard();
 #endif
 }
