@@ -20,48 +20,34 @@
 #ifndef __VIEWPORT_H__
 #define __VIEWPORT_H__
 
+#include <functional>
+
 #include <rfb/Rect.h>
 #include <rfb/Timer.h>
 
 #include <QAbstractNativeEventFilter>
 #include <QClipboard>
-#include <QLabel>
 #include <QMap>
-#include <QScrollArea>
 #include <QWidget>
-#include <functional>
 
 #include "EmulateMB.h"
 #include "Keyboard.h"
 
-class QMenu;
-class QAction;
 class QCursor;
-class QLabel;
-class QScreen;
-class QClipboard;
-class QMoveEvent;
 class QGestureEvent;
-class QVNCToast;
-class GestureHandler;
+class QGestureRecognizer;
+class QMenu;
+
 class CConn;
 class Keyboard;
-class QGestureRecognizer;
-
-namespace rfb
-{
-struct Point;
-}
-
-using DownMap = std::map<int, quint32>;
 
 class Viewport : public QWidget, protected EmulateMB,
-                 protected KeyboardHandler,
-                 protected QAbstractNativeEventFilter {
+                 protected QAbstractNativeEventFilter,
+                 protected KeyboardHandler {
   Q_OBJECT
 
 public:
-  Viewport(CConn* cc, QWidget* parent = nullptr, Qt::WindowFlags f = Qt::Widget);
+  Viewport(CConn* cc, QWidget* parent=nullptr);
   ~Viewport();
 
   QSize pixmapSize() const { return pixmap.size(); };
@@ -84,26 +70,18 @@ public:
   void resize(int width, int height);
   void resizeFramebuffer(int new_w, int new_h);
 
-  void giveKeyboardFocus();
-
 signals:
   void delayedInitialized();
   void bufferResized(int oldW, int oldH, int w, int h);
   void remoteResizeRequest();
 
 protected:
-  QPoint localPointAdjust(QPoint p);
-  QRect localRectAdjust(QRect r);
-  QRect remoteRectAdjust(QRect r);
-  rfb::Point remotePointAdjust(rfb::Point const& pos);
-
   // Qt event handlers
   void paintEvent(QPaintEvent* event) override;
 #ifdef QT_DEBUG
   void handleTimeout(rfb::Timer* t) override;
 #endif
-  void getMouseProperties(QMouseEvent* event, int& x, int& y, int& buttonMask);
-  void getMouseWheelProperties(QWheelEvent* event, int& x, int& y, int& buttonMask, int& wheelMask);
+  void mouseEvent(QMouseEvent* event);
   void mouseMoveEvent(QMouseEvent* event) override;
   void mousePressEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event) override;
@@ -114,10 +92,13 @@ protected:
 
   void sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask) override;
 
-protected:
+private:
   void handleClipboardChange(QClipboard::Mode mode);
 
   void flushPendingClipboard();
+
+  void handlePointerEvent(const rfb::Point& pos, uint8_t buttonMask);
+  void handlePointerTimeout();
 
   typedef std::function<bool(QGestureEvent*)> GestureCallback;
   typedef std::function<bool(Qt::GestureType, QGestureEvent*)> GestureCallbackWithType;
@@ -149,7 +130,7 @@ protected:
 
   static void handleOptions(void *data);
 
-protected:
+private:
   CConn* cc;
 
   bool firstUpdate;
@@ -167,7 +148,8 @@ protected:
   bool firstLEDState;
 
   bool pendingClientClipboard;
-  QString pendingClientData;
+
+  QClipboard::Mode clipboardMode;
 #ifdef __APPLE__
   QString serverReceivedData;
 #endif

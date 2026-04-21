@@ -21,55 +21,41 @@
 #include <config.h>
 #endif
 
-// clang-format off
-// QEvent must be included before X headers to avoid symbol comflicts.
-#include <QEvent>
-// QAction must be included before X headers to avoid symbol comflicts.
-#include <QAction>
-// clang-format on
+#include <stdio.h>
+#include <string.h>
 
 #include <QAbstractEventDispatcher>
+#include <QAction>
 #include <QApplication>
-#include <QCheckBox>
 #include <QClipboard>
+#include <QGesture>
+#include <QGestureRecognizer>
+#include <QEvent>
 #include <QMenu>
 #include <QMessageBox>
-#include <QMoveEvent>
-#include <QPainter>
-#include <QPushButton>
-#include <QScreen>
-#include <QScrollBar>
-#include <QTimer>
-#include <QUrl>
-#include <QWindow>
 #include <QMimeData>
-#include <QGestureRecognizer>
-#include <QGesture>
+#include <QPainter>
+#include <QTimer>
 
 #include <rfb/CMsgWriter.h>
 #include <rfb/LogWriter.h>
 #include <rfb/Exception.h>
-#include <rfb/ServerParams.h>
 #include <rfb/ledStates.h>
 #include <rfb/util.h>
 
-#define XK_LATIN1
 #define XK_MISCELLANY
-#define XK_XKB_KEYS
 #include <rfb/keysymdef.h>
 
 #include "Viewport.h"
 #include "CConn.h"
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"
-#include "Keyboard.h"
-#include "EmulateMB.h"
 #include "i18n.h"
-#include "locale.h"
 #include "mainloop.h"
 #include "parameters.h"
 #include "menukey.h"
 #include "vncviewer.h"
+
 #include "clicksalternativegesture.h"
 #include "clicksalternativegesturerecognizer.h"
 #include "panzoomgesture.h"
@@ -104,22 +90,14 @@ static const int FAKE_KEY_CODE = 0xffff;
 // Used for fake key presses for gestures
 static const int FAKE_GESTURE_KEY_CODE = 0x20001;
 
-Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
-  : QWidget(parent, f)
-  , cc(cc_)
-  , firstUpdate(true)
-  , delayedInitializeTimer(new QTimer(this))
-  , lastButtonMask(0)
-  , mousePointerTimer(new QTimer(this))
-  , keyboard(nullptr)
-  , firstLEDState(true)
-  , pendingClientClipboard(false)
-  , contextMenu(nullptr)
-  , menuCtrlKey(false)
-  , menuAltKey(false)
-  , cursor(nullptr)
+Viewport::Viewport(CConn* cc_, QWidget* parent)
+  : QWidget(parent), cc(cc_), firstUpdate(true),
+    delayedInitializeTimer(new QTimer(this)), lastButtonMask(0),
+    mousePointerTimer(new QTimer(this)), keyboard(nullptr),
+    firstLEDState(true), pendingClientClipboard(false),
+    menuCtrlKey(false), menuAltKey(false), cursor(nullptr)
 #ifdef QT_DEBUG
-  , fpsTimer(this)
+    , fpsTimer(this)
 #endif
 {
   setAttribute(Qt::WA_OpaquePaintEvent, true);
@@ -144,14 +122,14 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
         sendKeyRelease(FAKE_GESTURE_KEY_CODE); // Prevents non handling of PanZoomGesture Finished
         if (gesture->getType() == ClicksAlternativeGesture::TwoPoints) {
           vlog.debug("Cendio Right click alternative gesture");
-          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 4 /* RightButton */);
-          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 4 /* RightButton */);
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
           event->accept();
           return true;
         } else if (gesture->getType() == ClicksAlternativeGesture::ThreePoints) {
           vlog.debug("Cendio Middle click gesture");
-          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 2 /* MiddleButton */);
-          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 2 /* MiddleButton */);
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
           event->accept();
           return true;
         }
@@ -188,8 +166,8 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
             panZoomGesture = true;
             QTimer::singleShot(100, this, [=](){
               panZoomGesture = false;
-              filterPointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
-              filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+              handlePointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
+              handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
             });
           }
         }
@@ -209,8 +187,8 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
             panZoomGesture = true;
             QTimer::singleShot(100, this, [=](){
               panZoomGesture = false;
-              filterPointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
-              filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+              handlePointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
+              handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
             });
           }
           event->accept();
@@ -241,14 +219,14 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
           if (!dragGesture) {
             dragGesture = true;
             QPoint startPos = gesture->getStartPosition().toPoint();
-            filterPointerEvent(rfb::Point(startPos.x(), startPos.y()), 1 /* LeftButton */);
+            handlePointerEvent(rfb::Point(startPos.x(), startPos.y()), 1 /* LeftButton */);
           }
-          filterPointerEvent(rfb::Point(pos.x(), pos.y()), 1 /* LeftButton */);
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 1 /* LeftButton */);
           event->accept();
           return true;
         } else if (gesture->state() == Qt::GestureFinished) {
           dragGesture = false;
-          filterPointerEvent(rfb::Point(pos.x(), pos.y()), 0);
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
           event->accept();
           return true;
         }
@@ -257,8 +235,8 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
       if (gesture->getType() == TapDragGesture::TapAndHold) {
         if (gesture->state() == Qt::GestureFinished) {
           vlog.debug("Cendio Right click gesture");
-          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 4 /* RightButton */);
-          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 4 /* RightButton */);
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
           event->accept();
           return true;
         }
@@ -267,8 +245,8 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
       if (gesture->getType() == TapDragGesture::Tap) {
         if(gesture->state() == Qt::GestureFinished) {
           vlog.debug("Cendio Click gesture");
-          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 1 /* LeftButton */);
-          filterPointerEvent(remotePointAdjust(rfb::Point(pos.x(), pos.y())), 0);
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 1 /* LeftButton */);
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
           event->accept();
           return true;
         }
@@ -282,7 +260,8 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
     vlog.debug("QGestureRecognizer::registerRecognizer type=%d", type);
   }
 
-  connect(QGuiApplication::clipboard(), &QClipboard::changed, this, &Viewport::handleClipboardChange);
+  connect(QGuiApplication::clipboard(), &QClipboard::changed, this,
+          &Viewport::handleClipboardChange);
 
   // We need to intercept keyboard events early
   QAbstractEventDispatcher::instance()->installNativeEventFilter(this);
@@ -301,6 +280,9 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
 
   OptionsDialog::addCallback(handleOptions, this);
 
+  // Make sure we have an initial blank cursor set
+  setCursor(0, 0, rfb::Point(0, 0), nullptr);
+
   delayedInitializeTimer->setInterval(1000);
   delayedInitializeTimer->setSingleShot(true);
   connect(delayedInitializeTimer, &QTimer::timeout, this, [this]() {
@@ -311,13 +293,8 @@ Viewport::Viewport(CConn* cc_, QWidget* parent, Qt::WindowFlags f)
 
   mousePointerTimer->setInterval(::pointerEventInterval);
   mousePointerTimer->setSingleShot(true);
-  connect(mousePointerTimer, &QTimer::timeout, this, [this]() {
-    try {
-      cc->writer()->writePointerEvent(lastPointerPos, lastButtonMask);
-    } catch (rdr::Exception& e) {
-      abort_connection_unexpected(e);
-    }
-  });
+  connect(mousePointerTimer, &QTimer::timeout, this,
+          &Viewport::handlePointerTimeout);
 
 #ifdef QT_DEBUG
   gettimeofday(&fpsLast, nullptr);
@@ -345,6 +322,8 @@ Viewport::~Viewport()
 
   delete cursor;
 
+  delete keyboard;
+
   for (auto gr : gestureRecognizers.keys()) {
     QGestureRecognizer::unregisterRecognizer(gr);
   }
@@ -370,7 +349,7 @@ void Viewport::updateWindow()
   int h = rect.br.y - y;
   if (!rect.is_empty()) {
     damage += QRect(x, y, w, h);
-    update(localRectAdjust(QRect(x, y, w, h)));
+    update(QRect(x, y, w, h));
   }
 }
 
@@ -388,42 +367,50 @@ void Viewport::setCursor(int width, int height,
                          const rfb::Point& hotspot,
                          const uint8_t* pixels)
 {
-  bool emptyCursor = true;
-  for (int i = 0; i < width * height; i++) {
-    if (pixels[i*4 + 3] != 0) {
-      emptyCursor = false;
-      break;
+  int i;
+
+  delete cursor;
+
+  for (i = 0; i < width*height; i++)
+    if (pixels[i*4 + 3] != 0) break;
+
+  if ((i == width*height) && dotWhenNoCursor) {
+    vlog.debug("cursor is empty - using dot");
+    cursor = new QCursor(QPixmap(dotcursor_xpm), 2, 2);
+  } else {
+    if ((width == 0) || (height == 0)) {
+      cursor = new QCursor(Qt::BlankCursor);
+    } else {
+      QImage image(pixels, width, height, QImage::Format_ARGB32);
+      cursor = new QCursor(QPixmap::fromImage(image),
+                          hotspot.x, hotspot.y);
     }
   }
-  if (emptyCursor) {
-    if (::dotWhenNoCursor) {
-      delete cursor;
-      cursor = new QCursor(QPixmap(dotcursor_xpm), 2, 2);
-    }
-    else {
-      static const char * emptycursor_xpm[] = {
-        "2 2 1 1",
-        ".	c None",
-        "..",
-        ".."};
-      delete cursor;
-      cursor = new QCursor(QPixmap(emptycursor_xpm), 0, 0);
-    }
-  }
-  else {
-    QImage image(pixels, width, height, QImage::Format_RGBA8888);
-    delete cursor;
-    cursor = new QCursor(QPixmap::fromImage(image), hotspot.x, hotspot.y);
-  }
+
   QWidget::setCursor(*cursor);
 }
 
 void Viewport::handleClipboardRequest()
 {
-  vlog.debug("Viewport::handleClipboardRequest: %s", pendingClientData.toStdString().c_str());
-  vlog.debug("Sending clipboard data (%d bytes)", (int)pendingClientData.size());
-  cc->sendClipboardData(pendingClientData.toStdString().c_str());
-  pendingClientData = "";
+  std::string text, filtered;
+
+  text = QGuiApplication::clipboard()->text(clipboardMode).toStdString();
+
+  if (!rfb::isValidUTF8(text.c_str())) {
+    vlog.error("Invalid UTF-8 sequence in system clipboard");
+    return;
+  }
+
+  filtered = rfb::convertLF(text.c_str());
+
+  vlog.debug("Sending clipboard data (%d bytes)", (int)filtered.size());
+
+  try {
+    cc->sendClipboardData(filtered.c_str());
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_connection_unexpected(e);
+  }
 }
 
 void Viewport::handleClipboardAnnounce(bool available)
@@ -442,7 +429,6 @@ void Viewport::handleClipboardAnnounce(bool available)
   }
 
   pendingClientClipboard = false;
-  pendingClientData = "";
 
   vlog.debug("Got notification of new clipboard on server, requesting data");
   cc->requestClipboard();
@@ -464,11 +450,13 @@ void Viewport::handleClipboardData(const char* cbdata)
 #ifdef __APPLE__
   serverReceivedData = cbdata;
 #endif
-  QGuiApplication::clipboard()->setText(cbdata);
 #if !defined(WIN32) && !defined(__APPLE__)
   if (setPrimary)
-    QGuiApplication::clipboard()->setText(cbdata, QClipboard::Mode::Selection);
+    QGuiApplication::clipboard()->setText(cbdata,
+                                          QClipboard::Mode::Selection);
 #endif
+  QGuiApplication::clipboard()->setText(cbdata,
+                                        QClipboard::Mode::Clipboard);
 }
 
 void Viewport::setLEDState(unsigned int ledState)
@@ -546,56 +534,6 @@ void Viewport::resizeFramebuffer(int new_w, int new_h)
   resize(new_w, new_h);
 }
 
-void Viewport::giveKeyboardFocus()
-{
-  vlog.debug("Viewport::giveKeyboardFocus");
-  if (qApp->activeModalWidget()) {
-    vlog.debug("Viewport::giveKeyboardFocus activeModalWidget=%s", qApp->activeModalWidget()->metaObject()->className());
-  }
-  if (keyboard && !qApp->activeModalWidget()) {
-    flushPendingClipboard();
-
-    // We may have gotten our lock keys out of sync with the server
-    // whilst we didn't have focus. Try to sort this out.
-    vlog.debug("KeyboardHandler::pushLEDState");
-    pushLEDState();
-
-    // Resend Ctrl/Alt if needed
-    if (menuCtrlKey)
-      sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-    if (menuAltKey)
-      sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-  }
-}
-
-QPoint Viewport::localPointAdjust(QPoint p)
-{
-  p.rx() += (width() - pixmap.width()) / 2;
-  p.ry() += (height() - pixmap.height()) / 2;
-  return p;
-}
-
-QRect Viewport::localRectAdjust(QRect r)
-{
-  return r.adjusted((width() - pixmap.width()) / 2,
-                    (height() - pixmap.height()) / 2,
-                    (width() - pixmap.width()) / 2,
-                    (height() - pixmap.height()) / 2);
-}
-
-QRect Viewport::remoteRectAdjust(QRect r)
-{
-  return r.adjusted(-(width() - pixmap.width()) / 2,
-                    -(height() - pixmap.height()) / 2,
-                    -(width() - pixmap.width()) / 2,
-                    -(height() - pixmap.height()) / 2);
-}
-
-rfb::Point Viewport::remotePointAdjust(const rfb::Point& pos)
-{
-  return rfb::Point(pos.x - (width() - pixmap.width()) / 2, pos.y - (height() - pixmap.height()) / 2);
-}
-
 void Viewport::paintEvent(QPaintEvent* event)
 {
   PlatformPixelBuffer* framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
@@ -631,7 +569,7 @@ void Viewport::paintEvent(QPaintEvent* event)
   QPainter painter(this);
   QRect r = event->rect();
 
-  painter.drawPixmap(r, pixmap, remoteRectAdjust(r));
+  painter.drawPixmap(r, pixmap, r);
 
 #ifdef QT_DEBUG
   fpsCounter++;
@@ -685,123 +623,94 @@ void Viewport::handleTimeout(rfb::Timer* t)
 }
 #endif
 
-void Viewport::getMouseProperties(QMouseEvent* event, int& x, int& y, int& buttonMask)
+void Viewport::mouseEvent(QMouseEvent* event)
 {
+  int buttonMask;
+
+  // FIXME: Is this really needed?
+  if(event->source() != Qt::MouseEventNotSynthesized)
+    return;
+
+  event->accept();
+
   buttonMask = 0;
-  if (event->buttons() & Qt::LeftButton) {
+  if (event->buttons() & Qt::LeftButton)
     buttonMask |= 1;
-  }
-  if (event->buttons() & Qt::MiddleButton) {
+  if (event->buttons() & Qt::MiddleButton)
     buttonMask |= 2;
-  }
-  if (event->buttons() & Qt::RightButton) {
+  if (event->buttons() & Qt::RightButton)
     buttonMask |= 4;
-  }
 
-  x = event->x();
-  y = event->y();
-}
-
-void Viewport::getMouseWheelProperties(QWheelEvent* event, int& x, int& y, int& buttonMask, int& wheelMask)
-{
-  buttonMask = 0;
-  wheelMask = 0;
-  if (event->buttons() & Qt::LeftButton) {
-    buttonMask |= 1;
-  }
-  if (event->buttons() & Qt::MiddleButton) {
-    buttonMask |= 2;
-  }
-  if (event->buttons() & Qt::RightButton) {
-    buttonMask |= 4;
-  }
-  if (event->angleDelta().y() > 0) {
-    wheelMask |= 8;
-  }
-  if (event->angleDelta().y() < 0) {
-    wheelMask |= 16;
-  }
-  if (event->angleDelta().x() > 0) {
-    wheelMask |= 32;
-  }
-  if (event->angleDelta().x() < 0) {
-    wheelMask |= 64;
-  }
-
-  x = event->position().x();
-  y = event->position().y();
+  handlePointerEvent(rfb::Point(event->x(), event->y()), buttonMask);
 }
 
 void Viewport::mouseMoveEvent(QMouseEvent* event)
 {
-  if(event->source() != Qt::MouseEventNotSynthesized) {
-    return;
-  }
-
-  int x, y, buttonMask;
-  getMouseProperties(event, x, y, buttonMask);
-  filterPointerEvent(rfb::Point(x, y), buttonMask);
+  mouseEvent(event);
 }
 
 void Viewport::mousePressEvent(QMouseEvent* event)
 {
-  vlog.debug("Viewport::mousePressEvent");
-
-  if(event->source() != Qt::MouseEventNotSynthesized) {
-    vlog.debug("!MouseEventNotSynthesized");
-    event->accept();
-    return;
-  }
-
-  if (::viewOnly) {
-    return;
-  }
-
-  setFocus(Qt::FocusReason::MouseFocusReason);
-
-  int x, y, buttonMask;
-  getMouseProperties(event, x, y, buttonMask);
-  filterPointerEvent(rfb::Point(x, y), buttonMask);
+  mouseEvent(event);
 }
 
 void Viewport::mouseReleaseEvent(QMouseEvent* event)
 {
-  vlog.debug("Viewport::mouseReleaseEvent");
-
-  if(event->source() != Qt::MouseEventNotSynthesized) {
-    vlog.debug("!MouseEventNotSynthesized");
-    event->accept();
-    return;
-  }
-
-  if (::viewOnly) {
-    return;
-  }
-
-  setFocus(Qt::FocusReason::MouseFocusReason);
-
-  int x, y, buttonMask;
-  getMouseProperties(event, x, y, buttonMask);
-  filterPointerEvent(rfb::Point(x, y), buttonMask);
+  mouseEvent(event);
 }
 
 void Viewport::wheelEvent(QWheelEvent* event)
 {
-  vlog.debug("Viewport::wheelEvent");
+  int buttonMask, wheelMask;
 
-  int x, y, buttonMask, wheelMask;
-  getMouseWheelProperties(event, x, y, buttonMask, wheelMask);
-  if (wheelMask) {
-    filterPointerEvent(rfb::Point(x, y), buttonMask | wheelMask);
-  }
-  filterPointerEvent(rfb::Point(x, y), buttonMask);
   event->accept();
+
+  buttonMask = 0;
+  if (event->buttons() & Qt::LeftButton)
+    buttonMask |= 1;
+  if (event->buttons() & Qt::MiddleButton)
+    buttonMask |= 2;
+  if (event->buttons() & Qt::RightButton)
+    buttonMask |= 4;
+
+  wheelMask = 0;
+  if (event->angleDelta().y() > 0)
+    wheelMask |= 8;
+  if (event->angleDelta().y() < 0)
+    wheelMask |= 16;
+  if (event->angleDelta().x() > 0)
+    wheelMask |= 32;
+  if (event->angleDelta().x() < 0)
+    wheelMask |= 64;
+
+  // A quick press of the wheel "button", followed by a immediate
+  // release below
+  handlePointerEvent(rfb::Point(event->position().x(),
+                                event->position().y()),
+                     buttonMask | wheelMask);
+
+  handlePointerEvent(rfb::Point(event->position().x(),
+                                event->position().y()),
+                     buttonMask);
 }
 
 void Viewport::focusInEvent(QFocusEvent* event)
 {
   vlog.debug("Viewport::focusInEvent");
-  giveKeyboardFocus();
+
+  flushPendingClipboard();
+
+  // We may have gotten our lock keys out of sync with the server
+  // whilst we didn't have focus. Try to sort this out.
+  vlog.debug("KeyboardHandler::pushLEDState");
+  pushLEDState();
+
+  // Resend Ctrl/Alt if needed
+  if (menuCtrlKey)
+    sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+  if (menuAltKey)
+    sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+
   QWidget::focusInEvent(event);
 #ifdef __APPLE__
   vlog.debug("cocoa_update_window_level hasFocus=%d", hasFocus());
@@ -817,6 +726,7 @@ void Viewport::focusOutEvent(QFocusEvent* event)
   vlog.debug("Viewport::focusOutEvent");
   // We won't get more key events, so reset our knowledge about keys
   resetKeyboard();
+
   QWidget::focusOutEvent(event);
 #ifdef __APPLE__
   vlog.debug("cocoa_update_window_level hasFocus=%d", hasFocus());
@@ -829,15 +739,11 @@ void Viewport::focusOutEvent(QFocusEvent* event)
 bool Viewport::event(QEvent *event)
 {
   switch (event->type()) {
-  case QEvent::WindowActivate:
-    vlog.debug("Viewport::WindowActivate");
-    break;
-  case QEvent::WindowDeactivate:
-    vlog.debug("Viewport::WindowDeactivate");
-    break;
   case QEvent::CursorChange:
-    event->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
-    return true;
+    // FIXME: Check this
+    // event->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
+    // return true;
+    break;
   case QEvent::Gesture:
     return gestureEvent(reinterpret_cast<QGestureEvent*>(event));
   default:
@@ -863,17 +769,12 @@ void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
       mousePointerTimer->start();
     }
   }
-  lastPointerPos = remotePointAdjust(pos);
+  lastPointerPos = pos;
   lastButtonMask = buttonMask;
 }
 
 void Viewport::handleClipboardChange(QClipboard::Mode mode)
 {
-  vlog.debug("Viewport::handleClipboardChange: mode=%d", mode);
-  vlog.debug("Viewport::handleClipboardChange: text=%s", QGuiApplication::clipboard()->text(mode).toStdString().c_str());
-  vlog.debug("Viewport::handleClipboardChange: ownsClipboard=%d", QGuiApplication::clipboard()->ownsClipboard());
-  vlog.debug("Viewport::handleClipboardChange: hasText=%d", QGuiApplication::clipboard()->mimeData(mode)->hasText());
-
   if (!sendClipboard)
     return;
 
@@ -882,26 +783,33 @@ void Viewport::handleClipboardChange(QClipboard::Mode mode)
     return;
 #endif
 
-  if(mode == QClipboard::Mode::Clipboard && QGuiApplication::clipboard()->ownsClipboard()) {
+  if ((mode != QClipboard::Mode::Clipboard) &&
+      (mode != QClipboard::Mode::Selection))
     return;
-  }
 
-  if(mode == QClipboard::Mode::Selection && QGuiApplication::clipboard()->ownsSelection()) {
+  if ((mode == QClipboard::Mode::Clipboard) &&
+      QGuiApplication::clipboard()->ownsClipboard())
     return;
-  }
 
-  if (!QGuiApplication::clipboard()->mimeData(mode)->hasText()) {
+  if ((mode == QClipboard::Mode::Selection) &&
+      QGuiApplication::clipboard()->ownsSelection())
     return;
-  }
+
+  if (!QGuiApplication::clipboard()->mimeData(mode)->hasText())
+    return;
 
 #ifdef __APPLE__
+  // FIXME: This shouldn't be needed, as Qt checks for
+  // kPasteboardModified from PasteboardSynchronize(), but we can
+  // use [[NSPasteboard generalPasteboard] changeCount] otherwise
+  // https://qt-project.atlassian.net/browse/QTBUG-124214
   if (QGuiApplication::clipboard()->text(mode) == serverReceivedData) {
     serverReceivedData = "";
     return;
   }
 #endif
 
-  pendingClientData = QGuiApplication::clipboard()->text(mode);
+  clipboardMode = mode;
 
   if (!hasFocus()) {
     vlog.debug("Local clipboard changed whilst not focused, will notify server later");
@@ -920,6 +828,7 @@ void Viewport::handleClipboardChange(QClipboard::Mode mode)
   }
 }
 
+
 void Viewport::flushPendingClipboard()
 {
   if (pendingClientClipboard) {
@@ -934,6 +843,24 @@ void Viewport::flushPendingClipboard()
 
   pendingClientClipboard = false;
 }
+
+
+void Viewport::handlePointerEvent(const rfb::Point& pos, uint8_t buttonMask)
+{
+  filterPointerEvent(pos, buttonMask);
+}
+
+
+void Viewport::handlePointerTimeout()
+{
+  try {
+    cc->writer()->writePointerEvent(lastPointerPos, lastButtonMask);
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_connection_unexpected(e);
+  }
+}
+
 
 bool Viewport::gestureEvent(QGestureEvent* event)
 {
@@ -958,11 +885,13 @@ bool Viewport::gestureEvent(QGestureEvent* event)
   return true;
 }
 
+
 void Viewport::registerGesture(QGestureRecognizer *gr, GestureCallbackWithType cb)
 {
   auto type = QGestureRecognizer::registerRecognizer(gr);
   gestureRecognizers.insert(type, QPair<QGestureRecognizer*, GestureCallback>(gr, std::bind(cb, type, std::placeholders::_1)));
 }
+
 
 void Viewport::resetKeyboard()
 {
@@ -972,9 +901,9 @@ void Viewport::resetKeyboard()
     vlog.error("%s", e.str());
     abort_connection_unexpected(e);
   }
-  if (keyboard)
-    keyboard->reset();
+  keyboard->reset();
 }
+
 
 void Viewport::handleKeyPress(int systemKeyCode,
                               uint32_t keyCode, uint32_t keySym)
@@ -986,6 +915,7 @@ void Viewport::handleKeyPress(int systemKeyCode,
 
   sendKeyPress(systemKeyCode, keyCode, keySym);
 }
+
 
 void Viewport::sendKeyPress(int systemKeyCode,
                             uint32_t keyCode, uint32_t keySym)
@@ -1001,10 +931,12 @@ void Viewport::sendKeyPress(int systemKeyCode,
   }
 }
 
+
 void Viewport::handleKeyRelease(int systemKeyCode)
 {
   sendKeyRelease(systemKeyCode);
 }
+
 
 void Viewport::sendKeyRelease(int systemKeyCode)
 {
@@ -1018,6 +950,7 @@ void Viewport::sendKeyRelease(int systemKeyCode)
     abort_connection_unexpected(e);
   }
 }
+
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, long*)
@@ -1214,10 +1147,12 @@ void Viewport::popupContextMenu()
   contextMenu->setFocus(Qt::PopupFocusReason);
 }
 
+
 void Viewport::setMenuKey()
 {
   getMenuKey(&menuKeyQt, &menuKeyCode, &menuKeySym);
 }
+
 
 void Viewport::handleOptions(void *data)
 {
