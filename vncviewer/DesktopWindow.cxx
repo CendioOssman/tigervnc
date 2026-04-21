@@ -119,7 +119,6 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   , devicePixelRatio(devicePixelRatioF())
 {
   setAttribute(Qt::WA_NativeWindow, true);
-  setFocusPolicy(Qt::StrongFocus);
 
   setContentsMargins(0, 0, 0, 0);
 
@@ -166,6 +165,9 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   l->setContentsMargins(0,0,0,0);
   l->addWidget(scrollArea);
   setLayout(l);
+
+  // FIXME: Not sure why this is needed
+  view->setFocus();
 
 #ifdef __APPLE__
   cocoa_fix_warping();
