@@ -87,7 +87,8 @@ protected:
 #endif
   void leaveEvent(QEvent* event) override;
   void closeEvent(QCloseEvent* e) override;
-  bool event(QEvent* event) override;
+
+  void handleFocusWindowChanged(QWindow* window);
 
   static void handleOptions(void *data);
 

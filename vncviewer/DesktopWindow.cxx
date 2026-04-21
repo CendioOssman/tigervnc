@@ -177,6 +177,9 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   connect(qApp, &QGuiApplication::screenAdded, this, &DesktopWindow::updateMonitorsFullscreen);
   connect(qApp, &QGuiApplication::screenRemoved, this, &DesktopWindow::updateMonitorsFullscreen);
 
+  connect(qApp, &QGuiApplication::focusWindowChanged, this,
+          &DesktopWindow::handleFocusWindowChanged);
+
   // Support for -geometry option. Note that although we do support
   // negative coordinates, we do not support -XOFF-YOFF (ie
   // coordinates relative to the right edge / bottom edge) at this
@@ -865,24 +868,14 @@ void DesktopWindow::closeEvent(QCloseEvent* e)
   ::disconnect();
 }
 
-bool DesktopWindow::event(QEvent* event)
+void DesktopWindow::handleFocusWindowChanged(QWindow* window)
 {
-  switch (event->type()) {
-  case QEvent::WindowActivate:
-    vlog.debug("DesktopWindow::WindowActivate");
+  if (window == windowHandle()) {
     maybeGrabKeyboard();
-    break;
-  case QEvent::WindowDeactivate:
-    vlog.debug("DesktopWindow::WindowActivate");
-    if (::fullscreenSystemKeys) {
+  } else {
+    if (fullscreenSystemKeys)
       ungrabKeyboard();
-    }
-    break;
-  default:
-    break;
   }
-
-  return QWidget::event(event);
 }
 
 void DesktopWindow::maybeGrabKeyboard()
