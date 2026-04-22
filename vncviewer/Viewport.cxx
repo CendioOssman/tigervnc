@@ -712,13 +712,6 @@ void Viewport::focusInEvent(QFocusEvent* event)
     sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
 
   QWidget::focusInEvent(event);
-#ifdef __APPLE__
-  vlog.debug("cocoa_update_window_level hasFocus=%d", hasFocus());
-  if (hasFocus()) {
-    bool shielding = ::fullscreenSystemKeys && ((DesktopWindow*)window())->allowKeyboardGrab();
-    cocoa_update_window_level(window(),((DesktopWindow*)window())->isFullscreenEnabled(), shielding);
-  }
-#endif
 }
 
 void Viewport::focusOutEvent(QFocusEvent* event)
@@ -728,12 +721,6 @@ void Viewport::focusOutEvent(QFocusEvent* event)
   resetKeyboard();
 
   QWidget::focusOutEvent(event);
-#ifdef __APPLE__
-  vlog.debug("cocoa_update_window_level hasFocus=%d", hasFocus());
-  if (!hasFocus()) {
-    cocoa_update_window_level(window(), false);
-  }
-#endif
 }
 
 bool Viewport::event(QEvent *event)

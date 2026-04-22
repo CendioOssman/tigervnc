@@ -428,7 +428,6 @@ void DesktopWindow::fullscreenOnSelectedDisplay(QScreen* screen)
     resize(screen->geometry().width(), screen->geometry().height());
     showFullScreen();
     view->setFocus();
-    view->giveKeyboardFocus();
   });
 #endif
 }
@@ -450,7 +449,6 @@ void DesktopWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int
     QApplication::sync();
 
     view->setFocus();
-    view->giveKeyboardFocus();
 
     activateWindow();
   });
@@ -479,7 +477,6 @@ void DesktopWindow::fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidt
     raise();
     activateWindow();
     view->setFocus();
-    view->giveKeyboardFocus();
   });
 }
 
@@ -759,16 +756,6 @@ void DesktopWindow::showToast()
   toast->setGeometry(rect());
 }
 
-void DesktopWindow::postDialogClosing()
-{
-  raise();
-  activateWindow();
-  if (view) {
-    view->setFocus();
-    view->giveKeyboardFocus();
-  }
-}
-
 void DesktopWindow::moveEvent(QMoveEvent* e)
 {
   vlog.debug("DesktopWindow::moveEvent pos=(%d, %d) oldPos=(%d, %d)", e->pos().x(), e->pos().y(), e->oldPos().x(), e->oldPos().y());
@@ -827,20 +814,6 @@ void DesktopWindow::changeEvent(QEvent* e)
     }
   }
   QWidget::changeEvent(e);
-}
-
-void DesktopWindow::focusInEvent(QFocusEvent*)
-{
-  vlog.debug("DesktopWindow::focusInEvent");
-  if (view) {
-    view->setFocus();
-    view->giveKeyboardFocus();
-  }
-}
-
-void DesktopWindow::focusOutEvent(QFocusEvent*)
-{
-  vlog.debug("DesktopWindow::focusOutEvent");
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)

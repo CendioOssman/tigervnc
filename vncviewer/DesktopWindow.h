@@ -69,8 +69,6 @@ public:
 
   void showToast();
 
-  void postDialogClosing();
-
 signals:
   void fullscreenChanged(bool enabled);
 
@@ -78,8 +76,6 @@ protected:
   void moveEvent(QMoveEvent* e) override;
   void resizeEvent(QResizeEvent* e) override;
   void changeEvent(QEvent* e) override;
-  void focusInEvent(QFocusEvent*) override;
-  void focusOutEvent(QFocusEvent*) override;
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   void enterEvent(QEvent* event) override;
 #else
