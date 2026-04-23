@@ -117,7 +117,6 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   , keyboardGrabbed(false)
   , mouseGrabbed(false)
   , resizeTimer(new QTimer(this))
-  , devicePixelRatio(devicePixelRatioF())
 {
   setContentsMargins(0, 0, 0, 0);
 
@@ -319,18 +318,6 @@ QScreen* DesktopWindow::getCurrentScreen() const
   return windowHandle() ? windowHandle()->screen() : qApp->primaryScreen();
 }
 
-double DesktopWindow::effectiveDevicePixelRatio(QScreen* screen) const
-{
-#ifdef Q_OS_DARWIN
-  return 1.0;
-#endif
-
-  if (screen) {
-    return screen->devicePixelRatio();
-  }
-  return devicePixelRatio;
-}
-
 void DesktopWindow::fullscreen(bool enabled)
 {
   vlog.debug("DesktopWindow::fullscreen enabled=%d", enabled);
@@ -365,22 +352,21 @@ void DesktopWindow::fullscreen(bool enabled)
       for (int& screenIndex : selectedScreens) {
         QScreen* screen = screens[screenIndex];
         QRect rect = screen->geometry();
-        double dpr = effectiveDevicePixelRatio(screen);
         if (xmin > rect.x()) {
           left = screenIndex;
           xmin = rect.x();
         }
-        if (xmax < rect.x() + rect.width() * dpr) {
+        if (xmax < rect.x() + rect.width()) {
           right = screenIndex;
-          xmax = rect.x() + rect.width() * dpr;
+          xmax = rect.x() + rect.width();
         }
         if (ymin > rect.y()) {
           top = screenIndex;
           ymin = rect.y();
         }
-        if (ymax < rect.y() + rect.height() * dpr) {
+        if (ymax < rect.y() + rect.height()) {
           bottom = screenIndex;
-          ymax = rect.y() + rect.height() * dpr;
+          ymax = rect.y() + rect.height();
         }
       }
       int w = xmax - xmin;
@@ -554,19 +540,18 @@ bool DesktopWindow::isFullscreenEnabled() const
 void DesktopWindow::handleDesktopSize()
 {
   vlog.debug("DesktopWindow::handleDesktopSize");
-  double f = effectiveDevicePixelRatio();
   if (!QString(::desktopSize).isEmpty()) {
     int w, h;
     // An explicit size has been requested
     if (sscanf(::desktopSize, "%dx%d", &w, &h) != 2) {
       return;
     }
-    remoteResize(w * f, h * f);
+    remoteResize(w, h);
     vlog.debug("DesktopWindow::handleDesktopSize(explicit) size=(%d, %d)", w, h);
   } else if (::remoteResize) {
     // No explicit size, but remote resizing is on so make sure it
     // matches whatever size the window ended up being
-    remoteResize(width() * f, height() * f);
+    remoteResize(width(), height());
     vlog.debug("DesktopWindow::handleDesktopSize(implicit) size=(%d, %d)", width(), height());
   }
 }
@@ -575,8 +560,7 @@ void DesktopWindow::remoteResize(int w, int h)
 {
   rfb::ScreenSet layout;
   rfb::ScreenSet::const_iterator iter;
-  double f = effectiveDevicePixelRatio();
-  if ((!fullscreenEnabled && !pendingFullscreen) || (w > width() * f) || (h > height() * f)) {
+  if ((!fullscreenEnabled && !pendingFullscreen) || (w > width()) || (h > height())) {
     // In windowed mode (or the framebuffer is so large that we need
     // to scroll) we just report a single virtual screen that covers
     // the entire framebuffer.
@@ -628,12 +612,11 @@ void DesktopWindow::remoteResize(int w, int h)
     //                (a->geometry().x() < b->geometry().x());
     //              });
     for (QScreen*& screen : screens) {
-      double dpr = effectiveDevicePixelRatio(screen);
       QRect vg = screen->geometry();
       int sx = vg.x();
       int sy = vg.y();
-      int sw = vg.width() * dpr;
-      int sh = vg.height() * dpr;
+      int sw = vg.width();
+      int sh = vg.height();
 
       // Check that the screen is fully inside the framebuffer
       rfb::Rect screen_rect;
