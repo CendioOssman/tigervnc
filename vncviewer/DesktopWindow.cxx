@@ -75,9 +75,7 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
     firstUpdate(true),
     delayedFullscreen(false), sentDesktopSize(false),
     pendingRemoteResize(false), lastResize({0, 0}),
-    keyboardGrabbed(false), mouseGrabbed(false), regrabOnFocus(false),
-    statsLastUpdates(0), statsLastPixels(0), statsLastPosition(0),
-    statsGraph(nullptr)
+    keyboardGrabbed(false), mouseGrabbed(false), regrabOnFocus(false)
 {
   Fl_Group* group;
 
@@ -216,12 +214,6 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
   // Adjust layout now that we're visible and know our final size
   repositionWidgets();
 
-  // Throughput graph for debugging
-  if (vlog.getLevel() >= core::LogWriter::LEVEL_DEBUG) {
-    memset(&stats, 0, sizeof(stats));
-    Fl::add_timeout(0, handleStatsTimeout, this);
-  }
-
   // Show hint about menu shortcut
   unsigned modifierMask;
 
@@ -254,7 +246,6 @@ DesktopWindow::~DesktopWindow()
   // again later when this object is already gone.
   Fl::remove_timeout(handleResizeTimeout, this);
   Fl::remove_timeout(handleFullscreenTimeout, this);
-  Fl::remove_timeout(handleStatsTimeout, this);
   Fl::remove_timeout(updateOverlay, this);
   Fl::remove_idle(checkFocus, this);
 
@@ -265,8 +256,6 @@ DesktopWindow::~DesktopWindow()
     overlays.pop_front();
   }
   delete offscreen;
-
-  delete statsGraph;
 
   instances.erase(this);
 
@@ -484,25 +473,6 @@ void DesktopWindow::draw()
       draw_child(*viewport);
     else
       update_child(*viewport);
-  }
-
-  // Debug graph (if active)
-  if (statsGraph) {
-    int ox, oy, ow, oh;
-
-    ox = X = w() - statsGraph->width() - 30;
-    oy = Y = h() - statsGraph->height() - 30;
-    ow = statsGraph->width();
-    oh = statsGraph->height();
-
-    fl_clip_box(ox, oy, ow, oh, ox, oy, ow, oh);
-
-    if ((ow != 0) && (oh != 0)) {
-      if (offscreen)
-        statsGraph->blend(offscreen, ox - X, oy - Y, ox, oy, ow, oh, 204);
-      else
-        statsGraph->blend(ox - X, oy - Y, ox, oy, ow, oh, 204);
-    }
   }
 
   // Overlay (if active)
@@ -1591,127 +1561,4 @@ void DesktopWindow::scrollTo(int x, int y)
 
   viewport->position(x, y);
   damage(FL_DAMAGE_SCROLL);
-}
-
-void DesktopWindow::handleStatsTimeout(void *data)
-{
-  DesktopWindow *self = (DesktopWindow*)data;
-
-  const size_t statsCount = sizeof(self->stats)/sizeof(self->stats[0]);
-
-  unsigned updates, pixels, pos;
-  unsigned elapsed;
-
-  const unsigned statsWidth = 200;
-  const unsigned statsHeight = 100;
-  const unsigned graphWidth = statsWidth - 10;
-  const unsigned graphHeight = statsHeight - 25;
-
-  Fl_Image_Surface *surface;
-  Fl_RGB_Image *image;
-
-  unsigned maxUPS, maxPPS, maxBPS;
-  size_t i;
-
-  char buffer[256];
-
-  updates = self->cc->getUpdateCount();
-  pixels = self->cc->getPixelCount();
-  pos = self->cc->getPosition();
-  elapsed = core::msSince(&self->statsLastTime);
-  if (elapsed < 1)
-    elapsed = 1;
-
-  memmove(&self->stats[0], &self->stats[1], sizeof(self->stats[0])*(statsCount-1));
-
-  self->stats[statsCount-1].ups = (updates - self->statsLastUpdates) * 1000 / elapsed;
-  self->stats[statsCount-1].pps = (pixels - self->statsLastPixels) * 1000 / elapsed;
-  self->stats[statsCount-1].bps = (pos - self->statsLastPosition) * 1000 / elapsed;
-
-  gettimeofday(&self->statsLastTime, nullptr);
-  self->statsLastUpdates = updates;
-  self->statsLastPixels = pixels;
-  self->statsLastPosition = pos;
-
-#if !defined(WIN32) && !defined(__APPLE__)
-  // FLTK < 1.3.5 crashes if fl_gc is unset
-  if (!fl_gc)
-    fl_gc = XDefaultGC(fl_display, 0);
-#endif
-
-  surface = new Fl_Image_Surface(statsWidth, statsHeight);
-  surface->set_current();
-
-  fl_rectf(0, 0, statsWidth, statsHeight, FL_BLACK);
-
-  fl_rect(5, 5, graphWidth, graphHeight, FL_WHITE);
-
-  maxUPS = maxPPS = maxBPS = 0;
-  for (i = 0;i < statsCount;i++) {
-    if (self->stats[i].ups > maxUPS)
-      maxUPS = self->stats[i].ups;
-    if (self->stats[i].pps > maxPPS)
-      maxPPS = self->stats[i].pps;
-    if (self->stats[i].bps > maxBPS)
-      maxBPS = self->stats[i].bps;
-  }
-
-  if (maxUPS != 0) {
-    fl_color(FL_GREEN);
-    for (i = 0;i < statsCount-1;i++) {
-      fl_line(5 + i * graphWidth / statsCount,
-              5 + graphHeight - graphHeight * self->stats[i].ups / maxUPS,
-              5 + (i+1) * graphWidth / statsCount,
-              5 + graphHeight - graphHeight * self->stats[i+1].ups / maxUPS);
-    }
-  }
-
-  if (maxPPS != 0) {
-    fl_color(FL_YELLOW);
-    for (i = 0;i < statsCount-1;i++) {
-      fl_line(5 + i * graphWidth / statsCount,
-              5 + graphHeight - graphHeight * self->stats[i].pps / maxPPS,
-              5 + (i+1) * graphWidth / statsCount,
-              5 + graphHeight - graphHeight * self->stats[i+1].pps / maxPPS);
-    }
-  }
-
-  if (maxBPS != 0) {
-    fl_color(FL_RED);
-    for (i = 0;i < statsCount-1;i++) {
-      fl_line(5 + i * graphWidth / statsCount,
-              5 + graphHeight - graphHeight * self->stats[i].bps / maxBPS,
-              5 + (i+1) * graphWidth / statsCount,
-              5 + graphHeight - graphHeight * self->stats[i+1].bps / maxBPS);
-    }
-  }
-
-  fl_font(FL_HELVETICA, 10);
-
-  fl_color(FL_GREEN);
-  snprintf(buffer, sizeof(buffer), "%u upd/s", self->stats[statsCount-1].ups);
-  fl_draw(buffer, 5, statsHeight - 5);
-
-  fl_color(FL_YELLOW);
-  fl_draw(core::siPrefix(self->stats[statsCount-1].pps, "pix/s").c_str(),
-          5 + (statsWidth-10)/3, statsHeight - 5);
-
-  fl_color(FL_RED);
-  fl_draw(core::siPrefix(self->stats[statsCount-1].bps * 8, "bps").c_str(),
-          5 + (statsWidth-10)*2/3, statsHeight - 5);
-
-  image = surface->image();
-  delete surface;
-
-  Fl_Display_Device::display_device()->set_current();
-
-  delete self->statsGraph;
-  self->statsGraph = new Surface(image);
-  delete image;
-
-  self->damage(FL_DAMAGE_CHILD, self->w() - statsWidth - 30,
-               self->h() - statsHeight - 30,
-               statsWidth, statsHeight);
-
-  Fl::repeat_timeout(0.5, handleStatsTimeout, data);
 }

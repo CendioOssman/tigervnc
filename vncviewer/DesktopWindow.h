@@ -117,8 +117,6 @@ private:
 
   void scrollTo(int x, int y);
 
-  static void handleStatsTimeout(void *data);
-
 private:
   CConn* cc;
   Fl_Scrollbar *hscroll, *vscroll;
@@ -147,20 +145,6 @@ private:
   bool mouseGrabbed;
 
   bool regrabOnFocus;
-
-  struct statsEntry {
-    unsigned ups;
-    unsigned pps;
-    unsigned bps;
-  };
-  struct statsEntry stats[100];
-
-  struct timeval statsLastTime;
-  unsigned statsLastUpdates;
-  unsigned statsLastPixels;
-  unsigned statsLastPosition;
-
-  Surface *statsGraph;
 };
 
 #endif
