@@ -28,6 +28,8 @@
 #include <string.h>
 #include <sys/time.h>
 
+#include <rdr/Exception.h>
+
 #include <rfb/LogWriter.h>
 #include <rfb/CMsgWriter.h>
 #include <rfb/util.h>
@@ -1303,7 +1305,12 @@ void DesktopWindow::remoteResize(int width, int height)
     vlog.debug("%s", buffer);
   }
 
-  cc->writer()->writeSetDesktopSize(width, height, layout);
+  try {
+    cc->writer()->writeSetDesktopSize(width, height, layout);
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_connection_unexpected(e);
+  }
 }
 
 
