@@ -70,11 +70,6 @@ public:
   void resize(int width, int height);
   void resizeFramebuffer(int new_w, int new_h);
 
-signals:
-  void delayedInitialized();
-  void bufferResized(int oldW, int oldH, int w, int h);
-  void remoteResizeRequest();
-
 protected:
   // Qt event handlers
   void paintEvent(QPaintEvent* event) override;
@@ -132,9 +127,6 @@ private:
 
 private:
   CConn* cc;
-
-  bool firstUpdate;
-  QTimer* delayedInitializeTimer;
 
   QPixmap pixmap;
   QRegion damage;

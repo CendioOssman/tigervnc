@@ -42,9 +42,7 @@ public:
 
   // Remote resize
   void handleDesktopSize();
-  void postRemoteResizeRequest();
   void remoteResize(int width, int height);
-  void fromBufferResize(int oldW, int oldH, int width, int height);
 
   // Flush updates to screen
   void updateWindow();
@@ -98,6 +96,8 @@ public:
 private:
   CConn* cc;
   Viewport* view;
+
+  bool firstUpdate;
 
   bool keyboardGrabbed;
   bool mouseGrabbed;

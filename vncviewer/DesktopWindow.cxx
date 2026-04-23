@@ -113,6 +113,7 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
                              CConn* cc_, QWidget* parent)
   : QWidget(parent)
   , cc(cc_)
+  , firstUpdate(true)
   , keyboardGrabbed(false)
   , mouseGrabbed(false)
   , resizeTimer(new QTimer(this))
@@ -136,13 +137,6 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   setBackgroundRole(QPalette::Window);
 
   view = new Viewport(cc, scrollArea);
-  connect(view, &Viewport::bufferResized, this, &DesktopWindow::fromBufferResize, Qt::QueuedConnection);
-  connect(view,
-          &Viewport::remoteResizeRequest,
-          this,
-          &DesktopWindow::postRemoteResizeRequest,
-          Qt::QueuedConnection);
-  connect(view, &Viewport::delayedInitialized, this, &DesktopWindow::showToast);
 
   view->resize(w, h);
   resize(w, h);
@@ -215,6 +209,9 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
     vlog.debug("SHOW");
     show();
   }
+
+  // Show hint about menu key
+  QTimer::singleShot(500, this, &DesktopWindow::showToast);
 }
 
 DesktopWindow::~DesktopWindow()
@@ -247,6 +244,23 @@ void DesktopWindow::setName(const char *name)
 
   setWindowTitle(windowNameStr);
 }
+
+
+// Copy the areas of the framebuffer that have been changed (damaged)
+// to the displayed window.
+
+void DesktopWindow::updateWindow()
+{
+  if (firstUpdate) {
+    if (cc->server.supportsSetDesktopSize) {
+      resizeTimer->start();
+    }
+    firstUpdate = false;
+  }
+
+  view->updateWindow();
+}
+
 
 QList<int> DesktopWindow::fullscreenScreens() const
 {
@@ -535,12 +549,6 @@ void DesktopWindow::handleDesktopSize()
   }
 }
 
-void DesktopWindow::postRemoteResizeRequest()
-{
-  vlog.debug("DesktopWindow::postRemoteResizeRequest");
-  resizeTimer->start();
-}
-
 void DesktopWindow::remoteResize(int w, int h)
 {
   rfb::ScreenSet layout;
@@ -673,34 +681,16 @@ void DesktopWindow::remoteResize(int w, int h)
   }
 }
 
-void DesktopWindow::fromBufferResize(int oldW, int oldH, int width, int height)
-{
-  vlog.debug("DesktopWindow::resize size=(%d, %d)", width, height);
-
-  if (this->width() == width && this->height() == height) {
-    vlog.debug("DesktopWindow::resize ignored");
-    return;
-  }
-
-  if (!view) {
-    vlog.debug("DesktopWindow::resize !view");
-    resize(width, height);
-  } else {
-    vlog.debug("DesktopWindow::resize view");
-    if (QSize(oldW, oldH) == size()) {
-      vlog.debug("DesktopWindow::resize because session and client were in sync");
-      resize(width, height);
-    }
-  }
-}
-
-void DesktopWindow::updateWindow()
-{
-  view->updateWindow();
-}
-
 void DesktopWindow::resizeFramebuffer(int new_w, int new_h)
 {
+  vlog.debug("DesktopWindow::resize size=(%d, %d)", new_w, new_h);
+
+  vlog.debug("DesktopWindow::resize view");
+  if (view->size() == size()) {
+    vlog.debug("DesktopWindow::resize because session and client were in sync");
+    resize(new_w, new_h);
+  }
+
   view->resizeFramebuffer(new_w, new_h);
 }
 
@@ -766,7 +756,7 @@ void DesktopWindow::resizeEvent(QResizeEvent* e)
 
   vlog.debug("DesktopWindow::resizeEvent supportsSetDesktopSize=%d", cc->server.supportsSetDesktopSize);
   if (::remoteResize && cc->server.supportsSetDesktopSize) {
-    postRemoteResizeRequest();
+    resizeTimer->start();
   }
 
   toast->setGeometry(rect());

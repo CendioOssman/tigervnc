@@ -91,8 +91,8 @@ static const int FAKE_KEY_CODE = 0xffff;
 static const int FAKE_GESTURE_KEY_CODE = 0x20001;
 
 Viewport::Viewport(CConn* cc_, QWidget* parent)
-  : QWidget(parent), cc(cc_), firstUpdate(true),
-    delayedInitializeTimer(new QTimer(this)), lastButtonMask(0),
+  : QWidget(parent), cc(cc_),
+    lastPointerPos(0, 0), lastButtonMask(0),
     mousePointerTimer(new QTimer(this)), keyboard(nullptr),
     firstLEDState(true), pendingClientClipboard(false),
     menuCtrlKey(false), menuAltKey(false), cursor(nullptr)
@@ -282,14 +282,6 @@ Viewport::Viewport(CConn* cc_, QWidget* parent)
   // Make sure we have an initial blank cursor set
   setCursor(0, 0, rfb::Point(0, 0), nullptr);
 
-  delayedInitializeTimer->setInterval(1000);
-  delayedInitializeTimer->setSingleShot(true);
-  connect(delayedInitializeTimer, &QTimer::timeout, this, [this]() {
-    cc->refreshFramebuffer();
-    emit delayedInitialized();
-  });
-  delayedInitializeTimer->start();
-
   mousePointerTimer->setInterval(::pointerEventInterval);
   mousePointerTimer->setSingleShot(true);
   connect(mousePointerTimer, &QTimer::timeout, this,
@@ -299,16 +291,6 @@ Viewport::Viewport(CConn* cc_, QWidget* parent)
   gettimeofday(&fpsLast, nullptr);
   fpsTimer.start(5000);
 #endif
-
-  connect(
-      this,
-      &Viewport::bufferResized,
-      this,
-      [=]() {
-        setAttribute(Qt::WA_OpaquePaintEvent, false);
-        repaint();
-      },
-      Qt::QueuedConnection);
 
   setMouseTracking(true);
 }
@@ -332,14 +314,6 @@ Viewport::~Viewport()
 // to the displayed window.
 void Viewport::updateWindow()
 {
-  // copied from DesktopWindow.cxx.
-  if (firstUpdate) {
-    if (cc->server.supportsSetDesktopSize) {
-      emit remoteResizeRequest();
-    }
-    firstUpdate = false;
-  }
-
   PlatformPixelBuffer* framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
   rfb::Rect rect = framebuffer->getDamage();
   int x = rect.tl.x;
@@ -529,7 +503,8 @@ void Viewport::resizeFramebuffer(int new_w, int new_h)
   damage = QRegion(0, 0, pixmap.width(), pixmap.height());
   vlog.debug("Viewport::bufferResized pixmapSize=(%d, %d) size=(%d, %d)",
               pixmap.size().width(), pixmap.size().height(), width(), height());
-  emit bufferResized(width(), height(), new_w, new_h);
+  setAttribute(Qt::WA_OpaquePaintEvent, false);
+  repaint();
   resize(new_w, new_h);
 }
 
