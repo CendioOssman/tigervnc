@@ -12,7 +12,7 @@
 #include "rfb/LogWriter.h"
 #include "rfb/ScreenSet.h"
 #include "OptionsDialog.h"
-#include "toast.h"
+#include "Toast.h"
 #include "CConn.h"
 #include "mainloop.h"
 

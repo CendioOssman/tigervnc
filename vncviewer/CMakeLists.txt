@@ -91,8 +91,6 @@ set(PROJECT_SOURCES
         AuthDialog.h
         CConn.h
         CConn.cxx
-        toast.cxx
-        toast.h
         ServerDialog.cxx
         ServerDialog.h
         OptionsDialog.cxx
@@ -110,6 +108,8 @@ set(PROJECT_SOURCES
         OptionsSecurity.h
         QMonitorArrangement.cxx
         QMonitorArrangement.h
+        Toast.cxx
+        Toast.h
         clicksalternativegesture.cxx
         clicksalternativegesture.h
         clicksalternativegesturerecognizer.cxx

@@ -25,7 +25,7 @@
 
 #include <rfb/util.h>
 
-#include "toast.h"
+#include "Toast.h"
 
 Toast::Toast(QWidget* parent)
   : QWidget{parent}
