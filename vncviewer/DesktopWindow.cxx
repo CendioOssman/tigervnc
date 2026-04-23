@@ -211,7 +211,7 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   }
 
   // Show hint about menu key
-  QTimer::singleShot(500, this, &DesktopWindow::showToast);
+  QTimer::singleShot(500, this, &DesktopWindow::menuOverlay);
 }
 
 DesktopWindow::~DesktopWindow()
@@ -261,6 +261,28 @@ void DesktopWindow::updateWindow()
   view->updateWindow();
 }
 
+
+void DesktopWindow::menuOverlay()
+{
+  if (strcmp((const char*)menuKey, "") != 0) {
+    setOverlay(_("Press %s to open the context menu"),
+               (const char*)menuKey);
+  }
+}
+
+void DesktopWindow::setOverlay(const char* text, ...)
+{
+  va_list ap;
+  char textbuf[1024];
+
+  va_start(ap, text);
+  vsnprintf(textbuf, sizeof(textbuf), text, ap);
+  textbuf[sizeof(textbuf)-1] = '\0';
+  va_end(ap);
+
+  toast->showToast(textbuf);
+  toast->setGeometry(rect());
+}
 
 QList<int> DesktopWindow::fullscreenScreens() const
 {
@@ -736,12 +758,6 @@ void DesktopWindow::handleClipboardAnnounce(bool available)
 void DesktopWindow::handleClipboardData(const char* text)
 {
   view->handleClipboardData(text);
-}
-
-void DesktopWindow::showToast()
-{
-  toast->showToast();
-  toast->setGeometry(rect());
 }
 
 void DesktopWindow::moveEvent(QMoveEvent* e)

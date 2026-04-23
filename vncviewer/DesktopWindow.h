@@ -65,7 +65,6 @@ public:
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* text);
 
-  void showToast();
 
 signals:
   void fullscreenChanged(bool enabled);
@@ -84,6 +83,12 @@ protected:
 
   void handleFocusWindowChanged(QWindow* window);
 
+private:
+  void menuOverlay();
+
+  void setOverlay(const char *text, ...)
+    __attribute__((__format__ (__printf__, 2, 3)));
+
   static void handleOptions(void *data);
 
 public:
@@ -96,6 +101,7 @@ public:
 private:
   CConn* cc;
   Viewport* view;
+  Toast* toast;
 
   bool firstUpdate;
 
@@ -110,7 +116,6 @@ private:
   QScreen* previousScreen;
   QByteArray previousGeometry;
 
-  Toast* toast;
   ScrollArea* scrollArea = nullptr;
 };
 
