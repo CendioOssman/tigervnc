@@ -118,8 +118,6 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   , resizeTimer(new QTimer(this))
   , devicePixelRatio(devicePixelRatioF())
 {
-  setAttribute(Qt::WA_NativeWindow, true);
-
   setContentsMargins(0, 0, 0, 0);
 
   scrollArea = new ScrollArea;
