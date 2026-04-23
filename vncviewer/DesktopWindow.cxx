@@ -59,19 +59,6 @@
 #include "x11.h"
 #endif
 
-// width of each "edge" region where scrolling happens,
-// as a ratio compared to the viewport size
-// default: 1/16th of the viewport size
-#define EDGE_SCROLL_SIZE 16
-// edge width is calculated at runtime; these values are just examples
-static int edge_scroll_size_x = 128;
-static int edge_scroll_size_y = 96;
-// maximum pixels to scroll per frame
-#define EDGE_SCROLL_SPEED 16
-// how long to wait between viewport scroll position changes
-// default: roughly 60 fps for smooth motion
-#define EDGE_SCROLL_SECONDS_PER_FRAME 0.016666
-
 static rfb::LogWriter vlog("DesktopWindow");
 
 // Global due to http://www.fltk.org/str.php?L2177 and the similar
@@ -258,7 +245,6 @@ DesktopWindow::~DesktopWindow()
   // again later when this object is already gone.
   Fl::remove_timeout(handleResizeTimeout, this);
   Fl::remove_timeout(handleFullscreenTimeout, this);
-  Fl::remove_timeout(handleEdgeScroll, this);
   Fl::remove_timeout(handleStatsTimeout, this);
   Fl::remove_timeout(menuOverlay, this);
   Fl::remove_timeout(updateOverlay, this);
@@ -821,19 +807,6 @@ int DesktopWindow::handle(int event)
         ungrabPointer();
 #endif
     }
-    if (fullscreen_active()) {
-      // calculate width of "edge" regions
-      edge_scroll_size_x = viewport->w() / EDGE_SCROLL_SIZE;
-      edge_scroll_size_y = viewport->h() / EDGE_SCROLL_SIZE;
-      // if cursor is near the edge of the viewport, scroll
-      if (((viewport->x() < 0) && (Fl::event_x() < edge_scroll_size_x)) ||
-          ((viewport->x() + viewport->w() >= w()) && (Fl::event_x() >= w() - edge_scroll_size_x)) ||
-          ((viewport->y() < 0) && (Fl::event_y() < edge_scroll_size_y)) ||
-          ((viewport->y() + viewport->h() >= h()) && (Fl::event_y() >= h() - edge_scroll_size_y))) {
-        if (!Fl::has_timeout(handleEdgeScroll, this))
-          Fl::add_timeout(EDGE_SCROLL_SECONDS_PER_FRAME, handleEdgeScroll, this);
-      }
-    }
     // Continue processing so that the viewport also gets mouse events
     break;
   }
@@ -1349,35 +1322,30 @@ void DesktopWindow::repositionWidgets()
 
   // Scrollbars visbility
 
-  if (fullscreen_active()) {
+  // Decide whether to show a scrollbar by checking if the window
+  // size (possibly minus scrollbar_size) is less than the viewport
+  // (remote framebuffer) size.
+  //
+  // We decide whether to subtract scrollbar_size on an axis by
+  // checking if the other axis *definitely* needs a scrollbar.  You
+  // might be tempted to think that this becomes a weird recursive
+  // problem, but it isn't: If the window size is less than the
+  // viewport size (without subtracting the scrollbar_size), then
+  // that axis *definitely* needs a scrollbar; if the check changes
+  // when we subtract scrollbar_size, then that axis only *maybe*
+  // needs a scrollbar.  If both axes only "maybe" need a scrollbar,
+  // then neither does; so we don't need to recurse on the "maybe"
+  // cases.
+
+  if (w() - (h() < viewport->h() ? Fl::scrollbar_size() : 0) < viewport->w())
+    hscroll->show();
+  else
     hscroll->hide();
+
+  if (h() - (w() < viewport->w() ? Fl::scrollbar_size() : 0) < viewport->h())
+    vscroll->show();
+  else
     vscroll->hide();
-  } else {
-    // Decide whether to show a scrollbar by checking if the window
-    // size (possibly minus scrollbar_size) is less than the viewport
-    // (remote framebuffer) size.
-    //
-    // We decide whether to subtract scrollbar_size on an axis by
-    // checking if the other axis *definitely* needs a scrollbar.  You
-    // might be tempted to think that this becomes a weird recursive
-    // problem, but it isn't: If the window size is less than the
-    // viewport size (without subtracting the scrollbar_size), then
-    // that axis *definitely* needs a scrollbar; if the check changes
-    // when we subtract scrollbar_size, then that axis only *maybe*
-    // needs a scrollbar.  If both axes only "maybe" need a scrollbar,
-    // then neither does; so we don't need to recurse on the "maybe"
-    // cases.
-
-    if (w() - (h() < viewport->h() ? Fl::scrollbar_size() : 0) < viewport->w())
-      hscroll->show();
-    else
-      hscroll->hide();
-
-    if (h() - (w() < viewport->w() ? Fl::scrollbar_size() : 0) < viewport->h())
-      vscroll->show();
-    else
-      vscroll->hide();
-  }
 
   // Scrollbars positions
 
@@ -1450,56 +1418,6 @@ void DesktopWindow::scrollTo(int x, int y)
 
   viewport->position(x, y);
   damage(FL_DAMAGE_SCROLL);
-}
-
-void DesktopWindow::handleEdgeScroll(void *data)
-{
-  DesktopWindow *self = (DesktopWindow *)data;
-
-  int mx, my;
-  int dx, dy;
-
-  assert(self);
-
-  if (!self->fullscreen_active())
-    return;
-
-  mx = Fl::event_x();
-  my = Fl::event_y();
-
-  dx = dy = 0;
-
-  // Clamp mouse position in case it is outside the window
-  if (mx < 0)
-    mx = 0;
-  if (mx > self->w())
-    mx = self->w();
-  if (my < 0)
-    my = 0;
-  if (my > self->h())
-    my = self->h();
-
-  if ((self->viewport->x() < 0) && (mx < edge_scroll_size_x))
-    dx = EDGE_SCROLL_SPEED -
-         EDGE_SCROLL_SPEED * mx / edge_scroll_size_x;
-  if ((self->viewport->x() + self->viewport->w() >= self->w()) &&
-      (mx >= self->w() - edge_scroll_size_x))
-    dx = EDGE_SCROLL_SPEED * (self->w() - mx) / edge_scroll_size_x -
-         EDGE_SCROLL_SPEED - 1;
-  if ((self->viewport->y() < 0) && (my < edge_scroll_size_y))
-    dy = EDGE_SCROLL_SPEED -
-         EDGE_SCROLL_SPEED * my / edge_scroll_size_y;
-  if ((self->viewport->y() + self->viewport->h() >= self->h()) &&
-      (my >= self->h() - edge_scroll_size_y))
-    dy = EDGE_SCROLL_SPEED * (self->h() - my) / edge_scroll_size_y -
-         EDGE_SCROLL_SPEED - 1;
-
-  if ((dx == 0) && (dy == 0))
-    return;
-
-  self->scrollTo(self->hscroll->value() - dx, self->vscroll->value() - dy);
-
-  Fl::repeat_timeout(EDGE_SCROLL_SECONDS_PER_FRAME, handleEdgeScroll, data);
 }
 
 void DesktopWindow::handleStatsTimeout(void *data)

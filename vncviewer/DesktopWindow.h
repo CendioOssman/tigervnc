@@ -107,7 +107,6 @@ private:
   static void handleFullscreenTimeout(void *data);
 
   void scrollTo(int x, int y);
-  static void handleEdgeScroll(void *data);
 
   static void handleStatsTimeout(void *data);
 
