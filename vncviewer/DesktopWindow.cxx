@@ -66,7 +66,6 @@ static rfb::LogWriter vlog("DesktopWindow");
 static std::set<DesktopWindow *> instances;
 
 DesktopWindow::DesktopWindow(int w, int h, const char *name,
-                             const rfb::PixelFormat& serverPF,
                              CConn* cc_)
   : Fl_Window(w, h), cc(cc_), offscreen(nullptr), overlay(nullptr),
     firstUpdate(true),
@@ -80,7 +79,7 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   group->resizable(nullptr);
   resizable(group);
 
-  viewport = new Viewport(w, h, serverPF, cc);
+  viewport = new Viewport(w, h, cc);
 
   // Position will be adjusted later
   hscroll = new Fl_Scrollbar(0, 0, 0, 0);

@@ -194,13 +194,6 @@ const char *CConn::connectionInfo()
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
-  // TRANSLATORS: Similar to the earlier "Pixel format" string
-  serverPF.print(pfStr, 100);
-  snprintf(scratch, sizeof(scratch),
-           _("(server default %s)"), pfStr);
-  strcat(infoText, scratch);
-  strcat(infoText, "\n");
-
   snprintf(scratch, sizeof(scratch),
            _("Requested encoding: %s"), encodingName(getPreferredEncoding()));
   strcat(infoText, scratch);
@@ -586,10 +579,8 @@ void CConn::initDone()
   if (server.beforeVersion(3, 8) && autoSelect)
     fullColour.setParam(true);
 
-  serverPF = server.pf();
-
   desktop = new DesktopWindow(server.width(), server.height(),
-                              server.name(), serverPF, this);
+                              server.name(), this);
   fullColourPF = desktop->getPreferredPF();
 
   // Force a switch to the format and encoding we'd like

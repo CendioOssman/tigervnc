@@ -33,8 +33,7 @@ class Fl_Scrollbar;
 class DesktopWindow : public Fl_Window {
 public:
 
-  DesktopWindow(int w, int h, const char *name,
-                const rfb::PixelFormat& serverPF, CConn* cc_);
+  DesktopWindow(int w, int h, const char *name, CConn* cc_);
   ~DesktopWindow();
 
   // Most efficient format (from DesktopWindow's point of view)
