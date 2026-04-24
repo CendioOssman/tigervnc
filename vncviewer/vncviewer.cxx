@@ -328,9 +328,10 @@ int main(int argc, char** argv)
 #endif
 
   // FIXME: Should we really let Qt respect command line args? We didn't
-  //        for FLTK. And -geometry is currently caught by Qt with
-  //        unknown effects.
-  QApplication app(argc, argv);
+  //        for FLTK.
+  int qtargc = 1;
+  char **qtargv = &argv[0];
+  QApplication app(qtargc, qtargv);
 
   init_qt();
 

@@ -198,26 +198,61 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   // negative coordinates, we do not support -XOFF-YOFF (ie
   // coordinates relative to the right edge / bottom edge) at this
   // time.
+  bool force_position = false;
   int geom_x = 0, geom_y = 0;
-  if (!QString(::geometry).isEmpty()) {
-    int nfields =
-        sscanf(::geometry.getValueStr().c_str(), "+%d+%d", &geom_x, &geom_y);
-    if (nfields != 2) {
+  if (strcmp(::geometry, "") != 0) {
+    int matched;
+    matched = sscanf((const char*)::geometry, "+%d+%d", &geom_x, &geom_y);
+    if (matched == 2) {
+      force_position = true;
+    } else {
       int geom_w, geom_h;
-      nfields = sscanf(::geometry.getValueStr().c_str(),
-                       "%dx%d+%d+%d",
-                       &geom_w,
-                       &geom_h,
-                       &geom_x,
-                       &geom_y);
-      if (nfields != 4) {
-        vlog.debug(_("Invalid geometry specified!"));
+      matched = sscanf((const char*)::geometry, "%dx%d+%d+%d", &geom_w, &geom_h, &geom_x, &geom_y);
+      switch (matched) {
+      case 4:
+        force_position = true;
+        /* fall through */
+      case 2:
+        w = geom_w;
+        h = geom_h;
+        break;
+      default:
+        geom_x = geom_y = 0;
+        vlog.error(_("Invalid geometry specified!"));
       }
     }
-    if (nfields == 2 || nfields == 4) {
-      move(geom_x, geom_y);
-    }
   }
+
+  // Many window managers don't properly resize overly large windows,
+  // so we'll have to do some sanity checks ourselves here
+  QScreen* screen = nullptr;
+  QRect screenGeometry;
+
+  if (force_position) {
+    screen = qApp->screenAt({geom_x, geom_y});
+  } else {
+    // If we don't explicitly request a position then we don't know which
+    // monitor the window manager might place us on. Assume the popular
+    // behaviour of following the cursor.
+    screen = qApp->screenAt(QCursor::pos());
+  }
+  if (screen == nullptr)
+    screen = qApp->primaryScreen();
+
+  screenGeometry = screen->availableGeometry();
+
+  if ((w > screenGeometry.width()) || (h > screenGeometry.height())) {
+    vlog.info(_("Reducing window size to fit on current monitor"));
+    if (w > screenGeometry.width())
+      w = screenGeometry.width();
+    if (h > screenGeometry.height())
+      h = screenGeometry.height();
+  }
+
+  // FIXME: This doesn't adjust for title, like FLTK does
+  if (force_position)
+    move(geom_x, geom_y);
+  resize(w, h);
 
   if (::fullScreen) {
 #ifdef __APPLE__
