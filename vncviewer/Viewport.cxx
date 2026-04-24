@@ -956,10 +956,10 @@ void Viewport::initContextMenu()
   action = new QAction(p_("ContextMenu|", "&Full screen"), contextMenu);
   connect(action, &QAction::triggered, this,
           [this](bool checked) {
-            ((DesktopWindow*)window())->fullscreen(checked);
+            ((DesktopWindow*)window())->setFullScreen(checked);
           });
   action->setCheckable(true);
-  action->setChecked(((DesktopWindow*)window())->isFullscreenEnabled());
+  action->setChecked(((DesktopWindow*)window())->isFullScreen());
   contextMenu->addAction(action);
 
   action = new QAction(p_("ContextMenu|", "Minimi&ze"), contextMenu);
@@ -973,7 +973,7 @@ void Viewport::initContextMenu()
                        contextMenu);
   connect(action, &QAction::triggered, this,
           [this]() {
-            if (((DesktopWindow*)window())->isFullscreenEnabled())
+            if (((DesktopWindow*)window())->isFullScreen())
               return;
             window()->resize(width(), height());
           });

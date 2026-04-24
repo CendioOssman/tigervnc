@@ -28,6 +28,9 @@ void cocoa_release_displays(QWidget* win);
 
 bool cocoa_screens_have_separate_spaces();
 
+void cocoa_set_presentation_default();
+void cocoa_set_presentation_full_screen();
+
 int cocoa_scrollbar_size();
 
 void cocoa_prevent_native_full_screen(QWidget* win);

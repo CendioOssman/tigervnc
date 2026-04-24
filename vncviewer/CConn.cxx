@@ -40,8 +40,8 @@
 #include <rfb/Exception.h>
 #include <rfb/Hostname.h>
 #include <rfb/LogWriter.h>
-#include <rfb/screenTypes.h>
 #include <rfb/fenceTypes.h>
+#include <rfb/screenTypes.h>
 #include <rfb/obfuscate.h>
 #include <network/TcpSocket.h>
 #ifndef WIN32
@@ -598,26 +598,14 @@ void CConn::initDone()
     setPreferredEncoding(encNum);
 }
 
-// setDesktopSize() is called when the desktop size changes (including when
-// it is set initially).
-void CConn::setDesktopSize(int w, int h)
-{
-  CConnection::setDesktopSize(w,h);
-  resizeFramebuffer();
-}
-
-// setExtendedDesktopSize() is a more advanced version of setDesktopSize()
 void CConn::setExtendedDesktopSize(unsigned reason, unsigned result,
-                                   int w, int h, const rfb::ScreenSet& layout)
+                                   int w, int h,
+                                   const rfb::ScreenSet& layout)
 {
   CConnection::setExtendedDesktopSize(reason, result, w, h, layout);
 
-  if ((reason == reasonClient) && (result != resultSuccess)) {
-    vlog.error(_("SetDesktopSize failed: %d"), result);
-    return;
-  }
-
-  resizeFramebuffer();
+  if (reason == reasonClient)
+    desktop->setDesktopSizeDone(result);
 }
 
 // setName() is called when the desktop name changes

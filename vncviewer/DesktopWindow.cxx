@@ -32,6 +32,7 @@
 
 #include <rfb/LogWriter.h>
 #include <rfb/CMsgWriter.h>
+#include <rfb/util.h>
 
 #include <QApplication>
 #include <QMoveEvent>
@@ -132,12 +133,12 @@ private:
 
 DesktopWindow::DesktopWindow(int w, int h, const char *name,
                              CConn* cc_, QWidget* parent)
-  : QWidget(parent)
-  , cc(cc_)
-  , firstUpdate(true)
-  , keyboardGrabbed(false)
-  , mouseGrabbed(false)
-  , resizeTimer(new QTimer(this))
+  : QWidget(parent), cc(cc_),
+    firstUpdate(true),
+    delayedFullscreen(false), sentDesktopSize(false),
+    pendingRemoteResize(false), lastResize({0, 0}),
+    fakeFullScreen(false),
+    keyboardGrabbed(false), mouseGrabbed(false)
 {
   // We need an early and stable QWindow as we do a lot of low level
   // stuff with it
@@ -171,10 +172,10 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   // Hack. See below...
   windowHandle()->installEventFilter(this);
 
-  // FIXME: this is a lot faster than before
-  resizeTimer->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
+  resizeTimer = new QTimer(this);
   resizeTimer->setSingleShot(true);
-  connect(resizeTimer, &QTimer::timeout, this, &DesktopWindow::handleDesktopSize);
+  connect(resizeTimer, &QTimer::timeout, this,
+          &DesktopWindow::handleResizeTimeout);
 
   toast = new Toast(this);
 
@@ -187,12 +188,29 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   // FIXME: Not sure why this is needed
   viewport->setFocus();
 
-#ifdef __APPLE__
-  cocoa_prevent_native_full_screen(this);
-#endif
-
-  connect(qApp, &QGuiApplication::screenAdded, this, &DesktopWindow::updateMonitorsFullscreen);
-  connect(qApp, &QGuiApplication::screenRemoved, this, &DesktopWindow::updateMonitorsFullscreen);
+  // Screens removed or added. Recreate fullscreen window if
+  // necessary. On Windows, adding a second screen only works
+  // reliable if we are using a timer. Otherwise, the window will
+  // not be resized to cover the new screen. A timer makes sense
+  // also on other systems, to make sure that whatever desktop
+  // environment has a chance to deal with things before we do.
+  // Please note that when using FullscreenSystemKeys on macOS, the
+  // display configuration cannot be changed: macOS will not detect
+  // added or removed screens and there will be no event.
+  // This is by design:
+  // "When you capture a display, you have exclusive use of the
+  // display. Other applications and system services are not allowed
+  // to use the display or change its configuration. In addition,
+  // they are not notified of display changes"
+  QTimer* screensTimer = new QTimer(this);
+  screensTimer->setInterval(500);
+  screensTimer->setSingleShot(true);
+  connect(screensTimer, &QTimer::timeout, this,
+          &DesktopWindow::reconfigureFullscreen);
+  connect(qApp, &QGuiApplication::screenAdded, screensTimer,
+          [screensTimer]() { screensTimer->start(); });
+  connect(qApp, &QGuiApplication::screenRemoved, screensTimer,
+          [screensTimer]() { screensTimer->start(); });
 
   // Activate events aren't sent for focus grabs, but signals are
   connect(windowHandle(), &QWindow::activeChanged, this,
@@ -258,18 +276,34 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
     move(geom_x, geom_y);
   resize(w, h);
 
-  if (::fullScreen) {
 #ifdef __APPLE__
-    QTimer::singleShot(100, [=](){
+  cocoa_prevent_native_full_screen(this);
 #endif
-      fullscreen(true);
-#ifdef __APPLE__
-    });
-#endif
-  } else {
-    vlog.debug("SHOW");
-    show();
+
+  fullscreenTimer = new QTimer(this);
+  fullscreenTimer->setSingleShot(true);
+  connect(fullscreenTimer, &QTimer::timeout, this,
+          &DesktopWindow::handleFullscreenTimeout);
+
+  if (fullScreen) {
+    // We cannot enable full screen before the window is visible/mapped
+    // for two reasons:
+    //
+    // a) Window managers seem to be rather crappy at respecting
+    // fullscreen hints on initial windows. So on X11 we'll have to
+    // wait until after we've been mapped.
+    //
+    // b) We bypass Qt and do low level manipulation of the window on
+    // Windows and macOS, which only works reliably once the window is
+    // visible.
+    delayedFullscreen = true;
   }
+
+  if (maximize) {
+    setWindowState(windowState() ^ Qt::WindowMaximized);
+  }
+
+  show();
 
   // Show hint about menu key
   QTimer::singleShot(500, this, &DesktopWindow::menuOverlay);
@@ -299,18 +333,6 @@ const rfb::PixelFormat &DesktopWindow::getPreferredPF()
 }
 
 
-void DesktopWindow::updateMonitorsFullscreen()
-{
-  bool allMonitors = !strcasecmp(fullScreenMode, "all");
-  bool selectedMonitors = !strcasecmp(fullScreenMode, "selected");
-
-  if ((fullscreenEnabled || pendingFullscreen)
-      && (allMonitors || selectedMonitors)) {
-    fullscreen(false);
-    fullscreen(true);
-  }
-}
-
 void DesktopWindow::setName(const char *name)
 {
   char windowNameStr[256];
@@ -327,10 +349,8 @@ void DesktopWindow::setName(const char *name)
 void DesktopWindow::updateWindow()
 {
   if (firstUpdate) {
-    if (cc->server.supportsSetDesktopSize) {
-      resizeTimer->start();
-    }
     firstUpdate = false;
+    remoteResize();
   }
 
   viewport->updateWindow();
@@ -345,13 +365,27 @@ void DesktopWindow::resizeFramebuffer(int new_w, int new_h)
   // If we're letting the viewport match the window perfectly, then
   // keep things that way for the new size, otherwise just keep things
   // like they are.
-  if (!isFullscreenEnabled() && !isMaximized()) {
+  if (!isFullScreen() && !isMaximized()) {
     if (size() == viewport->size())
       resize(new_w, new_h);
   }
 
   viewport->resize(new_w, new_h);
 }
+
+
+void DesktopWindow::setDesktopSizeDone(unsigned result)
+{
+  pendingRemoteResize = false;
+
+  if (result != 0)
+    return;
+
+  // We might have resized again whilst waiting for the previous
+  // request, so check if we are in sync
+  remoteResize();
+}
+
 
 void DesktopWindow::setCursor(int width, int height,
                               const rfb::Point& hotspot,
@@ -403,7 +437,7 @@ void DesktopWindow::resize(int w, int h)
 #if ! (defined(WIN32) || defined(__APPLE__))
   // X11 window managers will treat a resize to cover the entire
   // monitor as a request to go full screen. Make sure we avoid this.
-  if (!isFullscreenEnabled()) {
+  if (!isFullScreen()) {
     QList<QScreen*> screens = qApp->screens();
     for (QScreen* screen : screens) {
       // We can't trust x and y if the window isn't mapped as the
@@ -457,6 +491,10 @@ void DesktopWindow::setOverlay(const char* text, ...)
 
 void DesktopWindow::moveEvent(QMoveEvent* e)
 {
+  // We might be overlapping a different set of monitors now, even if
+  // our size is the same
+  remoteResize();
+
   // Some systems require a grab after the window size has been changed.
   // Otherwise they might hold on to displays, resulting in them being unusable.
   maybeGrabKeyboard();
@@ -466,12 +504,7 @@ void DesktopWindow::moveEvent(QMoveEvent* e)
 
 void DesktopWindow::resizeEvent(QResizeEvent* e)
 {
-  vlog.debug("DesktopWindow::resizeEvent size=(%d, %d)", e->size().width(), e->size().height());
-
-  vlog.debug("DesktopWindow::resizeEvent supportsSetDesktopSize=%d", cc->server.supportsSetDesktopSize);
-  if (::remoteResize && cc->server.supportsSetDesktopSize) {
-    resizeTimer->start();
-  }
+  remoteResize();
 
   toast->setGeometry(rect());
 
@@ -485,37 +518,42 @@ void DesktopWindow::resizeEvent(QResizeEvent* e)
 void DesktopWindow::changeEvent(QEvent* e)
 {
   if (e->type() == QEvent::WindowStateChange) {
-    int oldState = (static_cast<QWindowStateChangeEvent*>(e))->oldState();
-    vlog.debug("DesktopWindow::changeEvent size=(%d, %d) state=%d oldState=%d",
-               width(),
-               height(),
-               int(windowState()),
-               oldState);
-    vlog.debug("DesktopWindow::changeEvent fullscreenEnabled=%d pendingFullscreen=%d",
-               fullscreenEnabled, pendingFullscreen);
-    if (!fullscreenEnabled && !pendingFullscreen) {
-      if (!(oldState & Qt::WindowFullScreen) && windowState() & Qt::WindowFullScreen) {
-#ifdef __APPLE__
-        vlog.debug("DesktopWindow::changeEvent window has gone fullscreen, we do not like it on Mac");
-        QTimer::singleShot(std::chrono::milliseconds(1000), [=]() {
-          fullscreen(false);
-          fullscreen(true);
-        });
-#else
-        vlog.debug("DesktopWindow::changeEvent window has gone fullscreen, checking if it is our doing");
-        fullscreen(true);
-#endif
+    QWindowStateChangeEvent* event;
+
+    event = dynamic_cast<QWindowStateChangeEvent*>(e);
+    assert(event);
+
+    // We only use Qt's native full screen for X11 with a window manager
+#if !defined(WIN32) && !defined(__APPLE__)
+    if (x11_has_wm()) {
+      if ((event->oldState() & Qt::WindowFullScreen) !=
+          (windowState() & Qt::WindowFullScreen)) {
+        fullScreenEvent();
       }
-    } else if (fullscreenEnabled && !pendingFullscreen) {
-      if (oldState & Qt::WindowFullScreen && !(windowState() & Qt::WindowFullScreen)) {
-#ifndef __APPLE__
-        vlog.debug("DesktopWindow::changeEvent window has left fullscreen, checking if it is our doing");
-        fullscreen(false);
+    } else
 #endif
-      }
+    {
+      if (windowState() & Qt::WindowFullScreen)
+        vlog.error("Unexpected system full screen state");
     }
   }
+
   QWidget::changeEvent(e);
+}
+
+void DesktopWindow::fullScreenEvent()
+{
+  fullScreen.setParam(isFullScreen());
+
+  if (isFullScreen())
+    maybeGrabKeyboard();
+  else
+    ungrabKeyboard();
+
+  // The window manager respected our full screen request, but we
+  // still need to wait a bit long for it to finish resizing us
+  if (delayedFullscreen && isFullScreen())
+    fullscreenTimer->start(100);
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -574,6 +612,19 @@ void DesktopWindow::showEvent(QShowEvent* event)
   QWidget::showEvent(event);
 }
 
+void DesktopWindow::exposeEvent()
+{
+  // This is a response to MapNotify, which means we can continue
+  // enabling initial fullscreen.
+  if (delayedFullscreen && !fullscreenTimer->isActive()) {
+    // Hack: Fullscreen requests may be ignored, so we need a
+    // timeout for when we should stop waiting. We also need to wait
+    // for the resize, which can come after the fullscreen event.
+    fullscreenTimer->start(500);
+    setFullScreen(true);
+  }
+}
+
 void DesktopWindow::closeEvent(QCloseEvent* e)
 {
   QWidget::closeEvent(e);
@@ -584,6 +635,10 @@ void DesktopWindow::closeEvent(QCloseEvent* e)
 bool DesktopWindow::eventFilter(QObject* watched, QEvent* event)
 {
   switch (event->type()) {
+  // This is the only way we can detect a MapNotify event
+  case QEvent::Expose:
+    exposeEvent();
+    break;
   // Mouse events are normally only sent to the widget under the mouse,
   // so we need to intercept them here to actually see them
   case QEvent::MouseButtonRelease:
@@ -600,255 +655,167 @@ bool DesktopWindow::eventFilter(QObject* watched, QEvent* event)
 }
 
 
-QList<QScreen*> DesktopWindow::fullscreenScreens() const
+bool DesktopWindow::isFullScreen() const
 {
-  QApplication* app = static_cast<QApplication*>(QApplication::instance());
-  QList<QScreen*> screens = app->screens();
-  QList<QScreen*> applicableScreens;
-  if (!strcasecmp(fullScreenMode, "all")) {
-    for (int i = 0; i < screens.length(); i++) {
-      applicableScreens << screens[i];
-    }
-  } else if (!strcasecmp(fullScreenMode, "selected")) {
-    for (QScreen* screen : ::fullScreenSelectedMonitors.getParam()) {
-      applicableScreens << screen;
-    }
+  // We only use Qt's native full screen for X11 with a window manager
+#if !defined(WIN32) && !defined(__APPLE__)
+  if (x11_has_wm())
+    return QWidget::isFullScreen();
+#endif
+  return fakeFullScreen;
+}
+
+void DesktopWindow::setFullScreen(bool enabled)
+{
+  bool allMonitors = !strcasecmp(fullScreenMode, "all");
+  bool selectedMonitors = !strcasecmp(fullScreenMode, "selected");
+  QScreen* top, * bottom, * left, * right;
+
+  // We're messing around with low-level details of the window, which
+  // requires it to be visible to not conflict badly with Qt
+  assert(isVisible());
+
+  if (not selectedMonitors and not allMonitors) {
+    top = bottom = left = right = windowHandle()->screen();
   } else {
-    QScreen* cscreen = getCurrentScreen();
-    for (int i = 0; i < screens.length(); i++) {
-      if (screens[i] == cscreen) {
-        applicableScreens << screens[i];
-        break;
-      }
-    }
-  }
-  if (applicableScreens.isEmpty()) {
-    applicableScreens << screens[0];
-  }
-  return applicableScreens;
-}
+    int top_y, bottom_y, left_x, right_x;
 
-QScreen* DesktopWindow::getCurrentScreen() const
-{
-  return windowHandle() ? windowHandle()->screen() : qApp->primaryScreen();
-}
+    QRect sg;
 
-void DesktopWindow::fullscreen(bool enabled)
-{
-  vlog.debug("DesktopWindow::fullscreen enabled=%d", enabled);
-  bool fullscreenEnabled0 = fullscreenEnabled;
-  fullscreenEnabled = false;
-  pendingFullscreen = enabled;
-  resizeTimer->stop();
-  QApplication* app = static_cast<QApplication*>(QApplication::instance());
-  QList<QScreen*> screens = app->screens();
-  if (enabled) {
-    // cf. DesktopWindow::fullscreen_on()
-    if (!fullscreenEnabled0) {
-      previousGeometry = saveGeometry();
-      previousScreen = getCurrentScreen();
+    std::set<QScreen*> monitors;
+
+    if (selectedMonitors and not allMonitors) {
+      std::set<QScreen*> selected = fullScreenSelectedMonitors.getParam();
+      monitors.insert(selected.begin(), selected.end());
+    } else {
+      QList<QScreen*> all = qApp->screens();
+      monitors.insert(all.begin(), all.end());
     }
 
-#if defined(Q_OS_LINUX)
-    bool hasWM = x11_has_wm();
-#endif
-
-    bool allMonitors = !strcasecmp(fullScreenMode, "all");
-    bool selectedMonitors = !strcasecmp(fullScreenMode, "selected");
-    QList<QScreen*> selectedScreens = fullscreenScreens();
-    QScreen* top, * bottom, * left, * right;
-    QScreen* selectedPrimaryScreen = selectedScreens[0];
-    top = bottom = left = right = selectedScreens[0];
-    if ((allMonitors || selectedMonitors) && selectedScreens.length() > 0) {
-      int xmin = INT_MAX;
-      int ymin = INT_MAX;
-      int xmax = INT_MIN;
-      int ymax = INT_MIN;
-      for (QScreen* screen : selectedScreens) {
-        QRect rect = screen->geometry();
-        if (xmin > rect.x()) {
-          left = screen;
-          xmin = rect.x();
-        }
-        if (xmax < rect.x() + rect.width()) {
-          right = screen;
-          xmax = rect.x() + rect.width();
-        }
-        if (ymin > rect.y()) {
-          top = screen;
-          ymin = rect.y();
-        }
-        if (ymax < rect.y() + rect.height()) {
-          bottom = screen;
-          ymax = rect.y() + rect.height();
-        }
-      }
-      int w = xmax - xmin;
-      int h = ymax - ymin;
-      vlog.debug("DesktopWindow::fullscreen geometry=(%d, %d, %d, %d)", xmin, ymin, w, h);
-
-      if (selectedScreens.length() == 1) { // Fullscreen on the selected single display.
-#ifdef Q_OS_LINUX
-        if (hasWM) {
-          fullscreenOnSelectedDisplaysIndices(top, top, top, top);
-        } else {
-          fullscreenOnSelectedDisplaysPixels(xmin, ymin, w, h);
-        }
-#else
-        fullscreenOnSelectedDisplay(selectedPrimaryScreen);
-#endif
-      } else { // Fullscreen on multiple displays.
-#ifdef Q_OS_LINUX
-        if (hasWM) {
-          fullscreenOnSelectedDisplaysIndices(top, bottom, left, right);
-        } else {
-          fullscreenOnSelectedDisplaysPixels(xmin, ymin, w, h);
-        }
-#else
-        (void)top;
-        (void)bottom;
-        (void)left;
-        (void)right;
-        fullscreenOnSelectedDisplaysPixels(xmin, ymin, w, h);
-#endif
-      }
-    } else { // Fullscreen on the current single display.
-#ifdef Q_OS_LINUX
-      if (hasWM) {
-        fullscreenOnSelectedDisplaysIndices(top, top, top, top);
-      } else {
-        fullscreenOnSelectedDisplaysPixels(selectedPrimaryScreen->geometry().x(),
-                                            selectedPrimaryScreen->geometry().y(),
-                                            selectedPrimaryScreen->geometry().width(),
-                                            selectedPrimaryScreen->geometry().height());
-      }
-#else
-      fullscreenOnSelectedDisplay(selectedPrimaryScreen);
-#endif
+    // If no monitors were found in the selected monitors case, we want
+    // to explicitly use the window's current monitor.
+    if (monitors.size() == 0) {
+      monitors.insert(windowHandle()->screen());
     }
-  } else { // Exit fullscreen mode.
-    exitFullscreen();
+
+    // If there are monitors selected, calculate the dimensions
+    // of the frame buffer, expressed in the monitor indices that
+    // limits it.
+    std::set<QScreen*>::iterator it = monitors.begin();
+
+    // Get first monitor dimensions.
+    sg = (*it)->geometry();
+    top = bottom = left = right = *it;
+    top_y = sg.y();
+    bottom_y = sg.y() + sg.height();
+    left_x = sg.x();
+    right_x = sg.x() + sg.width();
+
+    // Keep going through the rest of the monitors.
+    for (; it != monitors.end(); it++) {
+      sg = (*it)->geometry();
+
+      if (sg.y() < top_y) {
+        top = *it;
+        top_y = sg.y();
+      }
+
+      if ((sg.y() + sg.height()) > bottom_y) {
+        bottom = *it;
+        bottom_y = sg.y() + sg.height();
+      }
+
+      if (sg.x() < left_x) {
+        left = *it;
+        left_x = sg.x();
+      }
+
+      if ((sg.x() + sg.width()) > right_x) {
+        right = *it;
+        right_x = sg.x() + sg.width();
+      }
+    }
+
   }
-  fullscreenEnabled = enabled;
-  pendingFullscreen = false;
-  setFocus();
-  activateWindow();
-  raise();
 
-  ::fullScreen.setParam(enabled);
-  if (fullscreenEnabled != fullscreenEnabled0) {
-    emit fullscreenChanged(fullscreenEnabled);
-  }
-}
+  // Qt doesn't support what we need, so we fake things in most cases
 
-void DesktopWindow::fullscreenOnSelectedDisplay(QScreen* screen)
-{
-  vlog.debug("DesktopWindow::fullscreenOnSelectedDisplay geometry=(%d, %d, %d, %d)",
-             screen->geometry().x(),
-             screen->geometry().y(),
-             screen->geometry().width(),
-             screen->geometry().height());
-#ifdef __APPLE__
-  fullscreenOnSelectedDisplaysPixels(screen->geometry().x(),
-                                     screen->geometry().y(),
-                                     screen->geometry().width(),
-                                     screen->geometry().height());
-#else
-  show();
-  QApplication::sync();
-  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
-    windowHandle()->setScreen(screen);
-    move(screen->geometry().x(), screen->geometry().y());
-    resize(screen->geometry().width(), screen->geometry().height());
-    showFullScreen();
-    viewport->setFocus();
-  });
-#endif
-}
-
-#ifdef Q_OS_LINUX
-void DesktopWindow::fullscreenOnSelectedDisplaysIndices(QScreen* top, QScreen* bottom, QScreen* left, QScreen* right) // screens indices
-{
-
-  show();
-
-  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
+#if !defined(WIN32) && !defined(__APPLE__)
+  if (x11_has_wm()) {
+    // Best effort, as the window manager might not support it
     x11_fullscreen_screens(this, top, bottom, left, right);
-    x11_fullscreen(this, true);
-    QApplication::sync();
 
-    viewport->setFocus();
+    if (enabled)
+      setWindowState(windowState() | Qt::WindowFullScreen);
+    else
+      setWindowState(windowState() & ~Qt::WindowFullScreen);
 
-    activateWindow();
-  });
-}
-#endif
-
-void DesktopWindow::fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, int vheight) // pixels
-{
-  vlog.debug("DesktopWindow::fullscreenOnSelectedDisplaysPixels geometry=(%d, %d, %d, %d)",
-             vx,
-             vy,
-             vwidth,
-             vheight);
-  setWindowFlag(Qt::WindowStaysOnTopHint, true);
-  setWindowFlag(Qt::FramelessWindowHint, true);
-
-#ifndef __APPLE__
-  show();
-#endif
-  QTimer::singleShot(std::chrono::milliseconds(100), [=]() {
-    move(vx, vy);
-    resize(vwidth, vheight);
-#ifdef __APPLE__
-    show();
-#endif
-    raise();
-    activateWindow();
-    viewport->setFocus();
-  });
-}
-
-void DesktopWindow::exitFullscreen()
-{
-  vlog.debug("DesktopWindow::exitFullscreen");
-  ungrabKeyboard();
-#ifdef Q_OS_LINUX
-  x11_fullscreen(this, false);
-  QApplication::sync();
-  if (QString(getenv("DESKTOP_SESSION")).isEmpty()) {
-    move(0, 0);
-    windowHandle()->setScreen(previousScreen);
-    restoreGeometry(previousGeometry);
+    return;
   }
-#else
-  setWindowFlag(Qt::WindowStaysOnTopHint, false);
-  setWindowFlag(Qt::FramelessWindowHint, false);
-#ifdef __APPLE__
-  cocoa_normal_window_level(this);
 #endif
 
-  showNormal();
-  move(0, 0);
-  windowHandle()->setScreen(previousScreen);
-  restoreGeometry(previousGeometry);
-  showNormal();
+  bool toggling;
+
+  // Are we switching in/out of full screen? Or merely adjusting it?
+  toggling = (isFullScreen() != enabled);
+
+  // We need to set this early so other routines respect the mode we're
+  // trying to set up
+  fakeFullScreen = enabled;
+
+  if (enabled) {
+    int vx, vy, vwidth, vheight;
+
+    vx = left->geometry().x();
+    vy = top->geometry().y();
+    vwidth = right->geometry().x() + right->geometry().width() - vx;
+    vheight = bottom->geometry().y() + bottom->geometry().height() - vy;
+
+    if (toggling) {
+      previousGeometry = saveGeometry();
+
+      windowHandle()->setFlags(windowHandle()->flags() |
+                               Qt::FramelessWindowHint);
+
+#if defined(__APPLE__)
+      cocoa_set_presentation_full_screen();
 #endif
-}
+    }
 
-bool DesktopWindow::allowKeyboardGrab() const
-{
-  return fullscreenEnabled || pendingFullscreen;
-}
+    // We use QWindow directly to avoid some weird abstraction effects
+    windowHandle()->setFramePosition({vx, vy});
+    // These are required to prevent user resizing the window on at
+    // least macOS
+    windowHandle()->setMinimumSize({vwidth, vheight});
+    windowHandle()->setMaximumSize({vwidth, vheight});
+    windowHandle()->resize(vwidth, vheight);
+    windowHandle()->raise();
+  } else {
+    if (toggling) {
+      // Hidden API constant
+      const unsigned QWINDOWSIZE_MAX = ((1<<24)-1);
+      windowHandle()->setMinimumSize({0, 0});
+      windowHandle()->setMaximumSize({QWINDOWSIZE_MAX,
+                                      QWINDOWSIZE_MAX});
 
-bool DesktopWindow::isFullscreenEnabled() const
-{
-  return fullscreenEnabled;
+#if defined(__APPLE__)
+      cocoa_set_presentation_default();
+#endif
+
+      windowHandle()->setFlags(windowHandle()->flags() &
+                               ~Qt::FramelessWindowHint);
+
+      restoreGeometry(previousGeometry);
+    }
+  }
+
+  if (toggling)
+    fullScreenEvent();
 }
 
 void DesktopWindow::maybeGrabKeyboard()
 {
-  if (fullscreenSystemKeys && allowKeyboardGrab() && isActiveWindow())
+  if (fullscreenSystemKeys && isFullScreen() && isActiveWindow())
     grabKeyboard();
 }
 
@@ -955,29 +922,60 @@ void DesktopWindow::handleActiveChanged()
 }
 
 
-void DesktopWindow::handleDesktopSize()
+void DesktopWindow::handleResizeTimeout()
 {
-  if (strcmp(desktopSize, "") != 0) {
-    int width, height;
-
-    // An explicit size has been requested
-
-    if (sscanf(desktopSize, "%dx%d", &width, &height) != 2)
-      return;
-
-    remoteResize(width, height);
-  } else if (::remoteResize) {
-    // No explicit size, but remote resizing is on so make sure it
-    // matches whatever size the window ended up being
-    remoteResize(width(), height());
-  }
+  remoteResize();
 }
 
-void DesktopWindow::remoteResize(int w, int h)
+
+void DesktopWindow::reconfigureFullscreen()
 {
+  if (isFullScreen())
+    setFullScreen(true);
+}
+
+
+void DesktopWindow::remoteResize()
+{
+  int w, h;
   rfb::ScreenSet layout;
   rfb::ScreenSet::const_iterator iter;
-  if ((!fullscreenEnabled && !pendingFullscreen) || (w > width()) || (h > height())) {
+
+  if (!::remoteResize)
+    return;
+  if (!cc->server.supportsSetDesktopSize)
+    return;
+
+  // Don't pester the server with a resize until we have our final size
+  // FIXME: Some window managers (e.g. mutter) will do multiple resizes
+  //        every time we enter or leave full screen, which we'd also
+  //        like to avoid
+  if (delayedFullscreen)
+    return;
+
+  // Rate limit to one pending resize at a time
+  if (pendingRemoteResize)
+    return;
+
+  // And no more than once every 100ms
+  if (rfb::msSince(&lastResize) < 100) {
+    resizeTimer->start((100.0 - rfb::msSince(&lastResize)) / 1000);
+    return;
+  }
+
+  w = width();
+  h = height();
+
+  if (!sentDesktopSize && (strcmp(desktopSize, "") != 0)) {
+    // An explicit size has been requested
+
+    if (sscanf(desktopSize, "%dx%d", &w, &h) != 2)
+      return;
+
+    sentDesktopSize = true;
+  }
+
+  if (!isFullScreen() || (w > width()) || (h > height())) {
     // In windowed mode (or the framebuffer is so large that we need
     // to scroll) we just report a single virtual screen that covers
     // the entire framebuffer.
@@ -1096,6 +1094,9 @@ void DesktopWindow::remoteResize(int w, int h)
     vlog.debug("%s", buffer);
   }
 
+  pendingRemoteResize = true;
+  gettimeofday(&lastResize, nullptr);
+
   try {
     cc->writer()->writeSetDesktopSize(w, h, layout);
   } catch (rdr::Exception& e) {
@@ -1103,6 +1104,7 @@ void DesktopWindow::remoteResize(int w, int h)
     abort_connection_unexpected(e);
   }
 }
+
 
 void DesktopWindow::handleOptions(void *data)
 {
@@ -1113,10 +1115,20 @@ void DesktopWindow::handleOptions(void *data)
   else
     self->ungrabKeyboard();
 
-  // Call fullscreen_on even if active since it handles
+  // Call setFullScreen() even if active since it handles
   // fullScreenMode
   if (fullScreen)
-    self->fullscreen(true);
-  else if (!fullScreen && self->isFullscreenEnabled())
-    self->fullscreen(false);
+    self->setFullScreen(true);
+  else if (!fullScreen && self->isFullScreen())
+    self->setFullScreen(false);
+}
+
+void DesktopWindow::handleFullscreenTimeout()
+{
+  // We are here because we got tired of waiting for the window manager
+  // to finish switching to fullscreen mode, or because we are waiting
+  // for all resize events so we get our final position
+
+  delayedFullscreen = false;
+  remoteResize();
 }

@@ -20,6 +20,7 @@
 #ifndef __DESKTOPWINDOW_H__
 #define __DESKTOPWINDOW_H__
 
+#include <QTimer>
 #include <QWidget>
 
 #include <rfb/Rect.h>
@@ -41,8 +42,6 @@ public:
                 CConn* cc, QWidget* parent=nullptr);
   ~DesktopWindow();
 
-  void updateMonitorsFullscreen();
-
   // Most efficient format (from DesktopWindow's point of view)
   const rfb::PixelFormat &getPreferredPF();
 
@@ -54,6 +53,9 @@ public:
 
   // Resize the current framebuffer, but retain the contents
   void resizeFramebuffer(int new_w, int new_h);
+
+  // A previous call to writeSetDesktopSize() has completed
+  void setDesktopSizeDone(unsigned result);
 
   // New image for the locally rendered cursor
   void setCursor(int width, int height, const rfb::Point& hotspot,
@@ -74,27 +76,15 @@ public:
   void resize(int w, int h);
   void resize(const QSize& size);
 
-  // Fullscreen
-  QList<QScreen*> fullscreenScreens() const;
-  QScreen* getCurrentScreen() const;
-  void fullscreen(bool enabled);
-  void fullscreenOnSelectedDisplay(QScreen* screen);
-#ifdef Q_OS_LINUX
-  void fullscreenOnSelectedDisplaysIndices(QScreen* top, QScreen* bottom, QScreen* left, QScreen* right); // screens indices
-#endif
-  void fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, int vheight); // pixels
-  void exitFullscreen();
-  bool allowKeyboardGrab() const;
-  bool isFullscreenEnabled() const;
-
-signals:
-  void fullscreenChanged(bool enabled);
+  bool isFullScreen() const;
+  void setFullScreen(bool enabled);
 
 protected:
   // Qt event handlers
   void moveEvent(QMoveEvent* e) override;
   void resizeEvent(QResizeEvent* e) override;
   void changeEvent(QEvent* e) override;
+  void fullScreenEvent();
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   void enterEvent(QEvent* event) override;
 #else
@@ -104,6 +94,7 @@ protected:
   void mouseMoveEvent();
   void mouseReleaseEvent();
   void showEvent(QShowEvent* event) override;
+  void exposeEvent();
   void closeEvent(QCloseEvent* e) override;
 
   bool eventFilter(QObject* obj, QEvent* event) override;
@@ -122,10 +113,13 @@ private:
 
   void handleActiveChanged();
 
-  void handleDesktopSize();
-  void remoteResize(int width, int height);
+  void handleResizeTimeout();
+  void reconfigureFullscreen();
+  void remoteResize();
 
   static void handleOptions(void *data);
+
+  void handleFullscreenTimeout();
 
 private:
   CConn* cc;
@@ -134,16 +128,19 @@ private:
   Toast* toast;
 
   bool firstUpdate;
+  bool delayedFullscreen;
+  bool sentDesktopSize;
+  QTimer* fullscreenTimer;
+
+  bool pendingRemoteResize;
+  struct timeval lastResize;
+  QTimer* resizeTimer;
+
+  bool fakeFullScreen;
+  QByteArray previousGeometry;
 
   bool keyboardGrabbed;
   bool mouseGrabbed;
-
-  QTimer* resizeTimer;
-  bool fullscreenEnabled = false;
-  bool pendingFullscreen = false;
-
-  QScreen* previousScreen;
-  QByteArray previousGeometry;
 };
 
 #endif

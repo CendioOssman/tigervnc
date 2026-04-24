@@ -116,6 +116,18 @@ bool cocoa_screens_have_separate_spaces()
   return [NSScreen screensHaveSeparateSpaces];
 }
 
+void cocoa_set_presentation_default()
+{
+  [NSApp setPresentationOptions: NSApplicationPresentationDefault];
+}
+
+void cocoa_set_presentation_full_screen()
+{
+  [NSApp setPresentationOptions:
+         NSApplicationPresentationAutoHideMenuBar |
+         NSApplicationPresentationAutoHideDock];
+}
+
 int cocoa_scrollbar_size()
 {
   return static_cast<int>([NSScroller
