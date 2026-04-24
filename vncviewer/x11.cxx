@@ -284,6 +284,20 @@ void x11_ungrab_pointer()
   XIFreeDeviceInfo(devices);
 }
 
+bool x11_is_pointer_on_same_screen(QWidget* win)
+{
+  Display* display = qt_display();
+  Window root, child;
+  int x, y, wx, wy;
+  unsigned int mask;
+
+  if (!XQueryPointer(display, win->winId(), &root, &child,
+                     &x, &y, &wx, &wy, &mask))
+    return false;
+
+  return true;
+}
+
 void x11_bell()
 {
   XBell(qt_display(), 0 /* volume */);

@@ -1,46 +1,67 @@
-#include "DesktopWindow.h"
+/* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
+ * Copyright 2011 Pierre Ossman <ossman@cendio.se> for Cendio AB
+ * 
+ * This is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this software; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+ * USA.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
-#include "Viewport.h"
-#include "i18n.h"
-#include "parameters.h"
-#include "rdr/Exception.h"
-#include "rfb/CMsgWriter.h"
-#include "rfb/LogWriter.h"
-#include "rfb/ScreenSet.h"
-#include "OptionsDialog.h"
-#include "Toast.h"
-#include "CConn.h"
-#include "mainloop.h"
+#include <algorithm>
+
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
+
+#include <rdr/Exception.h>
+
+#include <rfb/LogWriter.h>
+#include <rfb/CMsgWriter.h>
 
 #include <QApplication>
 #include <QMoveEvent>
-#include <QPainter>
-#include <QResizeEvent>
-#include <QVBoxLayout>
-#include <QScreen>
-#include <QScrollBar>
-#include <QStyleFactory>
-#include <QTimer>
-#include <QWindow>
 #include <QProxyStyle>
+#include <QResizeEvent>
+#include <QScreen>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QTimer>
+#include <QVBoxLayout>
+#include <QWindow>
+
+#include "DesktopWindow.h"
+#include "OptionsDialog.h"
+#include "i18n.h"
+#include "mainloop.h"
+#include "parameters.h"
+#include "CConn.h"
+#include "Toast.h"
+#include "Viewport.h"
+
 #if defined(WIN32)
-#include <windows.h>
-#endif
-#ifdef Q_OS_LINUX
+#include "win32.h"
+#elif defined(__APPLE__)
+#include "cocoa.h"
+#else
 #include "x11.h"
 #endif
-#ifdef WIN32
-#include "win32.h"
-#endif
-#ifdef __APPLE__
-#include "cocoa.h"
-#endif
 
-static rfb::LogWriter vlog("VNCWindow");
+static rfb::LogWriter vlog("DesktopWindow");
 
 #ifdef __APPLE__
 class ScrollBarStyle : public QProxyStyle
@@ -135,14 +156,17 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   setPalette(p);
   setBackgroundRole(QPalette::Window);
 
-  view = new Viewport(cc, scrollArea);
+  viewport = new Viewport(cc, scrollArea);
 
-  view->resize(w, h);
+  viewport->resize(w, h);
   resize(w, h);
-  scrollArea->setWidget(view);
+  scrollArea->setWidget(viewport);
   setName(name);
 
   OptionsDialog::addCallback(handleOptions, this);
+
+  // Hack. See below...
+  windowHandle()->installEventFilter(this);
 
   // FIXME: this is a lot faster than before
   resizeTimer->setInterval(100); // <-- DesktopWindow::resize(int x, int y, int w, int h)
@@ -158,10 +182,9 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   setLayout(l);
 
   // FIXME: Not sure why this is needed
-  view->setFocus();
+  viewport->setFocus();
 
 #ifdef __APPLE__
-  cocoa_fix_warping();
   cocoa_prevent_native_fullscreen(this);
 #endif
 
@@ -211,7 +234,14 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
 
   // Show hint about menu key
   QTimer::singleShot(500, this, &DesktopWindow::menuOverlay);
+
+  // By default we get a slight delay when we warp the pointer, something
+  // we don't want or we'll get jerky movement
+#ifdef __APPLE__
+  cocoa_event_delay(0);
+#endif
 }
+
 
 DesktopWindow::~DesktopWindow()
 {
@@ -257,7 +287,68 @@ void DesktopWindow::updateWindow()
     firstUpdate = false;
   }
 
-  view->updateWindow();
+  viewport->updateWindow();
+}
+
+
+void DesktopWindow::resizeFramebuffer(int new_w, int new_h)
+{
+  if ((new_w == viewport->width()) && (new_h == viewport->height()))
+    return;
+
+  // If we're letting the viewport match the window perfectly, then
+  // keep things that way for the new size, otherwise just keep things
+  // like they are.
+  if (!isFullscreenEnabled() && !isMaximized()) {
+    if (size() == viewport->size())
+      resize(new_w, new_h);
+  }
+
+  viewport->resizeFramebuffer(new_w, new_h);
+}
+
+void DesktopWindow::setCursor(int width, int height,
+                              const rfb::Point& hotspot,
+                              const uint8_t* pixels)
+{
+  viewport->setCursor(width, height, hotspot, pixels);
+}
+
+
+void DesktopWindow::setCursorPos(const rfb::Point& pos)
+{
+  if (!mouseGrabbed) {
+    // Do nothing if we do not have the mouse captured.
+    return;
+  }
+  QPoint gp = mapToGlobal(QPoint(pos.x, pos.y) + viewport->pos());
+#if defined(__APPLE__)
+  cocoa_set_cursor_pos(gp.x(), gp.y());
+#else
+  QCursor::setPos(gp.x(), gp.y());
+#endif
+}
+
+
+void DesktopWindow::setLEDState(unsigned int state)
+{
+  viewport->setLEDState(state);
+}
+
+
+void DesktopWindow::handleClipboardRequest()
+{
+  viewport->handleClipboardRequest();
+}
+
+void DesktopWindow::handleClipboardAnnounce(bool available)
+{
+  viewport->handleClipboardAnnounce(available);
+}
+
+void DesktopWindow::handleClipboardData(const char* text)
+{
+  viewport->handleClipboardData(text);
 }
 
 
@@ -282,6 +373,142 @@ void DesktopWindow::setOverlay(const char* text, ...)
   toast->showToast(textbuf);
   toast->setGeometry(rect());
 }
+
+
+void DesktopWindow::moveEvent(QMoveEvent* e)
+{
+  // Some systems require a grab after the window size has been changed.
+  // Otherwise they might hold on to displays, resulting in them being unusable.
+  maybeGrabKeyboard();
+
+  QWidget::moveEvent(e);
+}
+
+void DesktopWindow::resizeEvent(QResizeEvent* e)
+{
+  vlog.debug("DesktopWindow::resizeEvent size=(%d, %d)", e->size().width(), e->size().height());
+
+  vlog.debug("DesktopWindow::resizeEvent supportsSetDesktopSize=%d", cc->server.supportsSetDesktopSize);
+  if (::remoteResize && cc->server.supportsSetDesktopSize) {
+    resizeTimer->start();
+  }
+
+  toast->setGeometry(rect());
+
+  // Some systems require a grab after the window size has been changed.
+  // Otherwise they might hold on to displays, resulting in them being unusable.
+  maybeGrabKeyboard();
+
+  QWidget::resizeEvent(e);
+}
+
+void DesktopWindow::changeEvent(QEvent* e)
+{
+  if (e->type() == QEvent::WindowStateChange) {
+    int oldState = (static_cast<QWindowStateChangeEvent*>(e))->oldState();
+    vlog.debug("DesktopWindow::changeEvent size=(%d, %d) state=%d oldState=%d",
+               width(),
+               height(),
+               int(windowState()),
+               oldState);
+    vlog.debug("DesktopWindow::changeEvent fullscreenEnabled=%d pendingFullscreen=%d",
+               fullscreenEnabled, pendingFullscreen);
+    if (!fullscreenEnabled && !pendingFullscreen) {
+      if (!(oldState & Qt::WindowFullScreen) && windowState() & Qt::WindowFullScreen) {
+#ifdef __APPLE__
+        vlog.debug("DesktopWindow::changeEvent window has gone fullscreen, we do not like it on Mac");
+        QTimer::singleShot(std::chrono::milliseconds(1000), [=]() {
+          fullscreen(false);
+          fullscreen(true);
+        });
+#else
+        vlog.debug("DesktopWindow::changeEvent window has gone fullscreen, checking if it is our doing");
+        fullscreen(true);
+#endif
+      }
+    } else if (fullscreenEnabled && !pendingFullscreen) {
+      if (oldState & Qt::WindowFullScreen && !(windowState() & Qt::WindowFullScreen)) {
+#ifndef __APPLE__
+        vlog.debug("DesktopWindow::changeEvent window has left fullscreen, checking if it is our doing");
+        fullscreen(false);
+#endif
+      }
+    }
+  }
+  QWidget::changeEvent(e);
+}
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+void DesktopWindow::enterEvent(QEvent *event)
+#else
+void DesktopWindow::enterEvent(QEnterEvent *event)
+#endif
+{
+  if (keyboardGrabbed)
+    grabPointer();
+
+  QWidget::enterEvent(event);
+}
+
+void DesktopWindow::leaveEvent(QEvent *event)
+{
+  if (mouseGrabbed)
+    ungrabPointer();
+
+  QWidget::leaveEvent(event);
+}
+
+void DesktopWindow::mouseMoveEvent()
+{
+  if (mouseGrabbed) {
+    // We don't get leaveEvent() with a grabbed pointer, so check
+    // manually
+    if ((QGuiApplication::mouseButtons() == Qt::NoButton) &&
+        !geometry().contains(QCursor::pos()))
+      ungrabPointer();
+
+#if !defined(WIN32) && !defined(__APPLE__)
+    // We also don't get sensible coordinates on zaphod setups
+    if (!x11_is_pointer_on_same_screen(this))
+      ungrabPointer();
+#endif
+  }
+}
+
+void DesktopWindow::mouseReleaseEvent()
+{
+  // We usually fail to grab the mouse if a mouse button was
+  // pressed when we gained focus (e.g. clicking on our window),
+  // so we may need to try again when the button is released.
+  if (keyboardGrabbed && !mouseGrabbed)
+    grabPointer();
+}
+
+void DesktopWindow::closeEvent(QCloseEvent* e)
+{
+  QWidget::closeEvent(e);
+  ::disconnect();
+}
+
+
+bool DesktopWindow::eventFilter(QObject* watched, QEvent* event)
+{
+  switch (event->type()) {
+  // Mouse events are normally only sent to the widget under the mouse,
+  // so we need to intercept them here to actually see them
+  case QEvent::MouseButtonRelease:
+    mouseReleaseEvent();
+    break;
+  case QEvent::MouseMove:
+    mouseMoveEvent();
+    break;
+  default:
+    break;
+  }
+
+  return QWidget::eventFilter(watched, event);
+}
+
 
 QList<int> DesktopWindow::fullscreenScreens() const
 {
@@ -447,7 +674,7 @@ void DesktopWindow::fullscreenOnSelectedDisplay(QScreen* screen)
     move(screen->geometry().x(), screen->geometry().y());
     resize(screen->geometry().width(), screen->geometry().height());
     showFullScreen();
-    view->setFocus();
+    viewport->setFocus();
   });
 #endif
 }
@@ -468,7 +695,7 @@ void DesktopWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int
     x11_fullscreen(this, true);
     QApplication::sync();
 
-    view->setFocus();
+    viewport->setFocus();
 
     activateWindow();
   });
@@ -496,7 +723,7 @@ void DesktopWindow::fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidt
 #endif
     raise();
     activateWindow();
-    view->setFocus();
+    viewport->setFocus();
   });
 }
 
@@ -537,22 +764,130 @@ bool DesktopWindow::isFullscreenEnabled() const
   return fullscreenEnabled;
 }
 
+void DesktopWindow::maybeGrabKeyboard()
+{
+  if (fullscreenSystemKeys && allowKeyboardGrab() && isActiveWindow())
+    grabKeyboard();
+}
+
+void DesktopWindow::grabKeyboard()
+{
+  // FIXME: Investigate QWidget::grabKeyboard()
+#if defined(WIN32)
+  int ret;
+
+  ret = win32_enable_lowlevel_keyboard((HWND)winId());
+  if (ret != 0) {
+    vlog.error(_("Failure grabbing keyboard"));
+    return;
+  }
+#elif defined(__APPLE__)
+  int ret;
+
+  ret = cocoa_capture_displays(fullscreenScreens());
+  if (ret != 0) {
+    vlog.error(_("Failure grabbing keyboard"));
+    return;
+  }
+#else
+  bool ret;
+
+  ret = x11_grab_keyboard(this);
+  if (!ret) {
+    vlog.error(_("Failure grabbing control of the keyboard"));
+    return;
+  }
+#endif
+
+  keyboardGrabbed = true;
+
+  if (underMouse())
+    grabPointer();
+}
+
+
+void DesktopWindow::ungrabKeyboard()
+{
+  keyboardGrabbed = false;
+
+  ungrabPointer();
+
+#if defined(WIN32)
+  win32_disable_lowlevel_keyboard((HWND)winId());
+#elif defined(__APPLE__)
+  cocoa_release_displays();
+#else
+  // Qt has a grab so lets not mess with it
+  if (keyboardGrabber() != nullptr)
+    return;
+  // Popups have an implicit grab that keyboardGrabber() doesn't show
+  QWindow* focused = qApp->focusWindow();
+  if ((focused != nullptr) &&
+      (focused->flags() & Qt::WindowType_Mask) == Qt::Popup)
+    return;
+
+  x11_ungrab_keyboard();
+#endif
+}
+
+
+void DesktopWindow::grabPointer()
+{
+  // FIXME: Investigate QWidget::grabMouse()
+
+#if !defined(WIN32) && !defined(__APPLE__)
+  // We also need to grab the pointer as some WMs like to grab buttons
+  // combined with modifies (e.g. Alt+Button0 in metacity).
+
+  // Having a button pressed prevents us from grabbing, we make
+  // a new attempt in fltkHandle()
+  if (!x11_grab_pointer(this))
+    return;
+#endif
+
+  mouseGrabbed = true;
+}
+
+
+void DesktopWindow::ungrabPointer()
+{
+  mouseGrabbed = false;
+
+#if !defined(WIN32) && !defined(__APPLE__)
+  x11_ungrab_pointer();
+#endif
+}
+
+void DesktopWindow::handleFocusWindowChanged(QWindow* window)
+{
+  // Focus might not stay with us just because we have grabbed the
+  // keyboard. E.g. we might have sub windows, or we're not using
+  // all monitors and the user clicked on another application.
+  // Make sure we update our grabs with the focus changes.
+  if (window == windowHandle()) {
+    maybeGrabKeyboard();
+  } else {
+    if (fullscreenSystemKeys)
+      ungrabKeyboard();
+  }
+}
+
+
 void DesktopWindow::handleDesktopSize()
 {
-  vlog.debug("DesktopWindow::handleDesktopSize");
-  if (!QString(::desktopSize).isEmpty()) {
-    int w, h;
+  if (strcmp(desktopSize, "") != 0) {
+    int width, height;
+
     // An explicit size has been requested
-    if (sscanf(::desktopSize, "%dx%d", &w, &h) != 2) {
+
+    if (sscanf(desktopSize, "%dx%d", &width, &height) != 2)
       return;
-    }
-    remoteResize(w, h);
-    vlog.debug("DesktopWindow::handleDesktopSize(explicit) size=(%d, %d)", w, h);
+
+    remoteResize(width, height);
   } else if (::remoteResize) {
     // No explicit size, but remote resizing is on so make sure it
     // matches whatever size the window ended up being
     remoteResize(width(), height());
-    vlog.debug("DesktopWindow::handleDesktopSize(implicit) size=(%d, %d)", width(), height());
   }
 }
 
@@ -593,11 +928,13 @@ void DesktopWindow::remoteResize(int w, int h)
     layout.begin()->dimensions.br.y = h;
   } else {
     uint32_t id;
+    QRect sg;
+    rfb::Rect viewport_rect, screen_rect;
 
     // In full screen we report all screens that are fully covered.
-    rfb::Rect viewport_rect;
-    viewport_rect.setXYWH(x(), y(), width(), height());
-    vlog.debug("viewport_rect(%d, %d, %dx%d)", x(), y(), width(), height());
+
+    viewport_rect.setXYWH(x() + (width() - w)/2, y() + (height() - h)/2,
+                          w, h);
 
     // If we can find a matching screen in the existing set, we use
     // that, otherwise we create a brand new screen.
@@ -605,34 +942,27 @@ void DesktopWindow::remoteResize(int w, int h)
     // FIXME: We should really track screens better so we can handle
     //        a resized one.
     //
-    QApplication* app = static_cast<QApplication*>(QApplication::instance());
-    QList<QScreen*> screens = app->screens();
-    //    std::sort(screens.begin(), screens.end(), [](QScreen *a, QScreen *b) {
-    //                return a->geometry().x() == b->geometry().x() ? (a->geometry().y() < b->geometry().y()) :
-    //                (a->geometry().x() < b->geometry().x());
-    //              });
+    QList<QScreen*> screens = qApp->screens();
     for (QScreen*& screen : screens) {
-      QRect vg = screen->geometry();
-      int sx = vg.x();
-      int sy = vg.y();
-      int sw = vg.width();
-      int sh = vg.height();
+      sg = screen->geometry();
 
       // Check that the screen is fully inside the framebuffer
-      rfb::Rect screen_rect;
-      screen_rect.setXYWH(sx, sy, sw, sh);
+      screen_rect.setXYWH(sg.x(), sg.y(), sg.width(), sg.height());
       if (!screen_rect.enclosed_by(viewport_rect))
         continue;
 
       // Adjust the coordinates so they are relative to our viewport
-      sx -= viewport_rect.tl.x;
-      sy -= viewport_rect.tl.y;
+      sg.translate(-viewport_rect.tl.x, -viewport_rect.tl.y);
 
       // Look for perfectly matching existing screen that is not yet present in
       // in the screen layout...
-      for (iter = cc->server.screenLayout().begin(); iter != cc->server.screenLayout().end(); ++iter) {
-        if ((iter->dimensions.tl.x == sx) && (iter->dimensions.tl.y == sy) && (iter->dimensions.width() == sw)
-            && (iter->dimensions.height() == sh) && (std::find(layout.begin(), layout.end(), *iter) == layout.end()))
+      for (iter = cc->server.screenLayout().begin();
+           iter != cc->server.screenLayout().end(); ++iter) {
+        if ((iter->dimensions.tl.x == sg.x()) &&
+            (iter->dimensions.tl.y == sg.y()) &&
+            (iter->dimensions.width() == sg.width()) &&
+            (iter->dimensions.height() == sg.height()) &&
+            (std::find(layout.begin(), layout.end(), *iter) == layout.end()))
           break;
       }
 
@@ -645,7 +975,8 @@ void DesktopWindow::remoteResize(int w, int h)
       // Need to add a new one, which means we need to find an unused id
       while (true) {
         id = rand();
-        for (iter = cc->server.screenLayout().begin(); iter != cc->server.screenLayout().end(); ++iter) {
+        for (iter = cc->server.screenLayout().begin();
+             iter != cc->server.screenLayout().end(); ++iter) {
           if (iter->id == id)
             break;
         }
@@ -654,7 +985,8 @@ void DesktopWindow::remoteResize(int w, int h)
           break;
       }
 
-      layout.add_screen(rfb::Screen(id, sx, sy, sw, sh, 0));
+      layout.add_screen(
+        rfb::Screen(id, sg.x(), sg.y(), sg.width(), sg.height(), 0));
     }
 
     // If the viewport doesn't match a physical screen, then we might
@@ -664,10 +996,13 @@ void DesktopWindow::remoteResize(int w, int h)
   }
 
   // Do we actually change anything?
-  if ((w == cc->server.width()) && (h == cc->server.height()) && (layout == cc->server.screenLayout()))
+  if ((w == cc->server.width()) &&
+      (h == cc->server.height()) &&
+      (layout == cc->server.screenLayout()))
     return;
 
-  vlog.debug("Requesting framebuffer resize from %dx%d to %dx%d", cc->server.width(), cc->server.height(), w, h);
+  vlog.debug("Requesting framebuffer resize from %dx%d to %dx%d",
+             cc->server.width(), cc->server.height(), w, h);
 
   char buffer[2048];
   layout.print(buffer, sizeof(buffer));
@@ -678,260 +1013,13 @@ void DesktopWindow::remoteResize(int w, int h)
   } else {
     vlog.debug("%s", buffer);
   }
-  vlog.debug("DesktopWindow::remoteResize size=(%d, %d) layout=%s", w, h, buffer);
+
   try {
     cc->writer()->writeSetDesktopSize(w, h, layout);
   } catch (rdr::Exception& e) {
-    abort_connection("%s", e.str());
+    vlog.error("%s", e.str());
+    abort_connection_unexpected(e);
   }
-}
-
-void DesktopWindow::resizeFramebuffer(int new_w, int new_h)
-{
-  vlog.debug("DesktopWindow::resize size=(%d, %d)", new_w, new_h);
-
-  vlog.debug("DesktopWindow::resize view");
-  if (view->size() == size()) {
-    vlog.debug("DesktopWindow::resize because session and client were in sync");
-    resize(new_w, new_h);
-  }
-
-  view->resizeFramebuffer(new_w, new_h);
-}
-
-void DesktopWindow::setCursor(int width, int height,
-                              const rfb::Point& hotspot,
-                              const uint8_t* pixels)
-{
-  view->setCursor(width, height, hotspot, pixels);
-}
-
-void DesktopWindow::setCursorPos(const rfb::Point& pos)
-{
-  vlog.debug("DesktopWindow::setCursorPos mouseGrabbed=%d", mouseGrabbed);
-  if (!mouseGrabbed) {
-    // Do nothing if we do not have the mouse captured.
-    return;
-  }
-  QPoint gp = mapToGlobal(QPoint(pos.x, pos.y) + view->pos());
-  vlog.debug("DesktopWindow::setCursorPos local x=%d y=%d", pos.x, pos.y);
-  vlog.debug("DesktopWindow::setCursorPos screen x=%d y=%d", gp.x(), gp.y());
-#if defined(__APPLE__)
-  cocoa_set_cursor_pos(gp.x(), gp.y());
-#else
-  QCursor::setPos(gp.x(), gp.y());
-#endif
-}
-
-void DesktopWindow::setLEDState(unsigned int state)
-{
-  view->setLEDState(state);
-}
-
-void DesktopWindow::handleClipboardRequest()
-{
-  view->handleClipboardRequest();
-}
-
-void DesktopWindow::handleClipboardAnnounce(bool available)
-{
-  view->handleClipboardAnnounce(available);
-}
-
-void DesktopWindow::handleClipboardData(const char* text)
-{
-  view->handleClipboardData(text);
-}
-
-void DesktopWindow::moveEvent(QMoveEvent* e)
-{
-  vlog.debug("DesktopWindow::moveEvent pos=(%d, %d) oldPos=(%d, %d)", e->pos().x(), e->pos().y(), e->oldPos().x(), e->oldPos().y());
-  QWidget::moveEvent(e);
-}
-
-void DesktopWindow::resizeEvent(QResizeEvent* e)
-{
-  vlog.debug("DesktopWindow::resizeEvent size=(%d, %d)", e->size().width(), e->size().height());
-
-  vlog.debug("DesktopWindow::resizeEvent supportsSetDesktopSize=%d", cc->server.supportsSetDesktopSize);
-  if (::remoteResize && cc->server.supportsSetDesktopSize) {
-    resizeTimer->start();
-  }
-
-  toast->setGeometry(rect());
-
-  // Some systems require a grab after the window size has been changed.
-  // Otherwise they might hold on to displays, resulting in them being unusable.
-  maybeGrabKeyboard();
-
-  QWidget::resizeEvent(e);
-}
-
-void DesktopWindow::changeEvent(QEvent* e)
-{
-  if (e->type() == QEvent::WindowStateChange) {
-    int oldState = (static_cast<QWindowStateChangeEvent*>(e))->oldState();
-    vlog.debug("DesktopWindow::changeEvent size=(%d, %d) state=%d oldState=%d",
-               width(),
-               height(),
-               int(windowState()),
-               oldState);
-    vlog.debug("DesktopWindow::changeEvent fullscreenEnabled=%d pendingFullscreen=%d",
-               fullscreenEnabled, pendingFullscreen);
-    if (!fullscreenEnabled && !pendingFullscreen) {
-      if (!(oldState & Qt::WindowFullScreen) && windowState() & Qt::WindowFullScreen) {
-#ifdef __APPLE__
-        vlog.debug("DesktopWindow::changeEvent window has gone fullscreen, we do not like it on Mac");
-        QTimer::singleShot(std::chrono::milliseconds(1000), [=]() {
-          fullscreen(false);
-          fullscreen(true);
-        });
-#else
-        vlog.debug("DesktopWindow::changeEvent window has gone fullscreen, checking if it is our doing");
-        fullscreen(true);
-#endif
-      }
-    } else if (fullscreenEnabled && !pendingFullscreen) {
-      if (oldState & Qt::WindowFullScreen && !(windowState() & Qt::WindowFullScreen)) {
-#ifndef __APPLE__
-        vlog.debug("DesktopWindow::changeEvent window has left fullscreen, checking if it is our doing");
-        fullscreen(false);
-#endif
-      }
-    }
-  }
-  QWidget::changeEvent(e);
-}
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-void DesktopWindow::enterEvent(QEvent *event)
-#else
-void DesktopWindow::enterEvent(QEnterEvent *event)
-#endif
-{
-  vlog.debug("DesktopWindow::enterEvent");
-  if (keyboardGrabbed)
-    grabPointer();
-  QWidget::enterEvent(event);
-}
-
-void DesktopWindow::leaveEvent(QEvent *event)
-{
-  vlog.debug("DesktopWindow::leaveEvent");
-  ungrabPointer();
-  QWidget::leaveEvent(event);
-}
-
-void DesktopWindow::closeEvent(QCloseEvent* e)
-{
-  QWidget::closeEvent(e);
-  ::disconnect();
-}
-
-void DesktopWindow::handleFocusWindowChanged(QWindow* window)
-{
-  if (window == windowHandle()) {
-    maybeGrabKeyboard();
-  } else {
-    if (fullscreenSystemKeys)
-      ungrabKeyboard();
-  }
-}
-
-void DesktopWindow::maybeGrabKeyboard()
-{
-  if (::fullscreenSystemKeys && allowKeyboardGrab() && isActiveWindow()) {
-    grabKeyboard();
-  }
-}
-
-void DesktopWindow::grabKeyboard()
-{
-  // FIXME: Investigate QWidget::grabKeyboard()
-#if defined(WIN32)
-  int ret;
-
-  ret = win32_enable_lowlevel_keyboard((HWND)winId());
-  if (ret != 0) {
-      vlog.error(_("Failure grabbing keyboard"));
-      return;
-  }
-#elif defined(__APPLE__)
-  int ret;
-
-  ret = cocoa_capture_displays(fullscreenScreens());
-  if (ret != 0) {
-      vlog.error(_("Failure grabbing keyboard"));
-      return;
-  }
-#else
-  bool ret;
-
-  ret = x11_grab_keyboard(this);
-  if (!ret) {
-    vlog.error(_("Failure grabbing control of the keyboard"));
-    return;
-  }
-#endif
-
-  keyboardGrabbed = true;
-
-  QPoint gpos = QCursor::pos();
-  QPoint lpos = mapFromGlobal(gpos);
-  QRect r = rect();
-  if (r.contains(lpos)) {
-    grabPointer();
-  }
-}
-
-void DesktopWindow::ungrabKeyboard()
-{
-  keyboardGrabbed = false;
-
-  ungrabPointer();
-
-#if defined(WIN32)
-  win32_disable_lowlevel_keyboard((HWND)winId());
-#elif defined(__APPLE__)
-  cocoa_release_displays();
-#else
-  // Qt has a grab so lets not mess with it
-  if (keyboardGrabber() != nullptr)
-    return;
-  // Popups have an implicit grab that keyboardGrabber() doesn't show
-  QWindow* focused = qApp->focusWindow();
-  if ((focused != nullptr) &&
-      (focused->flags() & Qt::WindowType_Mask) == Qt::Popup)
-    return;
-
-  x11_ungrab_keyboard();
-#endif
-}
-
-void DesktopWindow::grabPointer()
-{
-  // FIXME: Investigate QWidget::grabMouse()
-
-#if !defined(WIN32) && !defined(__APPLE__)
-  // We also need to grab the pointer as some WMs like to grab buttons
-  // combined with modifies (e.g. Alt+Button0 in metacity).
-
-  // Having a button pressed prevents us from grabbing, we make
-  // a new attempt in fltkHandle()
-  if (!x11_grab_pointer(this))
-    return;
-#endif
-
-  mouseGrabbed = true;
-}
-
-void DesktopWindow::ungrabPointer()
-{
-  mouseGrabbed = false;
-
-#if !defined(WIN32) && !defined(__APPLE__)
-  x11_ungrab_pointer();
-#endif
 }
 
 void DesktopWindow::handleOptions(void *data)

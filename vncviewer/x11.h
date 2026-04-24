@@ -33,6 +33,8 @@ void x11_ungrab_keyboard();
 bool x11_grab_pointer(QWidget* win);
 void x11_ungrab_pointer();
 
+bool x11_is_pointer_on_same_screen(QWidget* win);
+
 void x11_bell();
 
 #endif

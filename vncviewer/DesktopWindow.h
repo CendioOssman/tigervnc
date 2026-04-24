@@ -1,50 +1,49 @@
-#ifndef VNCWINDOW_H
-#define VNCWINDOW_H
+/* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
+ * Copyright 2011 Pierre Ossman <ossman@cendio.se> for Cendio AB
+ * 
+ * This is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this software; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+ * USA.
+ */
 
-#include <QScrollArea>
-#include <QScrollBar>
+#ifndef __DESKTOPWINDOW_H__
+#define __DESKTOPWINDOW_H__
+
+#include <QWidget>
 
 #include <rfb/Rect.h>
-#include <rfb/Timer.h>
 
-class QMoveEvent;
-class QResizeEvent;
-class Toast;
-class Viewport;
-class ScrollArea;
 class CConn;
+class ScrollArea;
+class Viewport;
+class Toast;
 
-class DesktopWindow : public QWidget
-{
+class DesktopWindow : public QWidget {
   Q_OBJECT
 
 public:
   DesktopWindow(int w, int h, const char *name,
-                CConn* cc, QWidget* parent = nullptr);
-  virtual ~DesktopWindow();
+                CConn* cc, QWidget* parent=nullptr);
+  ~DesktopWindow();
+
   void updateMonitorsFullscreen();
-
-  void setName(const char* name);
-
-  // Fullscreen
-  QList<int> fullscreenScreens() const;
-  QScreen* getCurrentScreen() const;
-  void fullscreen(bool enabled);
-  void fullscreenOnSelectedDisplay(QScreen* screen);
-#ifdef Q_OS_LINUX
-  void fullscreenOnSelectedDisplaysIndices(int top, int bottom, int left, int right); // screens indices
-#endif
-  void fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, int vheight); // pixels
-  void exitFullscreen();
-  bool allowKeyboardGrab() const;
-  bool isFullscreenEnabled() const;
-
-  // Remote resize
-  void handleDesktopSize();
-  void remoteResize(int width, int height);
 
   // Flush updates to screen
   void updateWindow();
+
+  // Updated session title
+  void setName(const char *name);
 
   // Resize the current framebuffer, but retain the contents
   void resizeFramebuffer(int new_w, int new_h);
@@ -64,11 +63,24 @@ public:
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* text);
 
+  // Fullscreen
+  QList<int> fullscreenScreens() const;
+  QScreen* getCurrentScreen() const;
+  void fullscreen(bool enabled);
+  void fullscreenOnSelectedDisplay(QScreen* screen);
+#ifdef Q_OS_LINUX
+  void fullscreenOnSelectedDisplaysIndices(int top, int bottom, int left, int right); // screens indices
+#endif
+  void fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, int vheight); // pixels
+  void exitFullscreen();
+  bool allowKeyboardGrab() const;
+  bool isFullscreenEnabled() const;
 
 signals:
   void fullscreenChanged(bool enabled);
 
 protected:
+  // Qt event handlers
   void moveEvent(QMoveEvent* e) override;
   void resizeEvent(QResizeEvent* e) override;
   void changeEvent(QEvent* e) override;
@@ -78,9 +90,11 @@ protected:
   void enterEvent(QEnterEvent* event) override;
 #endif
   void leaveEvent(QEvent* event) override;
+  void mouseMoveEvent();
+  void mouseReleaseEvent();
   void closeEvent(QCloseEvent* e) override;
 
-  void handleFocusWindowChanged(QWindow* window);
+  bool eventFilter(QObject* obj, QEvent* event) override;
 
 private:
   void menuOverlay();
@@ -88,18 +102,23 @@ private:
   void setOverlay(const char *text, ...)
     __attribute__((__format__ (__printf__, 2, 3)));
 
-  static void handleOptions(void *data);
-
-public:
   void maybeGrabKeyboard();
   void grabKeyboard();
   void ungrabKeyboard();
   void grabPointer();
   void ungrabPointer();
 
+  void handleFocusWindowChanged(QWindow* window);
+
+  void handleDesktopSize();
+  void remoteResize(int width, int height);
+
+  static void handleOptions(void *data);
+
 private:
   CConn* cc;
-  Viewport* view;
+  ScrollArea* scrollArea;
+  Viewport *viewport;
   Toast* toast;
 
   bool firstUpdate;
@@ -113,8 +132,6 @@ private:
 
   QScreen* previousScreen;
   QByteArray previousGeometry;
-
-  ScrollArea* scrollArea = nullptr;
 };
 
-#endif // VNCWINDOW_H
+#endif
