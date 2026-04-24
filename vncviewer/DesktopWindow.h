@@ -24,6 +24,10 @@
 
 #include <rfb/Rect.h>
 
+namespace rfb {
+  class PixelFormat;
+}
+
 class CConn;
 class ScrollArea;
 class Viewport;
@@ -38,6 +42,9 @@ public:
   ~DesktopWindow();
 
   void updateMonitorsFullscreen();
+
+  // Most efficient format (from DesktopWindow's point of view)
+  const rfb::PixelFormat &getPreferredPF();
 
   // Flush updates to screen
   void updateWindow();

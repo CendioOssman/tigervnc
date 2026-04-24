@@ -90,8 +90,8 @@ static const int FAKE_KEY_CODE = 0xffff;
 // Used for fake key presses for gestures
 static const int FAKE_GESTURE_KEY_CODE = 0x20001;
 
-Viewport::Viewport(CConn* cc_, QWidget* parent)
-  : QWidget(parent), cc(cc_),
+Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
+  : QWidget(parent), cc(cc_), frameBuffer(nullptr),
     lastPointerPos(0, 0), lastButtonMask(0),
     mousePointerTimer(new QTimer(this)), keyboard(nullptr),
     firstLEDState(true), pendingClientClipboard(false),
@@ -104,6 +104,7 @@ Viewport::Viewport(CConn* cc_, QWidget* parent)
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
   setContentsMargins(0, 0, 0, 0);
+  resize(w, h);
 
 #if defined(WIN32)
   keyboard = new KeyboardWin32(this);
@@ -265,6 +266,10 @@ Viewport::Viewport(CConn* cc_, QWidget* parent)
   // We need to intercept keyboard events early
   QAbstractEventDispatcher::instance()->installNativeEventFilter(this);
 
+  frameBuffer = new PlatformPixelBuffer(width(), height());
+  assert(frameBuffer);
+  cc->setFramebuffer(frameBuffer);
+
   contextMenu = new QMenu(this);
 
   // Set the default mouse pointer whilst the context menu is open, as
@@ -310,20 +315,22 @@ Viewport::~Viewport()
   }
 }
 
+
+const rfb::PixelFormat &Viewport::getPreferredPF()
+{
+  return frameBuffer->getPF();
+}
+
+
 // Copy the areas of the framebuffer that have been changed (damaged)
 // to the displayed window.
 void Viewport::updateWindow()
 {
-  PlatformPixelBuffer* framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-  rfb::Rect rect = framebuffer->getDamage();
-  int x = rect.tl.x;
-  int y = rect.tl.y;
-  int w = rect.br.x - x;
-  int h = rect.br.y - y;
-  if (!rect.is_empty()) {
-    damage += QRect(x, y, w, h);
-    update(QRect(x, y, w, h));
-  }
+  rfb::Rect r;
+
+  r = frameBuffer->getDamage();
+  damage += QRect(r.tl.x, r.tl.y, r.width(), r.height());
+  update(r.tl.x, r.tl.y, r.width(), r.height());
 }
 
 static const char * dotcursor_xpm[] = {
@@ -487,36 +494,16 @@ void Viewport::pushLEDState()
   }
 }
 
-void Viewport::resize(int width, int height)
-{
-  vlog.debug("Viewport::resize size=(%d, %d)", width, height);
-  if (this->width() == width && this->height() == height) {
-    vlog.debug("Viewport::resize ignored");
-    return;
-  }
-  QWidget::resize(width, height);
-}
-
-void Viewport::resizeFramebuffer(int new_w, int new_h)
-{
-  pixmap = QPixmap(new_w, new_h);
-  damage = QRegion(0, 0, pixmap.width(), pixmap.height());
-  vlog.debug("Viewport::bufferResized pixmapSize=(%d, %d) size=(%d, %d)",
-              pixmap.size().width(), pixmap.size().height(), width(), height());
-  setAttribute(Qt::WA_OpaquePaintEvent, false);
-  repaint();
-  resize(new_w, new_h);
-}
-
 void Viewport::paintEvent(QPaintEvent* event)
 {
-  PlatformPixelBuffer* framebuffer = static_cast<PlatformPixelBuffer*>(cc->framebuffer());
-
-  if ((framebuffer->width() != pixmap.width()) || (framebuffer->height() != pixmap.height())) {
-    update();
-    return;
+  // Shadow pixmap size out of sync with framebuffer?
+  if ((frameBuffer->width() != pixmap.width()) ||
+      (frameBuffer->height() != pixmap.height())) {
+    pixmap = QPixmap(frameBuffer->width(), frameBuffer->height());
+    damage = QRegion(0, 0, frameBuffer->width(), frameBuffer->height());
   }
 
+  // Shadow pixmap contents out of sync with framebuffer?
   if (!damage.isEmpty()) {
     QPainter pixmapPainter(&pixmap);
     const uint8_t* fbdata;
@@ -528,8 +515,8 @@ void Viewport::paintEvent(QPaintEvent* event)
     int h = bounds.height();
     rfb::Rect rfbrect(x, y, x + w, y + h);
 
-    if (rfbrect.enclosed_by(framebuffer->getRect())) {
-      fbdata = framebuffer->getBuffer(rfbrect, &stride);
+    if (rfbrect.enclosed_by(frameBuffer->getRect())) {
+      fbdata = frameBuffer->getBuffer(rfbrect, &stride);
       QImage image(fbdata, w, h, stride * 4, QImage::Format_RGB32);
 #ifdef __APPLE__
       pixmapPainter.fillRect(bounds, QColor("#ff000000"));
@@ -565,8 +552,6 @@ void Viewport::paintEvent(QPaintEvent* event)
   painter.setPen(Qt::red);
   painter.drawRect(rect());
 #endif
-
-  setAttribute(Qt::WA_OpaquePaintEvent, true);
 }
 
 #ifdef QT_DEBUG
@@ -596,6 +581,22 @@ void Viewport::handleTimeout(rfb::Timer* t)
   t->repeat();
 }
 #endif
+
+void Viewport::resizeEvent(QResizeEvent* e)
+{
+  if ((width() != frameBuffer->width()) ||
+      (height() != frameBuffer->height())) {
+    vlog.debug("Resizing framebuffer from %dx%d to %dx%d",
+               frameBuffer->width(), frameBuffer->height(),
+               width(), height());
+
+    frameBuffer = new PlatformPixelBuffer(width(), height());
+    assert(frameBuffer);
+    cc->setFramebuffer(frameBuffer);
+  }
+
+  QWidget::resizeEvent(e);
+}
 
 void Viewport::mouseEvent(QMouseEvent* event)
 {

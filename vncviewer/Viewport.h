@@ -38,8 +38,13 @@ class QGestureEvent;
 class QGestureRecognizer;
 class QMenu;
 
+namespace rfb {
+  class PixelFormat;
+}
+
 class CConn;
 class Keyboard;
+class PlatformPixelBuffer;
 
 class Viewport : public QWidget, protected EmulateMB,
                  protected QAbstractNativeEventFilter,
@@ -47,10 +52,11 @@ class Viewport : public QWidget, protected EmulateMB,
   Q_OBJECT
 
 public:
-  Viewport(CConn* cc, QWidget* parent=nullptr);
+  Viewport(int w, int h, CConn* cc, QWidget* parent=nullptr);
   ~Viewport();
 
-  QSize pixmapSize() const { return pixmap.size(); };
+  // Most efficient format (from Viewport's point of view)
+  const rfb::PixelFormat &getPreferredPF();
 
   // Flush updates to screen
   void updateWindow();
@@ -67,15 +73,13 @@ public:
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* data);
 
-  void resize(int width, int height);
-  void resizeFramebuffer(int new_w, int new_h);
-
 protected:
   // Qt event handlers
   void paintEvent(QPaintEvent* event) override;
 #ifdef QT_DEBUG
   void handleTimeout(rfb::Timer* t) override;
 #endif
+  void resizeEvent(QResizeEvent* e) override;
   void mouseEvent(QMouseEvent* event);
   void mouseMoveEvent(QMouseEvent* event) override;
   void mousePressEvent(QMouseEvent* event) override;
@@ -128,6 +132,7 @@ private:
 private:
   CConn* cc;
 
+  PlatformPixelBuffer* frameBuffer;
   QPixmap pixmap;
   QRegion damage;
 

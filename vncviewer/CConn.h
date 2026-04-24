@@ -86,8 +86,6 @@ public:
   void handleClipboardAnnounce(bool available) override;
   void handleClipboardData(const char* data) override;
 
-  rfb::ModifiablePixelBuffer* framebuffer(); // public facade for the protected method.
-
 private:
 
   void resizeFramebuffer() override;

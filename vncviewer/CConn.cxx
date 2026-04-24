@@ -53,7 +53,6 @@
 #include "CConn.h"
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"
-#include "PlatformPixelBuffer.h"
 #include "i18n.h"
 #include "parameters.h"
 #include "mainloop.h"
@@ -260,11 +259,6 @@ unsigned CConn::getPixelCount()
 unsigned CConn::getPosition()
 {
   return sock->inStream().pos();
-}
-
-ModifiablePixelBuffer *CConn::framebuffer()
-{
-  return getFramebuffer();
 }
 
 void CConn::startProcessing()
@@ -593,11 +587,9 @@ void CConn::initDone()
 
   serverPF = server.pf();
 
-  setFramebuffer(new PlatformPixelBuffer(server.width(), server.height()));
-
   desktop = new DesktopWindow(server.width(), server.height(),
                               server.name(), this);
-  fullColourPF = getFramebuffer()->getPF();
+  fullColourPF = desktop->getPreferredPF();
 
   // Force a switch to the format and encoding we'd like
   updatePixelFormat();
@@ -776,9 +768,6 @@ void CConn::handleClipboardData(const char* data)
 
 void CConn::resizeFramebuffer()
 {
-  PlatformPixelBuffer *framebuffer = new PlatformPixelBuffer(server.width(), server.height());
-  setFramebuffer(framebuffer);
-
   desktop->resizeFramebuffer(server.width(), server.height());
 }
 

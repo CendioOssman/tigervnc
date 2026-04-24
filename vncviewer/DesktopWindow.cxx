@@ -140,6 +140,7 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   , resizeTimer(new QTimer(this))
 {
   setContentsMargins(0, 0, 0, 0);
+  resize(w, h);
 
   scrollArea = new ScrollArea;
 
@@ -156,10 +157,8 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   setPalette(p);
   setBackgroundRole(QPalette::Window);
 
-  viewport = new Viewport(cc, scrollArea);
+  viewport = new Viewport(w, h, cc, scrollArea);
 
-  viewport->resize(w, h);
-  resize(w, h);
   scrollArea->setWidget(viewport);
   setName(name);
 
@@ -288,6 +287,13 @@ DesktopWindow::~DesktopWindow()
   OptionsDialog::removeCallback(handleOptions);
 }
 
+
+const rfb::PixelFormat &DesktopWindow::getPreferredPF()
+{
+  return viewport->getPreferredPF();
+}
+
+
 void DesktopWindow::updateMonitorsFullscreen()
 {
   bool allMonitors = !strcasecmp(fullScreenMode, "all");
@@ -339,7 +345,7 @@ void DesktopWindow::resizeFramebuffer(int new_w, int new_h)
       resize(new_w, new_h);
   }
 
-  viewport->resizeFramebuffer(new_w, new_h);
+  viewport->resize(new_w, new_h);
 }
 
 void DesktopWindow::setCursor(int width, int height,
