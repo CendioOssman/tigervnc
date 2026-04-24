@@ -63,6 +63,10 @@ public:
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* text);
 
+  // QWidget methods (poorly overridden)
+  void resize(int w, int h);
+  void resize(const QSize& size);
+
   // Fullscreen
   QList<int> fullscreenScreens() const;
   QScreen* getCurrentScreen() const;

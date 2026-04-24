@@ -387,6 +387,40 @@ void DesktopWindow::handleClipboardData(const char* text)
 }
 
 
+void DesktopWindow::resize(int w, int h)
+{
+#if ! (defined(WIN32) || defined(__APPLE__))
+  // X11 window managers will treat a resize to cover the entire
+  // monitor as a request to go full screen. Make sure we avoid this.
+  if (!isFullscreenEnabled()) {
+    QList<QScreen*> screens = qApp->screens();
+    for (QScreen* screen : screens) {
+      // We can't trust x and y if the window isn't mapped as the
+      // window manager might adjust those numbers
+      if (isVisible() && ((screen->geometry().x() != x()) ||
+                          (screen->geometry().y() != y())))
+        continue;
+
+      if ((screen->geometry().width() != w) ||
+          (screen->geometry().height() != h))
+        continue;
+
+      vlog.info(_("Adjusting window size to avoid accidental full-screen request"));
+      // Assume a panel of some form and adjust the height
+      h -= 40;
+    }
+  }
+#endif
+
+  QWidget::resize(w, h);
+}
+
+void DesktopWindow::resize(const QSize& size)
+{
+  resize(size.width(), size.height());
+}
+
+
 void DesktopWindow::menuOverlay()
 {
   if (strcmp((const char*)menuKey, "") != 0) {
