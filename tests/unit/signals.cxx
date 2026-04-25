@@ -42,21 +42,21 @@ public:
   Receiver() {}
 
   void simpleHandler() { callCount++; }
-  void genericHandler(Object*, const char*) { callCount++; }
-  void otherGenericHandler(Object*, const char*) { callCount++; }
-  void specificHandler(SenderBase*, const char*) { callCount++; }
-  void badSpecificHandler(Receiver*, const char*) { callCount++; }
+  void genericHandler(Object*) { callCount++; }
+  void otherGenericHandler(Object*) { callCount++; }
+  void specificHandler(SenderBase*) { callCount++; }
+  void badSpecificHandler(Receiver*) { callCount++; }
 
   template<typename... Args>
   void simpleTypeHandler(Args...) { callCount++; }
   template<typename... Args>
-  void genericTypeHandler(Object*, const char*, Args...) { callCount++; }
+  void genericTypeHandler(Object*, Args...) { callCount++; }
   template<typename... Args>
-  void otherGenericTypeHandler(Object*, const char*, Args...) { callCount++; }
+  void otherGenericTypeHandler(Object*, Args...) { callCount++; }
   template<typename... Args>
-  void specificTypeHandler(SenderBase*, const char*, Args...) { callCount++; }
+  void specificTypeHandler(SenderBase*, Args...) { callCount++; }
   template<typename... Args>
-  void badSpecificTypeHandler(Receiver*, const char*, Args...) { callCount++; }
+  void badSpecificTypeHandler(Receiver*, Args...) { callCount++; }
 };
 
 template<typename T>

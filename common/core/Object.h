@@ -68,8 +68,7 @@ namespace core {
     template<class T, class S, typename... SigArgs, typename... Args,
              IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
     Connection connectSignal(const signal<SigArgs...>* signal, T* obj,
-                             void (T::*callback)(S*, const char*,
-                                                 Args...));
+                             void (T::*callback)(S*, Args...));
 
     // Lambda friendly versions to register a signal callback. If the
     // lambda has a capture list, then an object must also be specified
@@ -95,8 +94,7 @@ namespace core {
     template<class T, class S, typename... SigArgs, typename... Args,
              IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
     void disconnectSignal(const signal<SigArgs...>* signal, T* obj,
-                          void (T::*callback)(S*, const char*,
-                                              Args...));
+                          void (T::*callback)(S*, Args...));
 
     // disconnectSignals() unregisters all methods for all names for the
     // specified object. This is automatically called when the specified
@@ -191,8 +189,7 @@ namespace core {
   template<class T, class S, typename... SigArgs, typename... Args,
            IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
   Connection Object::connectSignal(const signal<SigArgs...>* signal, T* obj,
-                                   void (T::*callback)(S*, const char*,
-                                                       Args...))
+                                   void (T::*callback)(S*, Args...))
   {
     static_assert(sizeof...(SigArgs) == sizeof...(Args),
                   "Wrong number of arguments for signal callback");
@@ -202,7 +199,7 @@ namespace core {
     if (!sender)
       throw std::logic_error("Incompatible signal callback");
     auto memfn = [sender, obj, callback](SigArgs... args) {
-      (obj->*callback)(sender, "FIXME", args...);
+      (obj->*callback)(sender, args...);
     };
     emitter_t emitter = [memfn](const std::vector<any>& info) {
       invoke_any<SigArgs...>(memfn, info);
@@ -285,9 +282,9 @@ namespace core {
 
   template<class T, class S, typename... SigArgs, typename... Args,
            IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
-  void Object::disconnectSignal(const signal<SigArgs...>* signal, T* obj,
-                                void (T::*callback)(S*, const char*,
-                                                    Args...))
+  void Object::disconnectSignal(const signal<SigArgs...>* signal,
+                                T* obj,
+                                void (T::*callback)(S*, Args...))
   {
     static_assert(sizeof...(SigArgs) == sizeof...(Args),
                   "Wrong number of arguments for signal callback");
