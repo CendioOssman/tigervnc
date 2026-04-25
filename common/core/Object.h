@@ -154,6 +154,8 @@ namespace core {
   Connection Object::connectSignal(const signal<SigArgs...>* signal,
                                    T* obj, void (T::*callback)(Args...))
   {
+    static_assert(std::is_base_of_v<Object, T>,
+                  "Target object is not subclass of core::Object");
     static_assert(sizeof...(SigArgs) == sizeof...(Args),
                   "Wrong number of arguments for signal callback");
     static_assert((std::is_convertible_v<SigArgs, Args> && ...),
@@ -229,6 +231,8 @@ namespace core {
   void Object::disconnectSignal(const signal<SigArgs...>* signal, T* obj,
                                 void (T::*callback)(Args...))
   {
+    static_assert(std::is_base_of_v<Object, T>,
+                  "Target object is not subclass of core::Object");
     static_assert(sizeof...(SigArgs) == sizeof...(Args),
                   "Wrong number of arguments for signal callback");
     static_assert((std::is_convertible_v<SigArgs, Args> && ...),
