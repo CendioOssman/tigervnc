@@ -26,14 +26,13 @@
 
 #include <assert.h>
 
+#include <any>
 #include <functional>
 #include <list>
 #include <map>
 #include <set>
 #include <stdexcept>
 #include <vector>
-
-#include <core/any.h>
 
 namespace core {
 
@@ -94,23 +93,23 @@ namespace core {
 
   private:
     // Wrapper to contain member function pointers
-    typedef std::function<void(const std::vector<any>&)> emitter_t;
+    typedef std::function<void(const std::vector<std::any>&)> emitter_t;
 
     void emitSignalImpl(const void* signal,
-                        const std::vector<any>& info);
+                        const std::vector<std::any>& info);
 
     Connection connectSignalImpl(const void* signal, Object* obj,
                                  const emitter_t& emitter);
     Connection connectSignalImpl(const void* signal, Object* obj,
-                                 const any& callback,
-                                 bool (*comparer)(const any&,
-                                                  const any&),
+                                 const std::any& callback,
+                                 bool (*comparer)(const std::any&,
+                                                  const std::any&),
                                  const emitter_t& emitter);
 
     // Compares two any objects, returning true if they are both type T
     // and have the same value
     template<class T>
-    static bool compareAny(const any& a, const any& b);
+    static bool compareAny(const std::any& a, const std::any& b);
 
   private:
     // Signal handling makes these objects difficult to copy, so it
@@ -139,8 +138,8 @@ namespace core {
     const void* signal;
     Object* src;
     Object* dst;
-    any callback;
-    bool (*comparer)(const any&, const any&);
+    std::any callback;
+    bool (*comparer)(const std::any&, const std::any&);
   };
 
   //////////////////////////////////////////////////////////////////////
@@ -150,7 +149,7 @@ namespace core {
 
   // Call a function with the specified vector of arguments
   template<typename... Args, typename Functor>
-  void invoke_any(Functor f, const std::vector<any>& info);
+  void invoke_any(Functor f, const std::vector<std::any>& info);
 
   template<class S, class T, typename... SigArgs, typename... Args>
   Connection Object::connectSignal(const signal<SigArgs...> S::* signal,
@@ -170,7 +169,7 @@ namespace core {
     auto memfn = [obj, callback](SigArgs... args) {
       (obj->*callback)(args...);
     };
-    emitter_t emitter = [memfn](const std::vector<any>& info) {
+    emitter_t emitter = [memfn](const std::vector<std::any>& info) {
       invoke_any<SigArgs...>(memfn, info);
     };
     assert(obj);
@@ -212,7 +211,7 @@ namespace core {
     auto wrapper = [callback](Args... args) {
       callback(args...);
     };
-    emitter_t emitter = [wrapper](const std::vector<any>& info) {
+    emitter_t emitter = [wrapper](const std::vector<std::any>& info) {
       invoke_any<Args...>(wrapper, info);
     };
     // It's not guaranteed if we get unique or identical addresses for
@@ -235,7 +234,7 @@ namespace core {
     auto wrapper = [callback](Args... args) {
       callback(args...);
     };
-    emitter_t emitter = [wrapper](const std::vector<any>& info) {
+    emitter_t emitter = [wrapper](const std::vector<std::any>& info) {
       invoke_any<Args...>(wrapper, info);
     };
     assert(obj);
@@ -276,15 +275,15 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
-    emitSignalImpl(&(sender->*signal), {any((SigArgs)args)...});
+    emitSignalImpl(&(sender->*signal), {std::any((SigArgs)args)...});
   }
 
   template<class T>
-  bool Object::compareAny(const any& a, const any& b)
+  bool Object::compareAny(const std::any& a, const std::any& b)
   {
     try {
-      const T& va = any_cast<T>(a);
-      const T& vb = any_cast<T>(b);
+      const T& va = std::any_cast<T>(a);
+      const T& vb = std::any_cast<T>(b);
       return std::equal_to<T>()(va, vb);
     } catch (const std::bad_cast&) {
       return false;
@@ -292,14 +291,14 @@ namespace core {
   }
 
   template<typename... Args, std::size_t... idx, typename Functor>
-  void _invoke_any_impl(Functor f, const std::vector<any>& info,
+  void _invoke_any_impl(Functor f, const std::vector<std::any>& info,
                         std::index_sequence<idx...>)
   {
     static_assert(std::is_invocable_v<Functor, Args...>);
-    f(any_cast<typename std::decay<Args>::type>(info[idx])...);
+    f(std::any_cast<typename std::decay<Args>::type>(info[idx])...);
   }
   template<typename... Args, typename Functor>
-  void invoke_any(Functor f, const std::vector<any>& info)
+  void invoke_any(Functor f, const std::vector<std::any>& info)
   {
     assert(info.size() == sizeof...(Args));
     _invoke_any_impl<Args...>(f, info,

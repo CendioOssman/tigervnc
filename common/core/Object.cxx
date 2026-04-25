@@ -63,7 +63,7 @@ Object::~Object()
 }
 
 void Object::emitSignalImpl(const void* signal,
-                            const std::vector<any>& info)
+                            const std::vector<std::any>& info)
 {
   ReceiverList siglist;
   ReceiverList::iterator iter;
@@ -98,9 +98,9 @@ Connection Object::connectSignalImpl(const void* signal, Object* obj,
 }
 
 Connection Object::connectSignalImpl(const void* signal, Object* obj,
-                                     const any& callback,
-                                     bool (*comparer)(const any&,
-                                                      const any&),
+                                     const std::any& callback,
+                                     bool (*comparer)(const std::any&,
+                                                      const std::any&),
                                      const emitter_t& emitter)
 {
   ReceiverList::iterator iter;
