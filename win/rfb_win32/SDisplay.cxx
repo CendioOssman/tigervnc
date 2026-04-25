@@ -84,27 +84,30 @@ SDisplay::SDisplay(rfb::VNCServer* server_)
   updateEvent.h = CreateEvent(nullptr, TRUE, FALSE, nullptr);
   terminateEvent.h = CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
-  server->connectSignal(&server->starting, this, &SDisplay::start);
-  server->connectSignal(&server->stopped, this, &SDisplay::stop);
+  server->connectSignal(&rfb::VNCServer::starting, this,
+                        &SDisplay::start);
+  server->connectSignal(&rfb::VNCServer::stopped, this,
+                        &SDisplay::stop);
 
-  server->connectSignal(&server->queryconnection, this,
+  server->connectSignal(&rfb::VNCServer::queryconnection, this,
                         &SDisplay::queryConnection);
 
-  server->connectSignal(&server->terminate, this,
+  server->connectSignal(&rfb::VNCServer::terminate, this,
                         [this]() { SetEvent(terminateEvent); });
 
-  server->connectSignal(&server->key, this, &SDisplay::keyEvent);
-  server->connectSignal(&server->pointer, this,
+  server->connectSignal(&rfb::VNCServer::key, this,
+                        &SDisplay::keyEvent);
+  server->connectSignal(&rfb::VNCServer::pointer, this,
                         &SDisplay::pointerEvent);
 
-  server->connectSignal(&server->clipboardrequest, this,
+  server->connectSignal(&rfb::VNCServer::clipboardrequest, this,
                         &SDisplay::handleClipboardRequest);
-  server->connectSignal(&server->clipboardannounce, this,
+  server->connectSignal(&rfb::VNCServer::clipboardannounce, this,
                         &SDisplay::handleClipboardAnnounce);
-  server->connectSignal(&server->clipboarddata, this,
+  server->connectSignal(&rfb::VNCServer::clipboarddata, this,
                         &SDisplay::handleClipboardData);
 
-  server->connectSignal(&server->layoutrequest, this,
+  server->connectSignal(&rfb::VNCServer::layoutrequest, this,
                         &SDisplay::layoutRequest);
 }
 

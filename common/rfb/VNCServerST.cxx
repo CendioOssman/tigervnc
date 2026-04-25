@@ -97,13 +97,13 @@ VNCServerST::VNCServerST(const char* name_)
 {
   slog.debug("Creating single-threaded server %s", name.c_str());
 
-  idleTimer.connectSignal(&idleTimer.timer, this,
+  idleTimer.connectSignal(&core::Timer::timer, this,
                           &VNCServerST::idleTimeout);
-  disconnectTimer.connectSignal(&disconnectTimer.timer, this,
+  disconnectTimer.connectSignal(&core::Timer::timer, this,
                                 &VNCServerST::disconnectTimeout);
-  connectTimer.connectSignal(&connectTimer.timer, this,
+  connectTimer.connectSignal(&core::Timer::timer, this,
                              &VNCServerST::connectTimeout);
-  frameTimer.connectSignal(&frameTimer.timer, this,
+  frameTimer.connectSignal(&core::Timer::timer, this,
                            &VNCServerST::frameTimeout);
 
   // FIXME: Do we really want to kick off these right away?
@@ -188,37 +188,37 @@ void VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
 
   clients.push_front(client);
 
-  client->connectSignal(&client->ready, this,
+  client->connectSignal(&SConnection::ready, this,
                         [client, this](bool shared) {
                           clientReady(client, shared);
                         });
 
   client->connectSignal(
-    &client->key, this,
+    &SConnection::key, this,
     [client, this](uint32_t keysym, uint32_t keycode, bool down) {
       keyEvent(client, keysym, keycode, down);
     });
   client->connectSignal(
-    &client->pointer, this,
+    &SConnection::pointer, this,
     [client, this](core::Point pos, uint16_t buttonMask) {
       pointerEvent(client, pos, buttonMask);
     });
 
-  client->connectSignal(&client->clipboardrequest, this,
+  client->connectSignal(&SConnection::clipboardrequest, this,
                         [client, this]() {
                           handleClipboardRequest(client);
                         });
-  client->connectSignal(&client->clipboardannounce, this,
+  client->connectSignal(&SConnection::clipboardannounce, this,
                         [client, this](bool available) {
                           handleClipboardAnnounce(client, available);
                         });
-  client->connectSignal(&client->clipboarddata, this,
+  client->connectSignal(&SConnection::clipboarddata, this,
                         [client, this](const char* data) {
                           handleClipboardData(client, data);
                         });
 
   client->connectSignal(
-    &client->layoutrequest, this,
+    &SConnection::layoutrequest, this,
     [client, this](int width, int height, const ScreenSet& layout) {
       handleLayoutRequest(client, width, height, layout);
     });
@@ -234,7 +234,7 @@ void VNCServerST::removeSocket(network::Socket* sock) {
       // - Remove any references to it
       if (pointerClient == *ci) {
         // Release the mouse buttons the client have pressed
-        emitSignal(&pointer, cursorPos, 0);
+        emitSignal(&VNCServer::pointer, cursorPos, 0);
         pointerClient = nullptr;
       }
       if (clipboardClient == *ci)
@@ -537,7 +537,7 @@ void VNCServerST::desktopReady()
     startFrameClock();
   }
 
-  emitSignal(&started);
+  emitSignal(&VNCServer::started);
 }
 
 void VNCServerST::bell()
@@ -659,7 +659,7 @@ void VNCServerST::keyEvent(VNCSConnectionST*,
     }
   }
 
-  emitSignal(&key, keysym, keycode, down);
+  emitSignal(&VNCServer::key, keysym, keycode, down);
 }
 
 void VNCServerST::pointerEvent(VNCSConnectionST* client,
@@ -686,7 +686,7 @@ void VNCServerST::pointerEvent(VNCSConnectionST* client,
   else
     pointerClient = nullptr;
 
-  emitSignal(&pointer, pos, buttonMask);
+  emitSignal(&VNCServer::pointer, pos, buttonMask);
 }
 
 void VNCServerST::handleLayoutRequest(VNCSConnectionST* requester,
@@ -729,7 +729,7 @@ void VNCServerST::handleLayoutRequest(VNCSConnectionST* requester,
   // FIXME: the desktop will call back to VNCServerST and an extra set
   // of ExtendedDesktopSize messages will be sent. This is okay
   // protocol-wise, but unnecessary.
-  emitSignal(&layoutrequest, width, height, layout);
+  emitSignal(&VNCServer::layoutrequest, width, height, layout);
 }
 
 // Other public methods
@@ -783,7 +783,7 @@ void VNCServerST::handleClipboardRequest(VNCSConnectionST* client)
 {
   clipboardRequestors.push_back(client);
   if (clipboardRequestors.size() == 1)
-    emitSignal(&clipboardrequest);
+    emitSignal(&VNCServer::clipboardrequest);
 }
 
 void VNCServerST::handleClipboardAnnounce(VNCSConnectionST* client,
@@ -800,7 +800,7 @@ void VNCServerST::handleClipboardAnnounce(VNCSConnectionST* client,
     clipboardClient = client;
   }
 
-  emitSignal(&clipboardannounce, available);
+  emitSignal(&VNCServer::clipboardannounce, available);
 }
 
 void VNCServerST::handleClipboardData(VNCSConnectionST* client,
@@ -814,7 +814,7 @@ void VNCServerST::handleClipboardData(VNCSConnectionST* client,
     return;
   }
 
-  emitSignal(&clipboarddata, data);
+  emitSignal(&VNCServer::clipboarddata, data);
 }
 
 void VNCServerST::frameTimeout()
@@ -844,25 +844,25 @@ void VNCServerST::frameTimeout()
     writeUpdate();
 
   msc++;
-  emitSignal(&frame);
+  emitSignal(&VNCServer::frame);
 }
 
 void VNCServerST::idleTimeout()
 {
   slog.info("MaxIdleTime reached, exiting");
-  emitSignal(&terminate);
+  emitSignal(&VNCServer::terminate);
 }
 
 void VNCServerST::disconnectTimeout()
 {
   slog.info("MaxDisconnectionTime reached, exiting");
-  emitSignal(&terminate);
+  emitSignal(&VNCServer::terminate);
 }
 
 void VNCServerST::connectTimeout()
 {
   slog.info("MaxConnectionTime reached, exiting");
-  emitSignal(&terminate);
+  emitSignal(&VNCServer::terminate);
 }
 
 void VNCServerST::queryConnection(VNCSConnectionST* client)
@@ -896,7 +896,7 @@ void VNCServerST::queryConnection(VNCSConnectionST* client)
     return;
   }
 
-  emitSignal(&queryconnection, (SConnection*)client);
+  emitSignal(&VNCServer::queryconnection, (SConnection*)client);
 }
 
 // -=- Internal methods
@@ -906,7 +906,7 @@ void VNCServerST::startDesktop()
   if (!desktopStarted && !desktopStarting) {
     slog.debug("Starting desktop");
     desktopStarting = true;
-    emitSignal(&starting);
+    emitSignal(&VNCServer::starting);
     // We might have already been in a ready state
     checkDesktopReady();
   }
@@ -918,7 +918,7 @@ void VNCServerST::stopDesktop()
     slog.debug("Stopping desktop");
     desktopStarted = false;
     desktopStarting = false;
-    emitSignal(&stopped);
+    emitSignal(&VNCServer::stopped);
   }
 }
 

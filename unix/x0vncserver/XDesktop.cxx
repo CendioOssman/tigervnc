@@ -222,40 +222,45 @@ XDesktop::XDesktop(rfb::VNCServer* server_, Display* dpy_,
 
   TXWindow::setGlobalEventHandler(this);
 
-  server->connectSignal(&server->starting, this, &XDesktop::start);
-  server->connectSignal(&server->stopped, this, &XDesktop::stop);
+  server->connectSignal(&rfb::VNCServer::starting, this,
+                        &XDesktop::start);
+  server->connectSignal(&rfb::VNCServer::stopped, this,
+                        &XDesktop::stop);
 
-  server->connectSignal(&server->queryconnection, this,
+  server->connectSignal(&rfb::VNCServer::queryconnection, this,
                         &XDesktop::queryConnection);
 
-  server->connectSignal(&server->terminate,
+  server->connectSignal(&rfb::VNCServer::terminate,
                         []() { kill(getpid(), SIGTERM); });
 
-  server->connectSignal(&server->key, this, &XDesktop::keyEvent);
-  server->connectSignal(&server->pointer, this,
+  server->connectSignal(&rfb::VNCServer::key, this,
+                        &XDesktop::keyEvent);
+  server->connectSignal(&rfb::VNCServer::pointer, this,
                         &XDesktop::pointerEvent);
 
-  server->connectSignal(&server->clipboardrequest, this,
-                        [this]() { selection.requestSelectionData(); });
-  server->connectSignal(&server->clipboardannounce, this,
+  server->connectSignal(&rfb::VNCServer::clipboardrequest, this,
+                        [this]() {
+                          selection.requestSelectionData();
+                        });
+  server->connectSignal(&rfb::VNCServer::clipboardannounce, this,
                         [this](bool available) {
                           if (available)
                             server->requestClipboard();
                         });
-  server->connectSignal(&server->clipboarddata, this,
+  server->connectSignal(&rfb::VNCServer::clipboarddata, this,
                         [this](const char* data) {
                           if (data)
                             selection.handleClientClipboardData(data);
                         });
 
-  server->connectSignal(&server->layoutrequest, this,
+  server->connectSignal(&rfb::VNCServer::layoutrequest, this,
                         &XDesktop::layoutRequest);
 
-  selection.connectSignal(&selection.announce, this,
+  selection.connectSignal(&XSelection::announce, this,
                           [this](bool available) {
                             server->announceClipboard(available);
                           });
-  selection.connectSignal(&selection.dataready, this,
+  selection.connectSignal(&XSelection::dataready, this,
                           [this](const char* data) {
                             server->sendClipboardData(data);
                           });

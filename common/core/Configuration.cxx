@@ -307,7 +307,7 @@ void BoolParameter::setParam(bool b) {
   if (value == b) return;
   value = b;
   vlog.debug("Set %s(Bool) to %s", getName(), getValueStr().c_str());
-  emitSignal(&config);
+  emitSignal(&VoidParameter::config);
 }
 
 std::string BoolParameter::getDefaultStr() const {
@@ -358,7 +358,7 @@ IntParameter::setParam(int v) {
   }
   vlog.debug("Set %s(Int) to %d", getName(), v);
   value = v;
-  emitSignal(&config);
+  emitSignal(&VoidParameter::config);
   return true;
 }
 
@@ -397,7 +397,7 @@ bool StringParameter::setParam(const char* v) {
   if (value == v) return true;
   vlog.debug("Set %s(String) to %s", getName(), v);
   value = v;
-  emitSignal(&config);
+  emitSignal(&VoidParameter::config);
   return true;
 }
 
@@ -457,7 +457,7 @@ bool EnumParameter::setParam(const char* v)
   if (value == *iter) return true;
   vlog.debug("Set %s(Enum) to %s", getName(), iter->c_str());
   value = *iter;
-  emitSignal(&config);
+  emitSignal(&VoidParameter::config);
   return true;
 }
 
@@ -534,7 +534,7 @@ void BinaryParameter::setParam(const uint8_t* v, size_t len) {
     length = len;
     memcpy(value, v, len);
   }
-  emitSignal(&config);
+  emitSignal(&VoidParameter::config);
 }
 
 std::string BinaryParameter::getDefaultStr() const {
@@ -613,7 +613,7 @@ bool ListParameter<ValueType>::setParam(const ListType& v)
   if (value == vnorm) return true;
   value = vnorm;
   vlog.debug("set %s(List) to %s", getName(), getValueStr().c_str());
-  emitSignal(&config);
+  emitSignal(&VoidParameter::config);
   return true;
 }
 

@@ -124,20 +124,21 @@ Viewport::Viewport(int w, int h, CConn* cc_)
   assert(frameBuffer);
   cc->setFramebuffer(frameBuffer);
 
-  cc->connectSignal(&cc->updatestart, this, [this]() {
+  cc->connectSignal(&rfb::CConnection::updatestart, this, [this]() {
     // Update the screen prematurely for very slow updates
     updateTimer.start(1000);
   });
-  cc->connectSignal(&cc->updateend, this, [this] {
+  cc->connectSignal(&rfb::CConnection::updateend, this, [this] {
     updateTimer.stop();
     updateWindow();
   });
-  updateTimer.connectSignal(&updateTimer.timer, this, [this]() {
+  updateTimer.connectSignal(&core::Timer::timer, this, [this]() {
     updateWindow();
     updateTimer.repeat();
   });
 
-  cc->connectSignal(&cc->cursorchange, this, &Viewport::setCursor);
+  cc->connectSignal(&rfb::CConnection::cursorchange, this,
+                    &Viewport::setCursor);
   // Make sure we have an initial blank cursor set
   setCursor();
 
@@ -145,17 +146,21 @@ Viewport::Viewport(int w, int h, CConn* cc_)
     if (Fl::belowmouse() == this)
       showCursor();
   };
-  viewOnly.connectSignal(&viewOnly.config, this, cursorCallback);
-  alwaysCursor.connectSignal(&alwaysCursor.config, this, cursorCallback);
-  cursorType.connectSignal(&cursorType.config, this, cursorCallback);
+  viewOnly.connectSignal(&core::VoidParameter::config, this,
+                         cursorCallback);
+  alwaysCursor.connectSignal(&core::VoidParameter::config, this,
+                             cursorCallback);
+  cursorType.connectSignal(&core::VoidParameter::config, this,
+                           cursorCallback);
 
-  cc->connectSignal(&cc->ledstate, this, &Viewport::handleLEDState);
+  cc->connectSignal(&rfb::CConnection::ledstate, this,
+                    &Viewport::handleLEDState);
 
-  cc->connectSignal(&cc->clipboardrequest, this,
+  cc->connectSignal(&rfb::CConnection::clipboardrequest, this,
                     &Viewport::handleClipboardRequest);
-  cc->connectSignal(&cc->clipboardannounce, this,
+  cc->connectSignal(&rfb::CConnection::clipboardannounce, this,
                     &Viewport::handleClipboardAnnounce);
-  cc->connectSignal(&cc->clipboarddata, this,
+  cc->connectSignal(&rfb::CConnection::clipboarddata, this,
                     &Viewport::handleClipboardData);
 
   contextMenu = new Fl_Menu_Button(0, 0, 0, 0);
@@ -170,7 +175,7 @@ Viewport::Viewport(int w, int h, CConn* cc_)
   window()->add(contextMenu);
 
   setShortcutModifiers();
-  shortcutModifiers.connectSignal(&shortcutModifiers.config, this,
+  shortcutModifiers.connectSignal(&core::VoidParameter::config, this,
                                   &Viewport::setShortcutModifiers);
 }
 

@@ -63,7 +63,7 @@ void Seat::seatCapabilities(uint32_t capabilities)
     vlog.debug("Keyboard detected");
     delete keyboard;
     keyboard = new Keyboard(display, this);
-    keyboard->connectSignal(&keyboard->ledstate, this,
-                            [this]() { emitSignal(&ledstate); });
+    keyboard->connectSignal(&Keyboard::ledstate, this,
+                            [this]() { emitSignal(&Seat::ledstate); });
   }
 }

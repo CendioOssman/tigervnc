@@ -62,7 +62,7 @@ SConnection::SConnection(network::Socket* s, AccessRights accessRights_)
     hasLocalClipboard(false),
     unsolicitedClipboardAttempt(false)
 {
-  authFailureTimer.connectSignal(&authFailureTimer.timer, this,
+  authFailureTimer.connectSignal(&core::Timer::timer, this,
                                  &SConnection::authFailureTimeout);
 
   defaultMajorVersion = 3;
@@ -429,7 +429,7 @@ void SConnection::keyEvent(uint32_t keysym, uint32_t keycode,
 {
   if (!accessCheck(AccessKeyEvents))
     return;
-  emitSignal(&key, keysym, keycode, down);
+  emitSignal(&SConnection::key, keysym, keycode, down);
 }
 
 void SConnection::pointerEvent(const core::Point& pos,
@@ -437,7 +437,7 @@ void SConnection::pointerEvent(const core::Point& pos,
 {
   if (!accessCheck(AccessPtrEvents))
     return;
-  emitSignal(&pointer, pos, buttonMask);
+  emitSignal(&SConnection::pointer, pos, buttonMask);
 }
 
 void SConnection::clientCutText(const char* str)
@@ -450,7 +450,7 @@ void SConnection::clientCutText(const char* str)
   if (!accessCheck(AccessCutText))
     return;
 
-  emitSignal(&clipboardannounce, true);
+  emitSignal(&SConnection::clipboardannounce, true);
 }
 
 void SConnection::handleClipboardCaps(uint32_t flags, const uint32_t* lengths)
@@ -507,7 +507,7 @@ void SConnection::handleClipboardRequest(uint32_t flags)
   }
   if (!accessCheck(AccessCutText))
     return;
-  emitSignal(&clipboardrequest);
+  emitSignal(&SConnection::clipboardrequest);
 }
 
 void SConnection::handleClipboardPeek()
@@ -524,11 +524,11 @@ void SConnection::handleClipboardNotify(uint32_t flags)
     hasLocalClipboard = false;
     if (!accessCheck(AccessCutText))
       return;
-    emitSignal(&clipboardannounce, true);
+    emitSignal(&SConnection::clipboardannounce, true);
   } else {
     if (!accessCheck(AccessCutText))
       return;
-    emitSignal(&clipboardannounce, false);
+    emitSignal(&SConnection::clipboardannounce, false);
   }
 }
 
@@ -553,7 +553,7 @@ void SConnection::handleClipboardProvide(uint32_t flags,
     return;
 
   // FIXME: Should probably verify that this data was actually requested
-  emitSignal(&clipboarddata, clientClipboard.c_str());
+  emitSignal(&SConnection::clipboarddata, clientClipboard.c_str());
 }
 
 void SConnection::setDesktopSize(int fb_width, int fb_height,
@@ -570,7 +570,7 @@ void SConnection::setDesktopSize(int fb_width, int fb_height,
     vlog.debug("Rejecting unauthorized framebuffer resize request");
     writer()->writeDesktopSize(reasonClient, resultProhibited);
   } else {
-    emitSignal(&layoutrequest, fb_width, fb_height, layout);
+    emitSignal(&SConnection::layoutrequest, fb_width, fb_height, layout);
   }
 }
 
@@ -634,7 +634,7 @@ void SConnection::desktopReady()
                            client.pf(), client.name());
   state_ = RFBSTATE_NORMAL;
 
-  emitSignal(&ready, shared_);
+  emitSignal(&SConnection::ready, shared_);
 }
 
 void SConnection::close(const char* /*reason*/)
@@ -699,7 +699,7 @@ void SConnection::requestClipboard()
     return;
 
   if (hasRemoteClipboard) {
-    emitSignal(&clipboarddata, clientClipboard.c_str());
+    emitSignal(&SConnection::clipboarddata, clientClipboard.c_str());
     return;
   }
 
@@ -723,7 +723,7 @@ void SConnection::announceClipboard(bool available)
         (client.clipboardFlags() & rfb::clipboardProvide)) {
       vlog.debug("Attempting unsolicited clipboard transfer...");
       unsolicitedClipboardAttempt = true;
-      emitSignal(&clipboardrequest);
+      emitSignal(&SConnection::clipboardrequest);
       return;
     }
 
@@ -734,7 +734,7 @@ void SConnection::announceClipboard(bool available)
   }
 
   if (available)
-    emitSignal(&clipboardrequest);
+    emitSignal(&SConnection::clipboardrequest);
 }
 
 void SConnection::sendClipboardData(const char* data)

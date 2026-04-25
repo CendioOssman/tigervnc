@@ -67,16 +67,16 @@ VNCSConnectionST::VNCSConnectionST(VNCServerST* server_, network::Socket *s,
     continuousUpdates(false), encodeManager(this),
     pointerEventTime(0), clientHasCursor(false)
 {
-  server->connectSignal(&server->started, this,
+  server->connectSignal(&VNCServer::started, this,
                         &VNCSConnectionST::desktopStarted);
 
   peerEndpoint = getSock()->getPeerEndpoint();
 
-  congestionTimer.connectSignal(&congestionTimer.timer, this,
+  congestionTimer.connectSignal(&core::Timer::timer, this,
                                 &VNCSConnectionST::updateTimeout);
-  losslessTimer.connectSignal(&losslessTimer.timer, this,
+  losslessTimer.connectSignal(&core::Timer::timer, this,
                               &VNCSConnectionST::updateTimeout);
-  idleTimer.connectSignal(&idleTimer.timer, this,
+  idleTimer.connectSignal(&core::Timer::timer, this,
                           &VNCSConnectionST::idleTimeout);
 
   // Kick off the idle timer

@@ -116,7 +116,7 @@ CConn::CConn(const char *filename)
 {
   cpuTime = 0.0;
 
-  connectSignal(&ready, this, &CConn::connectionReady);
+  connectSignal(&CConnection::ready, this, &CConn::connectionReady);
 
   in = new rdr::FileInStream(filename);
   out = new DummyOutStream;

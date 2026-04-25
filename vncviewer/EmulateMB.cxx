@@ -197,7 +197,8 @@ static const signed char stateTab[11][5][3] = {
 EmulateMB::EmulateMB(EmulateMBHandler* handler_)
   : handler(handler_), state(0), emulatedButtonMask(0)
 {
-  timer.connectSignal(&timer.timer, this, &EmulateMB::handleTimeout);
+  timer.connectSignal(&core::Timer::timer, this,
+                      &EmulateMB::handleTimeout);
 }
 
 void EmulateMB::filterPointerEvent(const core::Point& pos,

@@ -116,21 +116,22 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
 
   updateCaption();
 
-  cc->connectSignal(&cc->resize, this,
+  cc->connectSignal(&rfb::CConnection::resize, this,
                     &DesktopWindow::resizeFramebuffer);
-  cc->connectSignal(&cc->namechange, this, &DesktopWindow::updateCaption);
+  cc->connectSignal(&rfb::CConnection::namechange, this,
+                    &DesktopWindow::updateCaption);
 
-  cc->connectSignal(&cc->cursorposition, this,
+  cc->connectSignal(&rfb::CConnection::cursorposition, this,
                     &DesktopWindow::setCursorPos);
 
-  cc->connectSignal(&cc->updateend, this,
+  cc->connectSignal(&rfb::CConnection::updateend, this,
                     &DesktopWindow::handleFirstUpdate);
 
-  fullScreen.connectSignal(&fullScreen.config, this,
+  fullScreen.connectSignal(&core::VoidParameter::config, this,
                            &DesktopWindow::handleFullScreenConfig);
-  fullScreenMode.connectSignal(&fullScreenMode.config, this,
+  fullScreenMode.connectSignal(&core::VoidParameter::config, this,
                                &DesktopWindow::handleFullScreenConfig);
-  fullScreenSelectedMonitors.connectSignal(&fullScreenSelectedMonitors.config, this,
+  fullScreenSelectedMonitors.connectSignal(&core::VoidParameter::config, this,
                                            &DesktopWindow::handleFullScreenConfig);
 
   // Some events need to be caught globally

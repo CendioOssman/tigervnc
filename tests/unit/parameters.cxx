@@ -140,7 +140,7 @@ TEST(BoolParameter, signals)
   core::BoolParameter signals("boolparam", "", false);
   bool emitted;
 
-  signals.connectSignal(&signals.config, &signals,
+  signals.connectSignal(&core::VoidParameter::config, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -251,7 +251,7 @@ TEST(IntParameter, signals)
   core::IntParameter signals("intparam", "", 0);
   bool emitted;
 
-  signals.connectSignal(&signals.config, &signals,
+  signals.connectSignal(&core::VoidParameter::config, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -327,7 +327,7 @@ TEST(StringParameter, signals)
   core::StringParameter signals("stringparam", "", "");
   bool emitted;
 
-  signals.connectSignal(&signals.config, &signals,
+  signals.connectSignal(&core::VoidParameter::config, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -446,7 +446,7 @@ TEST(EnumParameter, signals)
   core::EnumParameter signals("enumparam", "", {"a", "b", "c"}, "a");
   bool emitted;
 
-  signals.connectSignal(&signals.config, &signals,
+  signals.connectSignal(&core::VoidParameter::config, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -580,7 +580,7 @@ TEST(BinaryParameter, signals)
   core::BinaryParameter signals("binaryparam", "", nullptr, 0);
   bool emitted;
 
-  signals.connectSignal(&signals.config, &signals,
+  signals.connectSignal(&core::VoidParameter::config, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -727,7 +727,7 @@ TEST(IntListParameter, signals)
   core::IntListParameter signals("listparam", "", {});
   bool emitted;
 
-  signals.connectSignal(&signals.config, &signals,
+  signals.connectSignal(&core::VoidParameter::config, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -828,7 +828,7 @@ TEST(StringListParameter, signals)
   core::StringListParameter signals("listparam", "", {});
   bool emitted;
 
-  signals.connectSignal(&signals.config, &signals,
+  signals.connectSignal(&core::VoidParameter::config, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -963,7 +963,7 @@ TEST(EnumListParameter, signals)
   core::EnumListParameter signals("listparam", "", {"a", "b", "c"}, {"a"});
   bool emitted;
 
-  signals.connectSignal(&signals.config, &signals,
+  signals.connectSignal(&core::VoidParameter::config, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;

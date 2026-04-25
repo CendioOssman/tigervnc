@@ -60,9 +60,9 @@ const unsigned GH_TWOTOUCH_TIMEOUT = 50;
 GestureHandler::GestureHandler() :
   state(GH_INITSTATE), waitingRelease(false)
 {
-  longpressTimer.connectSignal(&longpressTimer.timer, this,
+  longpressTimer.connectSignal(&core::Timer::timer, this,
                                &GestureHandler::longpressTimeout);
-  twoTouchTimer.connectSignal(&twoTouchTimer.timer, this,
+  twoTouchTimer.connectSignal(&core::Timer::timer, this,
                               &GestureHandler::twoTouchTimeout);
 }
 

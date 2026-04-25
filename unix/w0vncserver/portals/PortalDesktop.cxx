@@ -48,28 +48,33 @@ PortalDesktop::PortalDesktop(rfb::VNCServer* server_)
   : server(server_), remoteDesktop(nullptr), pb(nullptr),
     restoreToken("")
 {
-  server->connectSignal(&server->starting, this, &PortalDesktop::start);
-  server->connectSignal(&server->stopped, this, &PortalDesktop::stop);
+  server->connectSignal(&rfb::VNCServer::starting, this,
+                        &PortalDesktop::start);
+  server->connectSignal(&rfb::VNCServer::stopped, this,
+                        &PortalDesktop::stop);
 
   // FIXME: Implement this.
   server->connectSignal(
-    &server->queryconnection, this, [this](rfb::SConnection* conn) {
+    &rfb::VNCServer::queryconnection, this,
+    [this](rfb::SConnection* conn) {
       server->approveConnection(conn, false,
                                 "Unable to query the local user to "
                                 "accept the connection.");
     });
 
-  server->connectSignal(&server->terminate,
+  server->connectSignal(&rfb::VNCServer::terminate,
                         []() { kill(getpid(), SIGTERM); });
 
-  server->connectSignal(&server->key, this, &PortalDesktop::keyEvent);
-  server->connectSignal(&server->pointer, this,
+  server->connectSignal(&rfb::VNCServer::key, this,
+                        &PortalDesktop::keyEvent);
+  server->connectSignal(&rfb::VNCServer::pointer, this,
                         &PortalDesktop::pointerEvent);
 
-  server->connectSignal(
-    &server->layoutrequest, this, [this](int, int, rfb::ScreenSet) {
-      server->rejectScreenLayout(rfb::resultProhibited);
-    });
+  server->connectSignal(&rfb::VNCServer::layoutrequest, this,
+                        [this](int, int, rfb::ScreenSet) {
+                          server->rejectScreenLayout(
+                            rfb::resultProhibited);
+                        });
 }
 
 PortalDesktop::~PortalDesktop()

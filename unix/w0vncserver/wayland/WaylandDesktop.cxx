@@ -57,35 +57,39 @@ WaylandDesktop::WaylandDesktop(GMainLoop* loop_,
 {
   assert(available());
 
-  server->connectSignal(&server->starting, this,
+  server->connectSignal(&rfb::VNCServer::starting, this,
                         &WaylandDesktop::start);
-  server->connectSignal(&server->stopped, this,
+  server->connectSignal(&rfb::VNCServer::stopped, this,
                         &WaylandDesktop::stop);
 
   // FIXME: Implement this.
   server->connectSignal(
-    &server->queryconnection, this, [this](rfb::SConnection* conn) {
+    &rfb::VNCServer::queryconnection, this,
+    [this](rfb::SConnection* conn) {
       server->approveConnection(conn, false,
                                 "Unable to query the local user to "
                                 "accept the connection.");
     });
 
-  server->connectSignal(&server->terminate,
+  server->connectSignal(&rfb::VNCServer::terminate,
                         []() { kill(getpid(), SIGTERM); });
 
-  server->connectSignal(&server->key, this, &WaylandDesktop::keyEvent);
-  server->connectSignal(&server->pointer, this,
+  server->connectSignal(&rfb::VNCServer::key, this,
+                        &WaylandDesktop::keyEvent);
+  server->connectSignal(&rfb::VNCServer::pointer, this,
                         &WaylandDesktop::pointerEvent);
 
-  server->connectSignal(
-    &server->layoutrequest, this, [this](int, int, rfb::ScreenSet) {
-      server->rejectScreenLayout(rfb::resultProhibited);
-    });
+  server->connectSignal(&rfb::VNCServer::layoutrequest, this,
+                        [this](int, int, rfb::ScreenSet) {
+                          server->rejectScreenLayout(
+                            rfb::resultProhibited);
+                        });
 
   display = new wayland::Display();
   output = new wayland::Output(display);
   seat = new wayland::Seat(display);
-  seat->connectSignal(&seat->ledstate, this, &WaylandDesktop::ledState);
+  seat->connectSignal(&wayland::Seat::ledstate, this,
+                      &WaylandDesktop::ledState);
 }
 
 WaylandDesktop::~WaylandDesktop()

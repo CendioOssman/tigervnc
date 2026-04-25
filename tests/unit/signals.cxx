@@ -30,8 +30,8 @@ class SenderBase : public core::Object {
 public:
   SenderBase() {}
 
-  template<typename... SigArgs, typename... Args>
-  void emitSignal(const core::signal<SigArgs...>* sig, Args... args)
+  template<class S, typename... SigArgs, typename... Args>
+  void emitSignal(const core::signal<SigArgs...> S::* sig, Args... args)
   {
     core::Object::emitSignal(sig, args...);
   }
@@ -82,8 +82,8 @@ TEST(Signals, connectSignal)
 
   /* Simple handler */
   callCount = 0;
-  s.connectSignal(&s.signal, &r, &Receiver::simpleHandler);
-  s.emitSignal(&s.signal);
+  s.connectSignal(&Sender::signal, &r, &Receiver::simpleHandler);
+  s.emitSignal(&Sender::signal);
   EXPECT_EQ(callCount, 1);
 }
 
@@ -99,9 +99,9 @@ TYPED_TEST(SignalsArgs, connectSignalArg)
 
   /* Simple handler */
   callCount = 0;
-  s.connectSignal(&s.signal, &r,
+  s.connectSignal(&Sender::signal, &r,
                   &Receiver::simpleTypeHandler<TypeParam>);
-  s.emitSignal(&s.signal, TestFixture::value);
+  s.emitSignal(&Sender::signal, TestFixture::value);
   EXPECT_EQ(callCount, 1);
 }
 
@@ -117,9 +117,9 @@ TYPED_TEST(SignalsArgs, connectSignalMultiArg)
 
   /* Simple handler */
   callCount = 0;
-  s.connectSignal(&s.signal, &r,
+  s.connectSignal(&Sender::signal, &r,
                   &Receiver::simpleTypeHandler<TypeParam, double>);
-  s.emitSignal(&s.signal, TestFixture::value, 1.2);
+  s.emitSignal(&Sender::signal, TestFixture::value, 1.2);
   EXPECT_EQ(callCount, 1);
 }
 
@@ -135,19 +135,22 @@ TYPED_TEST(SignalsArgs, connectAmbiguous)
 
   /* Simple handler */
   callCount = 0;
-  s.connectSignal(&s.signal, &r,
+  s.connectSignal(&Sender::signal, &r,
                   &Receiver::simpleTypeHandler<Receiver*, TypeParam>);
-  s.emitSignal(&s.signal, &r, TestFixture::value);
+  s.emitSignal(&Sender::signal, &r, TestFixture::value);
   EXPECT_EQ(callCount, 1);
 }
 
-static void connectSimpleLambda(SenderBase* s, core::signal<>* signal)
+template<class S>
+static void connectSimpleLambda(SenderBase* s,
+                                core::signal<> S::* signal)
 {
   s->connectSignal(signal, []() { callCount++; });
 }
 
+template<class S>
 static void connectLambdaWithCaptures(SenderBase* s,
-                                      core::signal<>* signal,
+                                      core::signal<> S::* signal,
                                       Receiver* r, int x)
 {
   s->connectSignal(signal, r,
@@ -166,42 +169,42 @@ TEST(Signals, connectSignalLambda)
 
   /* Simple lambda */
   callCount = 0;
-  s.connectSignal(&s.signal, []() { callCount++; });
-  s.emitSignal(&s.signal);
+  s.connectSignal(&Sender::signal, []() { callCount++; });
+  s.emitSignal(&Sender::signal);
   EXPECT_EQ(callCount, 1);
 
   /* Multiple simple lambdas */
   callCount = 0;
-  connectSimpleLambda(&s, &s.msignal);
-  connectSimpleLambda(&s, &s.msignal);
-  s.emitSignal(&s.msignal);
+  connectSimpleLambda(&s, &Sender::msignal);
+  connectSimpleLambda(&s, &Sender::msignal);
+  s.emitSignal(&Sender::msignal);
   EXPECT_EQ(callCount, 2);
 
   /* Lambda with captures */
   callCount = 0;
-  s.connectSignal(&s.csignal, &r,
+  s.connectSignal(&Sender::csignal, &r,
                   [&s, &r]() { (void)s; (void)r; callCount++; });
-  s.emitSignal(&s.csignal);
+  s.emitSignal(&Sender::csignal);
   EXPECT_EQ(callCount, 1);
 
   /* Multiple lambdas with captures */
   callCount = 0;
-  connectLambdaWithCaptures(&s, &s.mcsignal, &r, 1);
-  connectLambdaWithCaptures(&s, &s.mcsignal, &r, 2);
-  s.emitSignal(&s.mcsignal);
+  connectLambdaWithCaptures(&s, &Sender::mcsignal, &r, 1);
+  connectLambdaWithCaptures(&s, &Sender::mcsignal, &r, 2);
+  s.emitSignal(&Sender::mcsignal);
   EXPECT_EQ(callCount, 2);
 }
 
-template<typename... Args>
+template<class S, typename... Args>
 static void connectSimpleLambdaArgs(SenderBase* s,
-                                    core::signal<Args...>* signal)
+                                    core::signal<Args...> S::* signal)
 {
   s->connectSignal(signal, [](Args...) { callCount++; });
 }
 
-template<typename... Args>
+template<class S, typename... Args>
 static void connectLambdaArgsWithCaptures(SenderBase* s,
-                                          core::signal<Args...>* signal,
+                                          core::signal<Args...> S::* signal,
                                           Receiver* r, int x)
 {
   s->connectSignal(signal, r, [s, r, x](Args...) {
@@ -222,31 +225,31 @@ TYPED_TEST(SignalsArgs, connectSignalLambdaArgs)
 
   /* Simple lambda */
   callCount = 0;
-  s.connectSignal(&s.signal, [](TypeParam) { callCount++; });
-  s.emitSignal(&s.signal, TestFixture::value);
+  s.connectSignal(&Sender::signal, [](TypeParam) { callCount++; });
+  s.emitSignal(&Sender::signal, TestFixture::value);
   EXPECT_EQ(callCount, 1);
 
   /* Multiple simple lambdas */
   callCount = 0;
-  connectSimpleLambdaArgs(&s, &s.msignal);
-  connectSimpleLambdaArgs(&s, &s.msignal);
-  s.emitSignal(&s.msignal, TestFixture::value);
+  connectSimpleLambdaArgs(&s, &Sender::msignal);
+  connectSimpleLambdaArgs(&s, &Sender::msignal);
+  s.emitSignal(&Sender::msignal, TestFixture::value);
   EXPECT_EQ(callCount, 2);
 
   /* Lambda with captures */
   callCount = 0;
-  s.connectSignal(&s.csignal, &r, [&s, &r](TypeParam) {
+  s.connectSignal(&Sender::csignal, &r, [&s, &r](TypeParam) {
     (void)s; (void)r;
     callCount++;
   });
-  s.emitSignal(&s.csignal, TestFixture::value);
+  s.emitSignal(&Sender::csignal, TestFixture::value);
   EXPECT_EQ(callCount, 1);
 
   /* Multiple lambdas with captures */
   callCount = 0;
-  connectLambdaArgsWithCaptures(&s, &s.mcsignal, &r, 1);
-  connectLambdaArgsWithCaptures(&s, &s.mcsignal, &r, 2);
-  s.emitSignal(&s.mcsignal, TestFixture::value);
+  connectLambdaArgsWithCaptures(&s, &Sender::mcsignal, &r, 1);
+  connectLambdaArgsWithCaptures(&s, &Sender::mcsignal, &r, 2);
+  s.emitSignal(&Sender::mcsignal, TestFixture::value);
   EXPECT_EQ(callCount, 2);
 }
 
@@ -262,32 +265,33 @@ TYPED_TEST(SignalsArgs, connectSignalLambdaMultiArgs)
 
   /* Simple lambda */
   callCount = 0;
-  s.connectSignal(&s.signal, [](TypeParam, double) { callCount++; });
-  s.emitSignal(&s.signal, TestFixture::value, 1.2);
+  s.connectSignal(&Sender::signal,
+                  [](TypeParam, double) { callCount++; });
+  s.emitSignal(&Sender::signal, TestFixture::value, 1.2);
   EXPECT_EQ(callCount, 1);
 
   /* Multiple simple lambdas */
   callCount = 0;
-  connectSimpleLambdaArgs(&s, &s.msignal);
-  connectSimpleLambdaArgs(&s, &s.msignal);
-  s.emitSignal(&s.msignal, TestFixture::value, 1.2);
+  connectSimpleLambdaArgs(&s, &Sender::msignal);
+  connectSimpleLambdaArgs(&s, &Sender::msignal);
+  s.emitSignal(&Sender::msignal, TestFixture::value, 1.2);
   EXPECT_EQ(callCount, 2);
 
   /* Lambda with captures */
   callCount = 0;
-  s.connectSignal(&s.csignal, &r, [&s, &r](TypeParam, double) {
+  s.connectSignal(&Sender::csignal, &r, [&s, &r](TypeParam, double) {
     (void)s;
     (void)r;
     callCount++;
   });
-  s.emitSignal(&s.csignal, TestFixture::value, 1.2);
+  s.emitSignal(&Sender::csignal, TestFixture::value, 1.2);
   EXPECT_EQ(callCount, 1);
 
   /* Multiple lambdas with captures */
   callCount = 0;
-  connectLambdaArgsWithCaptures(&s, &s.mcsignal, &r, 1);
-  connectLambdaArgsWithCaptures(&s, &s.mcsignal, &r, 2);
-  s.emitSignal(&s.mcsignal, TestFixture::value, 1.2);
+  connectLambdaArgsWithCaptures(&s, &Sender::mcsignal, &r, 1);
+  connectLambdaArgsWithCaptures(&s, &Sender::mcsignal, &r, 2);
+  s.emitSignal(&Sender::mcsignal, TestFixture::value, 1.2);
   EXPECT_EQ(callCount, 2);
 }
 
@@ -301,9 +305,9 @@ TEST(Signals, doubleConnect)
   Sender s;
   Receiver r;
 
-  s.connectSignal(&s.dblsignal, &r, &Receiver::simpleHandler);
+  s.connectSignal(&Sender::dblsignal, &r, &Receiver::simpleHandler);
   EXPECT_THROW({
-    s.connectSignal(&s.dblsignal, &r, &Receiver::simpleHandler);
+    s.connectSignal(&Sender::dblsignal, &r, &Receiver::simpleHandler);
   }, std::logic_error);
 }
 
@@ -317,10 +321,10 @@ TYPED_TEST(SignalsArgs, doubleConnectArg)
   Sender s;
   Receiver r;
 
-  s.connectSignal(&s.dblsignal, &r,
+  s.connectSignal(&Sender::dblsignal, &r,
                   &Receiver::simpleTypeHandler<TypeParam>);
   EXPECT_THROW({
-    s.connectSignal(&s.dblsignal, &r,
+    s.connectSignal(&Sender::dblsignal, &r,
                     &Receiver::simpleTypeHandler<TypeParam>);
   }, std::logic_error);
 }
@@ -335,13 +339,73 @@ TYPED_TEST(SignalsArgs, doubleConnectMultiArg)
   Sender s;
   Receiver r;
 
-  s.connectSignal(&s.dblsignal, &r,
+  s.connectSignal(&Sender::dblsignal, &r,
                   &Receiver::simpleTypeHandler<TypeParam, double>);
   EXPECT_THROW({
-    s.connectSignal(&s.dblsignal, &r,
+    s.connectSignal(&Sender::dblsignal, &r,
                     &Receiver::simpleTypeHandler<TypeParam, double>);
   }, std::logic_error);
 }
+
+TEST(Signals, connectBadSignal)
+{
+  class SenderA : public SenderBase {
+  public:
+    core::signal<> goodsignal;
+  };
+  class SenderB : public SenderBase {
+  public:
+    core::signal<> badsignal;
+  };
+
+  SenderA s;
+  Receiver r;
+
+  s.connectSignal(&SenderA::goodsignal, &r, &Receiver::simpleHandler);
+  s.connectSignal(&SenderA::goodsignal, []() {});
+  s.connectSignal(&SenderA::goodsignal, &r, [&r]() { (void)r; });
+  EXPECT_THROW({
+    s.connectSignal(&SenderB::badsignal, &r, &Receiver::simpleHandler);
+  }, std::logic_error);
+  EXPECT_THROW({
+    s.connectSignal(&SenderB::badsignal, []() {});
+  }, std::logic_error);
+  EXPECT_THROW({
+    s.connectSignal(&SenderB::badsignal, &r, [&r]() { (void)r; });
+  }, std::logic_error);
+}
+
+TYPED_TEST(SignalsArgs, connectBadSignalArgs)
+{
+  class SenderA : public SenderBase {
+  public:
+    core::signal<TypeParam> goodsignal;
+  };
+  class SenderB : public SenderBase {
+  public:
+    core::signal<TypeParam> badsignal;
+  };
+
+  SenderA s;
+  Receiver r;
+
+  s.connectSignal(&SenderA::goodsignal, &r,
+                  &Receiver::simpleTypeHandler<TypeParam>);
+  s.connectSignal(&SenderA::goodsignal, [](TypeParam) {});
+  s.connectSignal(&SenderA::goodsignal, &r,
+                  [&r](TypeParam) { (void)r; });
+  EXPECT_THROW({
+    s.connectSignal(&SenderB::badsignal, &r,
+                    &Receiver::simpleTypeHandler<TypeParam>);
+   }, std::logic_error);
+  EXPECT_THROW({
+    s.connectSignal(&SenderB::badsignal, [](TypeParam) {});
+   }, std::logic_error);
+  EXPECT_THROW({
+    s.connectSignal(&SenderB::badsignal, &r,
+                    [&r](TypeParam) { (void)r; });
+   }, std::logic_error);
+ }
 
 TEST(Signals, disconnectSignal)
 {
@@ -356,24 +420,24 @@ TEST(Signals, disconnectSignal)
 
   /* Simple handler */
   callCount = 0;
-  c = s.connectSignal(&s.signal, &r, &Receiver::simpleHandler);
+  c = s.connectSignal(&Sender::signal, &r, &Receiver::simpleHandler);
   s.disconnectSignal(c);
-  s.emitSignal(&s.signal);
+  s.emitSignal(&Sender::signal);
   EXPECT_EQ(callCount, 0);
 
   /* Simple lambda */
   callCount = 0;
-  c = s.connectSignal(&s.lsignal, []() { callCount++; });
+  c = s.connectSignal(&Sender::lsignal, []() { callCount++; });
   s.disconnectSignal(c);
-  s.emitSignal(&s.lsignal);
+  s.emitSignal(&Sender::lsignal);
   EXPECT_EQ(callCount, 0);
 
   /* Lambda with captures */
   callCount = 0;
-  c = s.connectSignal(&s.lcsignal, &r,
+  c = s.connectSignal(&Sender::lcsignal, &r,
                       [&s, &r]() { (void)s; (void)r; callCount++; });
   s.disconnectSignal(c);
-  s.emitSignal(&s.lcsignal);
+  s.emitSignal(&Sender::lcsignal);
   EXPECT_EQ(callCount, 0);
 }
 
@@ -390,26 +454,26 @@ TYPED_TEST(SignalsArgs, disconnectSignalArg)
 
   /* Simple handler with args */
   callCount = 0;
-  c = s.connectSignal(&s.signal, &r,
+  c = s.connectSignal(&Sender::signal, &r,
                       &Receiver::simpleTypeHandler<TypeParam>);
   s.disconnectSignal(c);
-  s.emitSignal(&s.signal, TestFixture::value);
+  s.emitSignal(&Sender::signal, TestFixture::value);
   EXPECT_EQ(callCount, 0);
 
   /* Simple lambda with args */
   callCount = 0;
-  c = s.connectSignal(&s.lsignal, [](TypeParam) { callCount++; });
+  c = s.connectSignal(&Sender::lsignal, [](TypeParam) { callCount++; });
   s.disconnectSignal(c);
-  s.emitSignal(&s.lsignal, TestFixture::value);
+  s.emitSignal(&Sender::lsignal, TestFixture::value);
   EXPECT_EQ(callCount, 0);
 
   /* Lambda with captures and args */
   callCount = 0;
-  c = s.connectSignal(&s.lcsignal, &r, [&s, &r](TypeParam) {
+  c = s.connectSignal(&Sender::lcsignal, &r, [&s, &r](TypeParam) {
     (void)s; (void)r; callCount++;
 });
   s.disconnectSignal(c);
-  s.emitSignal(&s.lcsignal, TestFixture::value);
+  s.emitSignal(&Sender::lcsignal, TestFixture::value);
   EXPECT_EQ(callCount, 0);
 }
 
@@ -426,26 +490,27 @@ TYPED_TEST(SignalsArgs, disconnectSignalMultiArg)
 
   /* Simple handler with args */
   callCount = 0;
-  c = s.connectSignal(&s.signal, &r,
+  c = s.connectSignal(&Sender::signal, &r,
                       &Receiver::simpleTypeHandler<TypeParam, double>);
   s.disconnectSignal(c);
-  s.emitSignal(&s.signal, TestFixture::value, 1.2);
+  s.emitSignal(&Sender::signal, TestFixture::value, 1.2);
   EXPECT_EQ(callCount, 0);
 
   /* Simple lambda with args */
   callCount = 0;
-  c = s.connectSignal(&s.lsignal, [](TypeParam, double) { callCount++; });
+  c = s.connectSignal(&Sender::lsignal,
+                      [](TypeParam, double) { callCount++; });
   s.disconnectSignal(c);
-  s.emitSignal(&s.lsignal, TestFixture::value, 1.2);
+  s.emitSignal(&Sender::lsignal, TestFixture::value, 1.2);
   EXPECT_EQ(callCount, 0);
 
   /* Lambda with captures and args */
   callCount = 0;
-  c = s.connectSignal(&s.lcsignal, &r, [&s, &r](TypeParam, double) {
+  c = s.connectSignal(&Sender::lcsignal, &r, [&s, &r](TypeParam, double) {
     (void)s; (void)r; callCount++;
   });
   s.disconnectSignal(c);
-  s.emitSignal(&s.lcsignal, TestFixture::value, 1.2);
+  s.emitSignal(&Sender::lcsignal, TestFixture::value, 1.2);
   EXPECT_EQ(callCount, 0);
 }
 
@@ -460,7 +525,7 @@ TEST(Signals, doubleDisconnect)
   Receiver r;
   core::Connection c;
 
-  c = s.connectSignal(&s.dblsignal, &r, &Receiver::simpleHandler);
+  c = s.connectSignal(&Sender::dblsignal, &r, &Receiver::simpleHandler);
   s.disconnectSignal(c);
   EXPECT_NO_THROW({
     s.disconnectSignal(c);
@@ -479,7 +544,8 @@ TEST(Signals, disconnectWrongObject)
   Receiver r;
   core::Connection c;
 
-  c = s.connectSignal(&s.othersignal, &r, &Receiver::simpleHandler);
+  c = s.connectSignal(&Sender::othersignal, &r,
+                      &Receiver::simpleHandler);
   EXPECT_THROW({
     s2.disconnectSignal(c);
   }, std::logic_error);
@@ -497,9 +563,9 @@ TEST(Signals, disconnectHelper)
 
   /* Simple handler */
   callCount = 0;
-  s.connectSignal(&s.signal, &r, &Receiver::simpleHandler);
-  s.disconnectSignal(&s.signal, &r, &Receiver::simpleHandler);
-  s.emitSignal(&s.signal);
+  s.connectSignal(&Sender::signal, &r, &Receiver::simpleHandler);
+  s.disconnectSignal(&Sender::signal, &r, &Receiver::simpleHandler);
+  s.emitSignal(&Sender::signal);
   EXPECT_EQ(callCount, 0);
 }
 
@@ -515,11 +581,11 @@ TYPED_TEST(SignalsArgs, disconnectHelperArg)
 
   /* Simple handler */
   callCount = 0;
-  s.connectSignal(&s.signal, &r,
+  s.connectSignal(&Sender::signal, &r,
                   &Receiver::simpleTypeHandler<TypeParam>);
-  s.disconnectSignal(&s.signal, &r,
+  s.disconnectSignal(&Sender::signal, &r,
                      &Receiver::simpleTypeHandler<TypeParam>);
-  s.emitSignal(&s.signal, TestFixture::value);
+  s.emitSignal(&Sender::signal, TestFixture::value);
   EXPECT_EQ(callCount, 0);
 }
 
@@ -535,11 +601,11 @@ TYPED_TEST(SignalsArgs, disconnectHelperMultiArg)
 
   /* Simple handler */
   callCount = 0;
-  s.connectSignal(&s.signal, &r,
+  s.connectSignal(&Sender::signal, &r,
                   &Receiver::simpleTypeHandler<TypeParam, double>);
-  s.disconnectSignal(&s.signal, &r,
+  s.disconnectSignal(&Sender::signal, &r,
                      &Receiver::simpleTypeHandler<TypeParam, double>);
-  s.emitSignal(&s.signal, TestFixture::value, 1.2);
+  s.emitSignal(&Sender::signal, TestFixture::value, 1.2);
   EXPECT_EQ(callCount, 0);
 }
 
@@ -554,10 +620,10 @@ TEST(Signals, disconnectSimilar)
   Receiver r;
 
   callCount = 0;
-  s.connectSignal(&s.osignal, &r, &Receiver::simpleHandler);
-  s.connectSignal(&s.osignal, &r, &Receiver::otherSimpleHandler);
-  s.disconnectSignal(&s.osignal, &r, &Receiver::simpleHandler);
-  s.emitSignal(&s.osignal);
+  s.connectSignal(&Sender::osignal, &r, &Receiver::simpleHandler);
+  s.connectSignal(&Sender::osignal, &r, &Receiver::otherSimpleHandler);
+  s.disconnectSignal(&Sender::osignal, &r, &Receiver::simpleHandler);
+  s.emitSignal(&Sender::osignal);
   EXPECT_EQ(callCount, 1);
 }
 
@@ -572,13 +638,13 @@ TYPED_TEST(SignalsArgs, disconnectSimilarArg)
   Receiver r;
 
   callCount = 0;
-  s.connectSignal(&s.osignal, &r,
+  s.connectSignal(&Sender::osignal, &r,
                   &Receiver::simpleTypeHandler<TypeParam>);
-  s.connectSignal(&s.osignal, &r,
+  s.connectSignal(&Sender::osignal, &r,
                   &Receiver::otherSimpleTypeHandler<TypeParam>);
-  s.disconnectSignal(&s.osignal, &r,
+  s.disconnectSignal(&Sender::osignal, &r,
                      &Receiver::simpleTypeHandler<TypeParam>);
-  s.emitSignal(&s.osignal, TestFixture::value);
+  s.emitSignal(&Sender::osignal, TestFixture::value);
   EXPECT_EQ(callCount, 1);
 }
 
@@ -593,15 +659,59 @@ TYPED_TEST(SignalsArgs, disconnectSimilarMultiArg)
   Receiver r;
 
   callCount = 0;
-  s.connectSignal(&s.osignal, &r,
+  s.connectSignal(&Sender::osignal, &r,
                   &Receiver::simpleTypeHandler<TypeParam, double>);
-  s.connectSignal(&s.osignal, &r,
+  s.connectSignal(&Sender::osignal, &r,
                   &Receiver::otherSimpleTypeHandler<TypeParam, double>);
-  s.disconnectSignal(&s.osignal, &r,
+  s.disconnectSignal(&Sender::osignal, &r,
                      &Receiver::simpleTypeHandler<TypeParam, double>);
-  s.emitSignal(&s.osignal, TestFixture::value, 1.2);
+  s.emitSignal(&Sender::osignal, TestFixture::value, 1.2);
   EXPECT_EQ(callCount, 1);
 }
+
+TEST(Signals, disconnectBadSignal)
+{
+  class SenderA : public SenderBase {
+  public:
+    core::signal<> goodsignal;
+  };
+  class SenderB : public SenderBase {
+  public:
+    core::signal<> badsignal;
+  };
+
+  SenderA s;
+  Receiver r;
+
+  s.disconnectSignal(&SenderA::goodsignal, &r,
+                     &Receiver::simpleHandler);
+  EXPECT_THROW({
+    s.disconnectSignal(&SenderB::badsignal, &r,
+                       &Receiver::simpleHandler);
+  }, std::logic_error);
+}
+
+TYPED_TEST(SignalsArgs, disconnectBadSignalArg)
+{
+  class SenderA : public SenderBase {
+  public:
+    core::signal<TypeParam> goodsignal;
+  };
+  class SenderB : public SenderBase {
+  public:
+    core::signal<TypeParam> badsignal;
+  };
+
+  SenderA s;
+  Receiver r;
+
+  s.disconnectSignal(&SenderA::goodsignal, &r,
+                     &Receiver::simpleTypeHandler<TypeParam>);
+  EXPECT_THROW({
+    s.disconnectSignal(&SenderB::badsignal, &r,
+                       &Receiver::simpleTypeHandler<TypeParam>);
+   }, std::logic_error);
+ }
 
 TEST(Signals, disconnectAll)
 {
@@ -617,20 +727,20 @@ TEST(Signals, disconnectAll)
   Receiver r2;
 
   callCount = 0;
-  s.connectSignal(&s.signal1, &r, &Receiver::simpleHandler);
-  s.connectSignal(&s.signal1, &r, [] { callCount++; });
-  s.connectSignal(&s.signal2, &r, &Receiver::simpleHandler);
-  s.connectSignal(&s.signal3, &r,
+  s.connectSignal(&Sender::signal1, &r, &Receiver::simpleHandler);
+  s.connectSignal(&Sender::signal1, &r, [] { callCount++; });
+  s.connectSignal(&Sender::signal2, &r, &Receiver::simpleHandler);
+  s.connectSignal(&Sender::signal3, &r,
                   &Receiver::simpleTypeHandler<const char*>);
-  s.connectSignal(&s.signal3, &r, [](const char*) { callCount++; });
-  s.connectSignal(&s.signal4, &r,
+  s.connectSignal(&Sender::signal3, &r, [](const char*) { callCount++; });
+  s.connectSignal(&Sender::signal4, &r,
                   &Receiver::simpleTypeHandler<const char*, double>);
-  s.connectSignal(&s.signal1, &r2, &Receiver::simpleHandler);
+  s.connectSignal(&Sender::signal1, &r2, &Receiver::simpleHandler);
   s.disconnectSignals(&r);
-  s.emitSignal(&s.signal1);
-  s.emitSignal(&s.signal2);
-  s.emitSignal(&s.signal3, "data");
-  s.emitSignal(&s.signal4, "data", 1.2);
+  s.emitSignal(&Sender::signal1);
+  s.emitSignal(&Sender::signal2);
+  s.emitSignal(&Sender::signal3, "data");
+  s.emitSignal(&Sender::signal4, "data", 1.2);
   EXPECT_EQ(callCount, 1);
 }
 
@@ -646,9 +756,9 @@ TEST(Signals, implicitDisconnect)
   callCount = 0;
   {
     Receiver scoped_r;
-    s.connectSignal(&s.isignal, &scoped_r, &Receiver::simpleHandler);
+    s.connectSignal(&Sender::isignal, &scoped_r, &Receiver::simpleHandler);
   }
-  s.emitSignal(&s.isignal);
+  s.emitSignal(&Sender::isignal);
   EXPECT_EQ(callCount, 0);
 }
 
@@ -663,11 +773,11 @@ TEST(Signals, addWhileEmitting)
   Receiver r;
 
   callCount = 0;
-  s.connectSignal(&s.asignal, &r, [&s, &r]() {
-    s.connectSignal(&s.asignal, &r, &Receiver::simpleHandler);
+  s.connectSignal(&Sender::asignal, &r, [&s, &r]() {
+    s.connectSignal(&Sender::asignal, &r, &Receiver::simpleHandler);
   });
-  s.connectSignal(&s.asignal, &r, &Receiver::otherSimpleHandler);
-  s.emitSignal(&s.asignal);
+  s.connectSignal(&Sender::asignal, &r, &Receiver::otherSimpleHandler);
+  s.emitSignal(&Sender::asignal);
   EXPECT_EQ(callCount, 1);
 }
 
@@ -682,12 +792,12 @@ TEST(Signals, removeWhileEmitting)
   Receiver r;
 
   callCount = 0;
-  s.connectSignal(&s.rsignal, &r, [&s, &r]() {
-    s.disconnectSignal(&s.rsignal, &r, &Receiver::simpleHandler);
+  s.connectSignal(&Sender::rsignal, &r, [&s, &r]() {
+    s.disconnectSignal(&Sender::rsignal, &r, &Receiver::simpleHandler);
   });
-  s.connectSignal(&s.rsignal, &r, &Receiver::simpleHandler);
-  s.connectSignal(&s.rsignal, &r, &Receiver::otherSimpleHandler);
-  s.emitSignal(&s.rsignal);
+  s.connectSignal(&Sender::rsignal, &r, &Receiver::simpleHandler);
+  s.connectSignal(&Sender::rsignal, &r, &Receiver::otherSimpleHandler);
+  s.emitSignal(&Sender::rsignal);
   EXPECT_EQ(callCount, 1);
 }
 
@@ -704,23 +814,23 @@ TEST(Signals, emitIntConversion)
 
   /* Receiver casts to int */
   callCount = 0;
-  s.connectSignal(&s.inthandler, &r,
+  s.connectSignal(&Sender::inthandler, &r,
                   &Receiver::simpleTypeHandler<int>);
-  s.connectSignal(&s.inthandler, [](int) { callCount++; });
-  s.connectSignal(&s.inthandler, &r,
+  s.connectSignal(&Sender::inthandler, [](int) { callCount++; });
+  s.connectSignal(&Sender::inthandler, &r,
                   [&r](int) { (void)r; callCount++; });
-  s.emitSignal(&s.inthandler, 1.2);
+  s.emitSignal(&Sender::inthandler, 1.2);
   EXPECT_EQ(callCount, 3);
 
   /* Sender casts to int */
   callCount = 0;
-  s.connectSignal(&s.intemitter, &r,
+  s.connectSignal(&Sender::intemitter, &r,
                   &Receiver::simpleTypeHandler<int>);
-  s.connectSignal(&s.intemitter, [](int) { callCount++; });
-  s.connectSignal(&s.intemitter, &r,
+  s.connectSignal(&Sender::intemitter, [](int) { callCount++; });
+  s.connectSignal(&Sender::intemitter, &r,
                   [&r](int) { (void)r; callCount++; });
-  s.emitSignal(&s.intemitter, 1.2);
-  s.emitSignal(&s.intemitter, (unsigned long long)123);
+  s.emitSignal(&Sender::intemitter, 1.2);
+  s.emitSignal(&Sender::intemitter, (unsigned long long)123);
   EXPECT_EQ(callCount, 6);
 }
 
@@ -737,22 +847,24 @@ TYPED_TEST(SignalsArgs, emitRefConversion)
 
   /* Receiver adds reference */
   callCount = 0;
-  s.connectSignal(&s.refhandler, &r,
+  s.connectSignal(&Sender::refhandler, &r,
                   &Receiver::simpleTypeHandler<const TypeParam&>);
-  s.connectSignal(&s.refhandler, [](const TypeParam&) { callCount++; });
-  s.connectSignal(&s.refhandler, &r,
+  s.connectSignal(&Sender::refhandler,
+                  [](const TypeParam&) { callCount++; });
+  s.connectSignal(&Sender::refhandler, &r,
                   [&r](const TypeParam&) { (void)r; callCount++; });
-  s.emitSignal(&s.refhandler, TestFixture::value);
+  s.emitSignal(&Sender::refhandler, TestFixture::value);
   EXPECT_EQ(callCount, 3);
 
   /* Sender adds reference */
   callCount = 0;
-  s.connectSignal(&s.refemitter, &r,
+  s.connectSignal(&Sender::refemitter, &r,
                   &Receiver::simpleTypeHandler<const TypeParam&>);
-  s.connectSignal(&s.refemitter, [](const TypeParam&) { callCount++; });
-  s.connectSignal(&s.refemitter, &r,
+  s.connectSignal(&Sender::refemitter,
+                  [](const TypeParam&) { callCount++; });
+  s.connectSignal(&Sender::refemitter, &r,
                   [&r](const TypeParam&) { (void)r; callCount++; });
-  s.emitSignal(&s.refemitter, TestFixture::value);
+  s.emitSignal(&Sender::refemitter, TestFixture::value);
   EXPECT_EQ(callCount, 3);
 }
 
@@ -771,24 +883,64 @@ TYPED_TEST(SignalsArgs, emitConstConversion)
 
   /* Receiver adds pointer const qualifier */
   callCount = 0;
-  s.connectSignal(&s.consthandler, &r,
+  s.connectSignal(&Sender::consthandler, &r,
                   &Receiver::simpleTypeHandler<const TypeParam*>);
-  s.connectSignal(&s.consthandler, [](const TypeParam*) { callCount++; });
-  s.connectSignal(&s.consthandler, &r,
+  s.connectSignal(&Sender::consthandler,
+                  [](const TypeParam*) { callCount++; });
+  s.connectSignal(&Sender::consthandler, &r,
                   [&r](const TypeParam*) { (void)r; callCount++; });
-  s.emitSignal(&s.consthandler, &value);
+  s.emitSignal(&Sender::consthandler, &value);
   EXPECT_EQ(callCount, 3);
 
   /* Sender adds pointer const qualifier */
   callCount = 0;
-  s.connectSignal(&s.constemitter, &r,
+  s.connectSignal(&Sender::constemitter, &r,
                   &Receiver::simpleTypeHandler<const TypeParam*>);
-  s.connectSignal(&s.constemitter, [](const TypeParam*) { callCount++; });
-  s.connectSignal(&s.constemitter, &r,
+  s.connectSignal(&Sender::constemitter,
+                  [](const TypeParam*) { callCount++; });
+  s.connectSignal(&Sender::constemitter, &r,
                   [&r](const TypeParam*) { (void)r; callCount++; });
-  s.emitSignal(&s.constemitter, &value);
+  s.emitSignal(&Sender::constemitter, &value);
   EXPECT_EQ(callCount, 3);
 }
+
+TEST(Signals, emitBadSignal)
+{
+  class SenderA : public SenderBase {
+  public:
+    core::signal<> goodsignal;
+  };
+  class SenderB : public SenderBase {
+  public:
+    core::signal<> badsignal;
+  };
+
+  SenderA s;
+
+  s.emitSignal(&SenderA::goodsignal);
+  EXPECT_THROW({
+    s.emitSignal(&SenderB::badsignal);
+  }, std::logic_error);
+}
+
+TYPED_TEST(SignalsArgs, emitBadSignalArg)
+{
+  class SenderA : public SenderBase {
+  public:
+    core::signal<TypeParam> goodsignal;
+  };
+  class SenderB : public SenderBase {
+  public:
+    core::signal<TypeParam> badsignal;
+  };
+
+  SenderA s;
+
+  s.emitSignal(&SenderA::goodsignal, TestFixture::value);
+  EXPECT_THROW({
+    s.emitSignal(&SenderB::badsignal, TestFixture::value);
+   }, std::logic_error);
+ }
 
 int main(int argc, char** argv)
 {

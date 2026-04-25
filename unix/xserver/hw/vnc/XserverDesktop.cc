@@ -90,36 +90,37 @@ XserverDesktop::XserverDesktop(int screenIndex_,
 
   server = new rfb::VNCServerST(name);
 
-  server->connectSignal(&server->queryconnection, this,
+  server->connectSignal(&rfb::VNCServer::queryconnection, this,
                         &XserverDesktop::queryConnection);
 
-  server->connectSignal(&server->terminate,
+  server->connectSignal(&rfb::VNCServer::terminate,
                         []() { kill(getpid(), SIGTERM); });
 
-  server->connectSignal(&server->key, this, &XserverDesktop::keyEvent);
-  server->connectSignal(&server->pointer, this,
+  server->connectSignal(&rfb::VNCServer::key, this,
+                        &XserverDesktop::keyEvent);
+  server->connectSignal(&rfb::VNCServer::pointer, this,
                         &XserverDesktop::pointerEvent);
 
-  server->connectSignal(&server->clipboardrequest,
+  server->connectSignal(&rfb::VNCServer::clipboardrequest,
                         []() { vncHandleClipboardRequest(); });
-  server->connectSignal(&server->clipboardannounce,
+  server->connectSignal(&rfb::VNCServer::clipboardannounce,
                         [](bool available) {
                           vncHandleClipboardAnnounce(available);
                         });
-  server->connectSignal(&server->clipboarddata,
+  server->connectSignal(&rfb::VNCServer::clipboarddata,
                         [](const char* data_) {
                           vncHandleClipboardData(data_);
                         });
 
-  server->connectSignal(&server->layoutrequest, this,
+  server->connectSignal(&rfb::VNCServer::layoutrequest, this,
                         &XserverDesktop::layoutRequest);
 
-  server->connectSignal(&server->frame, this,
+  server->connectSignal(&rfb::VNCServer::frame, this,
                         &XserverDesktop::frameTick);
 
   setFramebuffer(width, height, fbptr, stride_);
 
-  queryConnectTimer.connectSignal(&queryConnectTimer.timer, this,
+  queryConnectTimer.connectSignal(&core::Timer::timer, this,
                                   &XserverDesktop::queryTimeout);
 
   for (network::SocketListener* listener : listeners)

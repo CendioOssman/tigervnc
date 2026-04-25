@@ -421,7 +421,7 @@ void CConnection::setDesktopSize(int w, int h)
                                            server.width(),
                                            server.height());
 
-  emitSignal(&resize);
+  emitSignal(&CConnection::resize);
   assert(framebuffer != nullptr);
   assert(framebuffer->width() == server.width());
   assert(framebuffer->height() == server.height());
@@ -449,7 +449,7 @@ void CConnection::setExtendedDesktopSize(unsigned reason,
                                            server.width(),
                                            server.height());
 
-  emitSignal(&resize);
+  emitSignal(&CConnection::resize);
   assert(framebuffer != nullptr);
   assert(framebuffer->width() == server.width());
   assert(framebuffer->height() == server.height());
@@ -461,18 +461,18 @@ void CConnection::setCursor(int width, int height,
 {
   Cursor cursor(width, height, hotspot, data);
   server.setCursor(cursor);
-  emitSignal(&cursorchange);
+  emitSignal(&CConnection::cursorchange);
 }
 
 void CConnection::setCursorPos(const core::Point& pos)
 {
-  emitSignal(&cursorposition, pos);
+  emitSignal(&CConnection::cursorposition, pos);
 }
 
 void CConnection::setName(const char* name)
 {
   server.setName(name);
-  emitSignal(&namechange);
+  emitSignal(&CConnection::namechange);
 }
 
 void CConnection::fence(uint32_t flags, unsigned len, const uint8_t data[])
@@ -527,7 +527,7 @@ void CConnection::serverInit(int width, int height,
   state_ = RFBSTATE_NORMAL;
   vlog.debug("Initialisation done");
 
-  emitSignal(&ready);
+  emitSignal(&CConnection::ready);
 
   assert(framebuffer != nullptr);
   assert(framebuffer->width() == server.width());
@@ -564,7 +564,7 @@ void CConnection::framebufferUpdateStart()
 
   requestNewUpdate();
 
-  emitSignal(&updatestart);
+  emitSignal(&CConnection::updatestart);
 }
 
 void CConnection::framebufferUpdateEnd()
@@ -590,7 +590,7 @@ void CConnection::framebufferUpdateEnd()
     firstUpdate = false;
   }
 
-  emitSignal(&updateend);
+  emitSignal(&CConnection::updateend);
 }
 
 bool CConnection::dataRect(const core::Rect& r, int encoding)
@@ -607,7 +607,7 @@ void CConnection::setColourMapEntries(int /*firstColour*/,
 
 void CConnection::bell()
 {
-  emitSignal(&bellrequest);
+  emitSignal(&CConnection::bellrequest);
 }
 
 void CConnection::serverCutText(const char* str)
@@ -617,13 +617,13 @@ void CConnection::serverCutText(const char* str)
   serverClipboard = str;
   hasRemoteClipboard = true;
 
-  emitSignal(&clipboardannounce, true);
+  emitSignal(&CConnection::clipboardannounce, true);
 }
 
 void CConnection::setLEDState(unsigned int state)
 {
   server.setLEDState(state);
-  emitSignal(&ledstate);
+  emitSignal(&CConnection::ledstate);
 }
 
 void CConnection::handleClipboardCaps(uint32_t flags,
@@ -687,7 +687,7 @@ void CConnection::handleClipboardRequest(uint32_t flags)
     vlog.debug("Ignoring unexpected clipboard request");
     return;
   }
-  emitSignal(&clipboardrequest);
+  emitSignal(&CConnection::clipboardrequest);
 }
 
 void CConnection::handleClipboardPeek()
@@ -702,9 +702,9 @@ void CConnection::handleClipboardNotify(uint32_t flags)
 
   if (flags & rfb::clipboardUTF8) {
     hasLocalClipboard = false;
-    emitSignal(&clipboardannounce, true);
+    emitSignal(&CConnection::clipboardannounce, true);
   } else {
-    emitSignal(&clipboardannounce, false);
+    emitSignal(&CConnection::clipboardannounce, false);
   }
 }
 
@@ -726,13 +726,13 @@ void CConnection::handleClipboardProvide(uint32_t flags,
   hasRemoteClipboard = true;
 
   // FIXME: Should probably verify that this data was actually requested
-  emitSignal(&clipboarddata, serverClipboard.c_str());
+  emitSignal(&CConnection::clipboarddata, serverClipboard.c_str());
 }
 
 void CConnection::requestClipboard()
 {
   if (hasRemoteClipboard) {
-    emitSignal(&clipboarddata, serverClipboard.c_str());
+    emitSignal(&CConnection::clipboarddata, serverClipboard.c_str());
     return;
   }
 
@@ -751,7 +751,7 @@ void CConnection::announceClipboard(bool available)
       (server.clipboardFlags() & rfb::clipboardProvide)) {
     vlog.debug("Attempting unsolicited clipboard transfer...");
     unsolicitedClipboardAttempt = true;
-    emitSignal(&clipboardrequest);
+    emitSignal(&CConnection::clipboardrequest);
     return;
   }
 
@@ -761,7 +761,7 @@ void CConnection::announceClipboard(bool available)
   }
 
   if (available)
-    emitSignal(&clipboardrequest);
+    emitSignal(&CConnection::clipboardrequest);
 }
 
 void CConnection::sendClipboardData(const char* data)
