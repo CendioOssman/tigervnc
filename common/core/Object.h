@@ -43,11 +43,6 @@ namespace core {
   // Opaque identifier for tracking a connection to a signal
   struct Connection;
 
-  template<std::size_t A, std::size_t B>
-  using IsEqual = std::enable_if_t<A == B, bool>;
-  template<typename Functor, typename... Args>
-  using IsInvocable = std::enable_if_t<std::is_invocable_v<Functor, Args...>, bool>;
-
   class Object {
   protected:
     // Must always be sub-classed
@@ -60,19 +55,16 @@ namespace core {
     // Inclusion of signal arguments must match how the signal is
     // emitted. Any method registered will automatically be unregistered
     // when the method's object is destroyed.
-    template<class T, typename... SigArgs, typename... Args,
-             IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
+    template<class T, typename... SigArgs, typename... Args>
     Connection connectSignal(const signal<SigArgs...>* signal, T* obj,
                              void (T::*callback)(Args...));
 
     // Lambda friendly versions to register a signal callback. If the
     // lambda has a capture list, then an object must also be specified
     // to control the lifetime.
-    template<typename... Args, typename Functor,
-             IsInvocable<Functor, Args...> = true>
+    template<typename... Args, typename Functor>
     Connection connectSignal(const signal<Args...>* signal, Functor f);
-    template<typename... Args, typename Functor,
-             IsInvocable<Functor, Args...> = true>
+    template<typename... Args, typename Functor>
     Connection connectSignal(const signal<Args...>* signal, Object* obj,
                              Functor callback);
 
@@ -82,8 +74,7 @@ namespace core {
 
     // Methods can be disconneced by reference, rather than tracking
     // the connection object.
-    template<class T, typename... SigArgs, typename... Args,
-             IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
+    template<class T, typename... SigArgs, typename... Args>
     void disconnectSignal(const signal<SigArgs...>* signal, T* obj,
                           void (T::*callback)(Args...));
 
@@ -157,8 +148,7 @@ namespace core {
   template<typename... Args, typename Functor>
   void invoke_any(Functor f, const std::vector<any>& info);
 
-  template<class T, typename... SigArgs, typename... Args,
-           IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
+  template<class T, typename... SigArgs, typename... Args>
   Connection Object::connectSignal(const signal<SigArgs...>* signal,
                                    T* obj, void (T::*callback)(Args...))
   {
@@ -194,8 +184,7 @@ namespace core {
   template<typename Functor>
   constexpr bool has_captures_v = has_captures<Functor>::value;
 
-  template<typename... Args, typename Functor,
-           IsInvocable<Functor, Args...>>
+  template<typename... Args, typename Functor>
   Connection Object::connectSignal(const signal<Args...>* signal,
                                    Functor callback)
   {
@@ -216,8 +205,7 @@ namespace core {
     return connectSignal((const void*)signal, nullptr, emitter);
   }
 
-  template<typename... Args, typename Functor,
-           IsInvocable<Functor, Args...>>
+  template<typename... Args, typename Functor>
   Connection Object::connectSignal(const signal<Args...>* signal,
                                    Object* obj, Functor callback)
   {
@@ -235,8 +223,7 @@ namespace core {
     return connectSignal((const void*)signal, obj, emitter);
   }
 
-  template<class T, typename... SigArgs, typename... Args,
-           IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
+  template<class T, typename... SigArgs, typename... Args>
   void Object::disconnectSignal(const signal<SigArgs...>* signal, T* obj,
                                 void (T::*callback)(Args...))
   {
