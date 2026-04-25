@@ -88,8 +88,10 @@ SDisplay::SDisplay(rfb::VNCServer* server_)
   updateEvent.h = CreateEvent(nullptr, TRUE, FALSE, nullptr);
   terminateEvent.h = CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
-  server->connectSignal(&VNCServer::starting, this, &SDisplay::start);
-  server->connectSignal(&VNCServer::stopped, this, &SDisplay::stop);
+  server->connectSignal(&rfb::VNCServer::starting, this,
+                        &SDisplay::start);
+  server->connectSignal(&rfb::VNCServer::stopped, this,
+                        &SDisplay::stop);
 
   server->connectSignal(&VNCServer::connectionRequested, this,
                         &SDisplay::queryConnection);
@@ -97,8 +99,9 @@ SDisplay::SDisplay(rfb::VNCServer* server_)
   server->connectSignal(&VNCServer::terminateRequested, this,
                         [this]() { SetEvent(terminateEvent); });
 
-  server->connectSignal(&VNCServer::key, this, &SDisplay::keyEvent);
-  server->connectSignal(&VNCServer::pointer, this,
+  server->connectSignal(&rfb::VNCServer::key, this,
+                        &SDisplay::keyEvent);
+  server->connectSignal(&rfb::VNCServer::pointer, this,
                         &SDisplay::pointerEvent);
 
   server->connectSignal(&VNCServer::clipboardRequested, this,

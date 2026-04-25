@@ -23,7 +23,6 @@
 #include <stdint.h>
 
 #include <algorithm>
-#include <stdexcept>
 
 #include <core/Object.h>
 
