@@ -295,7 +295,7 @@ namespace core {
                         std::index_sequence<idx...>)
   {
     static_assert(std::is_invocable_v<Functor, Args...>);
-    f(std::any_cast<typename std::decay<Args>::type>(info[idx])...);
+    f(std::any_cast<std::decay_t<Args>>(info[idx])...);
   }
   template<typename... Args, typename Functor>
   void invoke_any(Functor f, const std::vector<std::any>& info)
