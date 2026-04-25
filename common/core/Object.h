@@ -30,7 +30,6 @@
 #include <list>
 #include <map>
 #include <set>
-#include <stdexcept>
 #include <vector>
 
 #include <core/any.h>
@@ -65,10 +64,6 @@ namespace core {
              IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
     Connection connectSignal(const signal<SigArgs...>* signal, T* obj,
                              void (T::*callback)(Args...));
-    template<class T, class S, typename... SigArgs, typename... Args,
-             IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
-    Connection connectSignal(const signal<SigArgs...>* signal, T* obj,
-                             void (T::*callback)(S*, Args...));
 
     // Lambda friendly versions to register a signal callback. If the
     // lambda has a capture list, then an object must also be specified
@@ -91,10 +86,6 @@ namespace core {
              IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
     void disconnectSignal(const signal<SigArgs...>* signal, T* obj,
                           void (T::*callback)(Args...));
-    template<class T, class S, typename... SigArgs, typename... Args,
-             IsEqual<sizeof...(Args), sizeof...(SigArgs)> = true>
-    void disconnectSignal(const signal<SigArgs...>* signal, T* obj,
-                          void (T::*callback)(S*, Args...));
 
     // disconnectSignals() unregisters all methods for all names for the
     // specified object. This is automatically called when the specified
@@ -186,29 +177,6 @@ namespace core {
                          compareAny<typeof(callback)>, emitter);
   }
 
-  template<class T, class S, typename... SigArgs, typename... Args,
-           IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
-  Connection Object::connectSignal(const signal<SigArgs...>* signal, T* obj,
-                                   void (T::*callback)(S*, Args...))
-  {
-    static_assert(sizeof...(SigArgs) == sizeof...(Args),
-                  "Wrong number of arguments for signal callback");
-    static_assert((std::is_convertible_v<SigArgs, Args> && ...),
-                  "Incompatible callback data arguments for signal");
-    S* sender = dynamic_cast<S*>(this);
-    if (!sender)
-      throw std::logic_error("Incompatible signal callback");
-    auto memfn = [sender, obj, callback](SigArgs... args) {
-      (obj->*callback)(sender, args...);
-    };
-    emitter_t emitter = [memfn](const std::vector<any>& info) {
-      invoke_any<SigArgs...>(memfn, info);
-    };
-    assert(obj);
-    return connectSignal(signal, obj, callback,
-                         compareAny<typeof(callback)>, emitter);
-  }
-
   // Determine if a lambda has a capture list by using the fact that
   // the unary plus operator only exists without captures
   template<typename Functor>
@@ -271,20 +239,6 @@ namespace core {
            IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
   void Object::disconnectSignal(const signal<SigArgs...>* signal, T* obj,
                                 void (T::*callback)(Args...))
-  {
-    static_assert(sizeof...(SigArgs) == sizeof...(Args),
-                  "Wrong number of arguments for signal callback");
-    static_assert((std::is_convertible_v<SigArgs, Args> && ...),
-                  "Incompatible callback data arguments for signal");
-    disconnectSignal({(void*)signal, this, obj, callback,
-                      compareAny<typeof(callback)>});
-  }
-
-  template<class T, class S, typename... SigArgs, typename... Args,
-           IsEqual<sizeof...(Args), sizeof...(SigArgs)>>
-  void Object::disconnectSignal(const signal<SigArgs...>* signal,
-                                T* obj,
-                                void (T::*callback)(S*, Args...))
   {
     static_assert(sizeof...(SigArgs) == sizeof...(Args),
                   "Wrong number of arguments for signal callback");

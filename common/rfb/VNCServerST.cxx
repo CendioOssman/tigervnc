@@ -189,21 +189,39 @@ void VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
   clients.push_front(client);
 
   client->connectSignal(&client->ready, this,
-                        &VNCServerST::clientReady);
+                        [client, this](bool shared) {
+                          clientReady(client, shared);
+                        });
 
-  client->connectSignal(&client->key, this, &VNCServerST::keyEvent);
-  client->connectSignal(&client->pointer, this,
-                        &VNCServerST::pointerEvent);
+  client->connectSignal(
+    &client->key, this,
+    [client, this](uint32_t keysym, uint32_t keycode, bool down) {
+      keyEvent(client, keysym, keycode, down);
+    });
+  client->connectSignal(
+    &client->pointer, this,
+    [client, this](core::Point pos, uint16_t buttonMask) {
+      pointerEvent(client, pos, buttonMask);
+    });
 
   client->connectSignal(&client->clipboardrequest, this,
-                        &VNCServerST::handleClipboardRequest);
+                        [client, this]() {
+                          handleClipboardRequest(client);
+                        });
   client->connectSignal(&client->clipboardannounce, this,
-                        &VNCServerST::handleClipboardAnnounce);
+                        [client, this](bool available) {
+                          handleClipboardAnnounce(client, available);
+                        });
   client->connectSignal(&client->clipboarddata, this,
-                        &VNCServerST::handleClipboardData);
+                        [client, this](const char* data) {
+                          handleClipboardData(client, data);
+                        });
 
-  client->connectSignal(&client->layoutrequest, this,
-                        &VNCServerST::handleLayoutRequest);
+  client->connectSignal(
+    &client->layoutrequest, this,
+    [client, this](int width, int height, const ScreenSet& layout) {
+      handleLayoutRequest(client, width, height, layout);
+    });
 
   client->init();
 }
