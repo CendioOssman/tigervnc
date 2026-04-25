@@ -94,14 +94,16 @@ namespace core {
     // Wrapper to contain member function pointers
     typedef std::function<void(const std::vector<any>&)> emitter_t;
 
-    void emitSignal(const void* signal, const std::vector<any>& info);
+    void emitSignalImpl(const void* signal,
+                        const std::vector<any>& info);
 
-    Connection connectSignal(const void* signal, Object* obj,
-                             const emitter_t& emitter);
-    Connection connectSignal(const void* signal, Object* obj,
-                             const any& callback,
-                             bool (*comparer)(const any&, const any&),
-                             const emitter_t& emitter);
+    Connection connectSignalImpl(const void* signal, Object* obj,
+                                 const emitter_t& emitter);
+    Connection connectSignalImpl(const void* signal, Object* obj,
+                                 const any& callback,
+                                 bool (*comparer)(const any&,
+                                                  const any&),
+                                 const emitter_t& emitter);
 
     // Compares two any objects, returning true if they are both type T
     // and have the same value
@@ -163,8 +165,8 @@ namespace core {
       invoke_any<SigArgs...>(memfn, info);
     };
     assert(obj);
-    return connectSignal(signal, obj, callback,
-                         compareAny<typeof(callback)>, emitter);
+    return connectSignalImpl(signal, obj, callback,
+                             compareAny<typeof(callback)>, emitter);
   }
 
   // Determine if a lambda has a capture list by using the fact that
@@ -202,7 +204,7 @@ namespace core {
     // It's not guaranteed if we get unique or identical addresses for
     // otherwise identical lambdas. Treat each as unique for consistent
     // behaviour by omitting any tracking information.
-    return connectSignal((const void*)signal, nullptr, emitter);
+    return connectSignalImpl(signal, nullptr, emitter);
   }
 
   template<typename... Args, typename Functor>
@@ -220,7 +222,7 @@ namespace core {
     assert(obj);
     // Lambdas cannot be compared, so we cannot tell if it's an identical
     // lambda, or just the same body but with different captures.
-    return connectSignal((const void*)signal, obj, emitter);
+    return connectSignalImpl(signal, obj, emitter);
   }
 
   template<class T, typename... SigArgs, typename... Args>
@@ -243,7 +245,7 @@ namespace core {
                   "Wrong number of arguments emitting signal");
     static_assert((std::is_convertible_v<Args, SigArgs> && ...),
                   "Incompatible signal data emitting signal");
-    emitSignal(signal, {any((SigArgs)args)...});
+    emitSignalImpl(signal, {any((SigArgs)args)...});
   }
 
   template<class T>

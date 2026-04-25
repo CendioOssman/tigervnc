@@ -63,8 +63,8 @@ Object::~Object()
   }
 }
 
-void Object::emitSignal(const void* signal,
-                        const std::vector<any>& info)
+void Object::emitSignalImpl(const void* signal,
+                            const std::vector<any>& info)
 {
   ReceiverList siglist;
   ReceiverList::iterator iter;
@@ -88,20 +88,21 @@ void Object::emitSignal(const void* signal,
   }
 }
 
-Connection Object::connectSignal(const void* signal, Object* obj,
-                                 const emitter_t& emitter)
+Connection Object::connectSignalImpl(const void* signal, Object* obj,
+                                     const emitter_t& emitter)
 {
   static uint64_t index = 0;
   // This callback is not possible to check for uniqueness, so instead
   // we assume every call is unique and track them using an index.
-  return connectSignal(signal, obj, index++, compareAny<typeof(index)>,
-                       emitter);
+  return connectSignalImpl(signal, obj, index++,
+                           compareAny<typeof(index)>, emitter);
 }
 
-Connection Object::connectSignal(const void* signal, Object* obj,
-                                 const any& callback,
-                                 bool (*comparer)(const any&, const any&),
-                                 const emitter_t& emitter)
+Connection Object::connectSignalImpl(const void* signal, Object* obj,
+                                     const any& callback,
+                                     bool (*comparer)(const any&,
+                                                      const any&),
+                                     const emitter_t& emitter)
 {
   ReceiverList::iterator iter;
   Connection connection;
