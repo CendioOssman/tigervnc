@@ -1050,7 +1050,7 @@ void OptionsDialog::handleBoolParam(Fl_Widget *widget, void *data)
   core::BoolParameter *param;
 
   check = dynamic_cast<Fl_Check_Button*>(widget);
-  param = dynamic_cast<core::BoolParameter*>((core::VoidParameter*)data);
+  param = dynamic_cast<core::BoolParameter*>((core::Parameter*)data);
 
   assert(check);
   assert(param);
@@ -1065,7 +1065,7 @@ void OptionsDialog::handleIntParam(Fl_Widget *widget, void *data)
   core::IntParameter *param;
 
   input = dynamic_cast<Fl_Int_Input*>(widget);
-  param = dynamic_cast<core::IntParameter*>((core::VoidParameter*)data);
+  param = dynamic_cast<core::IntParameter*>((core::Parameter*)data);
 
   assert(input);
   assert(param);
@@ -1080,7 +1080,7 @@ void OptionsDialog::handleStringParam(Fl_Widget *widget, void *data)
   core::StringParameter *param;
 
   input = dynamic_cast<Fl_Input*>(widget);
-  param = dynamic_cast<core::StringParameter*>((core::VoidParameter*)data);
+  param = dynamic_cast<core::StringParameter*>((core::Parameter*)data);
 
   assert(input);
   assert(param);

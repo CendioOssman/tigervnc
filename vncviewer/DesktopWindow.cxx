@@ -127,11 +127,11 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
   cc->connectSignal(&rfb::CConnection::updateend, this,
                     &DesktopWindow::handleFirstUpdate);
 
-  fullScreen.connectSignal(&core::VoidParameter::config, this,
+  fullScreen.connectSignal(&core::Parameter::config, this,
                            &DesktopWindow::handleFullScreenConfig);
-  fullScreenMode.connectSignal(&core::VoidParameter::config, this,
+  fullScreenMode.connectSignal(&core::Parameter::config, this,
                                &DesktopWindow::handleFullScreenConfig);
-  fullScreenSelectedMonitors.connectSignal(&core::VoidParameter::config, this,
+  fullScreenSelectedMonitors.connectSignal(&core::Parameter::config, this,
                                            &DesktopWindow::handleFullScreenConfig);
 
   // Some events need to be caught globally
