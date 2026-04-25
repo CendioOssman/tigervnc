@@ -127,8 +127,10 @@ namespace core {
   //     Configuration parameter base-class.
 
   class Parameter : public Object {
-  public:
+  protected:
     Parameter(const char* name_, const char* desc_);
+
+  public:
     virtual  ~Parameter();
     const char* getName() const;
     const char* getDescription() const;
