@@ -527,7 +527,7 @@ void CConnection::serverInit(int width, int height,
   state_ = RFBSTATE_NORMAL;
   vlog.debug("Initialisation done");
 
-  emitSignal(&CConnection::ready);
+  emitSignal(&CConnection::connectionReady);
 
   assert(framebuffer != nullptr);
   assert(framebuffer->width() == server.width());

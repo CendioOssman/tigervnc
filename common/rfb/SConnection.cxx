@@ -634,7 +634,7 @@ void SConnection::desktopReady()
                            client.pf(), client.name());
   state_ = RFBSTATE_NORMAL;
 
-  emitSignal(&SConnection::ready, shared_);
+  emitSignal(&SConnection::connectionReady, shared_);
 }
 
 void SConnection::close(const char* /*reason*/)

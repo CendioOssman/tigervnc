@@ -201,13 +201,13 @@ namespace rfb {
 
     // Signals
 
-    // ready is emitted when the connection is fully established and
-    // standard messages can be sent. This is emitted before the initial
-    // FramebufferUpdateRequest giving listeners the chance to modify
-    // pixel format and settings. Listeners must also make sure to
-    // provided a valid framebuffer before returning from the signal
-    // handler.
-    core::signal<> ready;
+    // connectionReady is emitted when the connection is fully
+    // established and standard messages can be sent. This is emitted
+    // before the initial FramebufferUpdateRequest giving listeners the
+    // chance to modify pixel format and settings. Listeners must also
+    // make sure to provided a valid framebuffer before returning from
+    // the signal handler.
+    core::signal<> connectionReady;
 
     // resize is emitted whenever the framebuffer dimensions or the
     // screen layout changes. Listeners must make sure to provided a

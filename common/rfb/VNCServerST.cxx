@@ -188,7 +188,7 @@ void VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
 
   clients.push_front(client);
 
-  client->connectSignal(&SConnection::ready, this,
+  client->connectSignal(&SConnection::connectionReady, this,
                         [client, this](bool shared) {
                           clientReady(client, shared);
                         });

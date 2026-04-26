@@ -88,7 +88,8 @@ CConn::CConn()
   supportsDesktopResize = true;
   supportsLEDState = true;
 
-  connectSignal(&CConnection::ready, this, &CConn::connectionReady);
+  connectSignal(&CConnection::connectionReady, this,
+                &CConn::connectionReady);
 
   connectSignal(&CConnection::bellrequest, []() { fl_beep(); });
 
