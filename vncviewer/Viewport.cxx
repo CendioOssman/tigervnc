@@ -146,11 +146,11 @@ Viewport::Viewport(int w, int h, CConn* cc_)
     if (Fl::belowmouse() == this)
       showCursor();
   };
-  viewOnly.connectSignal(&core::Parameter::config, this,
+  viewOnly.connectSignal(&core::Parameter::valueChanged, this,
                          cursorCallback);
-  alwaysCursor.connectSignal(&core::Parameter::config, this,
+  alwaysCursor.connectSignal(&core::Parameter::valueChanged, this,
                              cursorCallback);
-  cursorType.connectSignal(&core::Parameter::config, this,
+  cursorType.connectSignal(&core::Parameter::valueChanged, this,
                            cursorCallback);
 
   cc->connectSignal(&rfb::CConnection::ledstate, this,
@@ -175,7 +175,7 @@ Viewport::Viewport(int w, int h, CConn* cc_)
   window()->add(contextMenu);
 
   setShortcutModifiers();
-  shortcutModifiers.connectSignal(&core::Parameter::config, this,
+  shortcutModifiers.connectSignal(&core::Parameter::valueChanged, this,
                                   &Viewport::setShortcutModifiers);
 }
 

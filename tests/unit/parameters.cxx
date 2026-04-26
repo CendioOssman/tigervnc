@@ -115,7 +115,7 @@ TEST(AliasParameter, signals)
   core::AliasParameter signals("aliasparam", "", &realparam);
   bool emitted;
 
-  signals.connectSignal(&core::Parameter::config, &signals,
+  signals.connectSignal(&core::Parameter::valueChanged, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -233,7 +233,7 @@ TEST(BoolParameter, signals)
   core::BoolParameter signals("boolparam", "", false);
   bool emitted;
 
-  signals.connectSignal(&core::Parameter::config, &signals,
+  signals.connectSignal(&core::Parameter::valueChanged, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -344,7 +344,7 @@ TEST(IntParameter, signals)
   core::IntParameter signals("intparam", "", 0);
   bool emitted;
 
-  signals.connectSignal(&core::Parameter::config, &signals,
+  signals.connectSignal(&core::Parameter::valueChanged, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -420,7 +420,7 @@ TEST(StringParameter, signals)
   core::StringParameter signals("stringparam", "", "");
   bool emitted;
 
-  signals.connectSignal(&core::Parameter::config, &signals,
+  signals.connectSignal(&core::Parameter::valueChanged, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -539,7 +539,7 @@ TEST(EnumParameter, signals)
   core::EnumParameter signals("enumparam", "", {"a", "b", "c"}, "a");
   bool emitted;
 
-  signals.connectSignal(&core::Parameter::config, &signals,
+  signals.connectSignal(&core::Parameter::valueChanged, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -673,7 +673,7 @@ TEST(BinaryParameter, signals)
   core::BinaryParameter signals("binaryparam", "", nullptr, 0);
   bool emitted;
 
-  signals.connectSignal(&core::Parameter::config, &signals,
+  signals.connectSignal(&core::Parameter::valueChanged, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -820,7 +820,7 @@ TEST(IntListParameter, signals)
   core::IntListParameter signals("listparam", "", {});
   bool emitted;
 
-  signals.connectSignal(&core::Parameter::config, &signals,
+  signals.connectSignal(&core::Parameter::valueChanged, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -921,7 +921,7 @@ TEST(StringListParameter, signals)
   core::StringListParameter signals("listparam", "", {});
   bool emitted;
 
-  signals.connectSignal(&core::Parameter::config, &signals,
+  signals.connectSignal(&core::Parameter::valueChanged, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;
@@ -1056,7 +1056,7 @@ TEST(EnumListParameter, signals)
   core::EnumListParameter signals("listparam", "", {"a", "b", "c"}, {"a"});
   bool emitted;
 
-  signals.connectSignal(&core::Parameter::config, &signals,
+  signals.connectSignal(&core::Parameter::valueChanged, &signals,
                         [&emitted] { emitted = true; });
 
   emitted = false;

@@ -144,7 +144,7 @@ namespace core {
 
     virtual void setImmutable();
 
-    signal<> config;
+    signal<> valueChanged;
 
   protected:
     friend class Configuration;
