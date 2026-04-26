@@ -179,7 +179,7 @@ CConn::CConn(const char *filename)
   out = new DummyOutStream;
   setStreams(in, out);
 
-  connectSignal(&CConnection::resize, this, [this]() {
+  connectSignal(&CConnection::screenLayoutChanged, this, [this]() {
     rfb::ModifiablePixelBuffer *pb;
 
     pb = new rfb::ManagedPixelBuffer((bool)translate ? fbPF : server.pf(),

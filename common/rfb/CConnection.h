@@ -209,10 +209,11 @@ namespace rfb {
     // the signal handler.
     core::signal<> connectionReady;
 
-    // resize is emitted whenever the framebuffer dimensions or the
-    // screen layout changes. Listeners must make sure to provided a
-    // valid framebuffer before returning from the signal handler.
-    core::signal<> resize;
+    // screenLayoutChanged is emitted whenever the framebuffer
+    // dimensions or the screen layout changes. Listeners must make sure
+    // to provided a valid framebuffer before returning from the signal
+    // handler.
+    core::signal<> screenLayoutChanged;
 
     // cursor is emitted whenever the server cursor sprited changes.
     core::signal<> cursorchange;

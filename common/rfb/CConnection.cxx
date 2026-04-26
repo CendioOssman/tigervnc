@@ -421,7 +421,7 @@ void CConnection::setDesktopSize(int w, int h)
                                            server.width(),
                                            server.height());
 
-  emitSignal(&CConnection::resize);
+  emitSignal(&CConnection::screenLayoutChanged);
   assert(framebuffer != nullptr);
   assert(framebuffer->width() == server.width());
   assert(framebuffer->height() == server.height());
@@ -449,7 +449,7 @@ void CConnection::setExtendedDesktopSize(unsigned reason,
                                            server.width(),
                                            server.height());
 
-  emitSignal(&CConnection::resize);
+  emitSignal(&CConnection::screenLayoutChanged);
   assert(framebuffer != nullptr);
   assert(framebuffer->width() == server.width());
   assert(framebuffer->height() == server.height());

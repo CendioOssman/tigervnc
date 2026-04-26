@@ -116,7 +116,7 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
 
   updateCaption();
 
-  cc->connectSignal(&rfb::CConnection::resize, this,
+  cc->connectSignal(&rfb::CConnection::screenLayoutChanged, this,
                     &DesktopWindow::resizeFramebuffer);
   cc->connectSignal(&rfb::CConnection::namechange, this,
                     &DesktopWindow::updateCaption);
