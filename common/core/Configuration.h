@@ -176,6 +176,8 @@ namespace core {
     std::string getDefaultStr() const override;
     std::string getValueStr() const override;
     operator bool() const;
+
+    signal<bool> valueChanged;
   protected:
     bool value;
     bool def_value;

@@ -312,6 +312,7 @@ void BoolParameter::setParam(bool b) {
   if (value == b) return;
   value = b;
   vlog.debug("Set %s(Bool) to %s", getName(), getValueStr().c_str());
+  emitSignal(&BoolParameter::valueChanged, value);
   emitSignal(&Parameter::valueChanged);
 }
 

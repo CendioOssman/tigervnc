@@ -232,17 +232,24 @@ TEST(BoolParameter, signals)
 {
   core::BoolParameter signals("boolparam", "", false);
   bool emitted;
+  bool emitted2;
 
   signals.connectSignal(&core::Parameter::valueChanged, &signals,
                         [&emitted] { emitted = true; });
+  signals.connectSignal(&core::BoolParameter::valueChanged, &signals,
+                        [&emitted2](bool) { emitted2 = true; });
 
   emitted = false;
+  emitted2 = false;
   signals.setParam(true);
   EXPECT_TRUE(emitted);
+  EXPECT_TRUE(emitted2);
 
   emitted = false;
+  emitted2 = false;
   signals.setParam(true);
   EXPECT_FALSE(emitted);
+  EXPECT_FALSE(emitted2);
 }
 
 TEST(IntParameter, values)
