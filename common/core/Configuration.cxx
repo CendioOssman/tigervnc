@@ -83,7 +83,8 @@ void Configuration::list(int width, int nameWidth) {
   for (Parameter* current: params) {
     std::string def_str = current->getDefaultStr();
     std::string desc_str = current->getDescription();
-    if (!def_str.empty())
+    if ((dynamic_cast<AliasParameter*>(current) == nullptr) &&
+        !def_str.empty())
       desc_str += " (default=" + def_str + ")";
     const char* desc = desc_str.c_str();
     fprintf(stderr,"  %-*s -", nameWidth, current->getName());
@@ -259,7 +260,7 @@ bool AliasParameter::setParam() {
 }
 
 std::string AliasParameter::getDefaultStr() const {
-  return "";
+  return param->getDefaultStr();
 }
 
 std::string AliasParameter::getValueStr() const {
