@@ -247,7 +247,11 @@ Parameter::setImmutable() {
 
 AliasParameter::AliasParameter(const char* name_, const char* desc_,
                                Parameter* param_)
-  : Parameter(name_, desc_), param(param_) {
+  : Parameter(name_, desc_), param(param_)
+{
+  param->connectSignal(&Parameter::config, this, [this]() {
+    emitSignal(&Parameter::config);
+  });
 }
 
 bool

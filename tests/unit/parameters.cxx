@@ -109,6 +109,40 @@ TEST(AliasParameter, immutable)
   EXPECT_EQ(realparam.getValueStr(), "0");
 }
 
+TEST(AliasParameter, signals)
+{
+  core::IntParameter realparam("intparam", "", 0);
+  core::AliasParameter signals("aliasparam", "", &realparam);
+  bool emitted;
+
+  signals.connectSignal(&core::Parameter::config, &signals,
+                        [&emitted] { emitted = true; });
+
+  emitted = false;
+  realparam.setParam(123);
+  EXPECT_TRUE(emitted);
+
+  emitted = false;
+  realparam.setParam(123);
+  EXPECT_FALSE(emitted);
+
+  emitted = false;
+  signals.setParam("-456");
+  EXPECT_TRUE(emitted);
+
+  emitted = false;
+  signals.setParam("-456");
+  EXPECT_FALSE(emitted);
+
+  emitted = false;
+  realparam.setParam(123);
+  EXPECT_TRUE(emitted);
+
+  emitted = false;
+  signals.setParam("123");
+  EXPECT_FALSE(emitted);
+}
+
 TEST(BoolParameter, values)
 {
   core::BoolParameter bools("boolparam", "", false);
