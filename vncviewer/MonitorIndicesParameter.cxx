@@ -29,9 +29,10 @@
 #include <stdlib.h>
 #include <stdexcept>
 
-#include "i18n.h"
 #include <QApplication>
 #include <QScreen>
+
+#include "i18n.h"
 #include <rfb/LogWriter.h>
 
 #include "MonitorIndicesParameter.h"
@@ -42,10 +43,10 @@ static LogWriter vlog("MonitorIndicesParameter");
 MonitorIndicesParameter::MonitorIndicesParameter(const char* name_, const char* desc_, const char* v)
 : StringParameter(name_, desc_, v) {}
 
-std::set<int> MonitorIndicesParameter::getParam()
+std::set<QScreen*> MonitorIndicesParameter::getParam()
 {
     bool valid = false;
-    std::set<int> indices;
+    std::set<QScreen*> indices;
     std::set<int> configIndices;
     std::vector<MonitorIndicesParameter::Monitor> monitors = fetchMonitors();
 
@@ -66,7 +67,7 @@ std::set<int> MonitorIndicesParameter::getParam()
     // Go through the monitors and see what indices are present in the config.
     for (int i = 0; i < ((int) monitors.size()); i++) {
         if (std::find(configIndices.begin(), configIndices.end(), i) != configIndices.end())
-            indices.insert(monitors[i].screenIndex);
+            indices.insert(monitors[i].screen);
     }
 
     return indices;
@@ -91,7 +92,7 @@ bool MonitorIndicesParameter::setParam(const char* v)
     return StringParameter::setParam(v);
 }
 
-bool MonitorIndicesParameter::setParam(std::set<int> indices)
+bool MonitorIndicesParameter::setParam(std::set<QScreen*> indices)
 {
     static const int BUF_MAX_LEN = 1024;
     char buf[BUF_MAX_LEN] = {0};
@@ -104,7 +105,10 @@ bool MonitorIndicesParameter::setParam(std::set<int> indices)
     }
 
     for (int i = 0; i < ((int) monitors.size()); i++) {
-        if (std::find(indices.begin(), indices.end(), monitors[i].screenIndex) != indices.end())
+      if (std::find_if(indices.begin(), indices.end(),
+                       [a=monitors[i].screen](QScreen* b) {
+                         return a->geometry() == b->geometry();
+                       }) != indices.end())
             configIndices.insert(i);
     }
 
@@ -195,13 +199,13 @@ std::vector<MonitorIndicesParameter::Monitor> MonitorIndicesParameter::fetchMoni
 
     // Start by creating a struct for every monitor.
     QList<QScreen*> screens = QApplication::screens();
-    for (int i = 0; i < screens.count(); i++) {
+    for (QScreen* screen : screens) {
         QRect geometry;
         Monitor monitor;
         bool match;
 
         // Get the properties of the monitor at the current index;
-        geometry = screens[i]->geometry();
+        geometry = screen->geometry();
         monitor.x = geometry.x();
         monitor.y = geometry.y();
         monitor.w = geometry.width();
@@ -225,7 +229,7 @@ std::vector<MonitorIndicesParameter::Monitor> MonitorIndicesParameter::fetchMoni
         if (match)
             continue;
 
-        monitor.screenIndex = i+1;
+        monitor.screen = screen;
         monitors.push_back(monitor);
     }
 

@@ -24,16 +24,18 @@
 
 #include <rfb/Configuration.h>
 
+class QScreen;
+
 class MonitorIndicesParameter: public rfb::StringParameter {
 public:
     MonitorIndicesParameter(const char* name_, const char* desc_, const char* v);
-    std::set<int> getParam();
-    bool setParam(std::set<int> indices);
+    std::set<QScreen*> getParam();
+    bool setParam(std::set<QScreen*> indices);
     bool setParam(const char* v) override;
 private:
     typedef struct {
         int x, y, w, h;
-        int screenIndex;
+        QScreen* screen;
     } Monitor;
 
     static bool parseIndices(const char* value, std::set<int> *indices,

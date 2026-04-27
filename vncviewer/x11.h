@@ -24,7 +24,9 @@ class QWidget;
 bool x11_has_wm();
 bool x11_wm_supports(const char* atom);
 
-void x11_fullscreen_screens(QWidget* window, int top, int bottom, int left, int right);
+bool x11_fullscreen_screens(QWidget* window,
+                            QScreen* top, QScreen* bottom,
+                            QScreen* left, QScreen* right);
 void x11_fullscreen(QWidget* window, bool enabled);
 
 void x11_win_may_grab(QWidget* win);

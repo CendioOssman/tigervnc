@@ -86,10 +86,17 @@ QMonitorArrangement::QMonitorArrangement(QWidget* parent)
 
 void QMonitorArrangement::apply()
 {
-  std::set<int> selectedScreens;
+  QList<QScreen*> screens = qApp->screens();
+  std::set<QScreen*> selectedScreens;
   for (auto const& c : qAsConst(checkBoxes)) {
     if (c->isChecked()) {
-      selectedScreens.insert(c->property("screenIndex").toInt() + 1);
+      QRect geometry = c->property("screenGeometry").toRect();
+      for (QScreen* screen : screens) {
+        if (screen->geometry() == geometry) {
+          selectedScreens.insert(screen);
+          break;
+        }
+      }
     }
   }
   ::fullScreenSelectedMonitors.setParam(selectedScreens);
@@ -102,13 +109,9 @@ void QMonitorArrangement::reset()
 
   QRect virtualGeometry = qApp->primaryScreen()->virtualGeometry();
   QList<QScreen*> screens = qApp->screens();
-  QList<int> availableScreens;
-  for (int i = 0; i < screens.length(); i++) {
-    availableScreens << i;
-  }
+  std::set<QScreen*> configScreens = fullScreenSelectedMonitors.getParam();
 
-  for (int& screenIndex : availableScreens) {
-    QScreen* screen = screens[screenIndex];
+  for (QScreen* screen : screens) {
     float rx = (screen->geometry().x() - virtualGeometry.x()) /
                virtualGeometry.width();
     float ry = (screen->geometry().y() - virtualGeometry.y()) /
@@ -124,8 +127,11 @@ void QMonitorArrangement::reset()
     CheckBox* newCheckBox = new CheckBox(this);
     newCheckBox->resize(lw, lh);
     newCheckBox->move(lx, ly);
-    newCheckBox->setProperty("screenIndex", screenIndex);
-    if (::fullScreenSelectedMonitors.getParam().count(screenIndex + 1))
+    newCheckBox->setProperty("screenGeometry", screen->geometry());
+    if (std::find_if(configScreens.begin(), configScreens.end(),
+                     [screen](QScreen* s) {
+                       return s->geometry() == screen->geometry();
+                     }) != configScreens.end())
       newCheckBox->setChecked(true);
     connect(newCheckBox, &QCheckBox::clicked, this, [=](bool checked) {
       newCheckBox->setProperty("included", false);
@@ -169,18 +175,12 @@ void QMonitorArrangement::moveCheckBoxes()
 {
   QRect virtualGeometry = qApp->primaryScreen()->virtualGeometry();
   QList<QScreen*> screens = qApp->screens();
-  QList<int> availableScreens;
-  for (int i = 0; i < screens.length(); i++) {
-    availableScreens << i;
-  }
-
   float ratio = qMin(((float)width() / virtualGeometry.width()),
                      ((float)height() / virtualGeometry.height()));
 
   selectedRect = QRect();
 
-  for (int& screenIndex : availableScreens) {
-    QScreen* screen = screens[screenIndex];
+  for (QScreen* screen : screens) {
     float rx = (screen->geometry().x() - virtualGeometry.x());
     float ry = (screen->geometry().y() - virtualGeometry.y());
     float rw = screen->geometry().width();
@@ -190,15 +190,16 @@ void QMonitorArrangement::moveCheckBoxes()
     int lx = rx * ratio;
     int ly = ry * ratio;
 
-    auto it = std::find_if(checkBoxes.begin(), checkBoxes.end(), [=](QCheckBox* const& c) {
-      return c->property("screenIndex") == screenIndex;
-    });
-    if (it != checkBoxes.end()) {
-      (*it)->resize(lw, lh);
-      (*it)->move(lx, ly);
-      if ((*it)->isChecked()) {
-        selectedRect = selectedRect.united((*it)->geometry());
-      }
+    for (QCheckBox* c : checkBoxes) {
+      if (c->property("screenGeometry") != screen->geometry())
+        continue;
+
+      c->resize(lw, lh);
+      c->move(lx, ly);
+      if (c->isChecked())
+        selectedRect = selectedRect.united(c->geometry());
+
+      break;
     }
   }
 

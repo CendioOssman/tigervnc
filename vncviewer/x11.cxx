@@ -29,10 +29,12 @@
 #else
 #include <QGuiApplication>
 #endif
+#include <QScreen>
 #include <QWidget>
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#include <X11/extensions/Xinerama.h>
 #include <X11/extensions/XInput2.h>
 
 #include <rfb/LogWriter.h>
@@ -115,24 +117,62 @@ bool x11_wm_supports(const char* atom)
   return false;
 }
 
-void x11_fullscreen_screens(QWidget* window, int top, int bottom, int left, int right)
+static bool x11_is_qscreen(QScreen* qscreen,
+                           XineramaScreenInfo* xscreen)
+{
+  return (qscreen->geometry().x() == xscreen->x_org &&
+          qscreen->geometry().y() == xscreen->y_org &&
+          qscreen->geometry().width() == xscreen->width &&
+          qscreen->geometry().height() == xscreen->height);
+}
+
+bool x11_fullscreen_screens(QWidget* window,
+                            QScreen* top, QScreen* bottom,
+                            QScreen* left, QScreen* right)
 {
   Display* display = qt_display();
   int screen = DefaultScreen(display);
+
+  XineramaScreenInfo* screens;
+  int i, number;
+
   XEvent event;
+  int xtop, xbottom, xleft, xright;
+
+  screens = XineramaQueryScreens(display, &number);
+  if (number == 0)
+    return false;
+
+  xtop = xbottom = xleft = xright = -1;
+  for (i = 0; i < number; i++) {
+    if (x11_is_qscreen(top, &screens[i]))
+      xtop = i;
+    if (x11_is_qscreen(bottom, &screens[i]))
+      xbottom = i;
+    if (x11_is_qscreen(left, &screens[i]))
+      xleft = i;
+    if (x11_is_qscreen(right, &screens[i]))
+      xright = i;
+  }
+
+  if ((xtop == -1) || (xbottom == -1) ||
+      (xleft == -1) || (xright == -1))
+    return false;
 
   event.xany.type = ClientMessage;
   event.xany.window = window->winId();
   event.xclient.message_type = XInternAtom(display, "_NET_WM_FULLSCREEN_MONITORS", 0);
   event.xclient.format = 32;
-  event.xclient.data.l[0] = top;
-  event.xclient.data.l[1] = bottom;
-  event.xclient.data.l[2] = left;
-  event.xclient.data.l[3] = right;
+  event.xclient.data.l[0] = xtop;
+  event.xclient.data.l[1] = xbottom;
+  event.xclient.data.l[2] = xleft;
+  event.xclient.data.l[3] = xright;
   event.xclient.data.l[4] = 0;
   XSendEvent(display, RootWindow(display, screen),
              0, SubstructureNotifyMask | SubstructureRedirectMask,
              &event);
+
+  return true;
 }
 
 void x11_fullscreen(QWidget* window, bool enabled)

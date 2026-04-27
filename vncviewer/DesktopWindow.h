@@ -75,12 +75,12 @@ public:
   void resize(const QSize& size);
 
   // Fullscreen
-  QList<int> fullscreenScreens() const;
+  QList<QScreen*> fullscreenScreens() const;
   QScreen* getCurrentScreen() const;
   void fullscreen(bool enabled);
   void fullscreenOnSelectedDisplay(QScreen* screen);
 #ifdef Q_OS_LINUX
-  void fullscreenOnSelectedDisplaysIndices(int top, int bottom, int left, int right); // screens indices
+  void fullscreenOnSelectedDisplaysIndices(QScreen* top, QScreen* bottom, QScreen* left, QScreen* right); // screens indices
 #endif
   void fullscreenOnSelectedDisplaysPixels(int vx, int vy, int vwidth, int vheight); // pixels
   void exitFullscreen();

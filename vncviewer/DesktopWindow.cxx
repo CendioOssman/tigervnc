@@ -595,32 +595,30 @@ bool DesktopWindow::eventFilter(QObject* watched, QEvent* event)
 }
 
 
-QList<int> DesktopWindow::fullscreenScreens() const
+QList<QScreen*> DesktopWindow::fullscreenScreens() const
 {
   QApplication* app = static_cast<QApplication*>(QApplication::instance());
   QList<QScreen*> screens = app->screens();
-  QList<int> applicableScreens;
+  QList<QScreen*> applicableScreens;
   if (!strcasecmp(fullScreenMode, "all")) {
     for (int i = 0; i < screens.length(); i++) {
-      applicableScreens << i;
+      applicableScreens << screens[i];
     }
   } else if (!strcasecmp(fullScreenMode, "selected")) {
-    for (int const& id : ::fullScreenSelectedMonitors.getParam()) {
-      int i = id - 1; // Screen ID in config is 1-origin.
-      if (i < screens.length())
-        applicableScreens << i;
+    for (QScreen* screen : ::fullScreenSelectedMonitors.getParam()) {
+      applicableScreens << screen;
     }
   } else {
     QScreen* cscreen = getCurrentScreen();
     for (int i = 0; i < screens.length(); i++) {
       if (screens[i] == cscreen) {
-        applicableScreens << i;
+        applicableScreens << screens[i];
         break;
       }
     }
   }
   if (applicableScreens.isEmpty()) {
-    applicableScreens << 0;
+    applicableScreens << screens[0];
   }
   return applicableScreens;
 }
@@ -652,32 +650,31 @@ void DesktopWindow::fullscreen(bool enabled)
 
     bool allMonitors = !strcasecmp(fullScreenMode, "all");
     bool selectedMonitors = !strcasecmp(fullScreenMode, "selected");
-    QList<int> selectedScreens = fullscreenScreens();
-    int top, bottom, left, right;
-    QScreen* selectedPrimaryScreen = screens[selectedScreens[0]];
+    QList<QScreen*> selectedScreens = fullscreenScreens();
+    QScreen* top, * bottom, * left, * right;
+    QScreen* selectedPrimaryScreen = selectedScreens[0];
     top = bottom = left = right = selectedScreens[0];
     if ((allMonitors || selectedMonitors) && selectedScreens.length() > 0) {
       int xmin = INT_MAX;
       int ymin = INT_MAX;
       int xmax = INT_MIN;
       int ymax = INT_MIN;
-      for (int& screenIndex : selectedScreens) {
-        QScreen* screen = screens[screenIndex];
+      for (QScreen* screen : selectedScreens) {
         QRect rect = screen->geometry();
         if (xmin > rect.x()) {
-          left = screenIndex;
+          left = screen;
           xmin = rect.x();
         }
         if (xmax < rect.x() + rect.width()) {
-          right = screenIndex;
+          right = screen;
           xmax = rect.x() + rect.width();
         }
         if (ymin > rect.y()) {
-          top = screenIndex;
+          top = screen;
           ymin = rect.y();
         }
         if (ymax < rect.y() + rect.height()) {
-          bottom = screenIndex;
+          bottom = screen;
           ymax = rect.y() + rect.height();
         }
       }
@@ -765,13 +762,8 @@ void DesktopWindow::fullscreenOnSelectedDisplay(QScreen* screen)
 }
 
 #ifdef Q_OS_LINUX
-void DesktopWindow::fullscreenOnSelectedDisplaysIndices(int top, int bottom, int left, int right) // screens indices
+void DesktopWindow::fullscreenOnSelectedDisplaysIndices(QScreen* top, QScreen* bottom, QScreen* left, QScreen* right) // screens indices
 {
-  vlog.debug("DesktopWindow::fullscreenOnSelectedDisplaysIndices top=%d bottom=%d left=%d right=%d",
-             top,
-             bottom,
-             left,
-             right);
 
   show();
 
