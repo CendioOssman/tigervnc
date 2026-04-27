@@ -137,7 +137,7 @@ Viewport::Viewport(int w, int h, CConn* cc_)
     updateTimer.repeat();
   });
 
-  cc->connectSignal(&rfb::CConnection::cursorchange, this,
+  cc->connectSignal(&rfb::CConnection::cursorChanged, this,
                     &Viewport::setCursor);
   // Make sure we have an initial blank cursor set
   setCursor();

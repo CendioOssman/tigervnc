@@ -461,7 +461,7 @@ void CConnection::setCursor(int width, int height,
 {
   Cursor cursor(width, height, hotspot, data);
   server.setCursor(cursor);
-  emitSignal(&CConnection::cursorchange);
+  emitSignal(&CConnection::cursorChanged);
 }
 
 void CConnection::setCursorPos(const core::Point& pos)

@@ -215,8 +215,9 @@ namespace rfb {
     // handler.
     core::signal<> screenLayoutChanged;
 
-    // cursor is emitted whenever the server cursor sprited changes.
-    core::signal<> cursorchange;
+    // cursorChanged is emitted whenever the server cursor sprited
+    // changes.
+    core::signal<> cursorChanged;
 
     // cursorposition is emitted whenever the server wants to "warp" the
     // cursor to a new position. A core::Point is included with the new
