@@ -93,7 +93,7 @@ static const int FAKE_GESTURE_KEY_CODE = 0x20001;
 Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
   : QWidget(parent), cc(cc_), frameBuffer(nullptr),
     lastPointerPos(0, 0), lastButtonMask(0),
-    mousePointerTimer(new QTimer(this)), keyboard(nullptr),
+    keyboard(nullptr),
     firstLEDState(true), pendingClientClipboard(false),
     menuCtrlKey(false), menuAltKey(false), cursor(nullptr)
 #ifdef QT_DEBUG
@@ -103,6 +103,8 @@ Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
   setAttribute(Qt::WA_OpaquePaintEvent, true);
   setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
+  setMouseTracking(true);
+
   setContentsMargins(0, 0, 0, 0);
   resize(w, h);
 
@@ -266,7 +268,7 @@ Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
   // We need to intercept keyboard events early
   QAbstractEventDispatcher::instance()->installNativeEventFilter(this);
 
-  frameBuffer = new PlatformPixelBuffer(width(), height());
+  frameBuffer = new PlatformPixelBuffer(w, h);
   assert(frameBuffer);
   cc->setFramebuffer(frameBuffer);
 
@@ -287,6 +289,7 @@ Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
   // Make sure we have an initial blank cursor set
   setCursor(0, 0, rfb::Point(0, 0), nullptr);
 
+  mousePointerTimer = new QTimer(this);
   mousePointerTimer->setInterval(::pointerEventInterval);
   mousePointerTimer->setSingleShot(true);
   connect(mousePointerTimer, &QTimer::timeout, this,
@@ -296,8 +299,6 @@ Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
   gettimeofday(&fpsLast, nullptr);
   fpsTimer.start(5000);
 #endif
-
-  setMouseTracking(true);
 }
 
 Viewport::~Viewport()
@@ -324,6 +325,7 @@ const rfb::PixelFormat &Viewport::getPreferredPF()
 
 // Copy the areas of the framebuffer that have been changed (damaged)
 // to the displayed window.
+
 void Viewport::updateWindow()
 {
   rfb::Rect r;
@@ -671,13 +673,10 @@ void Viewport::wheelEvent(QWheelEvent* event)
 
 void Viewport::focusInEvent(QFocusEvent* event)
 {
-  vlog.debug("Viewport::focusInEvent");
-
   flushPendingClipboard();
 
   // We may have gotten our lock keys out of sync with the server
   // whilst we didn't have focus. Try to sort this out.
-  vlog.debug("KeyboardHandler::pushLEDState");
   pushLEDState();
 
   // Resend Ctrl/Alt if needed
@@ -691,7 +690,6 @@ void Viewport::focusInEvent(QFocusEvent* event)
 
 void Viewport::focusOutEvent(QFocusEvent* event)
 {
-  vlog.debug("Viewport::focusOutEvent");
   // We won't get more key events, so reset our knowledge about keys
   resetKeyboard();
 
