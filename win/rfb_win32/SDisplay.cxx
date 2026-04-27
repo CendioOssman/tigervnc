@@ -107,7 +107,7 @@ SDisplay::SDisplay(rfb::VNCServer* server_)
   server->connectSignal(&rfb::VNCServer::clipboarddata, this,
                         &SDisplay::handleClipboardData);
 
-  server->connectSignal(&rfb::VNCServer::layoutrequest, this,
+  server->connectSignal(&rfb::VNCServer::screenLayoutRequested, this,
                         &SDisplay::layoutRequest);
 }
 

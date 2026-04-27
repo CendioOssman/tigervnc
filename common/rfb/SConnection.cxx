@@ -570,7 +570,8 @@ void SConnection::setDesktopSize(int fb_width, int fb_height,
     vlog.debug("Rejecting unauthorized framebuffer resize request");
     writer()->writeDesktopSize(reasonClient, resultProhibited);
   } else {
-    emitSignal(&SConnection::layoutrequest, fb_width, fb_height, layout);
+    emitSignal(&SConnection::screenLayoutRequested,
+               fb_width, fb_height, layout);
   }
 }
 

@@ -79,7 +79,7 @@ WaylandDesktop::WaylandDesktop(GMainLoop* loop_,
   server->connectSignal(&rfb::VNCServer::pointer, this,
                         &WaylandDesktop::pointerEvent);
 
-  server->connectSignal(&rfb::VNCServer::layoutrequest, this,
+  server->connectSignal(&rfb::VNCServer::screenLayoutRequested, this,
                         [this](int, int, rfb::ScreenSet) {
                           server->rejectScreenLayout(
                             rfb::resultProhibited);

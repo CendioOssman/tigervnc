@@ -218,7 +218,7 @@ void VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
                         });
 
   client->connectSignal(
-    &SConnection::layoutrequest, this,
+    &SConnection::screenLayoutRequested, this,
     [client, this](int width, int height, const ScreenSet& layout) {
       handleLayoutRequest(client, width, height, layout);
     });
@@ -729,7 +729,7 @@ void VNCServerST::handleLayoutRequest(VNCSConnectionST* requester,
   // FIXME: the desktop will call back to VNCServerST and an extra set
   // of ExtendedDesktopSize messages will be sent. This is okay
   // protocol-wise, but unnecessary.
-  emitSignal(&VNCServer::layoutrequest, width, height, layout);
+  emitSignal(&VNCServer::screenLayoutRequested, width, height, layout);
 }
 
 // Other public methods

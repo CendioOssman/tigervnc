@@ -70,7 +70,7 @@ PortalDesktop::PortalDesktop(rfb::VNCServer* server_)
   server->connectSignal(&rfb::VNCServer::pointer, this,
                         &PortalDesktop::pointerEvent);
 
-  server->connectSignal(&rfb::VNCServer::layoutrequest, this,
+  server->connectSignal(&rfb::VNCServer::screenLayoutRequested, this,
                         [this](int, int, rfb::ScreenSet) {
                           server->rejectScreenLayout(
                             rfb::resultProhibited);

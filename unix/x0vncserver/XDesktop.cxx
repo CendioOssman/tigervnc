@@ -253,7 +253,7 @@ XDesktop::XDesktop(rfb::VNCServer* server_, Display* dpy_,
                             selection.handleClientClipboardData(data);
                         });
 
-  server->connectSignal(&rfb::VNCServer::layoutrequest, this,
+  server->connectSignal(&rfb::VNCServer::screenLayoutRequested, this,
                         &XDesktop::layoutRequest);
 
   selection.connectSignal(&XSelection::announce, this,

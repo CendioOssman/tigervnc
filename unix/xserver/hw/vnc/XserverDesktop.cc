@@ -112,7 +112,7 @@ XserverDesktop::XserverDesktop(int screenIndex_,
                           vncHandleClipboardData(data_);
                         });
 
-  server->connectSignal(&rfb::VNCServer::layoutrequest, this,
+  server->connectSignal(&rfb::VNCServer::screenLayoutRequested, this,
                         &XserverDesktop::layoutRequest);
 
   server->connectSignal(&rfb::VNCServer::frame, this,
