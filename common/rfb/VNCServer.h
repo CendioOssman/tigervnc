@@ -106,18 +106,18 @@ namespace rfb {
     virtual const PixelBuffer* getPixelBuffer() const = 0;
 
     // requestClipboard() will result in a request to a client to
-    // transfer its clipboard data. A "clipboardData" signal will be
+    // transfer its clipboard data. A clipboardData signal will be
     // emitted once the data is available.
     virtual void requestClipboard() = 0;
 
     // announceClipboard() informs all clients of changes to the
-    // clipboard on the server. A client may later request the
-    // clipboard data by emitting a "clipboardRequested" signal.
+    // clipboard on the server. A client may later request the clipboard
+    // data, at which point a clipboardRequested signal will be emitted.
     virtual void announceClipboard(bool available) = 0;
 
     // sendClipboardData() transfers the clipboard data to a client
     // and should be called whenever a client has requested the
-    // clipboard via a "clipboardRequested" signal.
+    // clipboard via a clipboardRequested signal.
     virtual void sendClipboardData(const char* data) = 0;
 
     // bell() tells the server that it should make all clients make a bell sound.
