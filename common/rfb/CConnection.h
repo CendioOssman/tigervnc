@@ -219,10 +219,10 @@ namespace rfb {
     // changes.
     core::signal<> cursorChanged;
 
-    // cursorposition is emitted whenever the server wants to "warp" the
+    // cursorWarped is emitted whenever the server wants to "warp" the
     // cursor to a new position. A core::Point is included with the new
     // desired coordinates.
-    core::signal<core::Point> cursorposition;
+    core::signal<core::Point> cursorWarped;
 
     // name is emitted whenever the desktop name changes.
     core::signal<> namechange;

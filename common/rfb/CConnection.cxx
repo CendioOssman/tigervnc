@@ -466,7 +466,7 @@ void CConnection::setCursor(int width, int height,
 
 void CConnection::setCursorPos(const core::Point& pos)
 {
-  emitSignal(&CConnection::cursorposition, pos);
+  emitSignal(&CConnection::cursorWarped, pos);
 }
 
 void CConnection::setName(const char* name)
