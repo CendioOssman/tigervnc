@@ -123,10 +123,11 @@ namespace rfb {
     // bell() tells the server that it should make all clients make a bell sound.
     virtual void bell() = 0;
 
-    // approveConnection() is called some time after a "queryconnection"
-    // signal has been emitted, to accept or reject the connection. The
-    // accept argument should be true for acceptance, or false for
-    // rejection, in which case a string reason may also be given.
+    // approveConnection() is called some time after a
+    // connectionRequested signal has been emitted, to accept or reject
+    // the connection. The accept argument should be true for
+    // acceptance, or false for rejection, in which case a string reason
+    // may also be given.
     virtual void approveConnection(SConnection* client, bool accept,
                                    const char* reason = nullptr) = 0;
 
@@ -175,11 +176,11 @@ namespace rfb {
     // clients, and therefore the desktop can cease any expensive tasks.
     core::signal<> stopped;
 
-    // queryconnection is emitted when a connection has been
+    // connectionRequested is emitted when a connection has been
     // successfully authenticated. The relevant SConnection* object is
     // included. At some point later approveConnection() should be
     // called to either accept or reject the client.
-    core::signal<SConnection*> queryconnection;
+    core::signal<SConnection*> connectionRequested;
 
     // terminateRequested is emitted by the server when it wishes to
     // terminate itself, e.g. because it was configured to terminate

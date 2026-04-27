@@ -227,7 +227,7 @@ XDesktop::XDesktop(rfb::VNCServer* server_, Display* dpy_,
   server->connectSignal(&rfb::VNCServer::stopped, this,
                         &XDesktop::stop);
 
-  server->connectSignal(&rfb::VNCServer::queryconnection, this,
+  server->connectSignal(&rfb::VNCServer::connectionRequested, this,
                         &XDesktop::queryConnection);
 
   server->connectSignal(&rfb::VNCServer::terminateRequested,

@@ -64,7 +64,7 @@ WaylandDesktop::WaylandDesktop(GMainLoop* loop_,
 
   // FIXME: Implement this.
   server->connectSignal(
-    &rfb::VNCServer::queryconnection, this,
+    &rfb::VNCServer::connectionRequested, this,
     [this](rfb::SConnection* conn) {
       server->approveConnection(conn, false,
                                 "Unable to query the local user to "
