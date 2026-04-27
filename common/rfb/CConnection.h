@@ -235,8 +235,8 @@ namespace rfb {
     // have been decoded and updated.
     core::signal<> updateEnded;
 
-    // bellrequest is emitted when the server requests a bell alert.
-    core::signal<> bellrequest;
+    // bellRequested is emitted when the server requests a bell alert.
+    core::signal<> bellRequested;
 
     // ledstate is emitted when the current lock keys LED state changes.
     core::signal<> ledstate;

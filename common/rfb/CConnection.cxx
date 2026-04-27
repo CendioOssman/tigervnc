@@ -607,7 +607,7 @@ void CConnection::setColourMapEntries(int /*firstColour*/,
 
 void CConnection::bell()
 {
-  emitSignal(&CConnection::bellrequest);
+  emitSignal(&CConnection::bellRequested);
 }
 
 void CConnection::serverCutText(const char* str)

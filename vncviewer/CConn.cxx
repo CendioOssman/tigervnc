@@ -91,7 +91,7 @@ CConn::CConn()
   connectSignal(&CConnection::connectionReady, this,
                 &CConn::connectionReady);
 
-  connectSignal(&CConnection::bellrequest, []() { fl_beep(); });
+  connectSignal(&CConnection::bellRequested, []() { fl_beep(); });
 
   if (customCompressLevel)
     setCompressLevel(::compressLevel);
