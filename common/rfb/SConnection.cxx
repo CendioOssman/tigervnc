@@ -450,7 +450,7 @@ void SConnection::clientCutText(const char* str)
   if (!accessCheck(AccessCutText))
     return;
 
-  emitSignal(&SConnection::clipboardannounce, true);
+  emitSignal(&SConnection::clipboardAnnounced, true);
 }
 
 void SConnection::handleClipboardCaps(uint32_t flags, const uint32_t* lengths)
@@ -507,7 +507,7 @@ void SConnection::handleClipboardRequest(uint32_t flags)
   }
   if (!accessCheck(AccessCutText))
     return;
-  emitSignal(&SConnection::clipboardrequest);
+  emitSignal(&SConnection::clipboardRequested);
 }
 
 void SConnection::handleClipboardPeek()
@@ -524,11 +524,11 @@ void SConnection::handleClipboardNotify(uint32_t flags)
     hasLocalClipboard = false;
     if (!accessCheck(AccessCutText))
       return;
-    emitSignal(&SConnection::clipboardannounce, true);
+    emitSignal(&SConnection::clipboardAnnounced, true);
   } else {
     if (!accessCheck(AccessCutText))
       return;
-    emitSignal(&SConnection::clipboardannounce, false);
+    emitSignal(&SConnection::clipboardAnnounced, false);
   }
 }
 
@@ -553,7 +553,7 @@ void SConnection::handleClipboardProvide(uint32_t flags,
     return;
 
   // FIXME: Should probably verify that this data was actually requested
-  emitSignal(&SConnection::clipboarddata, clientClipboard.c_str());
+  emitSignal(&SConnection::clipboardData, clientClipboard.c_str());
 }
 
 void SConnection::setDesktopSize(int fb_width, int fb_height,
@@ -700,7 +700,7 @@ void SConnection::requestClipboard()
     return;
 
   if (hasRemoteClipboard) {
-    emitSignal(&SConnection::clipboarddata, clientClipboard.c_str());
+    emitSignal(&SConnection::clipboardData, clientClipboard.c_str());
     return;
   }
 
@@ -724,7 +724,7 @@ void SConnection::announceClipboard(bool available)
         (client.clipboardFlags() & rfb::clipboardProvide)) {
       vlog.debug("Attempting unsolicited clipboard transfer...");
       unsolicitedClipboardAttempt = true;
-      emitSignal(&SConnection::clipboardrequest);
+      emitSignal(&SConnection::clipboardRequested);
       return;
     }
 
@@ -735,7 +735,7 @@ void SConnection::announceClipboard(bool available)
   }
 
   if (available)
-    emitSignal(&SConnection::clipboardrequest);
+    emitSignal(&SConnection::clipboardRequested);
 }
 
 void SConnection::sendClipboardData(const char* data)

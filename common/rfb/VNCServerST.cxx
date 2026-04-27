@@ -204,15 +204,15 @@ void VNCServerST::addSocket(network::Socket* sock, bool outgoing, AccessRights a
       pointerEvent(client, pos, buttonMask);
     });
 
-  client->connectSignal(&SConnection::clipboardrequest, this,
+  client->connectSignal(&SConnection::clipboardRequested, this,
                         [client, this]() {
                           handleClipboardRequest(client);
                         });
-  client->connectSignal(&SConnection::clipboardannounce, this,
+  client->connectSignal(&SConnection::clipboardAnnounced, this,
                         [client, this](bool available) {
                           handleClipboardAnnounce(client, available);
                         });
-  client->connectSignal(&SConnection::clipboarddata, this,
+  client->connectSignal(&SConnection::clipboardData, this,
                         [client, this](const char* data) {
                           handleClipboardData(client, data);
                         });
@@ -783,7 +783,7 @@ void VNCServerST::handleClipboardRequest(VNCSConnectionST* client)
 {
   clipboardRequestors.push_back(client);
   if (clipboardRequestors.size() == 1)
-    emitSignal(&VNCServer::clipboardrequest);
+    emitSignal(&VNCServer::clipboardRequested);
 }
 
 void VNCServerST::handleClipboardAnnounce(VNCSConnectionST* client,
@@ -800,7 +800,7 @@ void VNCServerST::handleClipboardAnnounce(VNCSConnectionST* client,
     clipboardClient = client;
   }
 
-  emitSignal(&VNCServer::clipboardannounce, available);
+  emitSignal(&VNCServer::clipboardAnnounced, available);
 }
 
 void VNCServerST::handleClipboardData(VNCSConnectionST* client,
@@ -814,7 +814,7 @@ void VNCServerST::handleClipboardData(VNCSConnectionST* client,
     return;
   }
 
-  emitSignal(&VNCServer::clipboarddata, data);
+  emitSignal(&VNCServer::clipboardData, data);
 }
 
 void VNCServerST::frameTimeout()

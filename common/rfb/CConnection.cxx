@@ -617,7 +617,7 @@ void CConnection::serverCutText(const char* str)
   serverClipboard = str;
   hasRemoteClipboard = true;
 
-  emitSignal(&CConnection::clipboardannounce, true);
+  emitSignal(&CConnection::clipboardAnnounced, true);
 }
 
 void CConnection::setLEDState(unsigned int state)
@@ -687,7 +687,7 @@ void CConnection::handleClipboardRequest(uint32_t flags)
     vlog.debug("Ignoring unexpected clipboard request");
     return;
   }
-  emitSignal(&CConnection::clipboardrequest);
+  emitSignal(&CConnection::clipboardRequested);
 }
 
 void CConnection::handleClipboardPeek()
@@ -702,9 +702,9 @@ void CConnection::handleClipboardNotify(uint32_t flags)
 
   if (flags & rfb::clipboardUTF8) {
     hasLocalClipboard = false;
-    emitSignal(&CConnection::clipboardannounce, true);
+    emitSignal(&CConnection::clipboardAnnounced, true);
   } else {
-    emitSignal(&CConnection::clipboardannounce, false);
+    emitSignal(&CConnection::clipboardAnnounced, false);
   }
 }
 
@@ -726,13 +726,13 @@ void CConnection::handleClipboardProvide(uint32_t flags,
   hasRemoteClipboard = true;
 
   // FIXME: Should probably verify that this data was actually requested
-  emitSignal(&CConnection::clipboarddata, serverClipboard.c_str());
+  emitSignal(&CConnection::clipboardData, serverClipboard.c_str());
 }
 
 void CConnection::requestClipboard()
 {
   if (hasRemoteClipboard) {
-    emitSignal(&CConnection::clipboarddata, serverClipboard.c_str());
+    emitSignal(&CConnection::clipboardData, serverClipboard.c_str());
     return;
   }
 
@@ -751,7 +751,7 @@ void CConnection::announceClipboard(bool available)
       (server.clipboardFlags() & rfb::clipboardProvide)) {
     vlog.debug("Attempting unsolicited clipboard transfer...");
     unsolicitedClipboardAttempt = true;
-    emitSignal(&CConnection::clipboardrequest);
+    emitSignal(&CConnection::clipboardRequested);
     return;
   }
 
@@ -761,7 +761,7 @@ void CConnection::announceClipboard(bool available)
   }
 
   if (available)
-    emitSignal(&CConnection::clipboardrequest);
+    emitSignal(&CConnection::clipboardRequested);
 }
 
 void CConnection::sendClipboardData(const char* data)

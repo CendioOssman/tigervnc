@@ -241,25 +241,25 @@ namespace rfb {
     // ledstate is emitted when the current lock keys LED state changes.
     core::signal<> ledstate;
 
-    // clipboardrequest is emitted whenever the server requests the
+    // clipboardRequested is emitted whenever the server requests the
     // client to send over its clipboard data. It will only be sent
     // after the client has first announced a clipboard change via
     // announceClipboard().
-    core::signal<> clipboardrequest;
+    core::signal<> clipboardRequested;
 
-    // clipboardannounce is emitted to indicate a change in the
+    // clipboardAnnounced is emitted to indicate a change in the
     // clipboard on the server. Call requestClipboard() to access the
     // actual data. A boolean is included to indicate if the clipboard
     // is available or not.
-    core::signal<bool> clipboardannounce;
+    core::signal<bool> clipboardAnnounced;
 
-    // clipboarddata is emitted when the server has sent over the
+    // clipboardData is emitted when the server has sent over the
     // clipboard data as a result of a previous call to
     // requestClipboard(). Note that this function might never be called
     // if the clipboard data was no longer available when the server
     // received the request. A const char* string is included that
     // contains the actual clipboard contents.
-    core::signal<const char*> clipboarddata;
+    core::signal<const char*> clipboardData;
 
   protected:
 

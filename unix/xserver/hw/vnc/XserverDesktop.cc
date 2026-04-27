@@ -101,13 +101,13 @@ XserverDesktop::XserverDesktop(int screenIndex_,
   server->connectSignal(&rfb::VNCServer::pointer, this,
                         &XserverDesktop::pointerEvent);
 
-  server->connectSignal(&rfb::VNCServer::clipboardrequest,
+  server->connectSignal(&rfb::VNCServer::clipboardRequested,
                         []() { vncHandleClipboardRequest(); });
-  server->connectSignal(&rfb::VNCServer::clipboardannounce,
+  server->connectSignal(&rfb::VNCServer::clipboardAnnounced,
                         [](bool available) {
                           vncHandleClipboardAnnounce(available);
                         });
-  server->connectSignal(&rfb::VNCServer::clipboarddata,
+  server->connectSignal(&rfb::VNCServer::clipboardData,
                         [](const char* data_) {
                           vncHandleClipboardData(data_);
                         });

@@ -173,25 +173,25 @@ namespace rfb {
     // The cursor position and button state is included.
     core::signal<core::Point, uint16_t> pointer;
 
-    // clipboardrequest is emitted whenever the client requests the
+    // clipboardRequested is emitted whenever the client requests the
     // server to send over its clipboard data. It will only be sent
     // after the server has first announced a clipboard change via
     // announceClipboard().
-    core::signal<> clipboardrequest;
+    core::signal<> clipboardRequested;
 
-    // clipboardannounce is emitted to indicate a change in the
+    // clipboardAnnounced is emitted to indicate a change in the
     // clipboard on the client. Call requestClipboard() to access the
     // actual data. A boolean is included to indicate if the clipboard
     // is available or not.
-    core::signal<bool> clipboardannounce;
+    core::signal<bool> clipboardAnnounced;
 
-    // clipboarddata is emitted when the client has sent over the
+    // clipboardData is emitted when the client has sent over the
     // clipboard data as a result of a previous call to
     // requestClipboard(). Note that this function might never be called
     // if the clipboard data was no longer available when the client
     // received the request. A const char* string is included that
     // contains the actual clipboard contents.
-    core::signal<const char*> clipboarddata;
+    core::signal<const char*> clipboardData;
 
     // screenLayoutRequested is emitted whenever the client requests the
     // to reconfigure the framebuffer and/or the layout of screens. The

@@ -238,16 +238,16 @@ XDesktop::XDesktop(rfb::VNCServer* server_, Display* dpy_,
   server->connectSignal(&rfb::VNCServer::pointer, this,
                         &XDesktop::pointerEvent);
 
-  server->connectSignal(&rfb::VNCServer::clipboardrequest, this,
+  server->connectSignal(&rfb::VNCServer::clipboardRequested, this,
                         [this]() {
                           selection.requestSelectionData();
                         });
-  server->connectSignal(&rfb::VNCServer::clipboardannounce, this,
+  server->connectSignal(&rfb::VNCServer::clipboardAnnounced, this,
                         [this](bool available) {
                           if (available)
                             server->requestClipboard();
                         });
-  server->connectSignal(&rfb::VNCServer::clipboarddata, this,
+  server->connectSignal(&rfb::VNCServer::clipboardData, this,
                         [this](const char* data) {
                           if (data)
                             selection.handleClientClipboardData(data);
@@ -256,11 +256,11 @@ XDesktop::XDesktop(rfb::VNCServer* server_, Display* dpy_,
   server->connectSignal(&rfb::VNCServer::screenLayoutRequested, this,
                         &XDesktop::layoutRequest);
 
-  selection.connectSignal(&XSelection::announce, this,
+  selection.connectSignal(&XSelection::clipboardAnnounced, this,
                           [this](bool available) {
                             server->announceClipboard(available);
                           });
-  selection.connectSignal(&XSelection::dataready, this,
+  selection.connectSignal(&XSelection::clipboardData, this,
                           [this](const char* data) {
                             server->sendClipboardData(data);
                           });

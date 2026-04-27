@@ -31,8 +31,8 @@ public:
   void requestSelectionData();
   void handleClientClipboardData(const char* data);
 
-  core::signal<bool> announce;
-  core::signal<const char*> dataready;
+  core::signal<bool> clipboardAnnounced;
+  core::signal<const char*> clipboardData;
 
 private:
   Atom probeProperty;

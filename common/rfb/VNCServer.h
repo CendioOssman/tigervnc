@@ -106,18 +106,18 @@ namespace rfb {
     virtual const PixelBuffer* getPixelBuffer() const = 0;
 
     // requestClipboard() will result in a request to a client to
-    // transfer its clipboard data. A "clipboarddata" signal will be
+    // transfer its clipboard data. A "clipboardData" signal will be
     // emitted once the data is available.
     virtual void requestClipboard() = 0;
 
     // announceClipboard() informs all clients of changes to the
     // clipboard on the server. A client may later request the
-    // clipboard data by emitting a "clipboardrequest" signal.
+    // clipboard data by emitting a "clipboardRequested" signal.
     virtual void announceClipboard(bool available) = 0;
 
     // sendClipboardData() transfers the clipboard data to a client
     // and should be called whenever a client has requested the
-    // clipboard via a "clipboardrequest" signal.
+    // clipboard via a "clipboardRequested" signal.
     virtual void sendClipboardData(const char* data) = 0;
 
     // bell() tells the server that it should make all clients make a bell sound.
@@ -195,25 +195,25 @@ namespace rfb {
     // The cursor position and button state is included.
     core::signal<core::Point, uint16_t> pointer;
 
-    // clipboardrequest is emitted whenever the client requests the
+    // clipboardRequested is emitted whenever the client requests the
     // server to send over its clipboard data. It will only be sent
     // after the server has first announced a clipboard change via
     // announceClipboard().
-    core::signal<> clipboardrequest;
+    core::signal<> clipboardRequested;
 
-    // clipboardannounce is emitted to indicate a change in the
+    // clipboardAnnounced is emitted to indicate a change in the
     // clipboard on the client. Call requestClipboard() to access the
     // actual data. A boolean is included to indicate if the clipboard
     // is available or not.
-    core::signal<bool> clipboardannounce;
+    core::signal<bool> clipboardAnnounced;
 
-    // clipboarddata is emitted when the client has sent over the
+    // clipboardData is emitted when the client has sent over the
     // clipboard data as a result of a previous call to
     // requestClipboard(). Note that this function might never be called
     // if the clipboard data was no longer available when the client
     // received the request. A const char* string is included that
     // contains the actual clipboard contents.
-    core::signal<const char*> clipboarddata;
+    core::signal<const char*> clipboardData;
 
     // screenLayoutRequested is emitted whenever the client requests the
     // to reconfigure the framebuffer and/or the layout of screens. The

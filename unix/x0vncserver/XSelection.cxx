@@ -131,7 +131,7 @@ void XSelection::handleSelectionOwnerChange(Window owner, Atom selection, Time t
 void XSelection::announceSelection(Atom selection)
 {
   announcedSelection = selection;
-  emitSignal(&XSelection::announce, selection != None);
+  emitSignal(&XSelection::clipboardAnnounced, selection != None);
 }
 
 void XSelection::requestSelectionData()
@@ -189,11 +189,11 @@ void XSelection::selectionNotify(XSelectionEvent* ev, Atom type, int format,
 
     if (type == xaUTF8_STRING) {
       std::string result = core::convertLF((char*)data, nitems);
-      emitSignal(&XSelection::dataready, result.c_str());
+      emitSignal(&XSelection::clipboardData, result.c_str());
     } else if (type == XA_STRING) {
       std::string result = core::convertLF((char*)data, nitems);
       result = core::latin1ToUTF8(result.data(), result.length());
-      emitSignal(&XSelection::dataready, result.c_str());
+      emitSignal(&XSelection::clipboardData, result.c_str());
     }
   }
 }

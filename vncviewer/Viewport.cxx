@@ -156,11 +156,11 @@ Viewport::Viewport(int w, int h, CConn* cc_)
   cc->connectSignal(&rfb::CConnection::ledstate, this,
                     &Viewport::handleLEDState);
 
-  cc->connectSignal(&rfb::CConnection::clipboardrequest, this,
+  cc->connectSignal(&rfb::CConnection::clipboardRequested, this,
                     &Viewport::handleClipboardRequest);
-  cc->connectSignal(&rfb::CConnection::clipboardannounce, this,
+  cc->connectSignal(&rfb::CConnection::clipboardAnnounced, this,
                     &Viewport::handleClipboardAnnounce);
-  cc->connectSignal(&rfb::CConnection::clipboarddata, this,
+  cc->connectSignal(&rfb::CConnection::clipboardData, this,
                     &Viewport::handleClipboardData);
 
   contextMenu = new Fl_Menu_Button(0, 0, 0, 0);

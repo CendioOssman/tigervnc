@@ -100,11 +100,11 @@ SDisplay::SDisplay(rfb::VNCServer* server_)
   server->connectSignal(&rfb::VNCServer::pointer, this,
                         &SDisplay::pointerEvent);
 
-  server->connectSignal(&rfb::VNCServer::clipboardrequest, this,
+  server->connectSignal(&rfb::VNCServer::clipboardRequested, this,
                         &SDisplay::handleClipboardRequest);
-  server->connectSignal(&rfb::VNCServer::clipboardannounce, this,
+  server->connectSignal(&rfb::VNCServer::clipboardAnnounced, this,
                         &SDisplay::handleClipboardAnnounce);
-  server->connectSignal(&rfb::VNCServer::clipboarddata, this,
+  server->connectSignal(&rfb::VNCServer::clipboardData, this,
                         &SDisplay::handleClipboardData);
 
   server->connectSignal(&rfb::VNCServer::screenLayoutRequested, this,
