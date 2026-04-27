@@ -472,7 +472,7 @@ void CConnection::setCursorPos(const core::Point& pos)
 void CConnection::setName(const char* name)
 {
   server.setName(name);
-  emitSignal(&CConnection::namechange);
+  emitSignal(&CConnection::nameChanged);
 }
 
 void CConnection::fence(uint32_t flags, unsigned len, const uint8_t data[])

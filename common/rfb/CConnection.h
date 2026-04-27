@@ -224,8 +224,8 @@ namespace rfb {
     // desired coordinates.
     core::signal<core::Point> cursorWarped;
 
-    // name is emitted whenever the desktop name changes.
-    core::signal<> namechange;
+    // nameChanged is emitted whenever the desktop name changes.
+    core::signal<> nameChanged;
 
     // updatestart is emitted when a new update of the framebuffer is
     // about to be start, before any pixels have been decoded.
