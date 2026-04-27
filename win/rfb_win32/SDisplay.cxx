@@ -92,7 +92,7 @@ SDisplay::SDisplay(rfb::VNCServer* server_)
   server->connectSignal(&rfb::VNCServer::queryconnection, this,
                         &SDisplay::queryConnection);
 
-  server->connectSignal(&rfb::VNCServer::terminate, this,
+  server->connectSignal(&rfb::VNCServer::terminateRequested, this,
                         [this]() { SetEvent(terminateEvent); });
 
   server->connectSignal(&rfb::VNCServer::key, this,

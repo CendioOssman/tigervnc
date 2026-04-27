@@ -230,7 +230,7 @@ XDesktop::XDesktop(rfb::VNCServer* server_, Display* dpy_,
   server->connectSignal(&rfb::VNCServer::queryconnection, this,
                         &XDesktop::queryConnection);
 
-  server->connectSignal(&rfb::VNCServer::terminate,
+  server->connectSignal(&rfb::VNCServer::terminateRequested,
                         []() { kill(getpid(), SIGTERM); });
 
   server->connectSignal(&rfb::VNCServer::key, this,

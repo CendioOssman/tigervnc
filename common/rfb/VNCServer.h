@@ -181,10 +181,10 @@ namespace rfb {
     // called to either accept or reject the client.
     core::signal<SConnection*> queryconnection;
 
-    // terminate is emitted by the server when it wishes to terminate
-    // itself, e.g. because it was configured to terminate when no one
-    // is using it.
-    core::signal<> terminate;
+    // terminateRequested is emitted by the server when it wishes to
+    // terminate itself, e.g. because it was configured to terminate
+    // when no one is using it.
+    core::signal<> terminateRequested;
 
     // key is emitted whenever the client sends a key press or release
     // message. The KeySym, key code, and a boolean if it is a press,

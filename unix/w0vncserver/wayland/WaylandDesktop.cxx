@@ -71,7 +71,7 @@ WaylandDesktop::WaylandDesktop(GMainLoop* loop_,
                                 "accept the connection.");
     });
 
-  server->connectSignal(&rfb::VNCServer::terminate,
+  server->connectSignal(&rfb::VNCServer::terminateRequested,
                         []() { kill(getpid(), SIGTERM); });
 
   server->connectSignal(&rfb::VNCServer::key, this,
