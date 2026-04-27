@@ -623,7 +623,7 @@ void CConnection::serverCutText(const char* str)
 void CConnection::setLEDState(unsigned int state)
 {
   server.setLEDState(state);
-  emitSignal(&CConnection::ledstate);
+  emitSignal(&CConnection::ledStateChanged);
 }
 
 void CConnection::handleClipboardCaps(uint32_t flags,

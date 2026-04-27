@@ -51,7 +51,7 @@ namespace wayland {
     uint32_t keysymToKeycode(int keycode);
     uint32_t rfbcodeToKeycode(uint32_t rfbcode);
 
-    core::signal<> ledstate;
+    core::signal<> ledStateChanged;
 
   private:
     void handleKeyMap(uint32_t format, int32_t fd, uint32_t size);

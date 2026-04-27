@@ -125,7 +125,7 @@ bool Keyboard::updateState(uint32_t keycode, bool down,
   *group = xkb_state_serialize_mods(context->state, XKB_STATE_LAYOUT_EFFECTIVE);
 
   if (changed)
-    emitSignal(&Keyboard::ledstate);
+    emitSignal(&Keyboard::ledStateChanged);
 
   return changed != 0;
 }
@@ -236,7 +236,7 @@ void Keyboard::handleModifiers(uint32_t /* serial */,
                         modsLocked, group, 0, 0);
 
   if (changed & XKB_STATE_LEDS)
-    emitSignal(&Keyboard::ledstate);
+    emitSignal(&Keyboard::ledStateChanged);
 }
 
 unsigned int Keyboard::getLEDState()

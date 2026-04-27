@@ -36,7 +36,7 @@ namespace wayland {
     wl_seat* getSeat() const { return seat; }
     Keyboard* getKeyboard() const { return keyboard; }
 
-    core::signal<> ledstate;
+    core::signal<> ledStateChanged;
 
   private:
     void seatCapabilities(uint32_t capabilities);

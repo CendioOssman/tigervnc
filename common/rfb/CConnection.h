@@ -238,8 +238,9 @@ namespace rfb {
     // bellRequested is emitted when the server requests a bell alert.
     core::signal<> bellRequested;
 
-    // ledstate is emitted when the current lock keys LED state changes.
-    core::signal<> ledstate;
+    // ledStateChanged is emitted when the current lock keys LED state
+    // changes.
+    core::signal<> ledStateChanged;
 
     // clipboardRequested is emitted whenever the server requests the
     // client to send over its clipboard data. It will only be sent

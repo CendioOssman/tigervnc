@@ -153,7 +153,7 @@ Viewport::Viewport(int w, int h, CConn* cc_)
   cursorType.connectSignal(&core::Parameter::valueChanged, this,
                            cursorCallback);
 
-  cc->connectSignal(&rfb::CConnection::ledstate, this,
+  cc->connectSignal(&rfb::CConnection::ledStateChanged, this,
                     &Viewport::handleLEDState);
 
   cc->connectSignal(&rfb::CConnection::clipboardRequested, this,

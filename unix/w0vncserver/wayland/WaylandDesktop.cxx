@@ -88,7 +88,7 @@ WaylandDesktop::WaylandDesktop(GMainLoop* loop_,
   display = new wayland::Display();
   output = new wayland::Output(display);
   seat = new wayland::Seat(display);
-  seat->connectSignal(&wayland::Seat::ledstate, this,
+  seat->connectSignal(&wayland::Seat::ledStateChanged, this,
                       &WaylandDesktop::ledState);
 }
 
