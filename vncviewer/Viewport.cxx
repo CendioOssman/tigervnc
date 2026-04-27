@@ -124,11 +124,11 @@ Viewport::Viewport(int w, int h, CConn* cc_)
   assert(frameBuffer);
   cc->setFramebuffer(frameBuffer);
 
-  cc->connectSignal(&rfb::CConnection::updatestart, this, [this]() {
+  cc->connectSignal(&rfb::CConnection::updateStarted, this, [this]() {
     // Update the screen prematurely for very slow updates
     updateTimer.start(1000);
   });
-  cc->connectSignal(&rfb::CConnection::updateend, this, [this] {
+  cc->connectSignal(&rfb::CConnection::updateEnded, this, [this] {
     updateTimer.stop();
     updateWindow();
   });

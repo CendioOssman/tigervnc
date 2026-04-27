@@ -124,7 +124,7 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
   cc->connectSignal(&rfb::CConnection::cursorWarped, this,
                     &DesktopWindow::setCursorPos);
 
-  cc->connectSignal(&rfb::CConnection::updateend, this,
+  cc->connectSignal(&rfb::CConnection::updateEnded, this,
                     &DesktopWindow::handleFirstUpdate);
 
   fullScreen.connectSignal(&core::Parameter::valueChanged, this,

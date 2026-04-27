@@ -564,7 +564,7 @@ void CConnection::framebufferUpdateStart()
 
   requestNewUpdate();
 
-  emitSignal(&CConnection::updatestart);
+  emitSignal(&CConnection::updateStarted);
 }
 
 void CConnection::framebufferUpdateEnd()
@@ -590,7 +590,7 @@ void CConnection::framebufferUpdateEnd()
     firstUpdate = false;
   }
 
-  emitSignal(&CConnection::updateend);
+  emitSignal(&CConnection::updateEnded);
 }
 
 bool CConnection::dataRect(const core::Rect& r, int encoding)

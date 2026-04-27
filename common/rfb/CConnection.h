@@ -227,13 +227,13 @@ namespace rfb {
     // nameChanged is emitted whenever the desktop name changes.
     core::signal<> nameChanged;
 
-    // updatestart is emitted when a new update of the framebuffer is
+    // updateStarted is emitted when a new update of the framebuffer is
     // about to be start, before any pixels have been decoded.
-    core::signal<> updatestart;
+    core::signal<> updateStarted;
 
-    // updateend is emitted when all pixels of a framebuffer update have
-    // been decoded and updated.
-    core::signal<> updateend;
+    // updateEnded is emitted when all pixels of a framebuffer update
+    // have been decoded and updated.
+    core::signal<> updateEnded;
 
     // bellrequest is emitted when the server requests a bell alert.
     core::signal<> bellrequest;
