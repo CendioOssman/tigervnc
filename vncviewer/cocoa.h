@@ -54,7 +54,7 @@ bool cocoa_is_mouse_exited(const void *event);
 bool cocoa_is_mouse_moved(const void *event);
 
 void cocoa_get_mouse_properties(const void *event, int *x, int *y, int *buttonMask);
-bool cocoa_displays_have_separate_spaces();
+bool cocoa_screens_have_separate_spaces();
 void cocoa_set_overlay_property(WId winid);
 void cocoa_dim(NSView *view, bool enabled);
 

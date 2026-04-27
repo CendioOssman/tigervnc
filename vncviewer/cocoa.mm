@@ -378,7 +378,7 @@ void cocoa_get_mouse_properties(const void *event, int *x, int *y, int *buttonMa
   *buttonMask = [nsevent buttonMask];
 }
 
-bool cocoa_displays_have_separate_spaces()
+bool cocoa_screens_have_separate_spaces()
 {
   return [NSScreen screensHaveSeparateSpaces];
 }

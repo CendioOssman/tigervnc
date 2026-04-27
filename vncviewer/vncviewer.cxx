@@ -46,6 +46,7 @@
 #include <QFileInfo>
 #include <QIcon>
 #include <QMessageBox>
+#include <QProcess>
 #include <QTimer>
 
 #if defined(__APPLE__)
