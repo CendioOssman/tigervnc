@@ -559,6 +559,16 @@ void DesktopWindow::mouseReleaseEvent()
     grabPointer();
 }
 
+void DesktopWindow::showEvent(QShowEvent* event)
+{
+#if !defined(WIN32) && !defined(__APPLE__)
+  // Request ability to grab keyboard under Xwayland
+  x11_win_may_grab(this);
+#endif
+
+  QWidget::showEvent(event);
+}
+
 void DesktopWindow::closeEvent(QCloseEvent* e)
 {
   QWidget::closeEvent(e);

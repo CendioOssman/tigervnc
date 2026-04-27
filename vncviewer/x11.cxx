@@ -152,6 +152,24 @@ void x11_fullscreen(QWidget* window, bool enabled)
              &event);
 }
 
+void x11_win_may_grab(QWidget* win)
+{
+  Display* display = qt_display();
+  int screen = DefaultScreen(display);
+  XEvent e;
+
+  e.xany.type = ClientMessage;
+  e.xany.window = win->winId();
+  e.xclient.message_type = XInternAtom (display, "_XWAYLAND_MAY_GRAB_KEYBOARD", 0);
+  e.xclient.format = 32;
+  e.xclient.data.l[0] = 1;
+  e.xclient.data.l[1] = 0;
+  e.xclient.data.l[2] = 0;
+  e.xclient.data.l[3] = 0;
+  e.xclient.data.l[4] = 0;
+  XSendEvent(display, RootWindow(display, screen), 0, SubstructureNotifyMask | SubstructureRedirectMask, &e);
+}
+
 bool x11_grab_keyboard(QWidget* win)
 {
   Display* display = qt_display();

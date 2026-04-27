@@ -103,6 +103,7 @@ protected:
   void leaveEvent(QEvent* event) override;
   void mouseMoveEvent();
   void mouseReleaseEvent();
+  void showEvent(QShowEvent* event) override;
   void closeEvent(QCloseEvent* e) override;
 
   bool eventFilter(QObject* obj, QEvent* event) override;
