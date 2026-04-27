@@ -828,7 +828,7 @@ void DesktopWindow::exitFullscreen()
   setWindowFlag(Qt::WindowStaysOnTopHint, false);
   setWindowFlag(Qt::FramelessWindowHint, false);
 #ifdef __APPLE__
-  cocoa_update_window_level(this, false);
+  cocoa_normal_window_level(this);
 #endif
 
   showNormal();
@@ -869,7 +869,7 @@ void DesktopWindow::grabKeyboard()
 #elif defined(__APPLE__)
   int ret;
 
-  ret = cocoa_capture_displays(fullscreenScreens());
+  ret = cocoa_capture_displays(this);
   if (ret != 0) {
     vlog.error(_("Failure grabbing keyboard"));
     return;
@@ -900,7 +900,7 @@ void DesktopWindow::ungrabKeyboard()
 #if defined(WIN32)
   win32_disable_lowlevel_keyboard((HWND)winId());
 #elif defined(__APPLE__)
-  cocoa_release_displays();
+  cocoa_release_displays(this);
 #else
   // Qt has a grab so lets not mess with it
   if (keyboardGrabber() != nullptr)

@@ -289,60 +289,87 @@ CGImageRef cocoa_create_bitmap(int width, int height, unsigned char *data)
   return iref;
 }
 
-int cocoa_capture_displays(QList<int> screens)
+int cocoa_capture_displays(QWidget* win)
 {
-  CGDirectDisplayID displays[16];
-  CGDisplayCount count;
-  if (CGGetActiveDisplayList(16, displays, &count) != kCGErrorSuccess) {
-    return 0;
-  }
+  NSView *view;
+  NSWindow *nsw;
 
-  if (screens.size() == (int)count) {
-    CGCaptureAllDisplays();
-  }
-  else {
-    for (int dix = 0; dix < (int)count; dix++) {
-      if (screens.contains(dix)) {
-        if (CGDisplayCapture(displays[dix]) != kCGErrorSuccess) {
-          return 0;
-        }
-      } else {
-        // A display might have been captured with the previous
-        // monitor selection. In that case we don't want to keep
-        // it when its no longer inside the window_rect.
-        CGDisplayRelease(displays[dix]);
-      }
+  QList<QScreen*> screens;
+
+  view = (NSView*)win->winId();
+  nsw = [view window];
+
+  screens = qApp->screens();
+  for (QScreen* screen : screens) {
+    NSScreen *nsscreen;
+    CGDirectDisplayID display;
+
+    nsscreen = screen->nativeInterface<QNativeInterface::QCocoaScreen>()->nativeScreen();
+    display = [(NSNumber*)[nsscreen deviceDescription][@"NSScreenNumber"] unsignedIntValue];
+
+    if (win->geometry().contains(screen->geometry())) {
+      if (CGDisplayCapture(display) != kCGErrorSuccess)
+        return 1;
+
+    } else {
+      // A display might have been captured with the previous
+      // monitor selection. In that case we don't want to keep
+      // it when its no longer inside the window_rect.
+      CGDisplayRelease(display);
     }
   }
 
   captured = true;
-  
+
+  if ([nsw level] == CGShieldingWindowLevel())
+    return 0;
+
+  [nsw setLevel:CGShieldingWindowLevel()];
+
+  // We're not getting put in front of the shielding window in many
+  // cases on macOS 13, despite setLevel: being documented as also
+  // pushing the window to the front. So let's explicitly move it.
+  [nsw orderFront:nsw];
+
   return 0;
 }
 
-void cocoa_release_displays()
+void cocoa_release_displays(QWidget* win)
 {
-  CGReleaseAllDisplays();
+  NSView *view;
+  NSWindow *nsw;
+  int newlevel;
+
+  if (captured)
+    CGReleaseAllDisplays();
+
   captured = false;
+
+  view = (NSView*)win->winId();
+  nsw = [view window];
+
+  // Someone else has already changed the level of this window
+  if ([nsw level] != CGShieldingWindowLevel())
+    return;
+
+  // FIXME: what's the right level for Qt?
+  newlevel = NSNormalWindowLevel;
+
+  // Only change if different as the level change also moves the window
+  // to the top of that level.
+  if ([nsw level] != newlevel)
+    [nsw setLevel:newlevel];
 }
 
-void cocoa_update_window_level(QWidget *widget, bool enabled, bool shielding)
+void cocoa_normal_window_level(QWidget *win)
 {
-  NSView* view = cocoa_get_view(widget);
-  NSWindow *window = [view window];
-  if (enabled) {
-    if (shielding) {
-      [window setLevel:CGShieldingWindowLevel()];
-    } else {
-      [window setLevel:NSStatusWindowLevel];
-    }
-    // We're not getting put in front of the shielding window in many
-    // cases on macOS 13, despite setLevel: being documented as also
-    // pushing the window to the front. So let's explicitly move it.
-    [window orderFront:window];
-  } else {
-    [window setLevel:NSNormalWindowLevel];
-  }
+  NSView *view;
+  NSWindow *nsw;
+
+  view = (NSView*)win->winId();
+  nsw = [view window];
+
+  [nsw setLevel:NSNormalWindowLevel];
 }
 
 bool cocoa_is_mouse_entered(const void *event)

@@ -44,10 +44,10 @@ CGImage *cocoa_create_bitmap(int width, int height, unsigned char *framebuffer);
 void cocoa_draw(NSView *view, int x, int y, int w, int h);
 void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h);
 
-int cocoa_capture_displays(QList<int> screens);
-void cocoa_release_displays();
+int cocoa_capture_displays(QWidget* win);
+void cocoa_release_displays(QWidget* win);
 
-void cocoa_update_window_level(QWidget *widget, bool enabled, bool shielding = false);
+void cocoa_normal_window_level(QWidget *win);
 
 bool cocoa_is_mouse_entered(const void *event);
 bool cocoa_is_mouse_exited(const void *event);
