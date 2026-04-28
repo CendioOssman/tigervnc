@@ -155,7 +155,7 @@ EncodeManager::EncodeManager(SConnection* conn_)
   encoders[encoderZRLE] = new ZRLEEncoder(conn);
   encoders[encoderJPEG] = new JPEGEncoder(conn);
 
-  recentChangeTimer.connectSignal(&core::Timer::timer, this,
+  recentChangeTimer.connectSignal(&core::Timer::timeout, this,
                                   &EncodeManager::refreshTimeout);
 
   updates = 0;

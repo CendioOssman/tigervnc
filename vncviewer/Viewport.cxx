@@ -132,7 +132,7 @@ Viewport::Viewport(int w, int h, CConn* cc_)
     updateTimer.stop();
     updateWindow();
   });
-  updateTimer.connectSignal(&core::Timer::timer, this, [this]() {
+  updateTimer.connectSignal(&core::Timer::timeout, this, [this]() {
     updateWindow();
     updateTimer.repeat();
   });

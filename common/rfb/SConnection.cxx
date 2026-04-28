@@ -62,7 +62,7 @@ SConnection::SConnection(network::Socket* s, AccessRights accessRights_)
     hasLocalClipboard(false),
     unsolicitedClipboardAttempt(false)
 {
-  authFailureTimer.connectSignal(&core::Timer::timer, this,
+  authFailureTimer.connectSignal(&core::Timer::timeout, this,
                                  &SConnection::authFailureTimeout);
 
   defaultMajorVersion = 3;

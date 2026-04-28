@@ -92,9 +92,9 @@ namespace core {
     //   time.
     bool isBefore(timeval other);
 
-    // timer
+    // timeout
     //   Emitted when the Timer times out.
-    signal<> timer;
+    signal<> timeout;
 
   protected:
     timeval dueTime, lastDueTime;

@@ -60,7 +60,7 @@ QueryConnectDialog::QueryConnectDialog(Display* dpy_,
   resize(maxWidth + pad, y+reject.height()+pad);
   setBorderWidth(1);
   refreshTimeout();
-  timer.connectSignal(&core::Timer::timer, this,
+  timer.connectSignal(&core::Timer::timeout, this,
                       &QueryConnectDialog::queryTimeout);
   timer.start(1000);
 }

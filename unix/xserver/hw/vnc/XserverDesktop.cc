@@ -120,7 +120,7 @@ XserverDesktop::XserverDesktop(int screenIndex_,
 
   setFramebuffer(width, height, fbptr, stride_);
 
-  queryConnectTimer.connectSignal(&core::Timer::timer, this,
+  queryConnectTimer.connectSignal(&core::Timer::timeout, this,
                                   &XserverDesktop::queryTimeout);
 
   for (network::SocketListener* listener : listeners)

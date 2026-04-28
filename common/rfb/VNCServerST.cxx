@@ -97,13 +97,13 @@ VNCServerST::VNCServerST(const char* name_)
 {
   slog.debug("Creating single-threaded server %s", name.c_str());
 
-  idleTimer.connectSignal(&core::Timer::timer, this,
+  idleTimer.connectSignal(&core::Timer::timeout, this,
                           &VNCServerST::idleTimeout);
-  disconnectTimer.connectSignal(&core::Timer::timer, this,
+  disconnectTimer.connectSignal(&core::Timer::timeout, this,
                                 &VNCServerST::disconnectTimeout);
-  connectTimer.connectSignal(&core::Timer::timer, this,
+  connectTimer.connectSignal(&core::Timer::timeout, this,
                              &VNCServerST::connectTimeout);
-  frameTimer.connectSignal(&core::Timer::timer, this,
+  frameTimer.connectSignal(&core::Timer::timeout, this,
                            &VNCServerST::frameTimeout);
 
   // FIXME: Do we really want to kick off these right away?
