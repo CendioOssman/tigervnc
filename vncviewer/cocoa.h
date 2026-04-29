@@ -19,50 +19,21 @@
 #ifndef __VNCVIEWER_COCOA_H__
 #define __VNCVIEWER_COCOA_H__
 
-#include <QList>
-#include <QWindow>
-#ifdef __OBJC__
-@class NSWindow;
-@class NSView;
-@class NSCursor;
-#else
-class NSWindow;
-class NSView;
-class NSCursor;
-#endif
-class CGImage;
-class CGContext;
 class QWidget;
-class QCursor;
 
-NSView *cocoa_create_view(QWidget *parent, CGImage *bitmap);
-NSView *cocoa_get_view(QWidget *widget);
 void cocoa_beep();
-void cocoa_resize(NSView *view, CGImage *iref);
-NSCursor *cocoa_set_cursor(NSView *view, const QCursor *cursor);
-CGImage *cocoa_create_bitmap(int width, int height, unsigned char *framebuffer);
-void cocoa_draw(NSView *view, int x, int y, int w, int h);
-void cocoa_invalidate_region(NSView *view, int x, int y, int w, int h);
 
 int cocoa_capture_displays(QWidget* win);
 void cocoa_release_displays(QWidget* win);
 
-void cocoa_normal_window_level(QWidget *win);
-
-bool cocoa_is_mouse_entered(const void *event);
-bool cocoa_is_mouse_exited(const void *event);
-bool cocoa_is_mouse_moved(const void *event);
-
-void cocoa_get_mouse_properties(const void *event, int *x, int *y, int *buttonMask);
 bool cocoa_screens_have_separate_spaces();
-void cocoa_set_overlay_property(WId winid);
-void cocoa_dim(NSView *view, bool enabled);
 
 int cocoa_scrollbar_size();
 
-void cocoa_prevent_native_fullscreen(QWidget* w);
+void cocoa_prevent_native_full_screen(QWidget* win);
 
-void cocoa_fix_warping();
+void cocoa_event_delay(double seconds);
+
 void cocoa_set_cursor_pos(int x, int y);
 
 #endif

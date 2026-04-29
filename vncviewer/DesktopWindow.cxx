@@ -188,7 +188,7 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   viewport->setFocus();
 
 #ifdef __APPLE__
-  cocoa_prevent_native_fullscreen(this);
+  cocoa_prevent_native_full_screen(this);
 #endif
 
   connect(qApp, &QGuiApplication::screenAdded, this, &DesktopWindow::updateMonitorsFullscreen);
