@@ -23,6 +23,7 @@ add_executable(vncviewer
   OptionsPage.cxx
   OptionsSecurity.cxx
   PlatformPixelBuffer.cxx
+  Toast.cxx
   Viewport.cxx
   i18n.cxx
   mainloop.cxx

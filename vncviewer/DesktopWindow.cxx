@@ -41,6 +41,7 @@
 #include "parameters.h"
 #include "CConn.h"
 #include "Surface.h"
+#include "Toast.h"
 #include "Viewport.h"
 #include "touch.h"
 
@@ -67,7 +68,7 @@ static std::set<DesktopWindow *> instances;
 
 DesktopWindow::DesktopWindow(int w, int h, const char *name,
                              CConn* cc_)
-  : Fl_Window(w, h), cc(cc_), offscreen(nullptr), overlay(nullptr),
+  : Fl_Window(w, h), cc(cc_), offscreen(nullptr),
     firstUpdate(true),
     delayedFullscreen(false), sentDesktopSize(false),
     pendingRemoteResize(false), lastResize({0, 0}),
@@ -94,6 +95,8 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   vscroll->callback(handleScroll, this);
 
   group->end();
+
+  toast = new Toast(this);
 
   callback([](Fl_Widget*, void*) { disconnect(); });
 
@@ -206,7 +209,7 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   repositionWidgets();
 
   // Show hint about menu key
-  Fl::add_timeout(0.5, menuOverlay, this);
+  Fl::add_timeout(0.5, menuToast, this);
 
   // By default we get a slight delay when we warp the pointer, something
   // we don't want or we'll get jerky movement
@@ -229,12 +232,11 @@ DesktopWindow::~DesktopWindow()
   // again later when this object is already gone.
   Fl::remove_timeout(handleResizeTimeout, this);
   Fl::remove_timeout(handleFullscreenTimeout, this);
-  Fl::remove_timeout(menuOverlay, this);
-  Fl::remove_timeout(updateOverlay, this);
+  Fl::remove_timeout(menuToast, this);
 
   OptionsDialog::removeCallback(handleOptions);
 
-  delete overlay;
+  delete toast;
   delete offscreen;
 
   instances.erase(this);
@@ -423,8 +425,8 @@ void DesktopWindow::draw()
       update_child(*viewport);
   }
 
-  // Overlay (if active)
-  if (overlay) {
+  // Toast (if active)
+  if (toast->shown()) {
     int ox, oy, ow, oh;
     int sx, sy, sw, sh;
 
@@ -441,7 +443,7 @@ void DesktopWindow::draw()
         Fl::screen_xywh(sx, sy, sw, sh, idx);
 
         // The screen with the smallest index that are enclosed by
-        // the viewport will be used for showing the overlay.
+        // the viewport will be used for showing the toast.
         screenRect.setXYWH(sx, sy, sw, sh);
         if (screenRect.enclosed_by(windowRect)) {
           foundEnclosedScreen = true;
@@ -464,18 +466,18 @@ void DesktopWindow::draw()
       sw = w();
     }
 
-    ox = X = sx + (sw - overlay->width()) / 2;
+    ox = X = sx + (sw - toast->width()) / 2;
     oy = Y = sy + 50;
-    ow = overlay->width();
-    oh = overlay->height();
+    ow = toast->width();
+    oh = toast->height();
 
     fl_clip_box(ox, oy, ow, oh, ox, oy, ow, oh);
 
     if ((ow != 0) && (oh != 0)) {
       if (offscreen)
-        overlay->blend(offscreen, ox - X, oy - Y, ox, oy, ow, oh, overlayAlpha);
+        toast->draw(offscreen, ox - X, oy - Y, ox, oy, ow, oh);
       else
-        overlay->blend(ox - X, oy - Y, ox, oy, ow, oh, overlayAlpha);
+        toast->draw(ox - X, oy - Y, ox, oy, ow, oh);
     }
   }
 
@@ -591,138 +593,29 @@ void DesktopWindow::resize(int x, int y, int w, int h)
 }
 
 
-void DesktopWindow::menuOverlay(void* data)
+void DesktopWindow::menuToast(void* data)
 {
   DesktopWindow *self;
 
   self = (DesktopWindow*)data;
 
   if (strcmp((const char*)menuKey, "") != 0) {
-    self->setOverlay(_("Press %s to open the context menu"),
-                     (const char*)menuKey);
+    self->setToast(_("Press %s to open the context menu"),
+                   (const char*)menuKey);
   }
 }
 
-void DesktopWindow::setOverlay(const char* text, ...)
+void DesktopWindow::setToast(const char* text, ...)
 {
-  const Fl_Fontsize fontsize = 16;
-  const int margin = 10;
-
   va_list ap;
   char textbuf[1024];
-
-  Fl_Image_Surface *surface;
-
-  Fl_RGB_Image* imageText;
-  Fl_RGB_Image* image;
-
-  unsigned char* buffer;
-
-  int x, y;
-  int w, h;
-
-  unsigned char* a;
-  const unsigned char* b;
-
-  delete overlay;
-  Fl::remove_timeout(updateOverlay, this);
 
   va_start(ap, text);
   vsnprintf(textbuf, sizeof(textbuf), text, ap);
   textbuf[sizeof(textbuf)-1] = '\0';
   va_end(ap);
 
-#if !defined(WIN32) && !defined(__APPLE__)
-  // FLTK < 1.3.5 crashes if fl_gc is unset
-  if (!fl_gc)
-    fl_gc = XDefaultGC(fl_display, 0);
-#endif
-
-  fl_font(FL_HELVETICA, fontsize);
-  w = 0;
-  fl_measure(textbuf, w, h);
-
-  // Margins
-  w += margin * 2 * 2;
-  h += margin * 2;
-
-  surface = new Fl_Image_Surface(w, h);
-  surface->set_current();
-
-  fl_rectf(0, 0, w, h, 0, 0, 0);
-
-  fl_font(FL_HELVETICA, fontsize);
-  fl_color(FL_WHITE);
-  fl_draw(textbuf, 0, 0, w, h, FL_ALIGN_CENTER);
-
-  imageText = surface->image();
-  delete surface;
-
-  Fl_Display_Device::display_device()->set_current();
-
-  buffer = new unsigned char[w * h * 4];
-  image = new Fl_RGB_Image(buffer, w, h, 4);
-
-  a = buffer;
-  for (x = 0;x < image->w() * image->h();x++) {
-    a[0] = a[1] = a[2] = 0x40;
-    a[3] = 0xcc;
-    a += 4;
-  }
-
-  a = buffer;
-  b = (const unsigned char*)imageText->data()[0];
-  for (y = 0;y < h;y++) {
-    for (x = 0;x < w;x++) {
-      unsigned char alpha;
-      alpha = *b;
-      a[0] = (unsigned)a[0] * (255 - alpha) / 255 + alpha;
-      a[1] = (unsigned)a[1] * (255 - alpha) / 255 + alpha;
-      a[2] = (unsigned)a[2] * (255 - alpha) / 255 + alpha;
-      a[3] = 255 - (255 - a[3]) * (255 - alpha) / 255;
-      a += 4;
-      b += imageText->d();
-    }
-    if (imageText->ld() != 0)
-      b += imageText->ld() - w * imageText->d();
-  }
-
-  delete imageText;
-
-  overlay = new Surface(image);
-  overlayAlpha = 0;
-  gettimeofday(&overlayStart, nullptr);
-
-  delete image;
-  delete [] buffer;
-
-  Fl::add_timeout(1.0/60, updateOverlay, this);
-}
-
-void DesktopWindow::updateOverlay(void *data)
-{
-  DesktopWindow *self;
-  unsigned elapsed;
-
-  self = (DesktopWindow*)data;
-
-  elapsed = rfb::msSince(&self->overlayStart);
-
-  if (elapsed < 500) {
-    self->overlayAlpha = (unsigned)255 * elapsed / 500;
-    Fl::add_timeout(1.0/60, updateOverlay, self);
-  } else if (elapsed < 3500) {
-    self->overlayAlpha = 255;
-    Fl::add_timeout(3.0, updateOverlay, self);
-  } else if (elapsed < 4000) {
-    self->overlayAlpha = (unsigned)255 * (4000 - elapsed) / 500;
-    Fl::add_timeout(1.0/60, updateOverlay, self);
-  } else {
-    delete self->overlay;
-    self->overlay = nullptr;
-  }
-
-  self->damage(FL_DAMAGE_USER1);
+  toast->setText(textbuf);
 }
 
 

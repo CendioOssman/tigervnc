@@ -26,6 +26,7 @@ namespace rfb { class ModifiablePixelBuffer; }
 
 class CConn;
 class Surface;
+class Toast;
 class Viewport;
 
 class Fl_Scrollbar;
@@ -76,11 +77,10 @@ public:
   void fullscreen_on();
 
 private:
-  static void menuOverlay(void *data);
+  static void menuToast(void *data);
 
-  void setOverlay(const char *text, ...)
+  void setToast(const char *text, ...)
     __attribute__((__format__ (__printf__, 2, 3)));
-  static void updateOverlay(void *data);
 
   static int fltkDispatch(int event, Fl_Window *win);
   static int fltkHandle(int event);
@@ -112,9 +112,7 @@ private:
   Fl_Scrollbar *hscroll, *vscroll;
   Viewport *viewport;
   Surface *offscreen;
-  Surface *overlay;
-  unsigned char overlayAlpha;
-  struct timeval overlayStart;
+  Toast* toast;
 
   bool firstUpdate;
   bool delayedFullscreen;
