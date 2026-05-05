@@ -55,8 +55,8 @@ protected:
       }
 
       int sz = 5;
-      for(int i = 0; i < width(); i += sz) {
-        for(int j = 0; j < height(); j += sz){
+      for (int i = 0; i < width(); i += sz) {
+        for (int j = 0; j < height(); j += sz) {
           p.setBrush(QColor((((i+j) / sz) % 2) ? color1 : color2));
           p.drawRect(QRect(i+w, j+w, sz, sz));
         }
@@ -76,19 +76,23 @@ QMonitorArrangement::QMonitorArrangement(QWidget* parent)
   setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
 
   QList<QScreen*> screens = qApp->screens();
-  for(auto& screen : screens) {
-    connect(screen, &QScreen::geometryChanged, this, &QMonitorArrangement::moveCheckBoxes);
-    connect(screen, &QScreen::virtualGeometryChanged, this, &QMonitorArrangement::moveCheckBoxes);
+  for (QScreen* screen : screens) {
+    connect(screen, &QScreen::geometryChanged, this,
+            &QMonitorArrangement::moveCheckBoxes);
+    connect(screen, &QScreen::virtualGeometryChanged, this,
+            &QMonitorArrangement::moveCheckBoxes);
   }
-  connect(qApp, &QGuiApplication::screenAdded, this, [=](){ hide(); reset(); show(); });
-  connect(qApp, &QGuiApplication::screenRemoved, this, [=](){ hide(); reset(); show(); });
+  connect(qApp, &QGuiApplication::screenAdded, this,
+          [this](){ hide(); reset(); show(); });
+  connect(qApp, &QGuiApplication::screenRemoved, this,
+          [this](){ hide(); reset(); show(); });
 }
 
 void QMonitorArrangement::apply()
 {
   QList<QScreen*> screens = qApp->screens();
   std::set<QScreen*> selectedScreens;
-  for (auto const& c : qAsConst(checkBoxes)) {
+  for (QCheckBox* c : checkBoxes) {
     if (c->isChecked()) {
       QRect geometry = c->property("screenGeometry").toRect();
       for (QScreen* screen : screens) {
@@ -133,27 +137,28 @@ void QMonitorArrangement::reset()
                        return s->geometry() == screen->geometry();
                      }) != configScreens.end())
       newCheckBox->setChecked(true);
-    connect(newCheckBox, &QCheckBox::clicked, this, [=](bool checked) {
-      newCheckBox->setProperty("included", false);
-      newCheckBox->repaint();
+    connect(newCheckBox, &QCheckBox::clicked, this,
+            [this, newCheckBox](bool checked) {
+              newCheckBox->setProperty("included", false);
+              newCheckBox->repaint();
 
-      if (!checked) {
-        bool noChecked = true;
-        for (auto const& c : qAsConst(checkBoxes)) {
-          if (c->isChecked()) {
-            noChecked = false;
-            break;
-          }
-        }
-        if (noChecked) {
-          // we cannot have no screen selected
-          newCheckBox->setChecked(true);
-          newCheckBox->repaint();
-        }
-      }
+              if (!checked) {
+                bool noChecked = true;
+                for (QCheckBox* c : checkBoxes) {
+                  if (c->isChecked()) {
+                    noChecked = false;
+                    break;
+                  }
+                }
+                if (noChecked) {
+                  // we cannot have no screen selected
+                  newCheckBox->setChecked(true);
+                  newCheckBox->repaint();
+                }
+              }
 
-      moveCheckBoxes();
-    });
+              moveCheckBoxes();
+            });
 
     checkBoxes.append(newCheckBox);
   }
@@ -208,7 +213,7 @@ void QMonitorArrangement::moveCheckBoxes()
 
 void QMonitorArrangement::updatePartiallyChecked()
 {
-  for (auto& checkBox : checkBoxes) {
+  for (QCheckBox* checkBox : checkBoxes) {
     if (checkBox->property("included").toBool()) {
       checkBox->setProperty("included", false);
       checkBox->repaint();
