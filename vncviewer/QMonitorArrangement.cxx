@@ -84,35 +84,6 @@ QMonitorArrangement::QMonitorArrangement(QWidget* parent)
   connect(qApp, &QGuiApplication::screenRemoved, this, [=](){ hide(); reset(); show(); });
 }
 
-void QMonitorArrangement::getGlobalScreensGeometry(QList<int> screens, int& xmin, int& ymin, qreal& w, qreal& h)
-{
-  QList<QScreen*> appScreens = qApp->screens();
-  xmin = INT_MAX;
-  ymin = INT_MAX;
-  int xmax = INT_MIN;
-  int ymax = INT_MIN;
-  for (int& screenIndex : screens) {
-    QScreen* screen = appScreens[screenIndex];
-    QRect rect = screen->geometry();
-
-    if (xmin > rect.x()) {
-      xmin = rect.x();
-    }
-    if (xmax < rect.x() + rect.width()) {
-      xmax = rect.x() + rect.width();
-    }
-    if (ymin > rect.y()) {
-      ymin = rect.y();
-    }
-    if (ymax < rect.y() + rect.height()) {
-      ymax = rect.y() + rect.height();
-    }
-  }
-
-  w = xmax - xmin;
-  h = ymax - ymin;
-}
-
 void QMonitorArrangement::apply()
 {
   std::set<int> selectedScreens;
@@ -129,24 +100,21 @@ void QMonitorArrangement::reset()
   qDeleteAll(checkBoxes);
   checkBoxes.clear();
 
+  QRect virtualGeometry = qApp->primaryScreen()->virtualGeometry();
   QList<QScreen*> screens = qApp->screens();
   QList<int> availableScreens;
   for (int i = 0; i < screens.length(); i++) {
     availableScreens << i;
   }
 
-  int xmin = INT_MAX;
-  int ymin = INT_MAX;
-  qreal w = INT_MAX;
-  qreal h = INT_MAX;
-  getGlobalScreensGeometry(availableScreens, xmin, ymin, w, h);
-
   for (int& screenIndex : availableScreens) {
     QScreen* screen = screens[screenIndex];
-    qreal rx = (screen->geometry().x() - xmin) / w;
-    qreal ry = (screen->geometry().y() - ymin) / h;
-    qreal rw = screen->geometry().width() / w;
-    qreal rh = screen->geometry().height() / h;
+    float rx = (screen->geometry().x() - virtualGeometry.x()) /
+               virtualGeometry.width();
+    float ry = (screen->geometry().y() - virtualGeometry.y()) /
+               virtualGeometry.height();
+    float rw = screen->geometry().width() / virtualGeometry.width();
+    float rh = screen->geometry().height() / virtualGeometry.height();
 
     int lw = rw * width();
     int lh = rh * height();
@@ -199,27 +167,24 @@ void QMonitorArrangement::resizeEvent(QResizeEvent* event)
 
 void QMonitorArrangement::moveCheckBoxes()
 {
+  QRect virtualGeometry = qApp->primaryScreen()->virtualGeometry();
   QList<QScreen*> screens = qApp->screens();
   QList<int> availableScreens;
   for (int i = 0; i < screens.length(); i++) {
     availableScreens << i;
   }
 
-  int xmin = INT_MAX;
-  int ymin = INT_MAX;
-  qreal w = INT_MAX;
-  qreal h = INT_MAX;
-  getGlobalScreensGeometry(availableScreens, xmin, ymin, w, h);
-  qreal ratio = qMin((width() / w), (height() / h));
+  float ratio = qMin(((float)width() / virtualGeometry.width()),
+                     ((float)height() / virtualGeometry.height()));
 
   selectedRect = QRect();
 
   for (int& screenIndex : availableScreens) {
     QScreen* screen = screens[screenIndex];
-    qreal rx = (screen->geometry().x() - xmin);
-    qreal ry = (screen->geometry().y() - ymin);
-    qreal rw = screen->geometry().width();
-    qreal rh = screen->geometry().height();
+    float rx = (screen->geometry().x() - virtualGeometry.x());
+    float ry = (screen->geometry().y() - virtualGeometry.y());
+    float rw = screen->geometry().width();
+    float rh = screen->geometry().height();
     int lw = rw * ratio;
     int lh = rh * ratio;
     int lx = rx * ratio;

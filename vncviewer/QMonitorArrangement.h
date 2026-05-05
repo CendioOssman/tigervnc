@@ -11,8 +11,6 @@ class QMonitorArrangement : public QWidget
 public:
   QMonitorArrangement(QWidget* parent = nullptr);
 
-  void getGlobalScreensGeometry(QList<int> screens, int& xmin, int& ymin, qreal& w, qreal& h);
-
   void apply();
   void reset();
 
