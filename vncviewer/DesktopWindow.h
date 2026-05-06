@@ -120,7 +120,7 @@ private:
   void grabPointer();
   void ungrabPointer();
 
-  void handleFocusWindowChanged(QWindow* window);
+  void handleActiveChanged();
 
   void handleDesktopSize();
   void remoteResize(int width, int height);

@@ -139,6 +139,10 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   , mouseGrabbed(false)
   , resizeTimer(new QTimer(this))
 {
+  // We need an early and stable QWindow as we do a lot of low level
+  // stuff with it
+  setAttribute(Qt::WA_NativeWindow);
+
   setContentsMargins(0, 0, 0, 0);
   resize(w, h);
 
@@ -190,8 +194,9 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   connect(qApp, &QGuiApplication::screenAdded, this, &DesktopWindow::updateMonitorsFullscreen);
   connect(qApp, &QGuiApplication::screenRemoved, this, &DesktopWindow::updateMonitorsFullscreen);
 
-  connect(qApp, &QGuiApplication::focusWindowChanged, this,
-          &DesktopWindow::handleFocusWindowChanged);
+  // Activate events aren't sent for focus grabs, but signals are
+  connect(windowHandle(), &QWindow::activeChanged, this,
+          &DesktopWindow::handleActiveChanged);
 
   // Support for -geometry option. Note that although we do support
   // negative coordinates, we do not support -XOFF-YOFF (ie
@@ -935,13 +940,13 @@ void DesktopWindow::ungrabPointer()
 #endif
 }
 
-void DesktopWindow::handleFocusWindowChanged(QWindow* window)
+void DesktopWindow::handleActiveChanged()
 {
   // Focus might not stay with us just because we have grabbed the
   // keyboard. E.g. we might have sub windows, or we're not using
   // all monitors and the user clicked on another application.
   // Make sure we update our grabs with the focus changes.
-  if (window == windowHandle()) {
+  if (qApp->focusWindow() == windowHandle()) {
     maybeGrabKeyboard();
   } else {
     if (fullscreenSystemKeys)
