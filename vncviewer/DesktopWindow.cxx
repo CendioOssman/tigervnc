@@ -55,7 +55,6 @@
 #include "win32.h"
 #elif defined(__APPLE__)
 #include "cocoa.h"
-#include <Carbon/Carbon.h>
 #else
 #include "x11.h"
 #endif
@@ -214,9 +213,7 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   // By default we get a slight delay when we warp the pointer, something
   // we don't want or we'll get jerky movement
 #ifdef __APPLE__
-  CGEventSourceRef event = CGEventSourceCreate(kCGEventSourceStateCombinedSessionState);
-  CGEventSourceSetLocalEventsSuppressionInterval(event, 0);
-  CFRelease(event);
+  cocoa_event_delay(0);
 #endif
 }
 
@@ -350,10 +347,8 @@ void DesktopWindow::setCursorPos(const rfb::Point& pos)
   SetCursorPos(pos.x + x_root() + viewport->x(),
                pos.y + y_root() + viewport->y());
 #elif defined(__APPLE__)
-  CGPoint new_pos;
-  new_pos.x = pos.x + x_root() + viewport->x();
-  new_pos.y = pos.y + y_root() + viewport->y();
-  CGWarpMouseCursorPosition(new_pos);
+  cocoa_set_cursor_pos(pos.x + x_root() + viewport->x(),
+                       pos.y + y_root() + viewport->y());
 #else // Assume this is Xlib
   x11_warp_pointer(pos.x + x_root() + viewport->x(),
                    pos.y + y_root() + viewport->y());
