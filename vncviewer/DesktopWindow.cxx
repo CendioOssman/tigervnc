@@ -401,17 +401,6 @@ void DesktopWindow::setCursorPos(const core::Point& pos)
 }
 
 
-void DesktopWindow::show()
-{
-  Fl_Window::show();
-
-#if !defined(WIN32) && !defined(__APPLE__)
-  // Request ability to grab keyboard under Xwayland
-  x11_win_may_grab(this);
-#endif
-}
-
-
 void DesktopWindow::draw()
 {
   bool redraw;
@@ -621,82 +610,137 @@ void DesktopWindow::resize(int x, int y, int w, int h)
 
   Fl_Window::resize(x, y, w, h);
 
-  if (resizing) {
-    remoteResize();
+  if (resizing)
+    resizeEvent();
+}
 
-    repositionWidgets();
+
+void DesktopWindow::resizeEvent()
+{
+  remoteResize();
+
+  repositionWidgets();
+}
+
+void DesktopWindow::fullScreenEvent()
+{
+  fullScreen.setParam(fullscreen_active());
+
+  // Update scroll bars
+  repositionWidgets();
+
+  // Show how to get out of full screen
+  if (fullscreen_active()) {
+    unsigned modifierMask;
+
+    modifierMask = 0;
+    for (core::EnumListEntry key : shortcutModifiers)
+      modifierMask |= ShortcutHandler::parseModifier(key.getValueStr().c_str());
+
+    if (modifierMask)
+      toast->addRegular(_("Press %sEnter to leave full-screen mode"),
+                        ShortcutHandler::modifierPrefix(modifierMask));
+  }
+
+#ifdef __APPLE__
+  // Complain to the user if we won't have permission to grab keyboard
+  if (fullscreenSystemKeys && fullscreen_active()) {
+    // FIXME: There is some race during initial full screen where we
+    //        fail to give focus to the popup, but we can work around
+    //        it using a timer
+    Fl::add_timeout(0, [](void*) { cocoa_is_trusted(true); }, nullptr);
+  }
+#endif
+
+  // Automatically toggle keyboard grab?
+  if (fullscreenSystemKeys) {
+    if (fullscreen_active())
+      grabKeyboard();
+    else
+      ungrabKeyboard();
+  }
+
+  // The window manager respected our full screen request, but we
+  // still need to wait a bit long for it to finish resizing us
+  if (delayedFullscreen && fullscreen_active()) {
+    Fl::remove_timeout(handleFullscreenTimeout, this);
+    Fl::add_timeout(0.1, handleFullscreenTimeout, this);
   }
 }
 
+void DesktopWindow::enterEvent()
+{
+  if (keyboardGrabbed)
+    grabPointer();
+}
+
+void DesktopWindow::leaveEvent()
+{
+  // This probably never happens as we don't get called with a grab
+  // active. But let's be cautious in case we overlooked something.
+  if (mouseGrabbed)
+    ungrabPointer();
+}
+
+void DesktopWindow::mouseMoveEvent()
+{
+  if (mouseGrabbed) {
+    // We don't get FL_LEAVE with a grabbed pointer, so check manually
+    if ((Fl::event_x() < 0) || (Fl::event_x() >= w()) ||
+        (Fl::event_y() < 0) || (Fl::event_y() >= h())) {
+      ungrabPointer();
+    }
+#if !defined(WIN32) && !defined(__APPLE__)
+    // We also don't get sensible coordinates on zaphod setups
+    if (!x11_is_pointer_on_same_screen(this))
+      ungrabPointer();
+#endif
+  }
+}
+
+void DesktopWindow::mouseReleaseEvent()
+{
+  // We usually fail to grab the mouse if a mouse button was
+  // pressed when we gained focus (e.g. clicking on our window),
+  // so we may need to try again when the button is released.
+  if (keyboardGrabbed && !mouseGrabbed)
+    grabPointer();
+}
+
+void DesktopWindow::showEvent()
+{
+#if !defined(WIN32) && !defined(__APPLE__)
+  // Request ability to grab keyboard under Xwayland
+  x11_win_may_grab(this);
+#endif
+
+  // This is a response to MapNotify, which means we can continue
+  // enabling initial fullscreen.
+  if (delayedFullscreen) {
+    // Hack: Fullscreen requests may be ignored, so we need a
+    // timeout for when we should stop waiting. We also need to wait
+    // for the resize, which can come after the fullscreen event.
+    Fl::add_timeout(0.5, handleFullscreenTimeout, this);
+    fullscreen_on();
+  }
+}
 
 int DesktopWindow::handle(int event)
 {
   switch (event) {
   case FL_FULLSCREEN:
-    fullScreen.setParam(fullscreen_active());
-
-    // Update scroll bars
-    repositionWidgets();
-
-    // Show how to get out of full screen
-    if (fullscreen_active()) {
-      unsigned modifierMask;
-
-      modifierMask = 0;
-      for (core::EnumListEntry key : shortcutModifiers)
-        modifierMask |= ShortcutHandler::parseModifier(key.getValueStr().c_str());
-
-      if (modifierMask)
-        toast->addRegular(_("Press %sEnter to leave full-screen mode"),
-                          ShortcutHandler::modifierPrefix(modifierMask));
-    }
-
-#ifdef __APPLE__
-    // Complain to the user if we won't have permission to grab keyboard
-    if (fullscreenSystemKeys && fullscreen_active()) {
-      // FIXME: There is some race during initial full screen where we
-      //        fail to give focus to the popup, but we can work around
-      //        it using a timer
-      Fl::add_timeout(0, [](void*) { cocoa_is_trusted(true); }, nullptr);
-    }
-#endif
-
-    // Automatically toggle keyboard grab?
-    if (fullscreenSystemKeys) {
-      if (fullscreen_active())
-        grabKeyboard();
-      else
-        ungrabKeyboard();
-    }
-
-    // The window manager respected our full screen request, but we
-    // still need to wait a bit long for it to finish resizing us
-    if (delayedFullscreen && fullscreen_active()) {
-      Fl::remove_timeout(handleFullscreenTimeout, this);
-      Fl::add_timeout(0.1, handleFullscreenTimeout, this);
-    }
-
+    fullScreenEvent();
     break;
 
   case FL_ENTER:
-      if (keyboardGrabbed)
-          grabPointer();
-      /* fall through */
+    enterEvent();
+    break;
   case FL_LEAVE:
+    leaveEvent();
+    break;
   case FL_DRAG:
   case FL_MOVE:
-    if (mouseGrabbed) {
-      // We don't get FL_LEAVE with a grabbed pointer, so check manually
-      if ((Fl::event_x() < 0) || (Fl::event_x() >= w()) ||
-          (Fl::event_y() < 0) || (Fl::event_y() >= h())) {
-        ungrabPointer();
-      }
-#if !defined(WIN32) && !defined(__APPLE__)
-      // We also don't get sensible coordinates on zaphod setups
-      if (!x11_is_pointer_on_same_screen(this))
-        ungrabPointer();
-#endif
-    }
+    mouseMoveEvent();
     // Continue processing so that the viewport also gets mouse events
     break;
   }
@@ -732,25 +776,14 @@ int DesktopWindow::fltkDispatch(int event, Fl_Window *win, void *)
       break;
 
     case FL_SHOW:
-      // In this particular place, FL_SHOW means an actual MapNotify,
-      // which means we can continue enabling initial fullscreen.
-      if (dw->delayedFullscreen) {
-        // Hack: Fullscreen requests may be ignored, so we need a
-        // timeout for when we should stop waiting. We also need to wait
-        // for the resize, which can come after the fullscreen event.
-        Fl::add_timeout(0.5, handleFullscreenTimeout, dw);
-        dw->fullscreen_on();
-      }
+      // In this particular place, FL_SHOW means an actual MapNotify
+      dw->showEvent();
       break;
 
     case FL_RELEASE:
-      // We usually fail to grab the mouse if a mouse button was
-      // pressed when we gained focus (e.g. clicking on our window),
-      // so we may need to try again when the button is released.
-      // (We do it here rather than handle() because a window does not
-      // see FL_RELEASE events if a child widget grabs it first)
-      if (dw->keyboardGrabbed && !dw->mouseGrabbed)
-        dw->grabPointer();
+      // We do this here rather than handle() because a window does not
+      // see FL_RELEASE events if a child widget grabs it first
+      dw->mouseReleaseEvent();
       break;
     }
   }
@@ -869,6 +902,7 @@ void DesktopWindow::checkFocus(void *data)
   Fl::remove_idle(checkFocus, data);
 
   DesktopWindow *dw = (DesktopWindow*)data;
+
   // Focus might not stay with us just because we have grabbed the
   // keyboard. E.g. we might have sub windows, or the user clicked on
   // another application. Make sure we update our grabs with the focus
@@ -978,7 +1012,7 @@ void DesktopWindow::grabPointer()
   // combined with modifies (e.g. Alt+Button0 in metacity).
 
   // Having a button pressed prevents us from grabbing, we make
-  // a new attempt in fltkHandle()
+  // a new attempt in mouseReleaseEvent()
   if (!x11_grab_pointer(fl_xid(this)))
     return;
 #endif
@@ -995,7 +1029,6 @@ void DesktopWindow::ungrabPointer()
   x11_ungrab_pointer(fl_xid(this));
 #endif
 }
-
 
 void DesktopWindow::maximizeWindow()
 {

@@ -71,7 +71,6 @@ public:
   void handleClipboardData(const char* data);
 
   // Fl_Window callback methods
-  void show() override;
   void draw() override;
   void resize(int x, int y, int w, int h) override;
 
@@ -82,6 +81,15 @@ public:
   // Grab keyboard events from desktop environment
   void grabKeyboard();
   void ungrabKeyboard();
+
+protected:
+  void resizeEvent();
+  void fullScreenEvent();
+  void enterEvent();
+  void leaveEvent();
+  void mouseMoveEvent();
+  void mouseReleaseEvent();
+  void showEvent();
 
 private:
   static int fltkDispatch(int event, Fl_Window *win, void *);
