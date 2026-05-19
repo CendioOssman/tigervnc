@@ -68,13 +68,21 @@ public:
   void handleClipboardData(const char* data);
 
   // Fl_Window callback methods
-  void show() override;
   void draw() override;
   void resize(int x, int y, int w, int h) override;
 
   int handle(int event) override;
 
   void fullscreen_on();
+
+protected:
+  void resizeEvent();
+  void fullScreenEvent();
+  void enterEvent();
+  void leaveEvent();
+  void mouseMoveEvent();
+  void mouseReleaseEvent();
+  void showEvent();
 
 private:
   static void menuToast(void *data);
@@ -92,6 +100,8 @@ private:
   void ungrabKeyboard();
   void grabPointer();
   void ungrabPointer();
+
+  void handleFocusedChanged(bool focused);
 
   void maximizeWindow();
 
