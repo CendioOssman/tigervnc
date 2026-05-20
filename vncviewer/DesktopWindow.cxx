@@ -1013,7 +1013,7 @@ void DesktopWindow::grabPointer()
 
   // Having a button pressed prevents us from grabbing, we make
   // a new attempt in mouseReleaseEvent()
-  if (!x11_grab_pointer(fl_xid(this)))
+  if (!x11_grab_pointer(this))
     return;
 #endif
 
@@ -1026,7 +1026,7 @@ void DesktopWindow::ungrabPointer()
   mouseGrabbed = false;
 
 #if !defined(WIN32) && !defined(__APPLE__)
-  x11_ungrab_pointer(fl_xid(this));
+  x11_ungrab_pointer(this);
 #endif
 }
 
