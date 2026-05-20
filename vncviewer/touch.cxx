@@ -131,9 +131,12 @@ static void x11_change_touch_ownership(bool enable)
   }
 }
 
-bool x11_grab_pointer(Window window)
+bool x11_grab_pointer(Fl_Window* win)
 {
+  Window window;
   bool ret;
+
+  window = fl_xid(win);
 
   if (!xi_enabled) {
     int status;
@@ -166,8 +169,12 @@ bool x11_grab_pointer(Window window)
   return ret;
 }
 
-void x11_ungrab_pointer(Window window)
+void x11_ungrab_pointer(Fl_Window* win)
 {
+  Window window;
+
+  window = fl_xid(win);
+
   if (!xi_enabled) {
     XUngrabPointer(fl_display, CurrentTime);
     return;
