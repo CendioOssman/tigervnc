@@ -365,7 +365,8 @@ void DesktopWindow::resizeFramebuffer(int new_w, int new_h)
   // If we're letting the viewport match the window perfectly, then
   // keep things that way for the new size, otherwise just keep things
   // like they are.
-  if (!isFullScreen() && !isMaximized()) {
+  if (!isFullScreen() && !isMaximized() && !pendingRemoteResize &&
+      !resizeTimer->isActive()) {
     if (size() == viewport->size())
       resize(new_w, new_h);
   }
