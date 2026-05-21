@@ -675,6 +675,14 @@ void DesktopWindow::setFullScreen(bool enabled)
   // requires it to be visible to not conflict badly with Qt
   assert(isVisible());
 
+#ifdef __APPLE__
+  // Avoid surprises if we cannot do proper multiheaded full screen
+  if (cocoa_screens_have_separate_spaces()) {
+    allMonitors = false;
+    selectedMonitors = false;
+  }
+#endif
+
   if (not selectedMonitors and not allMonitors) {
     top = bottom = left = right = windowHandle()->screen();
   } else {
