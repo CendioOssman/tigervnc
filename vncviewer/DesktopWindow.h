@@ -83,6 +83,7 @@ public:
   void ungrabKeyboard();
 
 protected:
+  void moveEvent();
   void resizeEvent();
   void fullScreenEvent();
   void enterEvent();
