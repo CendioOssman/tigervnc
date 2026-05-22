@@ -1,16 +1,16 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
  * Copyright 2009-2014 Pierre Ossman for Cendio AB
- *
+ * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- *
+ * 
  * This software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
  * along with this software; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
@@ -21,14 +21,13 @@
 #define __CCONN_H__
 
 #include <rfb/CConnection.h>
-
-class Fl_Choice_Box;
-
-namespace network { class Socket; }
+#include <rfb/Timer.h>
 
 class QMessageBox;
 class QSocketNotifier;
 class QTimer;
+
+namespace network { class Socket; }
 
 class DesktopWindow;
 class AuthDialog;
@@ -44,6 +43,13 @@ public:
   unsigned getUpdateCount();
   unsigned getPixelCount();
   unsigned getPosition();
+
+protected:
+  // Callback when socket is ready (or broken)
+  void socketReadEvent();
+  void socketWriteEvent();
+
+  void processNextMsg(rfb::Timer*);
 
   // CConnection callback methods
 
@@ -92,10 +98,6 @@ private:
   void autoSelectFormatAndEncoding();
   void updatePixelFormat();
 
-  void startProcessing();
-  void flushSocket();
-  void processNextMsg();
-
   static void handleOptions(void *data);
 
   void handleUpdateTimeout(rfb::Timer*);
@@ -109,13 +111,15 @@ private:
   void handleHostKeyOK();
   void handleHostKeyCancel();
 
+  void resumeProcessing();
+
 private:
   std::string serverHost;
   int serverPort;
   network::Socket* sock;
   QSocketNotifier* socketReadNotifier;
   QSocketNotifier* socketWriteNotifier;
-  QTimer* processTimer;
+  rfb::MethodTimer<CConn> msgTimer;
 
   AuthDialog* authDialog;
   QMessageBox* verifyDialog;
@@ -128,7 +132,6 @@ private:
   unsigned updateCount;
   unsigned pixelCount;
 
-  rfb::PixelFormat serverPF;
   rfb::PixelFormat fullColourPF;
 
   int lastServerEncoding;

@@ -22,13 +22,9 @@
 #include <config.h>
 #endif
 
-#include <time.h>
+#include <assert.h>
 
-#include <QGuiApplication>
 #include <QTimer>
-#include <QCursor>
-#include <QClipboard>
-#include <QPixmap>
 #include <QSocketNotifier>
 #include <QMessageBox>
 
@@ -54,8 +50,8 @@
 #include "OptionsDialog.h"
 #include "DesktopWindow.h"
 #include "i18n.h"
-#include "parameters.h"
 #include "mainloop.h"
+#include "parameters.h"
 
 #ifdef __APPLE__
 #include "cocoa.h"
@@ -86,10 +82,8 @@ static const PixelFormat mediumColourPF(8, 8, false, true,
 static const unsigned bpsEstimateWindow = 1000;
 
 CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
-  : serverPort(0),
-    socketReadNotifier(nullptr), socketWriteNotifier(nullptr),
-    processTimer(nullptr), authDialog(nullptr), verifyDialog(nullptr),
-    desktop(nullptr),
+  : serverPort(0), msgTimer(this, &CConn::processNextMsg),
+    authDialog(nullptr), verifyDialog(nullptr), desktop(nullptr),
     updateCount(0), pixelCount(0),
     lastServerEncoding((unsigned int)-1), bpsEstimate(20000000),
     updateTimer(this, &CConn::handleUpdateTimeout)
@@ -132,25 +126,19 @@ CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
     }
   }
 
-  setServerName(serverHost.c_str());
-  setStreams(&sock->inStream(), &sock->outStream());
-
   socketReadNotifier = new QSocketNotifier(sock->getFd(),
                                            QSocketNotifier::Read);
   QObject::connect(socketReadNotifier, &QSocketNotifier::activated,
-                   [this](int) { startProcessing(); });
+                   [this](int) { socketReadEvent(); });
 
   socketWriteNotifier = new QSocketNotifier(sock->getFd(),
                                             QSocketNotifier::Write);
   socketWriteNotifier->setEnabled(false);
   QObject::connect(socketWriteNotifier, &QSocketNotifier::activated,
-                   [this](int) { flushSocket(); });
+                   [this](int) { socketWriteEvent(); });
 
-  processTimer = new QTimer();
-  QObject::connect(processTimer, &QTimer::timeout, [this]() {
-    processNextMsg();
-  });
-  processTimer->setInterval(0);
+  setServerName(serverHost.c_str());
+  setStreams(&sock->inStream(), &sock->outStream());
 
   initialiseProtocol();
 
@@ -168,8 +156,6 @@ CConn::~CConn()
 
   if (desktop)
     delete desktop;
-
-  delete processTimer;
 
   delete socketReadNotifier;
   delete socketWriteNotifier;
@@ -208,13 +194,6 @@ const char *CConn::connectionInfo()
   server.pf().print(pfStr, 100);
   snprintf(scratch, sizeof(scratch),
            _("Pixel format: %s"), pfStr);
-  strcat(infoText, scratch);
-  strcat(infoText, "\n");
-
-  // TRANSLATORS: Similar to the earlier "Pixel format" string
-  serverPF.print(pfStr, 100);
-  snprintf(scratch, sizeof(scratch),
-           _("(server default %s)"), pfStr);
   strcat(infoText, scratch);
   strcat(infoText, "\n");
 
@@ -261,26 +240,25 @@ unsigned CConn::getPosition()
   return sock->inStream().pos();
 }
 
-void CConn::startProcessing()
+void CConn::socketReadEvent()
 {
   // Stop monitoring the socket for now and start processing incoming
   // data asynchronously
   socketReadNotifier->setEnabled(false);
-  socketWriteNotifier->setEnabled(false);
-  processTimer->start();
+  msgTimer.start(0);
 
   // Coalesce data until we're fully done processing things
   getOutStream()->cork(true);
 }
 
-void CConn::flushSocket()
+void CConn::socketWriteEvent()
 {
   sock->outStream().flush();
 
   socketWriteNotifier->setEnabled(sock->outStream().hasBufferedData());
 }
 
-void CConn::processNextMsg()
+void CConn::processNextMsg(Timer*)
 {
   static bool recursing = false;
   bool again;
@@ -294,7 +272,6 @@ void CConn::processNextMsg()
   try {
     again = processMsg();
   } catch (rdr::EndOfStream& e) {
-    recursing = false;
     if (authDialog)
       authDialog->hide();
     if (verifyDialog)
@@ -308,8 +285,18 @@ void CConn::processNextMsg()
     } else {
       disconnect();
     }
+  } catch (rfb::AuthFailureException& e) {
+    if (authDialog)
+      authDialog->hide();
+    if (verifyDialog)
+      verifyDialog->hide();
+    savedUsername.clear();
+    savedPassword.clear();
+    vlog.error(_("Authentication failed: %s"), e.str());
+    abort_connection(_("Failed to authenticate with the server. Reason "
+                       "given by the server:\n\n%s"), e.str());
   } catch (rdr::Exception& e) {
-    recursing = false;
+    vlog.error("%s", e.str());
     if (authDialog)
       authDialog->hide();
     if (verifyDialog)
@@ -319,14 +306,14 @@ void CConn::processNextMsg()
 
   recursing = false;
 
-  if (again)
+  if (again) {
+    msgTimer.repeat();
     return;
+  }
 
   // Out of data, go back to waiting
 
   getOutStream()->cork(false);
-
-  processTimer->stop();
 
   socketReadNotifier->setEnabled(true);
   socketWriteNotifier->setEnabled(sock->outStream().hasBufferedData());
@@ -340,30 +327,30 @@ void CConn::credentialsRequested(bool secure, bool needsUser,
   const char *passwordFileName(passwordFile);
 
   assert(needsPassword);
-  char* envUsername = getenv("VNC_USERNAME");
-  char* envPassword = getenv("VNC_PASSWORD");
+  char *envUsername = getenv("VNC_USERNAME");
+  char *envPassword = getenv("VNC_PASSWORD");
 
   if (needsUser && envUsername && envPassword) {
     setCredentials(envUsername, envPassword);
-    startProcessing();
+    resumeProcessing();
     return;
   }
 
   if (!needsUser && envPassword) {
     setCredentials("", envPassword);
-    startProcessing();
+    resumeProcessing();
     return;
   }
 
   if (needsUser && !savedUsername.empty() && !savedPassword.empty()) {
     setCredentials(savedUsername, savedPassword);
-    startProcessing();
+    resumeProcessing();
     return;
   }
 
   if (!needsUser && !savedPassword.empty()) {
     setCredentials("", savedPassword);
-    startProcessing();
+    resumeProcessing();
     return;
   }
 
@@ -382,7 +369,7 @@ void CConn::credentialsRequested(bool secure, bool needsUser,
     fclose(fp);
 
     setCredentials("", deobfuscate(obfPwd.data(), obfPwd.size()));
-    startProcessing();
+    resumeProcessing();
     return;
   }
 
@@ -419,6 +406,7 @@ void CConn::certificateReceived(unsigned int status,
   int err, known;
 
   const char *hostsDir;
+
   gnutls_datum_t info_datum;
   size_t len;
 
@@ -487,7 +475,7 @@ void CConn::certificateReceived(unsigned int status,
   if (known == GNUTLS_E_SUCCESS) {
     vlog.info(_("Server has an existing security exception"));
     approveCertificate();
-    startProcessing();
+    resumeProcessing();
     return;
   }
 
@@ -581,11 +569,9 @@ void CConn::hostKeyReceived(const uint8_t* key, size_t length,
 void CConn::initDone()
 {
   // If using AutoSelect with old servers, start in FullColor
-  // mode. See comment in autoSelectFormatAndEncoding.
+  // mode. See comment in autoSelectFormatAndEncoding. 
   if (server.beforeVersion(3, 8) && autoSelect)
     fullColour.setParam(true);
-
-  serverPF = server.pf();
 
   desktop = new DesktopWindow(server.width(), server.height(),
                               server.name(), this);
@@ -660,7 +646,7 @@ void CConn::framebufferUpdateEnd()
     weight = 200000;
   bpsEstimate = ((bpsEstimate * (1000000 - weight)) +
                  (bps * weight)) / 1000000;
-  
+
   updateTimer.stop();
   desktop->updateWindow();
 
@@ -730,7 +716,6 @@ void CConn::fence(uint32_t flags, unsigned len, const uint8_t data[])
 
 void CConn::setLEDState(unsigned int state)
 {
-  vlog.debug("Got server LED state: 0x%08x", state);
   CConnection::setLEDState(state);
 
   desktop->setLEDState(state);
@@ -875,11 +860,9 @@ void CConn::handleOptions(void *data)
 
 void CConn::handleUpdateTimeout(rfb::Timer*)
 {
-  try {
-    framebufferUpdateEnd();
-  } catch (rdr::Exception& e) {
-    abort_connection("%s", e.str());
-  }
+  desktop->updateWindow();
+
+  updateTimer.repeat();
 }
 
 void CConn::handleAuthOK()
@@ -897,7 +880,7 @@ void CConn::handleAuthOK()
 
   setCredentials(user, password);
 
-  startProcessing();
+  resumeProcessing();
 }
 
 void CConn::handleAuthCancel()
@@ -954,7 +937,7 @@ void CConn::handleCertificateOK()
       vlog.info(_("Security exception added for server host"));
 
       approveCertificate();
-      startProcessing();
+      resumeProcessing();
       return;
     }
   }
@@ -1193,7 +1176,7 @@ void CConn::handleHostKeyOK()
   verifyDialog = nullptr;
 
   approveHostKey();
-  startProcessing();
+  resumeProcessing();
 }
 
 void CConn::handleHostKeyCancel()
@@ -1205,4 +1188,9 @@ void CConn::handleHostKeyCancel()
 
   vlog.info(_("Authentication cancelled"));
   disconnect();
+}
+
+void CConn::resumeProcessing()
+{
+  socketReadEvent();
 }
