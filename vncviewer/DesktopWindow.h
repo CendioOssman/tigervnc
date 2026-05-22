@@ -76,6 +76,7 @@ public:
   void fullscreen_on();
 
 protected:
+  void moveEvent();
   void resizeEvent();
   void fullScreenEvent();
   void enterEvent();
