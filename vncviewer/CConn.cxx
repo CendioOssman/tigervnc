@@ -135,16 +135,16 @@ CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
   setServerName(serverHost.c_str());
   setStreams(&sock->inStream(), &sock->outStream());
 
-  socketReadNotifier = new QSocketNotifier(sock->getFd(), QSocketNotifier::Read);
-  QObject::connect(socketReadNotifier, &QSocketNotifier::activated, [this](int) {
-    startProcessing();
-  });
+  socketReadNotifier = new QSocketNotifier(sock->getFd(),
+                                           QSocketNotifier::Read);
+  QObject::connect(socketReadNotifier, &QSocketNotifier::activated,
+                   [this](int) { startProcessing(); });
 
-  socketWriteNotifier = new QSocketNotifier(sock->getFd(), QSocketNotifier::Write);
+  socketWriteNotifier = new QSocketNotifier(sock->getFd(),
+                                            QSocketNotifier::Write);
   socketWriteNotifier->setEnabled(false);
-  QObject::connect(socketWriteNotifier, &QSocketNotifier::activated, [this](int) {
-    flushSocket();
-  });
+  QObject::connect(socketWriteNotifier, &QSocketNotifier::activated,
+                   [this](int) { flushSocket(); });
 
   processTimer = new QTimer();
   QObject::connect(processTimer, &QTimer::timeout, [this]() {
