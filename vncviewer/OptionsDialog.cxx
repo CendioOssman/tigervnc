@@ -145,8 +145,7 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   layout->addLayout(btnsLayout);
 
   setLayout(layout);
-
-  setMinimumSize(600, 600);
+  adjustSize();
 
   reset();
 

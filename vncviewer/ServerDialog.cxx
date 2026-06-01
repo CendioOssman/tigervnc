@@ -105,6 +105,7 @@ ServerDialog::ServerDialog(QWidget* parent)
   layout->addLayout(row3);
 
   setLayout(layout);
+  adjustSize();
 
   connect(serverName->lineEdit(), &QLineEdit::returnPressed, this,
           &ServerDialog::handleConnect);

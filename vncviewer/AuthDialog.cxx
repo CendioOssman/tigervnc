@@ -39,7 +39,6 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
   : QDialog{parent}
 {
   setWindowTitle(_("VNC authentication"));
-  setFixedSize(250, 100);
 #ifdef __APPLE__
   setWindowFlag(Qt::CustomizeWindowHint, true);
   setWindowFlag(Qt::WindowMaximizeButtonHint, false);
@@ -50,6 +49,7 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
   layout->setContentsMargins(0, 0, 0, 0);
 
   QLabel* banner = new QLabel;
+  banner->setFixedHeight(20);
   banner->setAlignment(Qt::AlignCenter);
   if (secure_) {
     banner->setText(QString("<img src=':/secure.svg' style='vertical-align: middle;' />") + _("This connection is secure"));
@@ -107,6 +107,7 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
   layout->addLayout(btnsLayout);
 
   setLayout(layout);
+  adjustSize();
 }
 
 std::string AuthDialog::getUser()
