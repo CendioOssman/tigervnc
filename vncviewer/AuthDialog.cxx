@@ -97,17 +97,16 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
   btnsLayout->addStretch(1);
 
   QPushButton* cancelBtn = new QPushButton(_("Cancel"));
+  connect(cancelBtn, &QPushButton::clicked, this, &AuthDialog::reject);
   btnsLayout->addWidget(cancelBtn, 0, Qt::AlignRight);
 
   QPushButton* okBtn = new QPushButton(_("Ok"));
+  connect(okBtn, &QPushButton::clicked, this, &AuthDialog::accept);
   btnsLayout->addWidget(okBtn, 0, Qt::AlignRight);
 
   layout->addLayout(btnsLayout);
 
   setLayout(layout);
-
-  connect(cancelBtn, &QPushButton::clicked, this, &AuthDialog::reject);
-  connect(okBtn, &QPushButton::clicked, this, &AuthDialog::accept);
 }
 
 std::string AuthDialog::getUser()
