@@ -21,6 +21,7 @@
 #include <config.h>
 #endif
 
+#include <QCheckBox>
 #include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -30,6 +31,7 @@
 #include <qlayout.h>
 
 #include "AuthDialog.h"
+#include "parameters.h"
 #include "i18n.h"
 
 AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
@@ -75,8 +77,17 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
     passwd->setFocus();
     formLayout->addRow(_("Password:"), passwd);
     connect(passwd, &QLineEdit::returnPressed, this, &AuthDialog::accept);
+
+    if (reconnectOnError) {
+      keepPasswdCheckbox =
+        new QCheckBox(_("Keep password for reconnect"));
+      formLayout->addRow(keepPasswdCheckbox);
+    } else {
+      keepPasswdCheckbox = nullptr;
+    }
   } else {
     passwd = nullptr;
+    keepPasswdCheckbox = nullptr;
   }
 
   layout->addLayout(formLayout);
@@ -111,4 +122,11 @@ std::string AuthDialog::getPassword()
   if (passwd)
     return passwd->text().toStdString();
   return "";
+}
+
+bool AuthDialog::getKeepPassword()
+{
+  if (keepPasswdCheckbox)
+    return keepPasswdCheckbox->isChecked();
+  return false;
 }

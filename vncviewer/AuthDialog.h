@@ -24,6 +24,7 @@
 
 #include <QDialog>
 
+class QCheckBox;
 class QLineEdit;
 
 class AuthDialog : public QDialog
@@ -36,8 +37,10 @@ public:
 
   std::string getUser();
   std::string getPassword();
+  bool getKeepPassword();
 
 private:
+  QCheckBox* keepPasswdCheckbox;
   QLineEdit* username;
   QLineEdit* passwd;
 };

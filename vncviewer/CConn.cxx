@@ -867,19 +867,30 @@ void CConn::handleUpdateTimeout(rfb::Timer*)
 
 void CConn::handleAuthOK()
 {
+  bool keepPasswd;
   std::string user;
   std::string password;
 
   assert(authDialog);
 
-  user = authDialog->getUser();
+  if (reconnectOnError)
+    keepPasswd = authDialog->getKeepPassword();
+  else
+    keepPasswd = false;
+
+  if (!authDialog->getUser().empty()) {
+    user = authDialog->getUser();
+    if (keepPasswd)
+      savedUsername = authDialog->getUser();
+  }
   password = authDialog->getPassword();
+  if (keepPasswd)
+    savedPassword = authDialog->getPassword();
 
   authDialog->deleteLater();
   authDialog = nullptr;
 
   setCredentials(user, password);
-
   resumeProcessing();
 }
 
