@@ -120,25 +120,22 @@ if(BUILD_STATIC)
     set(GMP_LIBRARIES "-Wl,-Bstatic -lgmp -Wl,-Bdynamic")
   endif()
 
-  if(DEFINED FLTK_LIBRARIES)
-    set(FLTK_LIBRARIES "-Wl,-Bstatic -lfltk_images -lpng -ljpeg -lfltk -Wl,-Bdynamic")
-
-    if(WIN32)
-      set(FLTK_LIBRARIES "${FLTK_LIBRARIES} -lcomctl32")
-    elseif(APPLE)
-      set(FLTK_LIBRARIES "${FLTK_LIBRARIES} -framework Cocoa")
-    else()
-      set(FLTK_LIBRARIES "${FLTK_LIBRARIES} -lm -ldl")
-    endif()
-
-    if(X11_FOUND AND NOT APPLE)
-      if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
-        set(FLTK_LIBRARIES "${FLTK_LIBRARIES} ${X11_Xcursor_LIB} ${X11_Xfixes_LIB} -Wl,-Bstatic -lXft -Wl,-Bdynamic -lfontconfig -lXrender -lXext -R/usr/sfw/lib -L=/usr/sfw/lib -lfreetype -lsocket -lnsl")
-      else()
-        set(FLTK_LIBRARIES "${FLTK_LIBRARIES} -Wl,-Bstatic -lXcursor -lXfixes -lXft -lfontconfig -lexpat -lfreetype -lpng -lbz2 -luuid -lXrender -lXext -lXinerama -Wl,-Bdynamic")
-      endif()
-
-      set(FLTK_LIBRARIES "${FLTK_LIBRARIES} -lX11")
+  # FIXME: Not tested
+  if(QT_FOUND)
+    add_definitions(-DQT_STATIC_BUILD=1)
+    if(QT_VERSION_MAJOR LESS_EQUAL 5)
+      find_package(QT NAMES Qt6 Qt5 COMPONENTS
+                  Gui
+                  Network
+                  Svg
+                  ThemeSupport
+                  REQUIRED)
+      find_package(Qt5 COMPONENTS
+                  Gui
+                  Network
+                  Svg
+                  ThemeSupport
+                  REQUIRED)
     endif()
   endif()
 

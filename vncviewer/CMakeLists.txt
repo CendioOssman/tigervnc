@@ -6,36 +6,6 @@ include_directories(SYSTEM ${GETTEXT_INCLUDE_DIR})
 
 include_directories(${CMAKE_SOURCE_DIR}/common)
 
-#list(APPEND CMAKE_PREFIX_PATH "/opt/Qt/Static/6.2.4/gcc_64s")
-if(DEFINED QT_SELECT)
-  find_package(QT NAMES Qt${QT_SELECT} COMPONENTS Core REQUIRED)
-else()
-  find_package(QT NAMES Qt6 COMPONENTS Core)
-  if(NOT DEFINED QT_VERSION_MAJOR)
-    find_package(QT NAMES Qt5 COMPONENTS Core)
-  endif()
-  if(NOT DEFINED QT_VERSION_MAJOR)
-    set(QT_VERSION_MAJOR 6)
-  endif()
-endif()
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Network Widgets REQUIRED)
-if(QT_VERSION_MAJOR LESS_EQUAL 5 AND BUILD_STATIC)
-  find_package(QT NAMES Qt6 Qt5 COMPONENTS
-               Gui
-               Network
-               Svg
-               ThemeSupport
-               REQUIRED)
-  find_package(Qt5 COMPONENTS
-               Gui
-               Network
-               Svg
-               ThemeSupport
-               REQUIRED)
-endif()
-add_definitions("-DQT_DISABLE_DEPRECATED_BEFORE=0x050f00")
-add_definitions("-DQT_DEPRECATED_WARNINGS_SINCE=0x050f00")
-
 if (WIN32)
   set(OS_DEP_SOURCES
       KeyboardWin32.cxx
@@ -164,10 +134,6 @@ if(WIN32 OR APPLE)
     )
 endif()
 
-if(BUILD_STATIC)
-  add_definitions(-DQT_STATIC_BUILD=1)
-endif()
-
 if(WIN32)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   configure_file(vncviewer.rc.in vncviewer.rc)
@@ -175,9 +141,6 @@ endif()
 
 if(WIN32)
   set(OS_DEPENDENT_LIBRARIES msimg32 imm32)
-  if(BUILD_STATIC)
-    set(OS_DEPENDENT_LIBRARIES ${OS_DEPENDENT_LIBRARIES} -static libzstd.a libstdc++.a -dynamic)
-  endif()
 elseif(APPLE)
   set(OS_DEPENDENT_LIBRARIES "-framework Cocoa -framework Carbon -framework IOKit -framework QuartzCore")
 else()
@@ -228,7 +191,6 @@ set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc")
           )
         endif()
         if(UNIX AND NOT APPLE)
-          find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS X11Extras)
           set(OS_DEPENDENT_LIBRARIES ${OS_DEPENDENT_LIBRARIES} Qt${QT_VERSION_MAJOR}::X11Extras)
           add_executable(vncviewer
             ${PROJECT_SOURCES}
