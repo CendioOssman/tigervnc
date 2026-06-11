@@ -16,20 +16,13 @@
  * USA.
  */
 
-#ifndef __OPTIONSPAGE_H__
-#define __OPTIONSPAGE_H__
-
-#include <QWidget>
-
-class OptionsPage : public QWidget
-{
-  Q_OBJECT
-
-public:
-  OptionsPage(QWidget* parent = nullptr);
-
-  virtual void apply() = 0;
-  virtual void reset() = 0;
-};
-
+#ifdef HAVE_CONFIG_H
+#include <config.h>
 #endif
+
+#include "OptionsPage.h"
+
+OptionsPage::OptionsPage(QWidget* parent)
+  : QWidget(parent)
+{
+}

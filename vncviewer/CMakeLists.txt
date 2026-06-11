@@ -2,259 +2,140 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(FATAL_ERROR "cmake must be invoked with the top level directory")
 endif()
 
-include_directories(SYSTEM ${GETTEXT_INCLUDE_DIR})
+add_executable(vncviewer
+  menukey.cxx
+  AuthDialog.cxx
+  CConn.cxx
+  DesktopWindow.cxx
+  EmulateMB.cxx
+  ServerDialog.cxx
+  OptionsCompression.cxx
+  OptionsDialog.cxx
+  OptionsDisplay.cxx
+  OptionsInput.cxx
+  OptionsMisc.cxx
+  OptionsPage.cxx
+  OptionsSecurity.cxx
+  PlatformPixelBuffer.cxx
+  QMonitorArrangement.cxx
+  Toast.cxx
+  Viewport.cxx
+  clicksalternativegesture.cxx
+  clicksalternativegesturerecognizer.cxx
+  i18n.cxx
+  mainloop.cxx
+  panzoomgesture.cxx
+  panzoomgesturerecognizer.cxx
+  parameters.cxx
+  MonitorIndicesParameter.cxx
+  tapdraggesture.cxx
+  tapdraggesturerecognizer.cxx
+  tunnelfactory.cxx
+  vncviewer.cxx)
 
-include_directories(${CMAKE_SOURCE_DIR}/common)
-
-if (WIN32)
-  set(OS_DEP_SOURCES
-      KeyboardWin32.cxx
-      KeyboardWin32.h
-      win32.c
-      win32.h
-  )
-elseif(APPLE)
-  set(OS_DEP_SOURCES
-      KeyboardMacOS.mm
-      KeyboardMacOS.h
-      cocoa.h
-      cocoa.mm
-      osx_to_qnum.c
-  )
-else()
-  set(OS_DEP_SOURCES
-      KeyboardX11.cxx
-      KeyboardX11.h
-      x11.h
-      x11.cxx
-      xkb_to_qnum.c
-  )
-endif()
-
-set(PROJECT_SOURCES
-        vncviewer.cxx
-        Keyboard.h
-        DesktopWindow.cxx
-        DesktopWindow.h
-        Viewport.h
-        Viewport.cxx
-        keysym2ucs.c
-        keysym2ucs.h
-        gettext.h
-        mainloop.h
-        mainloop.cxx
-        parameters.h
-        parameters.cxx
-        tunnelfactory.cxx
-        tunnelfactory.h
-        i18n.h
-        i18n.cxx
-        menukey.h
-        menukey.cxx
-        MonitorIndicesParameter.cxx
-        MonitorIndicesParameter.h
-        PlatformPixelBuffer.h
-        PlatformPixelBuffer.cxx
-        EmulateMB.h
-        EmulateMB.cxx
-        AuthDialog.cxx
-        AuthDialog.h
-        CConn.h
-        CConn.cxx
-        ServerDialog.cxx
-        ServerDialog.h
-        OptionsDialog.cxx
-        OptionsDialog.h
-        OptionsCompression.cxx
-        OptionsCompression.h
-        OptionsInput.cxx
-        OptionsInput.h
-        OptionsDisplay.cxx
-        OptionsDisplay.h
-        OptionsMisc.cxx
-        OptionsMisc.h
-        OptionsPage.h
-        OptionsSecurity.cxx
-        OptionsSecurity.h
-        QMonitorArrangement.cxx
-        QMonitorArrangement.h
-        Toast.cxx
-        Toast.h
-        clicksalternativegesture.cxx
-        clicksalternativegesture.h
-        clicksalternativegesturerecognizer.cxx
-        clicksalternativegesturerecognizer.h
-        panzoomgesture.cxx
-        panzoomgesture.h
-        panzoomgesturerecognizer.cxx
-        panzoomgesturerecognizer.h
-        tapdraggesture.cxx
-        tapdraggesture.h
-        tapdraggesturerecognizer.cxx
-        tapdraggesturerecognizer.h
-        res.qrc
-        ${OS_DEP_SOURCES}
-)
-
-if(WIN32 OR APPLE)
-    if(NOT QT_TRANSLATIONS_DIR)
-        get_target_property(QT${QT_VERSION_MAJOR}_QMAKE_EXECUTABLE Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
-        execute_process(COMMAND ${QT${QT_VERSION_MAJOR}_QMAKE_EXECUTABLE} -query QT_INSTALL_TRANSLATIONS OUTPUT_VARIABLE QT_TRANSLATIONS_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
-        file(TO_CMAKE_PATH "${QT_TRANSLATIONS_DIR}" QT_TRANSLATIONS_DIR)
-    endif()
-
-    message("QT_TRANSLATIONS_DIR")
-    message(${QT_TRANSLATIONS_DIR})
-    set(QT_TRANSLATIONS)
-    file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qt_*.qm")
-    list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
-    file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtbase_*.qm")
-    list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
-    file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtscript_*.qm")
-    list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
-    file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtmultimedia_*.qm")
-    list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
-    file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtxmlpatterns_*.qm")
-    list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
-    set(QT_TRANSLATIONS_CONFIGURE)
-    foreach(QT_TR_PATH ${QT_TRANSLATIONS})
-        get_filename_component(QT_TR_NAME ${QT_TR_PATH} NAME)
-        if (NOT QT_TR_NAME MATCHES "(help)")
-            list(APPEND QT_TRANSLATIONS_CONFIGURE
-                "<file alias='${QT_TR_NAME}'>${QT_TR_PATH}</file>"
-            )
-        endif()
-    endforeach()
-    string(REPLACE ";" "\n" QT_TRANSLATIONS_CONFIGURE "${QT_TRANSLATIONS_CONFIGURE}")
-    message("QT_TRANSLATIONS_CONFIGURE")
-    message(${QT_TRANSLATIONS_CONFIGURE})
-    configure_file(qttranslations.qrc.in ${CMAKE_CURRENT_BINARY_DIR}/qttranslations.qrc @ONLY)
-    list(APPEND PROJECT_SOURCES
-        ${CMAKE_CURRENT_BINARY_DIR}/qttranslations.qrc
-    )
+if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set_target_properties(vncviewer PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
 if(WIN32)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+  # Since vncviewer.rc is generated, local includes will be looking
+  # in the wrong directory. We need to help it out.
+  target_include_directories(vncviewer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
   configure_file(vncviewer.rc.in vncviewer.rc)
+  target_sources(vncviewer PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc)
 endif()
 
 if(WIN32)
-  set(OS_DEPENDENT_LIBRARIES msimg32 imm32)
+  target_sources(vncviewer PRIVATE win32.c)
+  target_sources(vncviewer PRIVATE KeyboardWin32.cxx keysym2ucs.c)
 elseif(APPLE)
-  set(OS_DEPENDENT_LIBRARIES "-framework Cocoa -framework Carbon -framework IOKit -framework QuartzCore")
+  target_sources(vncviewer PRIVATE cocoa.mm)
+  target_sources(vncviewer PRIVATE KeyboardMacOS.mm osx_to_qnum.c keysym2ucs.c)
 else()
-  set(OS_DEPENDENT_LIBRARIES ${X11_XiLIB} "-lXi" "-lXrender" "-lXcursor" "-lXinerama" "-lXext" "-lX11")
-  if(X11_Xrandr_LIB)
-    add_definitions(-DHAVE_XRANDR)
-    set(OS_DEPENDENT_LIBRARIES ${OS_DEPENDENT_LIBRARIES} ${X11_Xrandr_LIB})
-  endif()
+  target_sources(vncviewer PRIVATE x11.cxx)
+  target_sources(vncviewer PRIVATE KeyboardX11.cxx xkb_to_qnum.c)
 endif()
 
-if(QT_VERSION_MAJOR GREATER_EQUAL 6)
-    if (WIN32)
-      set(app_icon_resource_windows "${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc")
-    endif()
-    qt_add_executable(vncviewer
-        MANUAL_FINALIZATION
-        ${PROJECT_SOURCES}
-        ${app_icon_resource_windows}
-    )
-else()
-    if(ANDROID)
-        add_library(vncviewer SHARED
-          ${PROJECT_SOURCES}
-        )
-    else()
-        if (WIN32)
+target_sources(vncviewer PRIVATE res.qrc)
 
-set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_CURRENT_BINARY_DIR}/vncviewer.rc")
-          add_executable(vncviewer
-            ${PROJECT_SOURCES}
-            ${APP_ICON_RESOURCE_WINDOWS}
-          )
-        endif()
-        if(APPLE)
-          set(MACOSX_BUNDLE_BUNDLE_NAME "TigerVNC Viewer")
-          set(MACOSX_BUNDLE_BUNDLE_VERSION "${VERSION}${BUILD}")
-          set(MACOSX_BUNDLE_COPYRIGHT "Copyright © 1998-2024 [many holders]")
-          set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.tigervnc.tigervnc")
-          set(MACOSX_BUNDLE_ICON_FILE tigervnc.icns)
-          set(MACOSX_BUNDLE_INFO_STRING "${VERSION}, Copyright © 1998-2024 [many holders]")
-          set(MACOSX_BUNDLE_LONG_VERSION_STRING "TigerVNC Viewer ${VERSION}")
-          set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${VERSION}")
-          set(APP_ICON_MACOSX ${CMAKE_CURRENT_SOURCE_DIR}/../media/icons/tigervnc.icns)
-          set_source_files_properties(${APP_ICON_MACOSX} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
-          add_executable(vncviewer
-            ${PROJECT_SOURCES}
-            ${APP_ICON_MACOSX}
-          )
-        endif()
-        if(UNIX AND NOT APPLE)
-          set(OS_DEPENDENT_LIBRARIES ${OS_DEPENDENT_LIBRARIES} Qt${QT_VERSION_MAJOR}::X11Extras)
-          add_executable(vncviewer
-            ${PROJECT_SOURCES}
-          )
-        endif()
-    endif()
-endif()
-
-set_target_properties(vncviewer PROPERTIES AUTOMOC ON)
-set_target_properties(vncviewer PROPERTIES AUTORCC ON)
-
-if(APPLE)
-    set_target_properties(vncviewer PROPERTIES MACOSX_BUNDLE TRUE)
-endif()
+target_include_directories(vncviewer PUBLIC ${CMAKE_SOURCE_DIR}/common)
+target_link_libraries(vncviewer PRIVATE rfb network rdr os)
 
 target_include_directories(vncviewer SYSTEM PUBLIC ${GETTEXT_INCLUDE_DIR})
-target_include_directories(vncviewer PUBLIC ${CMAKE_SOURCE_DIR}/common)
-if(QT_VERSION_MAJOR GREATER_EQUAL 6)
-    target_link_libraries(vncviewer
-      PRIVATE
-      Qt${QT_VERSION_MAJOR}::Core
-      Qt${QT_VERSION_MAJOR}::Widgets
-      rfb network rdr os  ${OS_DEPENDENT_LIBRARIES})
-  if(ENABLE_NLS)
-    target_link_libraries(vncviewer
-      PRIVATE
-      ${GETTEXT_LIBRARIES}
-    )
+target_link_libraries(vncviewer PRIVATE ${GETTEXT_LIBRARIES})
+
+set_target_properties(vncviewer PROPERTIES AUTOMOC ON)
+target_link_libraries(vncviewer PRIVATE
+  Qt${QT_VERSION_MAJOR}::Core
+  Qt${QT_VERSION_MAJOR}::Widgets)
+if(UNIX AND NOT APPLE)
+  if(QT_VERSION_MAJOR LESS_EQUAL 5)
+    target_link_libraries(vncviewer PRIVATE
+      Qt${QT_VERSION_MAJOR}::X11Extras)
   endif()
+endif()
+
+# FIXME: Not tested
+if(BUILD_STATIC)
+  if(QT_VERSION_MAJOR LESS_EQUAL 5)
+    target_link_libraries(vncviewer PRIVATE
+      Qt${QT_VERSION_MAJOR}::Gui
+      Qt${QT_VERSION_MAJOR}::Network
+      Qt${QT_VERSION_MAJOR}::Svg
+      Qt${QT_VERSION_MAJOR}::ThemeSupport)
+  endif()
+
+  # Embed all translations that Qt needs
+  get_target_property(QT${QT_VERSION_MAJOR}_QMAKE_EXECUTABLE
+    Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
+  execute_process(COMMAND
+    ${QT${QT_VERSION_MAJOR}_QMAKE_EXECUTABLE}
+      --query QT_INSTALL_TRANSLATIONS
+    OUTPUT_VARIABLE QT_TRANSLATIONS_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  file(TO_CMAKE_PATH "${QT_TRANSLATIONS_DIR}" QT_TRANSLATIONS_DIR)
+
+  set(QT_TRANSLATIONS)
+  file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qt_*.qm")
+  list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
+  file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtbase_*.qm")
+  list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
+  file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtscript_*.qm")
+  list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
+  file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtmultimedia_*.qm")
+  list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
+  file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtxmlpatterns_*.qm")
+  list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
+  set(QT_TRANSLATIONS_CONFIGURE)
+  foreach(QT_TR_PATH ${QT_TRANSLATIONS})
+      get_filename_component(QT_TR_NAME ${QT_TR_PATH} NAME)
+      if (NOT QT_TR_NAME MATCHES "(help)")
+          list(APPEND QT_TRANSLATIONS_CONFIGURE
+              "<file alias='${QT_TR_NAME}'>${QT_TR_PATH}</file>"
+          )
+      endif()
+  endforeach()
+  string(REPLACE ";" "\n" QT_TRANSLATIONS_CONFIGURE "${QT_TRANSLATIONS_CONFIGURE}")
+  configure_file(qttranslations.qrc.in ${CMAKE_CURRENT_BINARY_DIR}/qttranslations.qrc @ONLY)
+  target_sources(vncviewer PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}/qttranslations.qrc)
+endif()
+
+if(WIN32)
+  target_link_libraries(vncviewer PRIVATE msimg32 imm32)
+elseif(APPLE)
+  target_link_libraries(vncviewer PRIVATE "-framework Cocoa")
+  target_link_libraries(vncviewer PRIVATE "-framework Carbon")
+  target_link_libraries(vncviewer PRIVATE "-framework IOKit")
+  target_link_libraries(vncviewer PRIVATE "-framework QuartzCore")
 else()
-    if(BUILD_STATIC)
-        target_link_libraries(vncviewer
-            PRIVATE
-            Qt${QT_VERSION_MAJOR}::Core
-            Qt${QT_VERSION_MAJOR}::Gui
-            Qt${QT_VERSION_MAJOR}::Network
-            Qt${QT_VERSION_MAJOR}::Svg
-            Qt${QT_VERSION_MAJOR}::ThemeSupport
-            Qt${QT_VERSION_MAJOR}::Widgets
-            rfb network rdr os ${OS_DEPENDENT_LIBRARIES})
-        if(ENABLE_NLS)
-          target_link_libraries(vncviewer
-            PRIVATE
-            ${GETTEXT_LIBRARIES}
-          )
-        endif()
-    else()
-        target_link_libraries(vncviewer
-            PRIVATE
-            Qt${QT_VERSION_MAJOR}::Core
-            Qt${QT_VERSION_MAJOR}::Network
-            Qt${QT_VERSION_MAJOR}::Widgets
-            rfb network rdr os ${OS_DEPENDENT_LIBRARIES})
-        if(ENABLE_NLS)
-          target_link_libraries(vncviewer
-            PRIVATE
-            ${GETTEXT_LIBRARIES}
-          )
-        endif()
-    endif()
+  target_link_libraries(vncviewer PRIVATE ${X11_Xi_LIB})
+  target_link_libraries(vncviewer PRIVATE ${X11_Xinerama_LIB})
+  target_link_libraries(vncviewer PRIVATE ${X11_X11_LIB})
 endif()
 
 if(QT_VERSION_MAJOR EQUAL 6)
-    qt_finalize_executable(vncviewer)
+  qt_finalize_executable(vncviewer)
 endif()
 
 install(TARGETS vncviewer DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})
