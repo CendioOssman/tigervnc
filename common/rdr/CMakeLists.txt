@@ -17,8 +17,9 @@ add_library(rdr STATIC
   ZlibOutStream.cxx)
 
 target_include_directories(rdr PUBLIC ${CMAKE_SOURCE_DIR}/common)
+target_link_libraries(rdr os rfb)
 target_include_directories(rdr SYSTEM PUBLIC ${ZLIB_INCLUDE_DIRS})
-target_link_libraries(rdr ${ZLIB_LIBRARIES} os rfb)
+target_link_libraries(rdr ${ZLIB_LIBRARIES})
 
 if(MSVC)
   # undef min and max macro
