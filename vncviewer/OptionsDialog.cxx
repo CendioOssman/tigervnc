@@ -29,6 +29,7 @@
 #include "OptionsSecurity.h"
 #include "i18n.h"
 
+#include <QDialogButtonBox>
 #include <QLabel>
 #include <QListWidget>
 #include <QPushButton>
@@ -136,12 +137,16 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
 
   QHBoxLayout* btnsLayout = new QHBoxLayout;
   btnsLayout->setContentsMargins(10,10,10,10);
-  btnsLayout->addStretch(1);
-  btnsLayout->setSpacing(5);
-  QPushButton* applyBtn = new QPushButton(_("Apply"));
-  btnsLayout->addWidget(applyBtn, 0, Qt::AlignRight);
-  QPushButton* closeBtn = new QPushButton(_("Close"));
-  btnsLayout->addWidget(closeBtn, 0, Qt::AlignRight);
+
+  QDialogButtonBox* buttonBox = new QDialogButtonBox;
+  buttonBox->addButton(QDialogButtonBox::Ok);
+  buttonBox->addButton(QDialogButtonBox::Cancel);
+  connect(buttonBox, &QDialogButtonBox::accepted,
+          this, &QDialog::accept);
+  connect(buttonBox, &QDialogButtonBox::rejected,
+          this, &QDialog::reject);
+  btnsLayout->addWidget(buttonBox);
+
   layout->addLayout(btnsLayout);
 
   setLayout(layout);
@@ -149,8 +154,7 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
 
   reset();
 
-  connect(closeBtn, &QPushButton::clicked, this, &QDialog::close);
-  connect(applyBtn, &QPushButton::clicked, this, &OptionsDialog::apply);
+  connect(this, &QDialog::accepted, this, &OptionsDialog::apply);
 }
 
 void OptionsDialog::apply()

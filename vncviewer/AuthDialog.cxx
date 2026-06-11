@@ -22,6 +22,7 @@
 #endif
 
 #include <QCheckBox>
+#include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -94,15 +95,15 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
 
   QHBoxLayout* btnsLayout = new QHBoxLayout;
   btnsLayout->setContentsMargins(5, 5, 5, 5);
-  btnsLayout->addStretch(1);
 
-  QPushButton* cancelBtn = new QPushButton(_("Cancel"));
-  connect(cancelBtn, &QPushButton::clicked, this, &AuthDialog::reject);
-  btnsLayout->addWidget(cancelBtn, 0, Qt::AlignRight);
-
-  QPushButton* okBtn = new QPushButton(_("Ok"));
-  connect(okBtn, &QPushButton::clicked, this, &AuthDialog::accept);
-  btnsLayout->addWidget(okBtn, 0, Qt::AlignRight);
+  QDialogButtonBox* buttonBox = new QDialogButtonBox;
+  buttonBox->addButton(QDialogButtonBox::Ok);
+  buttonBox->addButton(QDialogButtonBox::Cancel);
+  connect(buttonBox, &QDialogButtonBox::accepted,
+          this, &QDialog::accept);
+  connect(buttonBox, &QDialogButtonBox::rejected,
+          this, &QDialog::reject);
+  btnsLayout->addWidget(buttonBox);
 
   layout->addLayout(btnsLayout);
 
