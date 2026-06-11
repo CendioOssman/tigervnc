@@ -17,9 +17,9 @@ add_library(rdr STATIC
   ZlibOutStream.cxx)
 
 target_include_directories(rdr PUBLIC ${CMAKE_SOURCE_DIR}/common)
-target_link_libraries(rdr os rfb)
+target_link_libraries(rdr PRIVATE os rfb)
 target_include_directories(rdr SYSTEM PUBLIC ${ZLIB_INCLUDE_DIRS})
-target_link_libraries(rdr ${ZLIB_LIBRARIES})
+target_link_libraries(rdr PRIVATE ${ZLIB_LIBRARIES})
 
 if(MSVC)
   # undef min and max macro
@@ -28,15 +28,15 @@ endif()
 
 if(GNUTLS_FOUND)
   target_include_directories(rdr SYSTEM PUBLIC ${GNUTLS_INCLUDE_DIR})
-  target_link_libraries(rdr ${GNUTLS_LIBRARIES})
+  target_link_libraries(rdr PRIVATE ${GNUTLS_LIBRARIES})
 endif()
 if (NETTLE_FOUND)
   target_include_directories(rdr SYSTEM PUBLIC ${NETTLE_INCLUDE_DIRS})
-  target_link_libraries(rdr ${NETTLE_LIBRARIES})
+  target_link_libraries(rdr PRIVATE ${NETTLE_LIBRARIES})
   target_link_directories(rdr PUBLIC ${NETTLE_LIBRARY_DIRS})
 endif()
 if(WIN32)
-	target_link_libraries(rdr ws2_32)
+	target_link_libraries(rdr PRIVATE ws2_32)
 endif()
 
 if(UNIX)
