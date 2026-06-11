@@ -1,4 +1,6 @@
 add_executable(vncsession vncsession.c)
+target_include_directories(vncsession SYSTEM PUBLIC ${PAM_INCLUDE_DIRS})
+target_include_directories(vncsession SYSTEM PUBLIC ${SELINUX_INCLUDE_DIRS})
 target_link_libraries(vncsession PRIVATE ${PAM_LIBS} ${SELINUX_LIBS})
 
 configure_file(vncserver@.service.in vncserver@.service @ONLY)
