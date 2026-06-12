@@ -147,7 +147,10 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   setContentsMargins(0, 0, 0, 0);
   resize(w, h);
 
+  viewport = new Viewport(w, h, cc);
+
   scrollArea = new ScrollArea;
+  scrollArea->setWidget(viewport);
 
   QPalette p(palette());
 #ifdef Q_OS_LINUX
@@ -162,9 +165,8 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   setPalette(p);
   setBackgroundRole(QPalette::Window);
 
-  viewport = new Viewport(w, h, cc, scrollArea);
+  toast = new Toast(this);
 
-  scrollArea->setWidget(viewport);
   setName(name);
 
   OptionsDialog::addCallback(handleOptions, this);
@@ -176,8 +178,6 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   resizeTimer->setSingleShot(true);
   connect(resizeTimer, &QTimer::timeout, this,
           &DesktopWindow::handleResizeTimeout);
-
-  toast = new Toast(this);
 
   QVBoxLayout* l = new QVBoxLayout;
   l->setSpacing(0);

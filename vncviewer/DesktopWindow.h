@@ -20,7 +20,6 @@
 #ifndef __DESKTOPWINDOW_H__
 #define __DESKTOPWINDOW_H__
 
-#include <QTimer>
 #include <QWidget>
 
 #include <rfb/Rect.h>
@@ -31,15 +30,16 @@ namespace rfb {
 
 class CConn;
 class ScrollArea;
-class Viewport;
 class Toast;
+class Viewport;
 
 class DesktopWindow : public QWidget {
   Q_OBJECT
 
 public:
-  DesktopWindow(int w, int h, const char *name,
-                CConn* cc, QWidget* parent=nullptr);
+
+  DesktopWindow(int w, int h, const char *name, CConn* cc_,
+                QWidget* parent=nullptr);
   ~DesktopWindow();
 
   // Most efficient format (from DesktopWindow's point of view)
