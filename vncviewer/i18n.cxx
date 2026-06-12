@@ -151,7 +151,7 @@ void i18n_init()
 
 void i18n_qt_init()
 {
-#ifdef Q_OS_LINUX
+#if !defined(WIN32) && !defined(__APPLE__)
   load_catalogs(QLibraryInfo::location(QLibraryInfo::TranslationsPath));
 #else
   // FIXME: Only for static builds? Only fallback?

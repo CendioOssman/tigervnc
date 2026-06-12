@@ -41,7 +41,7 @@
 
 std::map<OptionsCallback*, void*> OptionsDialog::callbacks;
 
-#ifdef Q_OS_LINUX
+#if !defined(WIN32) && !defined(__APPLE__)
 class ListViewStyle : public QProxyStyle
 {
 public:
@@ -92,7 +92,7 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
   QHBoxLayout* hLayout = new QHBoxLayout;
 
   QListWidget* listWidget = new QListWidget;
-#ifdef Q_OS_LINUX
+#if !defined(WIN32) && !defined(__APPLE__)
   listWidget->setStyle(new ListViewStyle);
 #endif
   listWidget->setFrameShape(QFrame::NoFrame);

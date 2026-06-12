@@ -324,7 +324,7 @@ int main(int argc, char** argv)
   signal(SIGINT, CleanupSignalHandler);
   signal(SIGTERM, CleanupSignalHandler);
 
-#ifdef Q_OS_LINUX
+#if !defined(WIN32) && !defined(__APPLE__)
   qputenv("QT_QPA_PLATFORM", "xcb");
 #endif
 
