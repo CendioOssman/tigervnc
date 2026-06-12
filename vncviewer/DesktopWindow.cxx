@@ -36,7 +36,6 @@
 
 #include <QApplication>
 #include <QMoveEvent>
-#include <QProxyStyle>
 #include <QResizeEvent>
 #include <QScreen>
 #include <QScrollArea>
@@ -51,6 +50,7 @@
 #include "mainloop.h"
 #include "parameters.h"
 #include "CConn.h"
+#include "QStyles.h"
 #include "Toast.h"
 #include "Viewport.h"
 
@@ -63,73 +63,6 @@
 #endif
 
 static rfb::LogWriter vlog("DesktopWindow");
-
-#ifdef __APPLE__
-class ScrollBarStyle : public QProxyStyle
-{
-public:
-  int styleHint(StyleHint sh, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *hret) const override
-  {
-    int ret = 0;
-
-    switch (sh) {
-    case SH_ScrollBar_Transient:
-      ret = false;
-      break;
-    default:
-      return QProxyStyle::styleHint(sh, opt, widget, hret);
-    }
-
-    return ret;
-  }
-
-  int pixelMetric(PixelMetric metric, const QStyleOption *opt, const QWidget *widget) const override
-  {
-    int ret = 0;
-
-    switch (metric) {
-    case PM_ScrollBarExtent:
-      ret = cocoa_scrollbar_size();
-      break;
-    case PM_ScrollView_ScrollBarOverlap:
-      ret = false;
-      break;
-    default:
-      return QProxyStyle::pixelMetric(metric, opt, widget);
-    }
-
-    return ret;
-  }
-};
-#endif
-
-class ScrollArea : public QScrollArea
-{
-public:
-  ScrollArea(QWidget* parent = nullptr)
-    : QScrollArea(parent)
-  {
-    setViewportMargins(0, 0, 0, 0);
-    setFrameStyle(QFrame::NoFrame);
-    setLineWidth(0);
-    setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-#if defined(Q_OS_LINUX)
-    setStyleSheet("QScrollArea { background: transparent; }"
-                  "QScrollArea > QWidget { background: transparent; }");
-#elif defined(__APPLE__)
-    horizontalScrollBar()->setStyle(&style);
-    verticalScrollBar()->setStyle(&style);
-    setStyle(&style);
-#endif
-  }
-
-private:
-#ifdef __APPLE__
-  ScrollBarStyle style;
-#endif
-};
 
 DesktopWindow::DesktopWindow(int w, int h, const char *name,
                              CConn* cc_, QWidget* parent)
@@ -149,21 +82,21 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
 
   viewport = new Viewport(w, h, cc);
 
-  scrollArea = new ScrollArea;
+  scrollArea = new QScrollArea;
+  scrollArea->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+  scrollArea->setFrameStyle(QFrame::NoFrame);
   scrollArea->setWidget(viewport);
 
-  QPalette p(palette());
-#ifdef Q_OS_LINUX
-  scrollArea->horizontalScrollBar()->setPalette(p);
-  scrollArea->horizontalScrollBar()->setAutoFillBackground(true);
-  scrollArea->horizontalScrollBar()->setBackgroundRole(QPalette::Window);
-  scrollArea->verticalScrollBar()->setPalette(p);
-  scrollArea->verticalScrollBar()->setAutoFillBackground(true);
-  scrollArea->verticalScrollBar()->setBackgroundRole(QPalette::Window);
-#endif
-  p.setColor(QPalette::Window, QColor::fromRgb(40, 40, 40));
-  setPalette(p);
-  setBackgroundRole(QPalette::Window);
+  QPalette bg(scrollArea->viewport()->palette());
+  bg.setColor(QPalette::Window, QColor::fromRgb(40, 40, 40));
+  scrollArea->viewport()->setPalette(bg);
+
+  // We don't have any alternative way of scrolling, so we cannot let
+  // scrollbars be transient (hidden) when idle
+  QStyle* style = scrollArea->horizontalScrollBar()->style();
+  style = new QNonTransientStyle(style);
+  scrollArea->horizontalScrollBar()->setStyle(style);
+  scrollArea->verticalScrollBar()->setStyle(style);
 
   toast = new Toast(this);
 

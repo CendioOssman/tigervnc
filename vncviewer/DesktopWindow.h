@@ -24,12 +24,13 @@
 
 #include <rfb/Rect.h>
 
+class QScrollArea;
+
 namespace rfb {
   class PixelFormat;
 }
 
 class CConn;
-class ScrollArea;
 class Toast;
 class Viewport;
 
@@ -123,7 +124,7 @@ private:
 
 private:
   CConn* cc;
-  ScrollArea* scrollArea;
+  QScrollArea* scrollArea;
   Viewport *viewport;
   Toast* toast;
 

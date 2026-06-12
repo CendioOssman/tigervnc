@@ -18,6 +18,7 @@ add_executable(vncviewer
   OptionsSecurity.cxx
   PlatformPixelBuffer.cxx
   QMonitorArrangement.cxx
+  QStyles.cxx
   Toast.cxx
   Viewport.cxx
   clicksalternativegesture.cxx
