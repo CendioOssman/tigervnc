@@ -180,9 +180,9 @@ void OptionsSecurity::apply()
 void OptionsSecurity::reset()
 {
   rfb::Security security(rfb::SecurityClient::secTypes);
-  auto secTypes = security.GetEnabledSecTypes();
-  for (auto iter = secTypes.begin(); iter != secTypes.end(); ++iter) {
-    switch (*iter) {
+  std::list<uint8_t> secTypes = security.GetEnabledSecTypes();
+  for (uint8_t secType : secTypes) {
+    switch (secType) {
     case rfb::secTypeNone:
       encNoneCheckbox->setChecked(true);
       authNoneCheckbox->setChecked(true);
@@ -194,9 +194,9 @@ void OptionsSecurity::reset()
     }
   }
 
-  auto secTypesExt = security.GetEnabledExtSecTypes();
-  for (auto iterExt = secTypesExt.begin(); iterExt != secTypesExt.end(); ++iterExt) {
-    switch (*iterExt) {
+  std::list<uint32_t> secTypesExt = security.GetEnabledExtSecTypes();
+  for (uint32_t secTypeExt : secTypesExt) {
+    switch (secTypeExt) {
     case rfb::secTypePlain:
       encNoneCheckbox->setChecked(true);
       authPlainCheckbox->setChecked(true);

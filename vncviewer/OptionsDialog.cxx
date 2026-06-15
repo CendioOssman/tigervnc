@@ -52,7 +52,7 @@ public:
     }
 
     if (PE_PanelItemViewItem == element) {
-      auto newOption = *qstyleoption_cast<const QStyleOptionViewItem *>(option);
+      QStyleOptionViewItem newOption = *qstyleoption_cast<const QStyleOptionViewItem *>(option);
       newOption.showDecorationSelected = true;
       QProxyStyle::drawPrimitive(element, &newOption, painter, widget);
       return;
@@ -160,7 +160,7 @@ OptionsDialog::OptionsDialog(bool staysOnTop, QWidget* parent)
 void OptionsDialog::apply()
 {
   for (int i = 0; i < tabWidget->count(); ++i) {
-    auto w = qobject_cast<OptionsPage*>(tabWidget->widget(i));
+    OptionsPage* w = qobject_cast<OptionsPage*>(tabWidget->widget(i));
     if (w) {
       w->apply();
     }
@@ -177,7 +177,7 @@ void OptionsDialog::apply()
 void OptionsDialog::reset()
 {
   for (int i = 0; i < tabWidget->count(); ++i) {
-    auto w = qobject_cast<OptionsPage*>(tabWidget->widget(i));
+    OptionsPage* w = qobject_cast<OptionsPage*>(tabWidget->widget(i));
     if (w) {
       w->reset();
     }

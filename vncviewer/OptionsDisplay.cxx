@@ -116,9 +116,10 @@ void OptionsDisplay::apply()
   if (windowedButton->isChecked()) {
     ::fullScreen.setParam(false);
   } else {
-    auto newFullScreenMode = allMonitorsButton->isChecked()      ? "all"
-                           : selectedMonitorsButton->isChecked() ? "selected"
-                                                                              : "current";
+    const char* newFullScreenMode =
+      allMonitorsButton->isChecked()        ? "all"
+      : selectedMonitorsButton->isChecked() ? "selected"
+                                            : "current";
     ::fullScreenMode.setParam(newFullScreenMode);
     ::fullScreen.setParam(true);
   }

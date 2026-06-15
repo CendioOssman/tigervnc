@@ -60,7 +60,7 @@ OptionsInput::OptionsInput(QWidget* parent)
   menuKeyChoice = new QComboBox;
   QStringListModel* model = new QStringListModel;
   QStringList menuKeys;
-  auto keysyms = getMenuKeySymbols();
+  const MenuKeySymbol* keysyms = getMenuKeySymbols();
   for (int i = 0; i < getMenuKeySymbolCount(); i++) {
     menuKeys.append(keysyms[i].name);
   }

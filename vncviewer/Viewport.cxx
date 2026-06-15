@@ -257,7 +257,7 @@ Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
     return false;
   });
 
-  for (auto type : gestureRecognizers.keys()) {
+  for (Qt::GestureType type : gestureRecognizers.keys()) {
     grabGesture(type);
     vlog.debug("QGestureRecognizer::registerRecognizer type=%d", type);
   }
@@ -311,7 +311,7 @@ Viewport::~Viewport()
 
   delete keyboard;
 
-  for (auto gr : gestureRecognizers.keys()) {
+  for (Qt::GestureType gr : gestureRecognizers.keys()) {
     QGestureRecognizer::unregisterRecognizer(gr);
   }
 }
@@ -831,13 +831,13 @@ bool Viewport::gestureEvent(QGestureEvent* event)
   }
 
   static QMap<QTapGesture*, bool> tapGestures;
-  for(auto g : event->gestures()) {
+  for(QGesture* g: event->gestures()) {
     vlog.debug("Viewport::gestureEvent: %d %s",
                g->gestureType(),
                QVariant::fromValue(g->state()).toString().toStdString().c_str());
   }
 
-  for (auto gr : gestureRecognizers) {
+  for (QPair<QGestureRecognizer*, GestureCallback>& gr : gestureRecognizers) {
     if (gr.second(event))
       return true;
   }
@@ -848,7 +848,7 @@ bool Viewport::gestureEvent(QGestureEvent* event)
 
 void Viewport::registerGesture(QGestureRecognizer *gr, GestureCallbackWithType cb)
 {
-  auto type = QGestureRecognizer::registerRecognizer(gr);
+  Qt::GestureType type = QGestureRecognizer::registerRecognizer(gr);
   gestureRecognizers.insert(type, QPair<QGestureRecognizer*, GestureCallback>(gr, std::bind(cb, type, std::placeholders::_1)));
 }
 
