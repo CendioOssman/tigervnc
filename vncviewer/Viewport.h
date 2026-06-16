@@ -27,7 +27,6 @@
 
 #include <QAbstractNativeEventFilter>
 #include <QClipboard>
-#include <QMap>
 #include <QWidget>
 
 #include "EmulateMB.h"
@@ -45,6 +44,9 @@ namespace rfb {
 class CConn;
 class Keyboard;
 class PlatformPixelBuffer;
+class QClicksAlternativeGesture;
+class QPanZoomGesture;
+class QTapDragGesture;
 
 class Viewport : public QWidget, protected EmulateMB,
                  protected QAbstractNativeEventFilter,
@@ -87,6 +89,7 @@ protected:
   void wheelEvent(QWheelEvent* event) override;
   void focusInEvent(QFocusEvent* event) override;
   void focusOutEvent(QFocusEvent* event) override;
+  bool gestureEvent(QGestureEvent *event);
   bool event(QEvent* event) override;
 
   void sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask) override;
@@ -98,12 +101,6 @@ private:
 
   void handlePointerEvent(const rfb::Point& pos, uint8_t buttonMask);
   void handlePointerTimeout();
-
-  typedef std::function<bool(QGestureEvent*)> GestureCallback;
-  typedef std::function<bool(Qt::GestureType, QGestureEvent*)> GestureCallbackWithType;
-  QMap<Qt::GestureType, QPair<QGestureRecognizer*, GestureCallback>> gestureRecognizers;
-  bool gestureEvent(QGestureEvent *event);
-  void registerGesture(QGestureRecognizer* gr, GestureCallbackWithType cb);
 
   void resetKeyboard();
 
@@ -121,6 +118,10 @@ private:
 #endif
 
   void pushLEDState();
+
+  void clicksAlternativeGesture(QClicksAlternativeGesture* gesture);
+  void panZoomGesture(QPanZoomGesture* gesture);
+  void tapDragGesture(QTapDragGesture* gesture);
 
   void initContextMenu();
   void popupContextMenu();

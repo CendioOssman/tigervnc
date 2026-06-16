@@ -90,6 +90,10 @@ static const int FAKE_KEY_CODE = 0xffff;
 // Used for fake key presses for gestures
 static const int FAKE_GESTURE_KEY_CODE = 0x20001;
 
+static Qt::GestureType ClicksAlternativeGesture;
+static Qt::GestureType PanZoomGesture;
+static Qt::GestureType TapDragGesture;
+
 Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
   : QWidget(parent), cc(cc_), frameBuffer(nullptr),
     lastPointerPos(0, 0), lastButtonMask(0),
@@ -116,151 +120,13 @@ Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
   keyboard = new KeyboardX11(this);
 #endif
 
-  // 257
-  registerGesture(new QClicksAlternativeGestureRecognizer, [=](Qt::GestureType type, QGestureEvent* event){
-    if (QClicksAlternativeGesture *gesture = static_cast<QClicksAlternativeGesture *>(event->gesture(type))) {
-      if (gesture->state() == Qt::GestureFinished) {
-        QPoint pos = gesture->getPosition();
-        sendKeyRelease(FAKE_GESTURE_KEY_CODE); // Prevents non handling of PanZoomGesture Finished
-        if (gesture->getType() == QClicksAlternativeGesture::TwoPoints) {
-          vlog.debug("Cendio Right click alternative gesture");
-          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 4 /* RightButton */);
-          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
-          event->accept();
-          return true;
-        } else if (gesture->getType() == QClicksAlternativeGesture::ThreePoints) {
-          vlog.debug("Cendio Middle click gesture");
-          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 2 /* MiddleButton */);
-          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
-          event->accept();
-          return true;
-        }
-      }
-    }
-    return false;
-  });
+  ClicksAlternativeGesture = QGestureRecognizer::registerRecognizer(new QClicksAlternativeGestureRecognizer);
+  PanZoomGesture = QGestureRecognizer::registerRecognizer(new QPanZoomGestureRecognizer);
+  TapDragGesture = QGestureRecognizer::registerRecognizer(new QTapDragGestureRecognizer);
 
-  // 258
-  registerGesture(new QPanZoomGestureRecognizer, [=](Qt::GestureType type, QGestureEvent* event){
-    static bool panZoomGesture = false;
-    if (QPanZoomGesture *gesture = static_cast<QPanZoomGesture *>(event->gesture(type))) {
-      if (gesture->state() == Qt::GestureUpdated) {
-        if (gesture->getType() == QPanZoomGesture::Pan) {
-          QPoint pos = gesture->getPosition().toPoint();
-          int wheelMask = 0;
-          if (gesture->getOffsetDelta().y() > 0) {
-            wheelMask |= 8;
-          }
-          if (gesture->getOffsetDelta().y() < 0) {
-            wheelMask |= 16;
-          }
-          if (gesture->getOffsetDelta().x() > 0) {
-            wheelMask |= 32;
-          }
-          if (gesture->getOffsetDelta().x() < 0) {
-            wheelMask |= 64;
-          }
-          vlog.debug("Cendio Pan / Scroll gesture x=%f y=%f mask=%d",
-                     gesture->getOffsetDelta().x(),
-                     gesture->getOffsetDelta().y(),
-                     wheelMask);
-          if (!panZoomGesture) {
-            panZoomGesture = true;
-            QTimer::singleShot(100, this, [=](){
-              panZoomGesture = false;
-              handlePointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
-              handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
-            });
-          }
-        }
-
-        if (gesture->getType() == QPanZoomGesture::Pinch) {
-          QPoint pos = gesture->getPosition().toPoint();
-          int wheelMask = 0;
-          if (gesture->getScaleFactor() > 1.00) {
-            wheelMask |= 8;
-          }
-          if (gesture->getScaleFactor() < 1.00) {
-            wheelMask |= 16;
-          }
-          vlog.debug("Cendio Zoom gesture %d %f", wheelMask, gesture->getScaleFactor());
-          sendKeyPress(FAKE_GESTURE_KEY_CODE, 0x1d, XK_Control_L);
-          if (!panZoomGesture) {
-            panZoomGesture = true;
-            QTimer::singleShot(100, this, [=](){
-              panZoomGesture = false;
-              handlePointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
-              handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
-            });
-          }
-          event->accept();
-          return true;
-        }
-
-        if (gesture->getType() == QPanZoomGesture::Undefined) {
-          vlog.debug("Cendio UNDEFINED gesture");
-        }
-      } else {
-        event->accept();
-        sendKeyRelease(FAKE_GESTURE_KEY_CODE);
-        return true;
-      }
-    }
-    return false;
-  });
-
-  // 259
-  registerGesture(new QTapDragGestureRecognizer, [=](Qt::GestureType type, QGestureEvent* event){
-    if (QTapDragGesture *gesture = static_cast<QTapDragGesture *>(event->gesture(type))) {
-      QPoint pos = gesture->getPosition().toPoint();
-
-      if (gesture->getType() == QTapDragGesture::Drag) {
-        static bool dragGesture = false;
-        if (gesture->state() == Qt::GestureUpdated) {
-          vlog.debug("Cendio Drag gesture");
-          if (!dragGesture) {
-            dragGesture = true;
-            QPoint startPos = gesture->getStartPosition().toPoint();
-            handlePointerEvent(rfb::Point(startPos.x(), startPos.y()), 1 /* LeftButton */);
-          }
-          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 1 /* LeftButton */);
-          event->accept();
-          return true;
-        } else if (gesture->state() == Qt::GestureFinished) {
-          dragGesture = false;
-          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
-          event->accept();
-          return true;
-        }
-      }
-
-      if (gesture->getType() == QTapDragGesture::TapAndHold) {
-        if (gesture->state() == Qt::GestureFinished) {
-          vlog.debug("Cendio Right click gesture");
-          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 4 /* RightButton */);
-          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
-          event->accept();
-          return true;
-        }
-      }
-
-      if (gesture->getType() == QTapDragGesture::Tap) {
-        if(gesture->state() == Qt::GestureFinished) {
-          vlog.debug("Cendio Click gesture");
-          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 1 /* LeftButton */);
-          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
-          event->accept();
-          return true;
-        }
-      }
-    }
-    return false;
-  });
-
-  for (Qt::GestureType type : gestureRecognizers.keys()) {
-    grabGesture(type);
-    vlog.debug("QGestureRecognizer::registerRecognizer type=%d", type);
-  }
+  grabGesture(ClicksAlternativeGesture);
+  grabGesture(PanZoomGesture);
+  grabGesture(TapDragGesture);
 
   connect(QGuiApplication::clipboard(), &QClipboard::changed, this,
           &Viewport::handleClipboardChange);
@@ -311,9 +177,12 @@ Viewport::~Viewport()
 
   delete keyboard;
 
-  for (Qt::GestureType gr : gestureRecognizers.keys()) {
-    QGestureRecognizer::unregisterRecognizer(gr);
-  }
+  QGestureRecognizer::unregisterRecognizer(ClicksAlternativeGesture);
+  ClicksAlternativeGesture = (Qt::GestureType)0;
+  QGestureRecognizer::unregisterRecognizer(PanZoomGesture);
+  PanZoomGesture = (Qt::GestureType)0;
+  QGestureRecognizer::unregisterRecognizer(TapDragGesture);
+  TapDragGesture = (Qt::GestureType)0;
 }
 
 
@@ -696,6 +565,34 @@ void Viewport::focusOutEvent(QFocusEvent* event)
   QWidget::focusOutEvent(event);
 }
 
+bool Viewport::gestureEvent(QGestureEvent* event)
+{
+  QGesture* gesture;
+  vlog.debug("Viewport::gestureEvent");
+
+  if (::viewOnly) {
+    return true;
+  }
+
+  for(QGesture* g: event->gestures()) {
+    vlog.debug("Viewport::gestureEvent: %d %s",
+               g->gestureType(),
+               QVariant::fromValue(g->state()).toString().toStdString().c_str());
+  }
+
+  gesture = event->gesture(ClicksAlternativeGesture);
+  if (gesture)
+    clicksAlternativeGesture((QClicksAlternativeGesture*)gesture);
+  gesture = event->gesture(PanZoomGesture);
+  if (gesture)
+    panZoomGesture((QPanZoomGesture*)gesture);
+  gesture = event->gesture(TapDragGesture);
+  if (gesture)
+    tapDragGesture((QTapDragGesture*)gesture);
+
+  return true;
+}
+
 bool Viewport::event(QEvent *event)
 {
   switch (event->type()) {
@@ -705,7 +602,7 @@ bool Viewport::event(QEvent *event)
     // return true;
     break;
   case QEvent::Gesture:
-    return gestureEvent(reinterpret_cast<QGestureEvent*>(event));
+    return gestureEvent((QGestureEvent*)event);
   default:
     break;
   }
@@ -822,37 +719,6 @@ void Viewport::handlePointerTimeout()
 }
 
 
-bool Viewport::gestureEvent(QGestureEvent* event)
-{
-  vlog.debug("Viewport::gestureEvent");
-
-  if (::viewOnly) {
-    return true;
-  }
-
-  static QMap<QTapGesture*, bool> tapGestures;
-  for(QGesture* g: event->gestures()) {
-    vlog.debug("Viewport::gestureEvent: %d %s",
-               g->gestureType(),
-               QVariant::fromValue(g->state()).toString().toStdString().c_str());
-  }
-
-  for (QPair<QGestureRecognizer*, GestureCallback>& gr : gestureRecognizers) {
-    if (gr.second(event))
-      return true;
-  }
-
-  return true;
-}
-
-
-void Viewport::registerGesture(QGestureRecognizer *gr, GestureCallbackWithType cb)
-{
-  Qt::GestureType type = QGestureRecognizer::registerRecognizer(gr);
-  gestureRecognizers.insert(type, QPair<QGestureRecognizer*, GestureCallback>(gr, std::bind(cb, type, std::placeholders::_1)));
-}
-
-
 void Viewport::resetKeyboard()
 {
   try {
@@ -937,6 +803,124 @@ bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, qin
 
   return false;
 }
+
+
+void Viewport::clicksAlternativeGesture(QClicksAlternativeGesture* gesture)
+{
+  if (gesture->state() == Qt::GestureFinished) {
+    QPoint pos = gesture->getPosition();
+    sendKeyRelease(FAKE_GESTURE_KEY_CODE); // Prevents non handling of PanZoomGesture Finished
+    if (gesture->getType() == QClicksAlternativeGesture::TwoPoints) {
+      vlog.debug("Cendio Right click alternative gesture");
+      handlePointerEvent(rfb::Point(pos.x(), pos.y()), 4 /* RightButton */);
+      handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
+    } else if (gesture->getType() == QClicksAlternativeGesture::ThreePoints) {
+      vlog.debug("Cendio Middle click gesture");
+      handlePointerEvent(rfb::Point(pos.x(), pos.y()), 2 /* MiddleButton */);
+      handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
+    }
+  }
+}
+
+void Viewport::panZoomGesture(QPanZoomGesture* gesture)
+{
+  static bool panZoomGesture = false;
+  if (gesture->state() == Qt::GestureUpdated) {
+    if (gesture->getType() == QPanZoomGesture::Pan) {
+      QPoint pos = gesture->getPosition().toPoint();
+      int wheelMask = 0;
+      if (gesture->getOffsetDelta().y() > 0) {
+        wheelMask |= 8;
+      }
+      if (gesture->getOffsetDelta().y() < 0) {
+        wheelMask |= 16;
+      }
+      if (gesture->getOffsetDelta().x() > 0) {
+        wheelMask |= 32;
+      }
+      if (gesture->getOffsetDelta().x() < 0) {
+        wheelMask |= 64;
+      }
+      vlog.debug("Cendio Pan / Scroll gesture x=%f y=%f mask=%d",
+                  gesture->getOffsetDelta().x(),
+                  gesture->getOffsetDelta().y(),
+                  wheelMask);
+      if (!panZoomGesture) {
+        panZoomGesture = true;
+        QTimer::singleShot(100, this, [=](){
+          panZoomGesture = false;
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
+        });
+      }
+    }
+
+    if (gesture->getType() == QPanZoomGesture::Pinch) {
+      QPoint pos = gesture->getPosition().toPoint();
+      int wheelMask = 0;
+      if (gesture->getScaleFactor() > 1.00) {
+        wheelMask |= 8;
+      }
+      if (gesture->getScaleFactor() < 1.00) {
+        wheelMask |= 16;
+      }
+      vlog.debug("Cendio Zoom gesture %d %f", wheelMask, gesture->getScaleFactor());
+      sendKeyPress(FAKE_GESTURE_KEY_CODE, 0x1d, XK_Control_L);
+      if (!panZoomGesture) {
+        panZoomGesture = true;
+        QTimer::singleShot(100, this, [=](){
+          panZoomGesture = false;
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), wheelMask);
+          handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
+        });
+      }
+    }
+
+    if (gesture->getType() == QPanZoomGesture::Undefined) {
+      vlog.debug("Cendio UNDEFINED gesture");
+    }
+  } else {
+    sendKeyRelease(FAKE_GESTURE_KEY_CODE);
+  }
+}
+
+void Viewport::tapDragGesture(QTapDragGesture* gesture)
+{
+  QPoint pos = gesture->getPosition().toPoint();
+
+  if (gesture->getType() == QTapDragGesture::Drag) {
+    static bool dragGesture = false;
+    if (gesture->state() == Qt::GestureUpdated) {
+      vlog.debug("Cendio Drag gesture");
+      if (!dragGesture) {
+        dragGesture = true;
+        QPoint startPos = gesture->getStartPosition().toPoint();
+        handlePointerEvent(rfb::Point(startPos.x(), startPos.y()), 1 /* LeftButton */);
+      }
+      handlePointerEvent(rfb::Point(pos.x(), pos.y()), 1 /* LeftButton */);
+    } else if (gesture->state() == Qt::GestureFinished) {
+      dragGesture = false;
+      handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
+    }
+  }
+
+  if (gesture->getType() == QTapDragGesture::TapAndHold) {
+    if (gesture->state() == Qt::GestureFinished) {
+      vlog.debug("Cendio Right click gesture");
+      handlePointerEvent(rfb::Point(pos.x(), pos.y()), 4 /* RightButton */);
+      handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
+    }
+  }
+
+  if (gesture->getType() == QTapDragGesture::Tap) {
+    if(gesture->state() == Qt::GestureFinished) {
+      vlog.debug("Cendio Click gesture");
+      handlePointerEvent(rfb::Point(pos.x(), pos.y()), 1 /* LeftButton */);
+      handlePointerEvent(rfb::Point(pos.x(), pos.y()), 0);
+    }
+  }
+}
+
 
 void Viewport::initContextMenu()
 {
