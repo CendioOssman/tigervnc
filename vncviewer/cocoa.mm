@@ -128,13 +128,6 @@ void cocoa_set_presentation_full_screen()
          NSApplicationPresentationAutoHideDock];
 }
 
-int cocoa_scrollbar_size()
-{
-  return static_cast<int>([NSScroller
-    scrollerWidthForControlSize:static_cast<NSControlSize>(0)
-    scrollerStyle:NSScrollerStyleLegacy]);
-}
-
 void cocoa_prevent_native_full_screen(QWidget* win)
 {
   NSView* view = (NSView*)win->winId();
