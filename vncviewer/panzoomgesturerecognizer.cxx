@@ -19,17 +19,17 @@ static QPointF panOffset(const QList<QTouchEvent::TouchPoint> &touchPoints, int 
   return result / qreal(count);
 }
 
-QGesture *PanZoomGestureRecognizer::create(QObject *target)
+QGesture *QPanZoomGestureRecognizer::create(QObject *target)
 {
   if (target && target->isWidgetType()) {
     reinterpret_cast<QWidget *>(target)->setAttribute(Qt::WA_AcceptTouchEvents);
   }
-  return new PanZoomGesture;
+  return new QPanZoomGesture;
 }
 
-QGestureRecognizer::Result PanZoomGestureRecognizer::recognize(QGesture *state, QObject */*watched*/, QEvent *event)
+QGestureRecognizer::Result QPanZoomGestureRecognizer::recognize(QGesture *state, QObject */*watched*/, QEvent *event)
 {
-  PanZoomGesture *q = static_cast<PanZoomGesture *>(state);
+  QPanZoomGesture *q = static_cast<QPanZoomGesture *>(state);
 
   QGestureRecognizer::Result result = QGestureRecognizer::Ignore;
 
@@ -52,14 +52,14 @@ QGestureRecognizer::Result PanZoomGestureRecognizer::recognize(QGesture *state, 
   case QEvent::TouchUpdate: {
     const QTouchEvent *ev = static_cast<const QTouchEvent *>(event);
     if (ev->touchPoints().size() == 2) {
-      if (q->type == PanZoomGesture::Undefined) {
+      if (q->type == QPanZoomGesture::Undefined) {
         q->lastOffset = q->offset;
         q->offset = panOffset(ev->touchPoints(), 2);
         if (q->offset.x() > 3*kSingleStepOffset  || q->offset.y() > 3*kSingleStepOffset ||
             q->offset.x() < -3*kSingleStepOffset || q->offset.y() < -3*kSingleStepOffset) {
           q->setHotSpot(ev->touchPoints().first().startScreenPos());
           q->position = ev->touchPoints().first().startPos();
-          q->type = PanZoomGesture::Pan;
+          q->type = QPanZoomGesture::Pan;
           result = QGestureRecognizer::MayBeGesture;
 
           break;
@@ -82,17 +82,17 @@ QGestureRecognizer::Result PanZoomGestureRecognizer::recognize(QGesture *state, 
           QLineF startLine(p1.startScreenPos(),  p2.startScreenPos());
           qreal newScaleFactor = line.length() / startLine.length();
           if (qAbs(line.length() - startLine.length()) > 2*kSingleStepOffset) {
-            q->type = PanZoomGesture::Pinch;
+            q->type = QPanZoomGesture::Pinch;
             result = QGestureRecognizer::MayBeGesture;
           }
           q->scaleFactor = newScaleFactor;
         }
         q->totalScaleFactor = q->totalScaleFactor * q->scaleFactor;
         q->isNewSequence = false;
-        if (q->type == PanZoomGesture::Pinch) {
+        if (q->type == QPanZoomGesture::Pinch) {
           break;
         }
-      } else if (q->type == PanZoomGesture::Pan) {
+      } else if (q->type == QPanZoomGesture::Pan) {
         q->lastOffset = q->offset;
         q->offset = panOffset(ev->touchPoints(), 2);
         if (q->offset.x() > kSingleStepOffset  || q->offset.y() > kSingleStepOffset ||
@@ -103,7 +103,7 @@ QGestureRecognizer::Result PanZoomGestureRecognizer::recognize(QGesture *state, 
         } else {
           result = QGestureRecognizer::MayBeGesture;
         }
-      } else if (q->type == PanZoomGesture::Pinch) {
+      } else if (q->type == QPanZoomGesture::Pinch) {
         QTouchEvent::TouchPoint p1 = ev->touchPoints().at(0);
         QTouchEvent::TouchPoint p2 = ev->touchPoints().at(1);
 
@@ -142,11 +142,11 @@ QGestureRecognizer::Result PanZoomGestureRecognizer::recognize(QGesture *state, 
   return result;
 }
 
-void PanZoomGestureRecognizer::reset(QGesture *state)
+void QPanZoomGestureRecognizer::reset(QGesture *state)
 {
-  PanZoomGesture *q = static_cast<PanZoomGesture *>(state);
+  QPanZoomGesture *q = static_cast<QPanZoomGesture *>(state);
 
-  q->type = PanZoomGesture::Undefined;
+  q->type = QPanZoomGesture::Undefined;
 
   q->startCenterPoint = q->lastCenterPoint = q->centerPoint = QPointF();
   q->totalScaleFactor = q->lastScaleFactor = q->scaleFactor = 1;

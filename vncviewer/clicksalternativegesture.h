@@ -3,7 +3,7 @@
 
 #include <QGesture>
 
-class ClicksAlternativeGesture : public QGesture
+class QClicksAlternativeGesture : public QGesture
 {
   Q_OBJECT
 public:
@@ -14,7 +14,7 @@ public:
     ThreePoints
   };
 
-  ClicksAlternativeGesture();
+  QClicksAlternativeGesture();
 
   QPoint getPosition() const;
   void setPosition(QPoint newPosition);
@@ -27,7 +27,7 @@ private:
 
   QPoint position;
 
-  friend class ClicksAlternativeGestureRecognizer;
+  friend class QClicksAlternativeGestureRecognizer;
 };
 
 #endif // VNCGESTURE_H

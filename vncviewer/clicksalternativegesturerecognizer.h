@@ -3,7 +3,7 @@
 
 #include <QGestureRecognizer>
 
-class ClicksAlternativeGestureRecognizer : public QGestureRecognizer
+class QClicksAlternativeGestureRecognizer : public QGestureRecognizer
 {
 public:
   QGesture *create(QObject *target) override;

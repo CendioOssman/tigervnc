@@ -7,23 +7,23 @@
 static int kHoldTimeout = 700; // ms
 static int kTapRadius = 40;
 
-QGesture *TapDragGestureRecognizer::create(QObject *target)
+QGesture *QTapDragGestureRecognizer::create(QObject *target)
 {
   if (target && target->isWidgetType()) {
     reinterpret_cast<QWidget *>(target)->setAttribute(Qt::WA_AcceptTouchEvents);
   }
-  return new TapDragGesture;
+  return new QTapDragGesture;
 }
 
-QGestureRecognizer::Result TapDragGestureRecognizer::recognize(QGesture *state, QObject *watched, QEvent *event)
+QGestureRecognizer::Result QTapDragGestureRecognizer::recognize(QGesture *state, QObject *watched, QEvent *event)
 {
-  TapDragGesture *q = static_cast<TapDragGesture *>(state);
+  QTapDragGesture *q = static_cast<QTapDragGesture *>(state);
 
   if (watched == state && event->type() == QEvent::Timer) {
-    if (q->type != TapDragGesture::Drag) {
+    if (q->type != QTapDragGesture::Drag) {
       q->killTimer(q->timerId);
       q->timerId = 0;
-      q->type = TapDragGesture::TapAndHold;
+      q->type = QTapDragGesture::TapAndHold;
       return QGestureRecognizer::FinishGesture | QGestureRecognizer::ConsumeEventHint;
     } else {
       return QGestureRecognizer::Ignore;
@@ -47,12 +47,12 @@ QGestureRecognizer::Result TapDragGestureRecognizer::recognize(QGesture *state, 
       if (!q->timerId)
         return QGestureRecognizer::Ignore;
 
-      if (q->type == TapDragGesture::Undefined) {
-        q->type = TapDragGesture::Tap;
+      if (q->type == QTapDragGesture::Undefined) {
+        q->type = QTapDragGesture::Tap;
         return QGestureRecognizer::FinishGesture;
       }
 
-      if (q->type == TapDragGesture::TapAndHold) {
+      if (q->type == QTapDragGesture::TapAndHold) {
         return QGestureRecognizer::CancelGesture; // get out of the MayBeGesture state
       }
 
@@ -70,10 +70,10 @@ QGestureRecognizer::Result TapDragGestureRecognizer::recognize(QGesture *state, 
       q->setHotSpot(ev->touchPoints().at(0).screenPos());
       QPoint delta = p.pos().toPoint() - p.startPos().toPoint();
       if (delta.manhattanLength() > kTapRadius) {
-        q->type = TapDragGesture::Drag;
+        q->type = QTapDragGesture::Drag;
         return QGestureRecognizer::TriggerGesture;
       } else {
-        q->type = TapDragGesture::Tap;
+        q->type = QTapDragGesture::Tap;
         return QGestureRecognizer::MayBeGesture;
       }
     } else {
@@ -90,10 +90,10 @@ QGestureRecognizer::Result TapDragGestureRecognizer::recognize(QGesture *state, 
   return QGestureRecognizer::Ignore;
 }
 
-void TapDragGestureRecognizer::reset(QGesture *state)
+void QTapDragGestureRecognizer::reset(QGesture *state)
 {
-  TapDragGesture *q = static_cast<TapDragGesture *>(state);
-  q->type = TapDragGesture::Undefined;
+  QTapDragGesture *q = static_cast<QTapDragGesture *>(state);
+  q->type = QTapDragGesture::Undefined;
   q->position = q->startPosition = QPointF();
   if (q->timerId)
     q->killTimer(q->timerId);

@@ -1,26 +1,26 @@
 #include "panzoomgesture.h"
 
-PanZoomGesture::PanZoomGesture()
+QPanZoomGesture::QPanZoomGesture()
 {
 
 }
 
-PanZoomGesture::Type PanZoomGesture::getType() const
+QPanZoomGesture::Type QPanZoomGesture::getType() const
 {
   return type;
 }
 
-qreal PanZoomGesture::getScaleFactor() const
+qreal QPanZoomGesture::getScaleFactor() const
 {
   return scaleFactor;
 }
 
-QPointF PanZoomGesture::getOffsetDelta() const
+QPointF QPanZoomGesture::getOffsetDelta() const
 {
   return offset - lastOffset;
 }
 
-QPointF PanZoomGesture::getPosition() const
+QPointF QPanZoomGesture::getPosition() const
 {
   return position;
 }

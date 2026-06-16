@@ -4,17 +4,17 @@
 
 #include <QWidget>
 
-QGesture *ClicksAlternativeGestureRecognizer::create(QObject *target)
+QGesture *QClicksAlternativeGestureRecognizer::create(QObject *target)
 {
   if (target && target->isWidgetType()) {
     reinterpret_cast<QWidget *>(target)->setAttribute(Qt::WA_AcceptTouchEvents);
   }
-  return new ClicksAlternativeGesture;
+  return new QClicksAlternativeGesture;
 }
 
-QGestureRecognizer::Result ClicksAlternativeGestureRecognizer::recognize(QGesture *state, QObject */*watched*/, QEvent *event)
+QGestureRecognizer::Result QClicksAlternativeGestureRecognizer::recognize(QGesture *state, QObject */*watched*/, QEvent *event)
 {
-  ClicksAlternativeGesture *q = static_cast<ClicksAlternativeGesture *>(state);
+  QClicksAlternativeGesture *q = static_cast<QClicksAlternativeGesture *>(state);
   const QTouchEvent *ev = static_cast<const QTouchEvent *>(event);
 
   QGestureRecognizer::Result result = QGestureRecognizer::Ignore;
@@ -43,15 +43,15 @@ QGestureRecognizer::Result ClicksAlternativeGestureRecognizer::recognize(QGestur
   }
   case QEvent::TouchUpdate: {
     if (ev->touchPoints().size() > 1) {
-      if (q->type == ClicksAlternativeGesture::Undefined) {
+      if (q->type == QClicksAlternativeGesture::Undefined) {
         if (ev->touchPoints().size() == 2) {
-          q->type = ClicksAlternativeGesture::TwoPoints;
+          q->type = QClicksAlternativeGesture::TwoPoints;
         } else {
-          q->type = ClicksAlternativeGesture::ThreePoints;
+          q->type = QClicksAlternativeGesture::ThreePoints;
         }
-      } else if (q->type == ClicksAlternativeGesture::TwoPoints) {
+      } else if (q->type == QClicksAlternativeGesture::TwoPoints) {
         if (ev->touchPoints().size() == 3) {
-          q->type = ClicksAlternativeGesture::ThreePoints;
+          q->type = QClicksAlternativeGesture::ThreePoints;
         }
       }
 
@@ -80,10 +80,10 @@ QGestureRecognizer::Result ClicksAlternativeGestureRecognizer::recognize(QGestur
   return result;
 }
 
-void ClicksAlternativeGestureRecognizer::reset(QGesture *state)
+void QClicksAlternativeGestureRecognizer::reset(QGesture *state)
 {
-  ClicksAlternativeGesture *q = static_cast<ClicksAlternativeGesture *>(state);
-  q->type = ClicksAlternativeGesture::Undefined;
+  QClicksAlternativeGesture *q = static_cast<QClicksAlternativeGesture *>(state);
+  q->type = QClicksAlternativeGesture::Undefined;
   q->setPosition(QPoint());
   QGestureRecognizer::reset(state);
 }

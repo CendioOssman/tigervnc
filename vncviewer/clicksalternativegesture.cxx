@@ -1,21 +1,21 @@
 #include "clicksalternativegesture.h"
 
-ClicksAlternativeGesture::ClicksAlternativeGesture()
+QClicksAlternativeGesture::QClicksAlternativeGesture()
 {
 
 }
 
-ClicksAlternativeGesture::Type ClicksAlternativeGesture::getType() const
+QClicksAlternativeGesture::Type QClicksAlternativeGesture::getType() const
 {
   return type;
 }
 
-QPoint ClicksAlternativeGesture::getPosition() const
+QPoint QClicksAlternativeGesture::getPosition() const
 {
   return position;
 }
 
-void ClicksAlternativeGesture::setPosition(QPoint newPosition)
+void QClicksAlternativeGesture::setPosition(QPoint newPosition)
 {
   position = newPosition;
 }

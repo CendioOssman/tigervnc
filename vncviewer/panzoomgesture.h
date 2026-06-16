@@ -3,7 +3,7 @@
 
 #include <QGesture>
 
-class PanZoomGesture : public QGesture
+class QPanZoomGesture : public QGesture
 {
   Q_OBJECT
 public:
@@ -14,7 +14,7 @@ public:
     Pan
   };
 
-  PanZoomGesture();
+  QPanZoomGesture();
 
   Type getType() const;
 
@@ -46,7 +46,7 @@ private:
   QPointF offset;
   QPointF delta;
 
-  friend class PanZoomGestureRecognizer;
+  friend class QPanZoomGestureRecognizer;
 };
 
 #endif // ZOOMGESTURE_H

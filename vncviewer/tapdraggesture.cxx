@@ -1,21 +1,21 @@
 #include "tapdraggesture.h"
 
-TapDragGesture::TapDragGesture()
+QTapDragGesture::QTapDragGesture()
 {
 
 }
 
-TapDragGesture::Type TapDragGesture::getType() const
+QTapDragGesture::Type QTapDragGesture::getType() const
 {
 
   return type;
 }
-QPointF TapDragGesture::getPosition() const
+QPointF QTapDragGesture::getPosition() const
 {
   return position;
 }
 
-QPointF TapDragGesture::getStartPosition() const
+QPointF QTapDragGesture::getStartPosition() const
 {
   return startPosition;
 }

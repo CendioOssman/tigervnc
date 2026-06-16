@@ -3,7 +3,7 @@
 
 #include <QGestureRecognizer>
 
-class TapDragGestureRecognizer : public QGestureRecognizer
+class QTapDragGestureRecognizer : public QGestureRecognizer
 {
 public:
   QGesture *create(QObject *target) override;

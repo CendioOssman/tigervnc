@@ -3,7 +3,7 @@
 
 #include <QGesture>
 
-class TapDragGesture : public QGesture
+class QTapDragGesture : public QGesture
 {
   Q_OBJECT
 public:
@@ -14,7 +14,7 @@ public:
     TapAndHold
   };
 
-  TapDragGesture();
+  QTapDragGesture();
 
   Type getType() const;
 
@@ -30,7 +30,7 @@ private:
 
   int timerId;
 
-  friend class TapDragGestureRecognizer;
+  friend class QTapDragGestureRecognizer;
 };
 
 #endif // ZOOMGESTURE_H

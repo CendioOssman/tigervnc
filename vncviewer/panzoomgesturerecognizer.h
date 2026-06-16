@@ -3,7 +3,7 @@
 
 #include <QGestureRecognizer>
 
-class PanZoomGestureRecognizer : public QGestureRecognizer
+class QPanZoomGestureRecognizer : public QGestureRecognizer
 {
 public:
   QGesture *create(QObject *target) override;
