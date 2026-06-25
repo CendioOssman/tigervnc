@@ -25,6 +25,7 @@
 #include <FL/Fl_Widget.H>
 
 #include "EmulateMB.h"
+#include "GestureHandler.h"
 #include "Keyboard.h"
 #include "ShortcutHandler.h"
 
@@ -38,7 +39,8 @@ class PlatformPixelBuffer;
 class Surface;
 
 class Viewport : public Fl_Widget, protected EmulateMB,
-                 protected KeyboardHandler {
+                 protected KeyboardHandler,
+                 protected GestureCallback {
 public:
 
   Viewport(int w, int h, CConn* cc_);
@@ -72,6 +74,9 @@ public:
   int handle(int event) override;
 
 protected:
+  void handleGestureEvent(const GestureEvent& event) override;
+  void handleTapEvent(const GestureEvent& ev, int buttonMask);
+
   void sendPointerEvent(const core::Point& pos,
                         uint16_t buttonMask) override;
 
@@ -113,6 +118,12 @@ private:
 
   core::Point lastPointerPos;
   uint16_t lastButtonMask;
+
+  double lastMagnitudeX;
+  double lastMagnitudeY;
+
+  GestureEvent firstDoubleTapEvent;
+  struct timeval lastTapTime;
 
   Keyboard* keyboard;
   ShortcutHandler shortcutHandler;

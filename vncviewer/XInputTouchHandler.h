@@ -25,35 +25,17 @@
 #include "BaseTouchHandler.h"
 #include "GestureHandler.h"
 
-class XInputTouchHandler: public BaseTouchHandler, GestureCallback {
+class XInputTouchHandler: public BaseTouchHandler {
   public:
-    XInputTouchHandler(Window wnd);
+    XInputTouchHandler(Window wnd, GestureCallback* gestureCallback);
 
     bool handleEvent(const void* event) override;
 
   protected:
     void processEvent(const XIDeviceEvent* devev);
 
-    void preparePointerEvent(XEvent* dst, const XIDeviceEvent* src);
-    void fakeMotionEvent(const XIDeviceEvent* origEvent);
-    void fakeButtonEvent(bool press, int button,
-                         const XIDeviceEvent* origEvent);
-
-    void preparePointerEvent(XEvent* dst, const GestureEvent src);
-    void fakeMotionEvent(const GestureEvent origEvent) override;
-    void fakeButtonEvent(bool press, int button,
-                         const GestureEvent origEvent) override;
-    void fakeKeyEvent(bool press, int keycode,
-                      const GestureEvent origEvent) override;
-
-    void handleGestureEvent(const GestureEvent& event) override;
-
-  private:
-    void pushFakeEvent(XEvent* event);
-
   private:
     Window wnd;
-    int fakeStateMask;
 
     GestureHandler gestureHandler;
 };

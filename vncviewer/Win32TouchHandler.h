@@ -23,9 +23,11 @@
 
 #include "BaseTouchHandler.h"
 
+class GestureCallback;
+
 class Win32TouchHandler: public BaseTouchHandler {
   public:
-    Win32TouchHandler(HWND hWnd);
+    Win32TouchHandler(HWND hWnd, GestureCallback* gestureCallback);
 
     bool handleEvent(const void* event) override;
 
@@ -40,17 +42,9 @@ class Win32TouchHandler: public BaseTouchHandler {
     void handleWin32GestureEvent(GESTUREINFO gi);
     bool isSinglePan(GESTUREINFO gi);
 
-  protected:
-    void fakeMotionEvent(const GestureEvent origEvent) override;
-    void fakeButtonEvent(bool press, int button,
-                         const GestureEvent origEvent) override;
-    void fakeKeyEvent(bool press, int keycode,
-                      const GestureEvent origEvent) override;
-  private:
-    void pushFakeEvent(UINT Msg, WPARAM wParam, LPARAM lParam);
-
   private:
     HWND hWnd;
+    GestureCallback* gestureCallback;
 
     bool gesturesConfigured;
     bool startedSinglePan;
@@ -58,9 +52,6 @@ class Win32TouchHandler: public BaseTouchHandler {
 
     bool gestureActive;
     bool ignoringGesture;
-
-    int fakeButtonMask;
-    POINT lastFakeMotionPos;
 };
 
 #endif // __WIN32TOUCHHANDLER_H__

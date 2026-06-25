@@ -31,15 +31,18 @@
 #define XK_MISCELLANY
 #include <rfb/keysymdef.h>
 
+#include "GestureHandler.h"
 #include "Win32TouchHandler.h"
 
 static core::LogWriter vlog("Win32TouchHandler");
 
 static const unsigned SINGLE_PAN_THRESHOLD = 50;
 
-Win32TouchHandler::Win32TouchHandler(HWND hWnd_) :
-  hWnd(hWnd_), gesturesConfigured(false), gestureActive(false),
-  ignoringGesture(false), fakeButtonMask(0)
+Win32TouchHandler::Win32TouchHandler(HWND hWnd_,
+                                     GestureCallback* gestureCallback_)
+  : hWnd(hWnd_), gestureCallback(gestureCallback_),
+    gesturesConfigured(false), gestureActive(false),
+    ignoringGesture(false)
 {
   // If window is registered as touch we can not receive gestures,
   // this should not happen
@@ -143,17 +146,6 @@ void Win32TouchHandler::handleWin32GestureEvent(GESTUREINFO gi)
   POINT pos;
 
   if (gi.dwID == GID_BEGIN) {
-    // FLTK gets very confused if the cursor position is outside
-    // of the window when getting mouse events, so we start by
-    // moving the cursor to something proper.
-    // FIXME: Only do this when necessary?
-    // FIXME: There is some odd delay before Windows fully updates
-    //        the state of the cursor position. By doing it here in
-    //        GID_BEGIN we hope to do it early enough that we don't
-    //        get any odd effects.
-    // FIXME: GF_BEGIN position can differ from GID_BEGIN pos.
-
-    SetCursorPos(gi.ptsLocation.x, gi.ptsLocation.y);
     return;
   } else if (gi.dwID == GID_END) {
     gestureActive = false;
@@ -260,7 +252,7 @@ void Win32TouchHandler::handleWin32GestureEvent(GESTUREINFO gi)
 
   gestureActive = true;
 
-  BaseTouchHandler::handleGestureEvent(gev);
+  gestureCallback->handleGestureEvent(gev);
 
   // Since we have a threshold for GestureDrag we need to generate
   // a second event right away with the current position
@@ -268,22 +260,7 @@ void Win32TouchHandler::handleWin32GestureEvent(GESTUREINFO gi)
     gev.type = GestureUpdate;
     gev.eventX = pos.x;
     gev.eventY = pos.y;
-    BaseTouchHandler::handleGestureEvent(gev);
-  }
-
-  // FLTK tends to reset the cursor to the real position so we
-  // need to make sure that we update that position
-  if (gev.type == GestureEnd) {
-    POINT expectedPos;
-    POINT currentPos;
-
-    expectedPos = lastFakeMotionPos;
-    ClientToScreen(hWnd, &expectedPos);
-    GetCursorPos(&currentPos);
-
-    if ((expectedPos.x != currentPos.x) ||
-        (expectedPos.y != currentPos.y))
-      SetCursorPos(expectedPos.x, expectedPos.y);
+    gestureCallback->handleGestureEvent(gev);
   }
 }
 
@@ -319,160 +296,4 @@ bool Win32TouchHandler::isSinglePan(GESTUREINFO gi)
   lowestX = mi.rcMonitor.left;
 
   return lowestX == (LONG)gi.ullArguments;
-}
-
-void Win32TouchHandler::fakeMotionEvent(const GestureEvent origEvent)
-{
-  UINT Msg = WM_MOUSEMOVE;
-  WPARAM wParam = MAKEWPARAM(fakeButtonMask, 0);
-  LPARAM lParam = MAKELPARAM(origEvent.eventX, origEvent.eventY);
-
-  pushFakeEvent(Msg, wParam, lParam);
-  lastFakeMotionPos.x = origEvent.eventX;
-  lastFakeMotionPos.y = origEvent.eventY;
-}
-
-void Win32TouchHandler::fakeButtonEvent(bool press, int button,
-                                        const GestureEvent origEvent)
-{
-  UINT Msg;
-  WPARAM wParam;
-  LPARAM lParam;
-  int delta;
-
-  // Needed to silence false positive that this is used uninitialized
-  delta = 0;
-
-  switch (button) {
-
-  case 1: // left mousebutton
-    if (press) {
-      Msg = WM_LBUTTONDOWN;
-      fakeButtonMask |= MK_LBUTTON;
-    } else {
-      Msg = WM_LBUTTONUP;
-      fakeButtonMask &= ~MK_LBUTTON;
-    }
-    break;
-  case 2: // middle mousebutton
-    if (press) {
-      Msg = WM_MBUTTONDOWN;
-      fakeButtonMask |= MK_MBUTTON;
-    } else {
-      Msg = WM_MBUTTONUP;
-      fakeButtonMask &= ~MK_MBUTTON;
-    }
-    break;
-  case 3: // right mousebutton
-    if (press) {
-      Msg = WM_RBUTTONDOWN;
-      fakeButtonMask |= MK_RBUTTON;
-    } else {
-      Msg = WM_RBUTTONUP;
-      fakeButtonMask &= ~MK_RBUTTON;
-    }
-    break;
-
-  case 4: // scroll up
-    Msg = WM_MOUSEWHEEL;
-    delta = WHEEL_DELTA;
-    break;
-  case 5: // scroll down
-    Msg = WM_MOUSEWHEEL;
-    delta = -WHEEL_DELTA;
-    break;
-  case 6: // scroll left
-    Msg = WM_MOUSEHWHEEL;
-    delta = -WHEEL_DELTA;
-    break;
-  case 7: // scroll right
-    Msg = WM_MOUSEHWHEEL;
-    delta = WHEEL_DELTA;
-    break;
-
-  default:
-    vlog.error(_("Invalid mouse button %d, must be a number between 1 and 7."),
-               button);
-    return;
-  }
-
-  if (1 <= button && button <= 3) {
-    wParam = MAKEWPARAM(fakeButtonMask, 0);
-
-    // Regular mouse events expect client coordinates
-    lParam = MAKELPARAM(origEvent.eventX, origEvent.eventY);
-  } else {
-    POINT pos;
-
-    // Only act on wheel press, not on release
-    if (!press)
-      return;
-
-    wParam = MAKEWPARAM(fakeButtonMask, delta);
-
-    // Wheel events require screen coordinates
-    pos.x = (LONG)origEvent.eventX;
-    pos.y = (LONG)origEvent.eventY;
-
-    ClientToScreen(hWnd, &pos);
-    lParam = MAKELPARAM(pos.x, pos.y);
-  }
-
-  pushFakeEvent(Msg, wParam, lParam);
-}
-
-void Win32TouchHandler::fakeKeyEvent(bool press, int keysym,
-                                     const GestureEvent /*origEvent*/)
-{
-  UINT Msg = press ? WM_KEYDOWN : WM_KEYUP;
-  WPARAM wParam;
-  LPARAM lParam;
-  int vKey;
-  int scanCode;
-  int previousKeyState = press ? 0 : 1;
-  int transitionState = press ? 0 : 1;
-
-  switch(keysym) {
-
-  case XK_Control_L:
-    vKey = VK_CONTROL;
-    scanCode = 0x1d;
-    if (press)
-      fakeButtonMask |= MK_CONTROL;
-    else
-      fakeButtonMask &= ~MK_CONTROL;
-    break;
-
-  // BaseTouchHandler will currently not send SHIFT but we keep it for
-  // completeness sake. This way we have coverage for all wParam's MK_-bits.
-  case XK_Shift_L:
-    vKey = VK_SHIFT;
-    scanCode = 0x2a;
-    if (press)
-      fakeButtonMask |= MK_SHIFT;
-    else
-      fakeButtonMask &= ~MK_SHIFT;
-    break;
-
-  default:
-    //FIXME: consider adding generic handling
-    vlog.error(_("Unhandled key 0x%x - can't generate keyboard event."),
-               keysym);
-    return;
-  }
-
-  wParam = MAKEWPARAM(vKey, 0);
-
-  scanCode         <<= 0;
-  previousKeyState <<= 14;
-  transitionState  <<= 15;
-  lParam = MAKELPARAM(1, // RepeatCount
-                      (scanCode | previousKeyState | transitionState));
-
-  pushFakeEvent(Msg, wParam, lParam);
-}
-
-void Win32TouchHandler::pushFakeEvent(UINT Msg, WPARAM wParam, LPARAM lParam)
-{
-  PostMessage(hWnd, Msg, wParam, lParam);
 }
