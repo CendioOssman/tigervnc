@@ -24,6 +24,9 @@
 #include <limits.h>
 #include <unistd.h>
 
+#include <X11/extensions/XInput2.h>
+#include <X11/extensions/XI2.h>
+
 #include <FL/x.H>
 
 #include "x11.h"
@@ -203,6 +206,186 @@ bool x11_grab_keyboard(Fl_Window* win)
 void x11_ungrab_keyboard()
 {
   XUngrabKeyboard(fl_display, CurrentTime);
+}
+
+static int xi_major;
+
+bool x11_has_xinput22()
+{
+  static bool checked = false;
+  static bool has_xinput22 = false;
+
+  int ev, err;
+  int major_ver, minor_ver;
+
+  if (checked)
+    return has_xinput22;
+
+  checked = true;
+
+  fl_open_display();
+
+  if (!XQueryExtension(fl_display, "XInputExtension", &xi_major, &ev, &err))
+    return false;
+
+  major_ver = 2;
+  minor_ver = 2;
+  if (XIQueryVersion(fl_display, &major_ver, &minor_ver) != Success)
+    return false;
+
+  if ((major_ver == 2) && (minor_ver < 2))
+    return false;
+
+  has_xinput22 = true;
+
+  return true;
+}
+
+int x11_xinput_major()
+{
+  if (!x11_has_xinput22())
+    return -1;
+
+  return xi_major;
+}
+
+bool x11_grab_pointer(Fl_Window* win)
+{
+  Window window;
+
+  XIEventMask *curmasks;
+  int num_masks;
+
+  int ret, ndevices;
+
+  XIDeviceInfo *devices, *device;
+  bool gotGrab;
+
+  window = fl_xid(win);
+
+  if (!x11_has_xinput22()) {
+    int status;
+
+    status = XGrabPointer(fl_display, window, True,
+                          ButtonPressMask | ButtonReleaseMask |
+                          ButtonMotionMask | PointerMotionMask,
+                          GrabModeAsync, GrabModeAsync,
+                          None, None, CurrentTime);
+    return status == Success;
+  }
+
+  // We grab for the same events as the window is currently interested in
+  curmasks = XIGetSelectedEvents(fl_display, window, &num_masks);
+  if (curmasks == nullptr)
+    return false;
+
+  // Our windows should only have a single mask, which allows us to
+  // simplify all the code handling the masks
+  if (num_masks > 1) {
+    XFree(curmasks);
+    return false;
+  }
+
+  // We need to remove XI_TouchOwnership from our event masks while
+  // grabbing as otherwise we will get double events (one for the grab,
+  // and one because of XI_TouchOwnership) with no way of telling them
+  // apart. See XInputTouchHandler constructor for why we use this
+  // event.
+  XIClearMask(curmasks[0].mask, XI_TouchOwnership);
+  XISelectEvents(fl_display, window, curmasks, 1);
+
+  devices = XIQueryDevice(fl_display, XIAllMasterDevices, &ndevices);
+
+  // Iterate through available devices to find those which
+  // provide pointer input, and attempt to grab all such devices.
+  gotGrab = false;
+  for (int i = 0; i < ndevices; i++) {
+    device = &devices[i];
+
+    if (device->use != XIMasterPointer)
+      continue;
+
+    curmasks[0].deviceid = device->deviceid;
+
+    ret = XIGrabDevice(fl_display,
+                       device->deviceid,
+                       window,
+                       CurrentTime,
+                       None,
+                       XIGrabModeAsync,
+                       XIGrabModeAsync,
+                       True,
+                       &(curmasks[0]));
+
+    if (ret)
+      continue;
+
+    gotGrab = true;
+  }
+
+  XIFreeDeviceInfo(devices);
+
+  // Did we not even grab a single device?
+  if (!gotGrab) {
+    XISetMask(curmasks[0].mask, XI_TouchOwnership);
+    XISelectEvents(fl_display, window, curmasks, 1);
+    XFree(curmasks);
+    return false;
+  }
+
+  XFree(curmasks);
+
+  return true;
+}
+
+void x11_ungrab_pointer(Fl_Window* win)
+{
+  Window window;
+
+  int ndevices;
+  XIDeviceInfo *devices, *device;
+
+  XIEventMask *curmasks;
+  int num_masks;
+
+  window = fl_xid(win);
+
+  if (!x11_has_xinput22()) {
+    XUngrabPointer(fl_display, CurrentTime);
+    return;
+  }
+
+  devices = XIQueryDevice(fl_display, XIAllMasterDevices, &ndevices);
+
+  // Release all devices, hoping they are the same as when we
+  // grabbed things
+  for (int i = 0; i < ndevices; i++) {
+    device = &devices[i];
+
+    if (device->use != XIMasterPointer)
+      continue;
+
+    XIUngrabDevice(fl_display, device->deviceid, CurrentTime);
+  }
+
+  XIFreeDeviceInfo(devices);
+
+  // Restore XI_TouchOwnership now that the grab is gone
+  curmasks = XIGetSelectedEvents(fl_display, window, &num_masks);
+  if (curmasks == nullptr)
+    return;
+
+  // Our windows should only have a single mask, which allows us to
+  // simplify all the code handling the masks
+  if (num_masks > 1) {
+    XFree(curmasks);
+    return;
+  }
+
+  XISetMask(curmasks[0].mask, XI_TouchOwnership);
+  XISelectEvents(fl_display, window, curmasks, 1);
+
+  XFree(curmasks);
 }
 
 void x11_warp_pointer(unsigned x, unsigned y)

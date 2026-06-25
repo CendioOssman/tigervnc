@@ -27,9 +27,6 @@ class XInputTouchHandler: public BaseTouchHandler, GestureCallback {
   public:
     XInputTouchHandler(Window wnd);
 
-    bool grabPointer();
-    void ungrabPointer();
-
     void processEvent(const XIDeviceEvent* devev);
 
   protected:

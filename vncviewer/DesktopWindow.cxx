@@ -43,7 +43,6 @@
 #include "Surface.h"
 #include "Toast.h"
 #include "Viewport.h"
-#include "touch.h"
 #include "fltk/event_dispatch_handler.h"
 
 #include <FL/Fl.H>

@@ -34,6 +34,12 @@ void x11_win_may_grab(Fl_Window* win);
 bool x11_grab_keyboard(Fl_Window* win);
 void x11_ungrab_keyboard();
 
+bool x11_has_xinput22();
+int x11_xinput_major();
+
+bool x11_grab_pointer(Fl_Window* win);
+void x11_ungrab_pointer(Fl_Window* win);
+
 void x11_warp_pointer(unsigned x, unsigned y);
 
 bool x11_is_pointer_on_same_screen(Fl_Window* win);
