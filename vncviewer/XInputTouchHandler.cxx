@@ -43,7 +43,7 @@ static rfb::LogWriter vlog("XInputTouchHandler");
 static bool grabbed = false;
 
 XInputTouchHandler::XInputTouchHandler(Window wnd_)
-  : wnd(wnd_), fakeStateMask(0)
+  : wnd(wnd_), fakeStateMask(0), gestureHandler(this)
 {
   XIEventMask eventmask;
   unsigned char flags[XIMaskLen(XI_LASTEVENT)] = { 0 };
@@ -246,13 +246,13 @@ void XInputTouchHandler::processEvent(const XIDeviceEvent* devev)
                          XIAcceptTouch);
     }
 
-    handleTouchBegin(devev->detail, devev->event_x, devev->event_y);
+    gestureHandler.handleTouchBegin(devev->detail, devev->event_x, devev->event_y);
     break;
   case XI_TouchUpdate:
-    handleTouchUpdate(devev->detail, devev->event_x, devev->event_y);
+    gestureHandler.handleTouchUpdate(devev->detail, devev->event_x, devev->event_y);
     break;
   case XI_TouchEnd:
-    handleTouchEnd(devev->detail);
+    gestureHandler.handleTouchEnd(devev->detail);
     break;
   case XI_TouchOwnership:
     // FIXME: Currently ignored, see constructor

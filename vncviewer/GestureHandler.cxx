@@ -57,8 +57,8 @@ const unsigned GH_LONGPRESS_TIMEOUT = 1000;
 // Timeout when waiting to decide between PINCH and TWODRAG (ms)
 const unsigned GH_TWOTOUCH_TIMEOUT = 50;
 
-GestureHandler::GestureHandler() :
-  state(GH_INITSTATE), waitingRelease(false),
+GestureHandler::GestureHandler(GestureCallback* callback_) :
+  callback(callback_), state(GH_INITSTATE), waitingRelease(false),
   longpressTimer(this), twoTouchTimer(this)
 {
 }
@@ -409,7 +409,7 @@ void GestureHandler::pushEvent(GestureEventType t)
       getAverageMovement(&gev.magnitudeX, &gev.magnitudeY);
   }
 
-  handleGestureEvent(gev);
+  callback->handleGestureEvent(gev);
 }
 
 GestureEventGesture GestureHandler::stateToGesture(unsigned char state)

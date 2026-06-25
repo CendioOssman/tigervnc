@@ -27,7 +27,7 @@
 
 #include "../../vncviewer/GestureHandler.h"
 
-class TestClass : public GestureHandler
+class TestClass : public GestureCallback
 {
   protected:
     void handleGestureEvent(const GestureEvent& event) override;
@@ -50,14 +50,15 @@ void TestClass::handleGestureEvent(const GestureEvent& event)
 void testOneTapNormal()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -77,19 +78,20 @@ void testOneTapNormal()
 void testTwoTapNormal()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -109,17 +111,18 @@ void testTwoTapNormal()
 void testTwoTapSlowBegin()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   usleep(500000);
   rfb::Timer::checkTimeouts();
 
-  test.handleTouchBegin(2, 30.0, 50.0);
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
+  handler.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -129,17 +132,18 @@ void testTwoTapSlowBegin()
 void testTwoTapSlowEnd()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
-  test.handleTouchEnd(1);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchEnd(1);
 
   usleep(500000);
   rfb::Timer::checkTimeouts();
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -149,17 +153,18 @@ void testTwoTapSlowEnd()
 void testTwoTapTimeout()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
 
   usleep(1500000);
   rfb::Timer::checkTimeouts();
 
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -169,24 +174,25 @@ void testTwoTapTimeout()
 void testThreeTapNormal()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
-  test.handleTouchBegin(3, 40.0, 40.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(3, 40.0, 40.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchEnd(3);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -206,19 +212,20 @@ void testThreeTapNormal()
 void testThreeTapSlowBegin()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
 
   usleep(500000);
   rfb::Timer::checkTimeouts();
 
-  test.handleTouchBegin(3, 40.0, 40.0);
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
-  test.handleTouchEnd(3);
+  handler.handleTouchBegin(3, 40.0, 40.0);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -228,19 +235,20 @@ void testThreeTapSlowBegin()
 void testThreeTapSlowEnd()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
-  test.handleTouchBegin(3, 40.0, 40.0);
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(3, 40.0, 40.0);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
 
   usleep(500000);
   rfb::Timer::checkTimeouts();
 
-  test.handleTouchEnd(3);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -250,20 +258,21 @@ void testThreeTapSlowEnd()
 void testThreeTapDrag()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
-  test.handleTouchBegin(3, 40.0, 40.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(3, 40.0, 40.0);
 
-  test.handleTouchUpdate(1, 120.0, 130.0);
-  test.handleTouchUpdate(2, 130.0, 150.0);
-  test.handleTouchUpdate(3, 140.0, 140.0);
+  handler.handleTouchUpdate(1, 120.0, 130.0);
+  handler.handleTouchUpdate(2, 130.0, 150.0);
+  handler.handleTouchUpdate(3, 140.0, 140.0);
 
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
-  test.handleTouchEnd(3);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -273,19 +282,20 @@ void testThreeTapDrag()
 void testThreeTapTimeout()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
-  test.handleTouchBegin(3, 40.0, 40.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(3, 40.0, 40.0);
 
   usleep(1500000);
   rfb::Timer::checkTimeouts();
 
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
-  test.handleTouchEnd(3);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -295,18 +305,19 @@ void testThreeTapTimeout()
 void testDragHoriz()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 40.0, 30.0);
+  handler.handleTouchUpdate(1, 40.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -322,7 +333,7 @@ void testDragHoriz()
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -337,18 +348,19 @@ void testDragHoriz()
 void testDragVert()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 20.0, 50.0);
+  handler.handleTouchUpdate(1, 20.0, 50.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 20.0, 90.0);
+  handler.handleTouchUpdate(1, 20.0, 90.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -364,7 +376,7 @@ void testDragVert()
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -379,18 +391,19 @@ void testDragVert()
 void testDragDiag()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 120.0, 130.0);
+  handler.handleTouchBegin(1, 120.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 90.0, 100.0);
+  handler.handleTouchUpdate(1, 90.0, 100.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 60.0, 70.0);
+  handler.handleTouchUpdate(1, 60.0, 70.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -406,7 +419,7 @@ void testDragDiag()
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -421,10 +434,11 @@ void testDragDiag()
 void testLongPressNormal()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -440,7 +454,7 @@ void testLongPressNormal()
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -455,10 +469,11 @@ void testLongPressNormal()
 void testLongPressDrag()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -474,7 +489,7 @@ void testLongPressDrag()
 
   test.events.clear();
 
-  test.handleTouchUpdate(1, 120.0, 50.0);
+  handler.handleTouchUpdate(1, 120.0, 50.0);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -485,7 +500,7 @@ void testLongPressDrag()
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -500,24 +515,25 @@ void testLongPressDrag()
 void testTwoDragFastDistinctHoriz()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 40.0, 30.0);
+  handler.handleTouchUpdate(1, 40.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 50.0, 30.0);
+  handler.handleTouchUpdate(2, 50.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 90.0, 30.0);
-  test.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchUpdate(2, 90.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -537,7 +553,7 @@ void testTwoDragFastDistinctHoriz()
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -554,23 +570,24 @@ void testTwoDragFastDistinctHoriz()
 void testTwoDragFastDistinctVert()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 20.0, 100.0);
+  handler.handleTouchUpdate(1, 20.0, 100.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 30.0, 40.0);
+  handler.handleTouchUpdate(2, 30.0, 40.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 30.0, 90.0);
+  handler.handleTouchUpdate(2, 30.0, 90.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -590,7 +607,7 @@ void testTwoDragFastDistinctVert()
 
   test.events.clear();
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -607,23 +624,24 @@ void testTwoDragFastDistinctVert()
 void testTwoDragFastDistinctDiag()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 120.0, 130.0);
-  test.handleTouchBegin(2, 130.0, 130.0);
+  handler.handleTouchBegin(1, 120.0, 130.0);
+  handler.handleTouchBegin(2, 130.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 80.0, 90.0);
+  handler.handleTouchUpdate(1, 80.0, 90.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 100.0, 130.0);
+  handler.handleTouchUpdate(2, 100.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 60.0, 70.0);
+  handler.handleTouchUpdate(2, 60.0, 70.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -643,7 +661,7 @@ void testTwoDragFastDistinctDiag()
 
   test.events.clear();
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -660,15 +678,16 @@ void testTwoDragFastDistinctDiag()
 void testTwoDragFastAlmost()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 30.0);
-  test.handleTouchUpdate(1, 80.0, 30.0);
-  test.handleTouchUpdate(2, 70.0, 30.0);
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchUpdate(2, 70.0, 30.0);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -683,13 +702,14 @@ void testTwoDragFastAlmost()
 void testTwoDragSlowHoriz()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 50.0, 40.0);
-  test.handleTouchBegin(2, 60.0, 40.0);
-  test.handleTouchUpdate(2, 80.0, 40.0);
-  test.handleTouchUpdate(1, 110.0, 40.0);
+  handler.handleTouchBegin(1, 50.0, 40.0);
+  handler.handleTouchBegin(2, 60.0, 40.0);
+  handler.handleTouchUpdate(2, 80.0, 40.0);
+  handler.handleTouchUpdate(1, 110.0, 40.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -717,13 +737,14 @@ void testTwoDragSlowHoriz()
 void testTwoDragSlowVert()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 40.0, 40.0);
-  test.handleTouchBegin(2, 40.0, 60.0);
-  test.handleTouchUpdate(2, 40.0, 80.0);
-  test.handleTouchUpdate(1, 40.0, 100.0);
+  handler.handleTouchBegin(1, 40.0, 40.0);
+  handler.handleTouchBegin(2, 40.0, 60.0);
+  handler.handleTouchUpdate(2, 40.0, 80.0);
+  handler.handleTouchUpdate(1, 40.0, 100.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -751,13 +772,14 @@ void testTwoDragSlowVert()
 void testTwoDragSlowDiag()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 50.0, 40.0);
-  test.handleTouchBegin(2, 40.0, 60.0);
-  test.handleTouchUpdate(1, 70.0, 60.0);
-  test.handleTouchUpdate(2, 90.0, 110.0);
+  handler.handleTouchBegin(1, 50.0, 40.0);
+  handler.handleTouchBegin(2, 40.0, 60.0);
+  handler.handleTouchUpdate(1, 70.0, 60.0);
+  handler.handleTouchUpdate(2, 90.0, 110.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -785,17 +807,18 @@ void testTwoDragSlowDiag()
 void testTwoDragTooSlow()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   usleep(500000);
   rfb::Timer::checkTimeouts();
 
-  test.handleTouchBegin(2, 30.0, 30.0);
-  test.handleTouchUpdate(2, 50.0, 30.0);
-  test.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 30.0);
+  handler.handleTouchUpdate(2, 50.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -805,20 +828,21 @@ void testTwoDragTooSlow()
 void testPinchFastDistinctIn()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 0.0, 0.0);
-  test.handleTouchBegin(2, 130.0, 130.0);
+  handler.handleTouchBegin(1, 0.0, 0.0);
+  handler.handleTouchBegin(2, 130.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 50.0, 40.0);
-  test.handleTouchUpdate(2, 100.0, 130.0);
+  handler.handleTouchUpdate(1, 50.0, 40.0);
+  handler.handleTouchUpdate(2, 100.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 60.0, 70.0);
+  handler.handleTouchUpdate(2, 60.0, 70.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -838,7 +862,7 @@ void testPinchFastDistinctIn()
 
   test.events.clear();
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -855,20 +879,21 @@ void testPinchFastDistinctIn()
 void testPinchFastDistinctOut()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 100.0, 100.0);
-  test.handleTouchBegin(2, 110.0, 100.0);
+  handler.handleTouchBegin(1, 100.0, 100.0);
+  handler.handleTouchBegin(2, 110.0, 100.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 130.0, 70.0);
-  test.handleTouchUpdate(2, 0.0, 200.0);
+  handler.handleTouchUpdate(1, 130.0, 70.0);
+  handler.handleTouchUpdate(2, 0.0, 200.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 180.0, 20.0);
+  handler.handleTouchUpdate(1, 180.0, 20.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -888,7 +913,7 @@ void testPinchFastDistinctOut()
 
   test.events.clear();
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -905,14 +930,15 @@ void testPinchFastDistinctOut()
 void testPinchFastAlmost()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 130.0, 130.0);
-  test.handleTouchUpdate(1, 80.0, 70.0);
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 130.0, 130.0);
+  handler.handleTouchUpdate(1, 80.0, 70.0);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -927,16 +953,17 @@ void testPinchFastAlmost()
 void testPinchSlowIn()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 0.0, 0.0);
-  test.handleTouchBegin(2, 130.0, 130.0);
+  handler.handleTouchBegin(1, 0.0, 0.0);
+  handler.handleTouchBegin(2, 130.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 50.0, 40.0);
-  test.handleTouchUpdate(2, 100.0, 130.0);
+  handler.handleTouchUpdate(1, 50.0, 40.0);
+  handler.handleTouchUpdate(2, 100.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -965,15 +992,16 @@ void testPinchSlowIn()
 void testPinchSlowOut()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 100.0, 130.0);
-  test.handleTouchBegin(2, 110.0, 130.0);
+  handler.handleTouchBegin(1, 100.0, 130.0);
+  handler.handleTouchBegin(2, 110.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 200.0, 130.0);
+  handler.handleTouchUpdate(2, 200.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -1002,17 +1030,18 @@ void testPinchSlowOut()
 void testPinchTooSlow()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 0.0, 0.0);
+  handler.handleTouchBegin(1, 0.0, 0.0);
 
   usleep(60000); // 60ms
   rfb::Timer::checkTimeouts();
 
-  test.handleTouchBegin(2, 130.0, 130.0);
-  test.handleTouchUpdate(2, 100.0, 130.0);
-  test.handleTouchUpdate(1, 50.0, 40.0);
+  handler.handleTouchBegin(2, 130.0, 130.0);
+  handler.handleTouchUpdate(2, 100.0, 130.0);
+  handler.handleTouchUpdate(1, 50.0, 40.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -1022,12 +1051,13 @@ void testPinchTooSlow()
 void testExtraIgnore()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchUpdate(1, 40.0, 30.0);
-  test.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchUpdate(1, 40.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -1039,11 +1069,11 @@ void testExtraIgnore()
 
   test.events.clear();
 
-  test.handleTouchBegin(2, 10.0, 10.0);
+  handler.handleTouchBegin(2, 10.0, 10.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 100.0, 50.0);
+  handler.handleTouchUpdate(1, 100.0, 50.0);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -1054,7 +1084,7 @@ void testExtraIgnore()
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -1069,14 +1099,15 @@ void testExtraIgnore()
 void testIgnoreWhenAwaitingGestureEnd()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 30.0);
-  test.handleTouchUpdate(1, 40.0, 30.0);
-  test.handleTouchUpdate(2, 90.0, 30.0);
-  test.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 30.0);
+  handler.handleTouchUpdate(1, 40.0, 30.0);
+  handler.handleTouchUpdate(2, 90.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -1088,7 +1119,7 @@ void testIgnoreWhenAwaitingGestureEnd()
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -1097,8 +1128,8 @@ void testIgnoreWhenAwaitingGestureEnd()
 
   test.events.clear();
 
-  test.handleTouchBegin(3, 10.0, 10.0);
-  test.handleTouchEnd(3);
+  handler.handleTouchBegin(3, 10.0, 10.0);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -1108,12 +1139,13 @@ void testIgnoreWhenAwaitingGestureEnd()
 void testIgnoreAfterGesture()
 {
   TestClass test;
+  GestureHandler handler(&test);
 
   printf("%s: ", __func__);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchUpdate(1, 40.0, 30.0);
-  test.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchUpdate(1, 40.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -1126,11 +1158,11 @@ void testIgnoreAfterGesture()
   test.events.clear();
 
   // Start ignored event
-  test.handleTouchBegin(2, 10.0, 10.0);
+  handler.handleTouchBegin(2, 10.0, 10.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 100.0, 50.0);
+  handler.handleTouchUpdate(1, 100.0, 50.0);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -1141,7 +1173,7 @@ void testIgnoreAfterGesture()
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -1151,13 +1183,13 @@ void testIgnoreAfterGesture()
   ASSERT_EQ(test.events[0].eventY, 50.0);
 
   // End ignored event
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   // Check that everything is reseted after trailing ignores are released
   test.events.clear();
 
-  test.handleTouchBegin(3, 20.0, 30.0);
-  test.handleTouchEnd(3);
+  handler.handleTouchBegin(3, 20.0, 30.0);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 2);
 

@@ -27,17 +27,19 @@
 
 #include "GestureEvent.h"
 
+class GestureCallback {
+  public:
+    virtual void handleGestureEvent(const GestureEvent& event) = 0;
+};
+
 class GestureHandler : public rfb::Timer::Callback {
   public:
-    GestureHandler();
+    GestureHandler(GestureCallback* callback);
     virtual ~GestureHandler();
 
     void handleTouchBegin(int id, double x, double y);
     void handleTouchUpdate(int id, double x, double y);
     void handleTouchEnd(int id);
-
-  protected:
-    virtual void handleGestureEvent(const GestureEvent& event) = 0;
 
   private:
     bool hasDetectedGesture();
@@ -54,6 +56,9 @@ class GestureHandler : public rfb::Timer::Callback {
     void getAverageMovement(double *h, double *v);
     void getAverageDistance(double *firstX, double *firstY,
                             double *lastX, double *lastY);
+
+  protected:
+    GestureCallback* callback;
 
   private:
     struct GHTouch {
