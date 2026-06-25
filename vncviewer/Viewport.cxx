@@ -486,120 +486,33 @@ int Viewport::handle(int event)
 
 void Viewport::handleGestureEvent(const GestureEvent& ev)
 {
-  rfb::Point pos;
-  double magnitude;
-
-  pos.x = ev.eventX - x();
-  pos.y = ev.eventY - y();
-
-  switch (ev.type) {
-  case GestureBegin:
-    switch (ev.gesture) {
-    case GestureOneTap:
-      handleTapEvent(ev, 1<<0);
-      break;
-    case GestureTwoTap:
-      handleTapEvent(ev, 1<<2);
-      break;
-    case GestureThreeTap:
-      handleTapEvent(ev, 1<<1);
-      break;
-    case GestureDrag:
-      handlePointerEvent(pos, 1<<0);
-      break;
-    case GestureLongPress:
-      handlePointerEvent(pos, 1<<2);
-      break;
-    case GestureTwoDrag:
-      lastMagnitudeX = ev.magnitudeX;
-      lastMagnitudeY = ev.magnitudeY;
-      handlePointerEvent(pos, 0);
-      break;
-    case GesturePinch:
-      lastMagnitudeX = hypot(ev.magnitudeX, ev.magnitudeY);
-      handlePointerEvent(pos, 0);
-      break;
-    }
+  switch (ev.gesture) {
+  case GestureOneTap:
+  case GestureTwoTap:
+  case GestureThreeTap:
+    handleTapGesture(ev);
     break;
-
-  case GestureUpdate:
-    switch (ev.gesture) {
-    case GestureOneTap:
-    case GestureTwoTap:
-    case GestureThreeTap:
-      break;
-    case GestureDrag:
-      handlePointerEvent(pos, 1<<0);
-      break;
-    case GestureLongPress:
-      handlePointerEvent(pos, 1<<2);
-      break;
-    case GestureTwoDrag:
-      while ((ev.magnitudeY - lastMagnitudeY) > SCRLSENS) {
-        handlePointerEvent(pos, 1<<3);
-        handlePointerEvent(pos, 0);
-        lastMagnitudeY += SCRLSENS;
-      }
-      while ((ev.magnitudeY - lastMagnitudeY) < -SCRLSENS) {
-        handlePointerEvent(pos, 1<<4);
-        handlePointerEvent(pos, 0);
-        lastMagnitudeY -= SCRLSENS;
-      }
-      while ((ev.magnitudeX - lastMagnitudeX) > SCRLSENS) {
-        handlePointerEvent(pos, 1<<5);
-        handlePointerEvent(pos, 0);
-        lastMagnitudeX += SCRLSENS;
-      }
-      while ((ev.magnitudeX - lastMagnitudeX) < -SCRLSENS) {
-        handlePointerEvent(pos, 1<<6);
-        handlePointerEvent(pos, 0);
-        lastMagnitudeX -= SCRLSENS;
-      }
-      break;
-    case GesturePinch:
-      magnitude = hypot(ev.magnitudeX, ev.magnitudeY);
-      if (abs(magnitude - lastMagnitudeX) > ZOOMSENS) {
-        sendKeyPress(FAKE_GESTURE_KEY_CODE, 0x1d, XK_Control_L);
-
-        while ((magnitude - lastMagnitudeX) > ZOOMSENS) {
-          handlePointerEvent(pos, 1<<3);
-          handlePointerEvent(pos, 0);
-          lastMagnitudeX += ZOOMSENS;
-        }
-        while ((magnitude - lastMagnitudeX) < -ZOOMSENS) {
-          handlePointerEvent(pos, 1<<4);
-          handlePointerEvent(pos, 0);
-          lastMagnitudeX -= ZOOMSENS;
-        }
-
-        sendKeyRelease(FAKE_GESTURE_KEY_CODE);
-      }
-    }
+  case GestureLongPress:
+    handleLongPressGesture(ev);
     break;
-
-  case GestureEnd:
-    switch (ev.gesture) {
-    case GestureOneTap:
-    case GestureTwoTap:
-    case GestureThreeTap:
-    case GesturePinch:
-    case GestureTwoDrag:
-      break;
-    case GestureDrag:
-      handlePointerEvent(pos, 0);
-      break;
-    case GestureLongPress:
-      handlePointerEvent(pos, 0);
-      break;
-    }
+  case GestureDrag:
+  case GestureTwoDrag:
+    handleDragGesture(ev);
+    break;
+  case GesturePinch:
+    handlePinchGesture(ev);
     break;
   }
 }
 
-void Viewport::handleTapEvent(const GestureEvent& ev, int buttonMask)
+void Viewport::handleTapGesture(const GestureEvent& ev)
 {
   GestureEvent newEv = ev;
   rfb::Point pos;
+  int buttonMask;
+
+  if (ev.type != GestureBegin)
+    return;
 
   // If the user quickly taps multiple times we assume they meant to
   // hit the same spot, so slightly adjust coordinates
@@ -624,8 +537,119 @@ void Viewport::handleTapEvent(const GestureEvent& ev, int buttonMask)
   pos.x = newEv.eventX - x();
   pos.y = newEv.eventY - y();
 
+  switch (ev.gesture) {
+  case GestureOneTap:
+    buttonMask = 1<<0;
+    break;
+  case GestureTwoTap:
+    buttonMask = 1<<2;
+    break;
+  case GestureThreeTap:
+    buttonMask = 1<<1;
+    break;
+  default:
+    assert(false);
+  }
+
   handlePointerEvent(pos, buttonMask);
   handlePointerEvent(pos, 0);
+}
+
+void Viewport::handleLongPressGesture(const GestureEvent& ev)
+{
+  rfb::Point pos;
+
+  pos.x = ev.eventX - x();
+  pos.y = ev.eventY - y();
+
+  if (ev.type == GestureEnd)
+    handlePointerEvent(pos, 0);
+  else
+    handlePointerEvent(pos, 1<<2);
+}
+
+void Viewport::handleDragGesture(const GestureEvent& ev)
+{
+  rfb::Point pos;
+
+  pos.x = ev.eventX - x();
+  pos.y = ev.eventY - y();
+
+  if (ev.gesture == GestureDrag) {
+    if (ev.type == GestureEnd)
+      handlePointerEvent(pos, 0);
+    else
+      handlePointerEvent(pos, 1<<0);
+  } else {
+    switch (ev.type) {
+    case GestureBegin:
+      lastMagnitudeX = ev.magnitudeX;
+      lastMagnitudeY = ev.magnitudeY;
+      handlePointerEvent(pos, 0);
+      break;
+    case GestureUpdate:
+      while ((ev.magnitudeY - lastMagnitudeY) > SCRLSENS) {
+        handlePointerEvent(pos, 1<<3);
+        handlePointerEvent(pos, 0);
+        lastMagnitudeY += SCRLSENS;
+      }
+      while ((ev.magnitudeY - lastMagnitudeY) < -SCRLSENS) {
+        handlePointerEvent(pos, 1<<4);
+        handlePointerEvent(pos, 0);
+        lastMagnitudeY -= SCRLSENS;
+      }
+      while ((ev.magnitudeX - lastMagnitudeX) > SCRLSENS) {
+        handlePointerEvent(pos, 1<<5);
+        handlePointerEvent(pos, 0);
+        lastMagnitudeX += SCRLSENS;
+      }
+      while ((ev.magnitudeX - lastMagnitudeX) < -SCRLSENS) {
+        handlePointerEvent(pos, 1<<6);
+        handlePointerEvent(pos, 0);
+        lastMagnitudeX -= SCRLSENS;
+      }
+      break;
+    case GestureEnd:
+      break;
+    }
+  }
+}
+
+void Viewport::handlePinchGesture(const GestureEvent& ev)
+{
+  rfb::Point pos;
+  double magnitude;
+
+  pos.x = ev.eventX - x();
+  pos.y = ev.eventY - y();
+
+  switch (ev.type) {
+  case GestureBegin:
+    lastMagnitudeX = hypot(ev.magnitudeX, ev.magnitudeY);
+    handlePointerEvent(pos, 0);
+    break;
+  case GestureUpdate:
+    magnitude = hypot(ev.magnitudeX, ev.magnitudeY);
+    if (abs(magnitude - lastMagnitudeX) > ZOOMSENS) {
+      sendKeyPress(FAKE_GESTURE_KEY_CODE, 0x1d, XK_Control_L);
+
+      while ((magnitude - lastMagnitudeX) > ZOOMSENS) {
+        handlePointerEvent(pos, 1<<3);
+        handlePointerEvent(pos, 0);
+        lastMagnitudeX += ZOOMSENS;
+      }
+      while ((magnitude - lastMagnitudeX) < -ZOOMSENS) {
+        handlePointerEvent(pos, 1<<4);
+        handlePointerEvent(pos, 0);
+        lastMagnitudeX -= ZOOMSENS;
+      }
+
+      sendKeyRelease(FAKE_GESTURE_KEY_CODE);
+    }
+    break;
+  case GestureEnd:
+    break;
+  }
 }
 
 void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)

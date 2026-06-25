@@ -75,7 +75,10 @@ public:
 
 protected:
   void handleGestureEvent(const GestureEvent& event) override;
-  void handleTapEvent(const GestureEvent& ev, int buttonMask);
+  void handleTapGesture(const GestureEvent& ev);
+  void handleLongPressGesture(const GestureEvent& ev);
+  void handleDragGesture(const GestureEvent& ev);
+  void handlePinchGesture(const GestureEvent& ev);
 
   void sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask) override;
 
