@@ -32,24 +32,6 @@ class BaseTouchHandler {
 
   protected:
     BaseTouchHandler();
-
-  protected:
-    virtual void fakeMotionEvent(const GestureEvent origEvent) = 0;
-    virtual void fakeButtonEvent(bool press, int button,
-                                 const GestureEvent origEvent) = 0;
-    virtual void fakeKeyEvent(bool press, int keycode,
-                              const GestureEvent origEvent) = 0;
-
-    virtual void handleGestureEvent(const GestureEvent& event);
-
-  private:
-    void handleTapEvent(const GestureEvent& ev, int buttonEvent);
-
-    double lastMagnitudeX;
-    double lastMagnitudeY;
-
-    GestureEvent firstDoubleTapEvent;
-    struct timeval lastTapTime;
 };
 
 #endif

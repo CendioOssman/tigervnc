@@ -26,6 +26,7 @@
 
 #include "EmulateMB.h"
 #include "Keyboard.h"
+#include "GestureHandler.h"
 
 class Fl_Menu_Button;
 class Fl_RGB_Image;
@@ -37,7 +38,8 @@ class PlatformPixelBuffer;
 class Surface;
 
 class Viewport : public Fl_Widget, protected EmulateMB,
-                 protected KeyboardHandler {
+                 protected KeyboardHandler,
+                 protected GestureCallback {
 public:
 
   Viewport(int w, int h, CConn* cc_);
@@ -72,6 +74,9 @@ public:
   int handle(int event) override;
 
 protected:
+  void handleGestureEvent(const GestureEvent& event) override;
+  void handleTapEvent(const GestureEvent& ev, int buttonMask);
+
   void sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask) override;
 
 private:
@@ -111,6 +116,12 @@ private:
 
   rfb::Point lastPointerPos;
   uint8_t lastButtonMask;
+
+  double lastMagnitudeX;
+  double lastMagnitudeY;
+
+  GestureEvent firstDoubleTapEvent;
+  struct timeval lastTapTime;
 
   Keyboard* keyboard;
   BaseTouchHandler* touch;

@@ -22,6 +22,7 @@
 #endif
 
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -84,6 +85,16 @@ static const int FAKE_DEL_KEY_CODE = 0x10003;
 // Used for fake key presses for lock key sync
 static const int FAKE_KEY_CODE = 0xffff;
 
+// Used for fake key presses for gestures
+static const int FAKE_GESTURE_KEY_CODE = 0x20001;
+
+// Sensitivity threshold for gestures
+static const int ZOOMSENS = 30;
+static const int SCRLSENS = 50;
+
+static const unsigned DOUBLE_TAP_TIMEOUT   = 1000;
+static const unsigned DOUBLE_TAP_THRESHOLD = 50;
+
 Viewport::Viewport(int w, int h, CConn* cc_)
   : Fl_Widget(0, 0, w, h), cc(cc_), frameBuffer(nullptr),
     lastPointerPos(0, 0), lastButtonMask(0),
@@ -101,6 +112,8 @@ Viewport::Viewport(int w, int h, CConn* cc_)
 
   // We need a window handle before we can create these
   touch = nullptr;
+
+  gettimeofday(&lastTapTime, nullptr);
 
   Fl::add_clipboard_notify(handleClipboardChange, this);
 
@@ -471,6 +484,150 @@ int Viewport::handle(int event)
   return Fl_Widget::handle(event);
 }
 
+void Viewport::handleGestureEvent(const GestureEvent& ev)
+{
+  rfb::Point pos;
+  double magnitude;
+
+  pos.x = ev.eventX - x();
+  pos.y = ev.eventY - y();
+
+  switch (ev.type) {
+  case GestureBegin:
+    switch (ev.gesture) {
+    case GestureOneTap:
+      handleTapEvent(ev, 1<<0);
+      break;
+    case GestureTwoTap:
+      handleTapEvent(ev, 1<<2);
+      break;
+    case GestureThreeTap:
+      handleTapEvent(ev, 1<<1);
+      break;
+    case GestureDrag:
+      handlePointerEvent(pos, 1<<0);
+      break;
+    case GestureLongPress:
+      handlePointerEvent(pos, 1<<2);
+      break;
+    case GestureTwoDrag:
+      lastMagnitudeX = ev.magnitudeX;
+      lastMagnitudeY = ev.magnitudeY;
+      handlePointerEvent(pos, 0);
+      break;
+    case GesturePinch:
+      lastMagnitudeX = hypot(ev.magnitudeX, ev.magnitudeY);
+      handlePointerEvent(pos, 0);
+      break;
+    }
+    break;
+
+  case GestureUpdate:
+    switch (ev.gesture) {
+    case GestureOneTap:
+    case GestureTwoTap:
+    case GestureThreeTap:
+      break;
+    case GestureDrag:
+      handlePointerEvent(pos, 1<<0);
+      break;
+    case GestureLongPress:
+      handlePointerEvent(pos, 1<<2);
+      break;
+    case GestureTwoDrag:
+      while ((ev.magnitudeY - lastMagnitudeY) > SCRLSENS) {
+        handlePointerEvent(pos, 1<<3);
+        handlePointerEvent(pos, 0);
+        lastMagnitudeY += SCRLSENS;
+      }
+      while ((ev.magnitudeY - lastMagnitudeY) < -SCRLSENS) {
+        handlePointerEvent(pos, 1<<4);
+        handlePointerEvent(pos, 0);
+        lastMagnitudeY -= SCRLSENS;
+      }
+      while ((ev.magnitudeX - lastMagnitudeX) > SCRLSENS) {
+        handlePointerEvent(pos, 1<<5);
+        handlePointerEvent(pos, 0);
+        lastMagnitudeX += SCRLSENS;
+      }
+      while ((ev.magnitudeX - lastMagnitudeX) < -SCRLSENS) {
+        handlePointerEvent(pos, 1<<6);
+        handlePointerEvent(pos, 0);
+        lastMagnitudeX -= SCRLSENS;
+      }
+      break;
+    case GesturePinch:
+      magnitude = hypot(ev.magnitudeX, ev.magnitudeY);
+      if (abs(magnitude - lastMagnitudeX) > ZOOMSENS) {
+        sendKeyPress(FAKE_GESTURE_KEY_CODE, 0x1d, XK_Control_L);
+
+        while ((magnitude - lastMagnitudeX) > ZOOMSENS) {
+          handlePointerEvent(pos, 1<<3);
+          handlePointerEvent(pos, 0);
+          lastMagnitudeX += ZOOMSENS;
+        }
+        while ((magnitude - lastMagnitudeX) < -ZOOMSENS) {
+          handlePointerEvent(pos, 1<<4);
+          handlePointerEvent(pos, 0);
+          lastMagnitudeX -= ZOOMSENS;
+        }
+
+        sendKeyRelease(FAKE_GESTURE_KEY_CODE);
+      }
+    }
+    break;
+
+  case GestureEnd:
+    switch (ev.gesture) {
+    case GestureOneTap:
+    case GestureTwoTap:
+    case GestureThreeTap:
+    case GesturePinch:
+    case GestureTwoDrag:
+      break;
+    case GestureDrag:
+      handlePointerEvent(pos, 0);
+      break;
+    case GestureLongPress:
+      handlePointerEvent(pos, 0);
+      break;
+    }
+    break;
+  }
+}
+
+void Viewport::handleTapEvent(const GestureEvent& ev, int buttonMask)
+{
+  GestureEvent newEv = ev;
+  rfb::Point pos;
+
+  // If the user quickly taps multiple times we assume they meant to
+  // hit the same spot, so slightly adjust coordinates
+  if ((rfb::msSince(&lastTapTime) < DOUBLE_TAP_TIMEOUT) &&
+      (firstDoubleTapEvent.type == ev.type)) {
+
+    double dx = firstDoubleTapEvent.eventX - ev.eventX;
+    double dy = firstDoubleTapEvent.eventY - ev.eventY;
+    double distance = hypot(dx, dy);
+
+    if (distance < DOUBLE_TAP_THRESHOLD) {
+     newEv.eventX = firstDoubleTapEvent.eventX;
+     newEv.eventY = firstDoubleTapEvent.eventY;
+    } else {
+      firstDoubleTapEvent = ev;
+    }
+  } else {
+    firstDoubleTapEvent = ev;
+  }
+  gettimeofday(&lastTapTime, nullptr);
+
+  pos.x = newEv.eventX - x();
+  pos.y = newEv.eventY - y();
+
+  handlePointerEvent(pos, buttonMask);
+  handlePointerEvent(pos, 0);
+}
+
 void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
 {
   if (viewOnly)
@@ -645,9 +802,9 @@ int Viewport::handleSystemEvent(void *event, void *data)
   // We need a window handle before we can create these
   if (self->touch == nullptr) {
 #if defined(WIN32)
-    self->touch = new Win32TouchHandler(fl_xid(self->window()));
+    self->touch = new Win32TouchHandler(fl_xid(self->window()), self);
 #else
-    self->touch = new XInputTouchHandler(fl_xid(self->window()));
+    self->touch = new XInputTouchHandler(fl_xid(self->window()), self);
 #endif
   }
 
