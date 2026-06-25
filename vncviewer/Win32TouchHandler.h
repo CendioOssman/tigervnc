@@ -27,6 +27,13 @@ class Win32TouchHandler: public BaseTouchHandler {
   public:
     Win32TouchHandler(HWND hWnd);
 
+    bool handleEvent(const void* event) override;
+
+  protected:
+    static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
+                                       WPARAM wParam, LPARAM lParam,
+                                       UINT_PTR uIdSubclass,
+                                       DWORD_PTR dwRefData);
     bool processEvent(UINT Msg, WPARAM wParam, LPARAM lParam);
 
   private:

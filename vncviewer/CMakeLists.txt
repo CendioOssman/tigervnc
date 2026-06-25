@@ -34,7 +34,6 @@ add_executable(vncviewer
   i18n.cxx
   mainloop.cxx
   parameters.cxx
-  touch.cxx
   MonitorIndicesParameter.cxx
   vncviewer.cxx)
 
@@ -92,7 +91,7 @@ if(GNUTLS_FOUND)
 endif()
 
 if(WIN32)
-  target_link_libraries(vncviewer PRIVATE msimg32 winmm)
+  target_link_libraries(vncviewer PRIVATE comctl32 msimg32 winmm)
 elseif(APPLE)
   target_link_libraries(vncviewer PRIVATE "-framework Cocoa")
   target_link_libraries(vncviewer PRIVATE "-framework Carbon")

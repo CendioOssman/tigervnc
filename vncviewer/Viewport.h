@@ -31,6 +31,7 @@
 class Fl_Menu_Button;
 class Fl_RGB_Image;
 
+class BaseTouchHandler;
 class CConn;
 class Keyboard;
 class PlatformPixelBuffer;
@@ -118,6 +119,7 @@ private:
   bool shortcutBypass;
   bool shortcutActive;
   std::set<int> pressedKeys;
+  BaseTouchHandler* touch;
 
   bool firstLEDState;
 

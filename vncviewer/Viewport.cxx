@@ -69,10 +69,13 @@
 
 #if defined(WIN32)
 #include "KeyboardWin32.h"
+#include "Win32TouchHandler.h"
 #elif defined(__APPLE__)
 #include "KeyboardMacOS.h"
+#include "BaseTouchHandler.h"
 #else
 #include "KeyboardX11.h"
+#include "XInputTouchHandler.h"
 #endif
 
 #ifdef __APPLE__
@@ -104,6 +107,9 @@ Viewport::Viewport(int w, int h, CConn* cc_)
 #else
   keyboard = new KeyboardX11(this);
 #endif
+
+  // We need a window handle before we can create these
+  touch = nullptr;
 
   Fl::add_clipboard_notify(handleClipboardChange, this);
 
@@ -163,6 +169,7 @@ Viewport::~Viewport()
   }
 
   delete keyboard;
+  delete touch;
   Fl::enable_im();
 
   // FLTK automatically deletes all child widgets, so we shouldn't touch
@@ -908,6 +915,21 @@ int Viewport::handleSystemEvent(void *event, void *data)
   bool consumed;
 
   assert(self);
+
+#ifndef __APPLE__
+  // We need a window handle before we can create these
+  if (self->touch == nullptr) {
+#if defined(WIN32)
+    self->touch = new Win32TouchHandler(fl_xid(self->window()));
+#else
+    self->touch = new XInputTouchHandler(fl_xid(self->window()));
+#endif
+  }
+
+  consumed = self->touch->handleEvent(event);
+  if (consumed)
+    return 1;
+#endif
 
   if (!self->hasFocus())
     return 0;

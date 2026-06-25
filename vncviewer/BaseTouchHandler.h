@@ -28,6 +28,8 @@ class BaseTouchHandler {
   public:
     virtual ~BaseTouchHandler();
 
+    virtual bool handleEvent(const void* event) = 0;
+
   protected:
     BaseTouchHandler();
 

@@ -38,6 +38,7 @@
 #include <rfb/keysymdef.h>
 #endif
 
+#include "x11.h"
 #include "XInputTouchHandler.h"
 
 static core::LogWriter vlog("XInputTouchHandler");
@@ -83,6 +84,48 @@ XInputTouchHandler::XInputTouchHandler(Window wnd_)
   XISelectEvents(fl_display, wnd, curmasks, 1);
 
   XFree(curmasks);
+}
+
+bool XInputTouchHandler::handleEvent(const void* event)
+{
+  XEvent *xevent = (XEvent*)event;
+
+  if (xevent->type == GenericEvent) {
+    if (xevent->xgeneric.extension == x11_xinput_major()) {
+      XIDeviceEvent *devev;
+
+      if (!XGetEventData(fl_display, &xevent->xcookie)) {
+        vlog.error(_("Failed to get event data for X Input event"));
+        return true;
+      }
+
+      devev = (XIDeviceEvent*)xevent->xcookie.data;
+
+      if (devev->event != wnd) {
+        XFreeEventData(fl_display, &xevent->xcookie);
+        return false;
+      }
+
+      switch (devev->evtype) {
+      case XI_TouchBegin:
+      case XI_TouchUpdate:
+      case XI_TouchEnd:
+      case XI_TouchOwnership:
+        break;
+      default:
+        XFreeEventData(fl_display, &xevent->xcookie);
+        return 0;
+      }
+
+      processEvent(devev);
+
+      XFreeEventData(fl_display, &xevent->xcookie);
+
+      return true;
+    }
+  }
+
+  return false;
 }
 
 void XInputTouchHandler::processEvent(const XIDeviceEvent* devev)

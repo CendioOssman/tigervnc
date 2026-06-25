@@ -52,7 +52,6 @@
 #include "mainloop.h"
 #include "parameters.h"
 #include "i18n.h"
-#include "touch.h"
 #include "vncviewer.h"
 
 #ifdef WIN32
@@ -429,7 +428,6 @@ int main(int argc, char** argv)
   migrateDeprecatedOptions();
 
   init_fltk();
-  enable_touch();
 
   create_base_dirs();
 

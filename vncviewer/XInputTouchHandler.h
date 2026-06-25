@@ -20,6 +20,8 @@
 #ifndef __XINPUTTOUCHHANDLER_H__
 #define __XINPUTTOUCHHANDLER_H__
 
+#include <X11/extensions/XInput2.h>
+
 #include "BaseTouchHandler.h"
 #include "GestureHandler.h"
 
@@ -27,9 +29,11 @@ class XInputTouchHandler: public BaseTouchHandler, GestureCallback {
   public:
     XInputTouchHandler(Window wnd);
 
-    void processEvent(const XIDeviceEvent* devev);
+    bool handleEvent(const void* event) override;
 
   protected:
+    void processEvent(const XIDeviceEvent* devev);
+
     void preparePointerEvent(XEvent* dst, const XIDeviceEvent* src);
     void fakeMotionEvent(const XIDeviceEvent* origEvent);
     void fakeButtonEvent(bool press, int button,
