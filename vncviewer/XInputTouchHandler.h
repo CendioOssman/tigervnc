@@ -23,7 +23,7 @@
 #include "BaseTouchHandler.h"
 #include "GestureHandler.h"
 
-class XInputTouchHandler: public BaseTouchHandler, GestureHandler {
+class XInputTouchHandler: public BaseTouchHandler, GestureCallback {
   public:
     XInputTouchHandler(Window wnd);
 
@@ -53,6 +53,8 @@ class XInputTouchHandler: public BaseTouchHandler, GestureHandler {
   private:
     Window wnd;
     int fakeStateMask;
+
+    GestureHandler gestureHandler;
 };
 
 #endif

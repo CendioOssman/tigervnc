@@ -28,7 +28,7 @@
 
 #include "../../vncviewer/GestureHandler.h"
 
-class TestClass : public GestureHandler
+class TestClass : public GestureCallback
 {
   protected:
     void handleGestureEvent(const GestureEvent& event) override;
@@ -45,12 +45,13 @@ void TestClass::handleGestureEvent(const GestureEvent& event)
 TEST(GestureHandler, oneTapNormal)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -68,17 +69,18 @@ TEST(GestureHandler, oneTapNormal)
 TEST(GestureHandler, twoTapNormal)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
-
-  ASSERT_EQ(test.events.size(), 0);
-
-  test.handleTouchEnd(1);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(1);
+
+  ASSERT_EQ(test.events.size(), 0);
+
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -96,15 +98,16 @@ TEST(GestureHandler, twoTapNormal)
 TEST(GestureHandler, twoTapSlowBegin)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   usleep(500000);
   core::Timer::checkTimeouts();
 
-  test.handleTouchBegin(2, 30.0, 50.0);
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
+  handler.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 0);
 }
@@ -112,15 +115,16 @@ TEST(GestureHandler, twoTapSlowBegin)
 TEST(GestureHandler, twoTapSlowEnd)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
-  test.handleTouchEnd(1);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchEnd(1);
 
   usleep(500000);
   core::Timer::checkTimeouts();
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 0);
 }
@@ -128,15 +132,16 @@ TEST(GestureHandler, twoTapSlowEnd)
 TEST(GestureHandler, twoTapTimeout)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
 
   usleep(1500000);
   core::Timer::checkTimeouts();
 
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 0);
 }
@@ -144,22 +149,23 @@ TEST(GestureHandler, twoTapTimeout)
 TEST(GestureHandler, threeTapNormal)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
-  test.handleTouchBegin(3, 40.0, 40.0);
-
-  ASSERT_EQ(test.events.size(), 0);
-
-  test.handleTouchEnd(1);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(3, 40.0, 40.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchEnd(3);
+  handler.handleTouchEnd(2);
+
+  ASSERT_EQ(test.events.size(), 0);
+
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -177,17 +183,18 @@ TEST(GestureHandler, threeTapNormal)
 TEST(GestureHandler, threeTapSlowBegin)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
 
   usleep(500000);
   core::Timer::checkTimeouts();
 
-  test.handleTouchBegin(3, 40.0, 40.0);
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
-  test.handleTouchEnd(3);
+  handler.handleTouchBegin(3, 40.0, 40.0);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 0);
 }
@@ -195,17 +202,18 @@ TEST(GestureHandler, threeTapSlowBegin)
 TEST(GestureHandler, threeTapSlowEnd)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
-  test.handleTouchBegin(3, 40.0, 40.0);
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(3, 40.0, 40.0);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
 
   usleep(500000);
   core::Timer::checkTimeouts();
 
-  test.handleTouchEnd(3);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 0);
 }
@@ -213,18 +221,19 @@ TEST(GestureHandler, threeTapSlowEnd)
 TEST(GestureHandler, threeTapDrag)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
-  test.handleTouchBegin(3, 40.0, 40.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(3, 40.0, 40.0);
 
-  test.handleTouchUpdate(1, 120.0, 130.0);
-  test.handleTouchUpdate(2, 130.0, 150.0);
-  test.handleTouchUpdate(3, 140.0, 140.0);
+  handler.handleTouchUpdate(1, 120.0, 130.0);
+  handler.handleTouchUpdate(2, 130.0, 150.0);
+  handler.handleTouchUpdate(3, 140.0, 140.0);
 
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
-  test.handleTouchEnd(3);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 0);
 }
@@ -232,17 +241,18 @@ TEST(GestureHandler, threeTapDrag)
 TEST(GestureHandler, threeTapTimeout)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 50.0);
-  test.handleTouchBegin(3, 40.0, 40.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 50.0);
+  handler.handleTouchBegin(3, 40.0, 40.0);
 
   usleep(1500000);
   core::Timer::checkTimeouts();
 
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
-  test.handleTouchEnd(3);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 0);
 }
@@ -250,16 +260,17 @@ TEST(GestureHandler, threeTapTimeout)
 TEST(GestureHandler, dragHoriz)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-
-  ASSERT_EQ(test.events.size(), 0);
-
-  test.handleTouchUpdate(1, 40.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchUpdate(1, 40.0, 30.0);
+
+  ASSERT_EQ(test.events.size(), 0);
+
+  handler.handleTouchUpdate(1, 80.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -275,7 +286,7 @@ TEST(GestureHandler, dragHoriz)
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -288,16 +299,17 @@ TEST(GestureHandler, dragHoriz)
 TEST(GestureHandler, dragVert)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-
-  ASSERT_EQ(test.events.size(), 0);
-
-  test.handleTouchUpdate(1, 20.0, 50.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 20.0, 90.0);
+  handler.handleTouchUpdate(1, 20.0, 50.0);
+
+  ASSERT_EQ(test.events.size(), 0);
+
+  handler.handleTouchUpdate(1, 20.0, 90.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -313,7 +325,7 @@ TEST(GestureHandler, dragVert)
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -326,16 +338,17 @@ TEST(GestureHandler, dragVert)
 TEST(GestureHandler, dragDiag)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 120.0, 130.0);
-
-  ASSERT_EQ(test.events.size(), 0);
-
-  test.handleTouchUpdate(1, 90.0, 100.0);
+  handler.handleTouchBegin(1, 120.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 60.0, 70.0);
+  handler.handleTouchUpdate(1, 90.0, 100.0);
+
+  ASSERT_EQ(test.events.size(), 0);
+
+  handler.handleTouchUpdate(1, 60.0, 70.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -351,7 +364,7 @@ TEST(GestureHandler, dragDiag)
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -364,8 +377,9 @@ TEST(GestureHandler, dragDiag)
 TEST(GestureHandler, longPressNormal)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -381,7 +395,7 @@ TEST(GestureHandler, longPressNormal)
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -394,8 +408,9 @@ TEST(GestureHandler, longPressNormal)
 TEST(GestureHandler, longPressDrag)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -411,7 +426,7 @@ TEST(GestureHandler, longPressDrag)
 
   test.events.clear();
 
-  test.handleTouchUpdate(1, 120.0, 50.0);
+  handler.handleTouchUpdate(1, 120.0, 50.0);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -422,7 +437,7 @@ TEST(GestureHandler, longPressDrag)
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -435,22 +450,23 @@ TEST(GestureHandler, longPressDrag)
 TEST(GestureHandler, twoDragFastDistinctHoriz)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 30.0);
-
-  ASSERT_EQ(test.events.size(), 0);
-
-  test.handleTouchUpdate(1, 40.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 50.0, 30.0);
+  handler.handleTouchUpdate(1, 40.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 90.0, 30.0);
-  test.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchUpdate(2, 50.0, 30.0);
+
+  ASSERT_EQ(test.events.size(), 0);
+
+  handler.handleTouchUpdate(2, 90.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -470,7 +486,7 @@ TEST(GestureHandler, twoDragFastDistinctHoriz)
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -485,21 +501,22 @@ TEST(GestureHandler, twoDragFastDistinctHoriz)
 TEST(GestureHandler, twoDragFastDistinctVert)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 30.0);
-
-  ASSERT_EQ(test.events.size(), 0);
-
-  test.handleTouchUpdate(1, 20.0, 100.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 30.0, 40.0);
+  handler.handleTouchUpdate(1, 20.0, 100.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 30.0, 90.0);
+  handler.handleTouchUpdate(2, 30.0, 40.0);
+
+  ASSERT_EQ(test.events.size(), 0);
+
+  handler.handleTouchUpdate(2, 30.0, 90.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -519,7 +536,7 @@ TEST(GestureHandler, twoDragFastDistinctVert)
 
   test.events.clear();
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -534,21 +551,22 @@ TEST(GestureHandler, twoDragFastDistinctVert)
 TEST(GestureHandler, twoDragFastDistinctDiag)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 120.0, 130.0);
-  test.handleTouchBegin(2, 130.0, 130.0);
-
-  ASSERT_EQ(test.events.size(), 0);
-
-  test.handleTouchUpdate(1, 80.0, 90.0);
+  handler.handleTouchBegin(1, 120.0, 130.0);
+  handler.handleTouchBegin(2, 130.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 100.0, 130.0);
+  handler.handleTouchUpdate(1, 80.0, 90.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 60.0, 70.0);
+  handler.handleTouchUpdate(2, 100.0, 130.0);
+
+  ASSERT_EQ(test.events.size(), 0);
+
+  handler.handleTouchUpdate(2, 60.0, 70.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -568,7 +586,7 @@ TEST(GestureHandler, twoDragFastDistinctDiag)
 
   test.events.clear();
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -583,13 +601,14 @@ TEST(GestureHandler, twoDragFastDistinctDiag)
 TEST(GestureHandler, twoDragFastAlmost)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 30.0);
-  test.handleTouchUpdate(1, 80.0, 30.0);
-  test.handleTouchUpdate(2, 70.0, 30.0);
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchUpdate(2, 70.0, 30.0);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -602,11 +621,12 @@ TEST(GestureHandler, twoDragFastAlmost)
 TEST(GestureHandler, twoDragSlowHoriz)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 50.0, 40.0);
-  test.handleTouchBegin(2, 60.0, 40.0);
-  test.handleTouchUpdate(2, 80.0, 40.0);
-  test.handleTouchUpdate(1, 110.0, 40.0);
+  handler.handleTouchBegin(1, 50.0, 40.0);
+  handler.handleTouchBegin(2, 60.0, 40.0);
+  handler.handleTouchUpdate(2, 80.0, 40.0);
+  handler.handleTouchUpdate(1, 110.0, 40.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -633,11 +653,12 @@ TEST(GestureHandler, twoDragSlowHoriz)
 TEST(GestureHandler, twoDragSlowVert)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 40.0, 40.0);
-  test.handleTouchBegin(2, 40.0, 60.0);
-  test.handleTouchUpdate(2, 40.0, 80.0);
-  test.handleTouchUpdate(1, 40.0, 100.0);
+  handler.handleTouchBegin(1, 40.0, 40.0);
+  handler.handleTouchBegin(2, 40.0, 60.0);
+  handler.handleTouchUpdate(2, 40.0, 80.0);
+  handler.handleTouchUpdate(1, 40.0, 100.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -664,11 +685,12 @@ TEST(GestureHandler, twoDragSlowVert)
 TEST(GestureHandler, twoDragSlowDiag)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 50.0, 40.0);
-  test.handleTouchBegin(2, 40.0, 60.0);
-  test.handleTouchUpdate(1, 70.0, 60.0);
-  test.handleTouchUpdate(2, 90.0, 110.0);
+  handler.handleTouchBegin(1, 50.0, 40.0);
+  handler.handleTouchBegin(2, 40.0, 60.0);
+  handler.handleTouchUpdate(1, 70.0, 60.0);
+  handler.handleTouchUpdate(2, 90.0, 110.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -695,15 +717,16 @@ TEST(GestureHandler, twoDragSlowDiag)
 TEST(GestureHandler, twoDragTooSlow)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
 
   usleep(500000);
   core::Timer::checkTimeouts();
 
-  test.handleTouchBegin(2, 30.0, 30.0);
-  test.handleTouchUpdate(2, 50.0, 30.0);
-  test.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 30.0);
+  handler.handleTouchUpdate(2, 50.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 0);
 }
@@ -711,18 +734,19 @@ TEST(GestureHandler, twoDragTooSlow)
 TEST(GestureHandler, pinchFastDistinctIn)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 0.0, 0.0);
-  test.handleTouchBegin(2, 130.0, 130.0);
-
-  ASSERT_EQ(test.events.size(), 0);
-
-  test.handleTouchUpdate(1, 50.0, 40.0);
-  test.handleTouchUpdate(2, 100.0, 130.0);
+  handler.handleTouchBegin(1, 0.0, 0.0);
+  handler.handleTouchBegin(2, 130.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 60.0, 70.0);
+  handler.handleTouchUpdate(1, 50.0, 40.0);
+  handler.handleTouchUpdate(2, 100.0, 130.0);
+
+  ASSERT_EQ(test.events.size(), 0);
+
+  handler.handleTouchUpdate(2, 60.0, 70.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -742,7 +766,7 @@ TEST(GestureHandler, pinchFastDistinctIn)
 
   test.events.clear();
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -757,18 +781,19 @@ TEST(GestureHandler, pinchFastDistinctIn)
 TEST(GestureHandler, pinchFastDistinctOut)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 100.0, 100.0);
-  test.handleTouchBegin(2, 110.0, 100.0);
-
-  ASSERT_EQ(test.events.size(), 0);
-
-  test.handleTouchUpdate(1, 130.0, 70.0);
-  test.handleTouchUpdate(2, 0.0, 200.0);
+  handler.handleTouchBegin(1, 100.0, 100.0);
+  handler.handleTouchBegin(2, 110.0, 100.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 180.0, 20.0);
+  handler.handleTouchUpdate(1, 130.0, 70.0);
+  handler.handleTouchUpdate(2, 0.0, 200.0);
+
+  ASSERT_EQ(test.events.size(), 0);
+
+  handler.handleTouchUpdate(1, 180.0, 20.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -788,7 +813,7 @@ TEST(GestureHandler, pinchFastDistinctOut)
 
   test.events.clear();
 
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -803,12 +828,13 @@ TEST(GestureHandler, pinchFastDistinctOut)
 TEST(GestureHandler, pinchFastAlmost)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 130.0, 130.0);
-  test.handleTouchUpdate(1, 80.0, 70.0);
-  test.handleTouchEnd(1);
-  test.handleTouchEnd(2);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 130.0, 130.0);
+  handler.handleTouchUpdate(1, 80.0, 70.0);
+  handler.handleTouchEnd(1);
+  handler.handleTouchEnd(2);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -821,14 +847,15 @@ TEST(GestureHandler, pinchFastAlmost)
 TEST(GestureHandler, pinchSlowIn)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 0.0, 0.0);
-  test.handleTouchBegin(2, 130.0, 130.0);
+  handler.handleTouchBegin(1, 0.0, 0.0);
+  handler.handleTouchBegin(2, 130.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 50.0, 40.0);
-  test.handleTouchUpdate(2, 100.0, 130.0);
+  handler.handleTouchUpdate(1, 50.0, 40.0);
+  handler.handleTouchUpdate(2, 100.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -855,13 +882,14 @@ TEST(GestureHandler, pinchSlowIn)
 TEST(GestureHandler, pinchSlowOut)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 100.0, 130.0);
-  test.handleTouchBegin(2, 110.0, 130.0);
+  handler.handleTouchBegin(1, 100.0, 130.0);
+  handler.handleTouchBegin(2, 110.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(2, 200.0, 130.0);
+  handler.handleTouchUpdate(2, 200.0, 130.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
@@ -888,15 +916,16 @@ TEST(GestureHandler, pinchSlowOut)
 TEST(GestureHandler, pinchTooSlow)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 0.0, 0.0);
+  handler.handleTouchBegin(1, 0.0, 0.0);
 
   usleep(60000); // 60ms
   core::Timer::checkTimeouts();
 
-  test.handleTouchBegin(2, 130.0, 130.0);
-  test.handleTouchUpdate(2, 100.0, 130.0);
-  test.handleTouchUpdate(1, 50.0, 40.0);
+  handler.handleTouchBegin(2, 130.0, 130.0);
+  handler.handleTouchUpdate(2, 100.0, 130.0);
+  handler.handleTouchUpdate(1, 50.0, 40.0);
 
   ASSERT_EQ(test.events.size(), 0);
 }
@@ -904,10 +933,11 @@ TEST(GestureHandler, pinchTooSlow)
 TEST(GestureHandler, extraIgnore)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchUpdate(1, 40.0, 30.0);
-  test.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchUpdate(1, 40.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -919,11 +949,11 @@ TEST(GestureHandler, extraIgnore)
 
   test.events.clear();
 
-  test.handleTouchBegin(2, 10.0, 10.0);
+  handler.handleTouchBegin(2, 10.0, 10.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 100.0, 50.0);
+  handler.handleTouchUpdate(1, 100.0, 50.0);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -934,7 +964,7 @@ TEST(GestureHandler, extraIgnore)
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -947,12 +977,13 @@ TEST(GestureHandler, extraIgnore)
 TEST(GestureHandler, ignoreWhenAwaitingGestureEnd)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchBegin(2, 30.0, 30.0);
-  test.handleTouchUpdate(1, 40.0, 30.0);
-  test.handleTouchUpdate(2, 90.0, 30.0);
-  test.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchBegin(2, 30.0, 30.0);
+  handler.handleTouchUpdate(1, 40.0, 30.0);
+  handler.handleTouchUpdate(2, 90.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -964,7 +995,7 @@ TEST(GestureHandler, ignoreWhenAwaitingGestureEnd)
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -973,8 +1004,8 @@ TEST(GestureHandler, ignoreWhenAwaitingGestureEnd)
 
   test.events.clear();
 
-  test.handleTouchBegin(3, 10.0, 10.0);
-  test.handleTouchEnd(3);
+  handler.handleTouchBegin(3, 10.0, 10.0);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 0);
 }
@@ -982,10 +1013,11 @@ TEST(GestureHandler, ignoreWhenAwaitingGestureEnd)
 TEST(GestureHandler, ignoreAfterGesture)
 {
   TestClass test;
+  GestureHandler handler(&test);
 
-  test.handleTouchBegin(1, 20.0, 30.0);
-  test.handleTouchUpdate(1, 40.0, 30.0);
-  test.handleTouchUpdate(1, 80.0, 30.0);
+  handler.handleTouchBegin(1, 20.0, 30.0);
+  handler.handleTouchUpdate(1, 40.0, 30.0);
+  handler.handleTouchUpdate(1, 80.0, 30.0);
 
   ASSERT_EQ(test.events.size(), 2);
 
@@ -998,11 +1030,11 @@ TEST(GestureHandler, ignoreAfterGesture)
   test.events.clear();
 
   // Start ignored event
-  test.handleTouchBegin(2, 10.0, 10.0);
+  handler.handleTouchBegin(2, 10.0, 10.0);
 
   ASSERT_EQ(test.events.size(), 0);
 
-  test.handleTouchUpdate(1, 100.0, 50.0);
+  handler.handleTouchUpdate(1, 100.0, 50.0);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -1013,7 +1045,7 @@ TEST(GestureHandler, ignoreAfterGesture)
 
   test.events.clear();
 
-  test.handleTouchEnd(1);
+  handler.handleTouchEnd(1);
 
   ASSERT_EQ(test.events.size(), 1);
 
@@ -1023,13 +1055,13 @@ TEST(GestureHandler, ignoreAfterGesture)
   EXPECT_EQ(test.events[0].eventY, 50.0);
 
   // End ignored event
-  test.handleTouchEnd(2);
+  handler.handleTouchEnd(2);
 
   // Check that everything is reseted after trailing ignores are released
   test.events.clear();
 
-  test.handleTouchBegin(3, 20.0, 30.0);
-  test.handleTouchEnd(3);
+  handler.handleTouchBegin(3, 20.0, 30.0);
+  handler.handleTouchEnd(3);
 
   ASSERT_EQ(test.events.size(), 2);
 
