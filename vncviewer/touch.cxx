@@ -48,13 +48,11 @@
 #endif
 
 #include "touch.h"
+#if !defined(WIN32) && !defined(__APPLE__)
+#include "x11.h"
+#endif
 
 static rfb::LogWriter vlog("Touch");
-
-#if !defined(WIN32) && !defined(__APPLE__)
-static int xi_major;
-bool xi_enabled = false;
-#endif
 
 typedef std::map<Window, class BaseTouchHandler*> HandlerMap;
 static HandlerMap handlers;
@@ -85,110 +83,6 @@ LRESULT CALLBACK win32WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
     return 0;
   else
     return DefSubclassProc(hWnd, uMsg, wParam, lParam);
-}
-
-#elif !defined(__APPLE__)
-static void x11_change_touch_ownership(bool enable)
-{
-  HandlerMap::const_iterator iter;
-
-  XIEventMask *curmasks;
-  int num_masks;
-
-  XIEventMask newmask;
-  unsigned char mask[XIMaskLen(XI_LASTEVENT)] = { 0 };
-
-  newmask.mask = mask;
-  newmask.mask_len = sizeof(mask);
-
-  for (iter = handlers.begin(); iter != handlers.end(); ++iter) {
-    curmasks = XIGetSelectedEvents(fl_display, iter->first, &num_masks);
-    if (curmasks == nullptr) {
-      if (num_masks == -1)
-        vlog.error(_("Unable to get X Input 2 event mask for window 0x%08lx"), iter->first);
-      continue;
-    }
-
-    // Our windows should only have a single mask, which allows us to
-    // simplify all the code handling the masks
-    if (num_masks > 1) {
-      vlog.error(_("Window 0x%08lx has more than one X Input 2 event mask"), iter->first);
-      continue;
-    }
-
-    newmask.deviceid = curmasks[0].deviceid;
-
-    assert(newmask.mask_len >= curmasks[0].mask_len);
-    memcpy(newmask.mask, curmasks[0].mask, curmasks[0].mask_len);
-    if (enable)
-      XISetMask(newmask.mask, XI_TouchOwnership);
-    else
-      XIClearMask(newmask.mask, XI_TouchOwnership);
-
-    XISelectEvents(fl_display, iter->first, &newmask, 1);
-
-    XFree(curmasks);
-  }
-}
-
-bool x11_grab_pointer(Fl_Window* win)
-{
-  Window window;
-  bool ret;
-
-  window = fl_xid(win);
-
-  if (!xi_enabled) {
-    int status;
-
-    status = XGrabPointer(fl_display, window, True,
-                          ButtonPressMask | ButtonReleaseMask |
-                          ButtonMotionMask | PointerMotionMask,
-                          GrabModeAsync, GrabModeAsync,
-                          None, None, CurrentTime);
-    return status == Success;
-  }
-
-  if (handlers.count(window) == 0) {
-    vlog.error(_("Invalid window 0x%08lx specified for pointer grab"), window);
-    return false;
-  }
-
-  // We need to remove XI_TouchOwnership from our event masks while
-  // grabbing as otherwise we will get double events (one for the grab,
-  // and one because of XI_TouchOwnership) with no way of telling them
-  // apart. See XInputTouchHandler constructor for why we use this
-  // event.
-  x11_change_touch_ownership(false);
-
-  ret = dynamic_cast<XInputTouchHandler*>(handlers[window])->grabPointer();
-
-  if (!ret)
-    x11_change_touch_ownership(true);
-
-  return ret;
-}
-
-void x11_ungrab_pointer(Fl_Window* win)
-{
-  Window window;
-
-  window = fl_xid(win);
-
-  if (!xi_enabled) {
-    XUngrabPointer(fl_display, CurrentTime);
-    return;
-  }
-
-  if (handlers.count(window) == 0) {
-    vlog.error(_("Invalid window 0x%08lx specified for pointer grab"), window);
-    return;
-  }
-
-  dynamic_cast<XInputTouchHandler*>(handlers[window])->ungrabPointer();
-
-  // Restore XI_TouchOwnership now that the grab is gone
-  x11_change_touch_ownership(true);
 }
 #endif
 
@@ -232,7 +126,7 @@ static int handleTouchEvent(void *event, void* /*data*/)
     delete handlers[xevent->xdestroywindow.window];
     handlers.erase(xevent->xdestroywindow.window);
   } else if (xevent->type == GenericEvent) {
-    if (xevent->xgeneric.extension == xi_major) {
+    if (xevent->xgeneric.extension == x11_xinput_major()) {
       XIDeviceEvent *devev;
 
       if (!XGetEventData(fl_display, &xevent->xcookie)) {
@@ -269,29 +163,8 @@ static int handleTouchEvent(void *event, void* /*data*/)
 void enable_touch()
 {
 #if !defined(WIN32) && !defined(__APPLE__)
-  int ev, err;
-  int major_ver, minor_ver;
-
-  fl_open_display();
-
-  if (!XQueryExtension(fl_display, "XInputExtension", &xi_major, &ev, &err)) {
-    vlog.error(_("X Input extension not available."));
+  if (!x11_has_xinput22())
     return;
-  }
-
-  major_ver = 2;
-  minor_ver = 2;
-  if (XIQueryVersion(fl_display, &major_ver, &minor_ver) != Success) {
-    vlog.error(_("X Input 2 (or newer) is not available."));
-    return;
-  }
-
-  if ((major_ver == 2) && (minor_ver < 2)) {
-    vlog.error(_("X Input 2.2 (or newer) is not available. Touch gestures will not be supported."));
-    return;
-  }
-
-  xi_enabled = true;
 #endif
 
   Fl::add_system_handler(handleTouchEvent, nullptr);
@@ -300,7 +173,4 @@ void enable_touch()
 void disable_touch()
 {
   Fl::remove_system_handler(handleTouchEvent);
-#if !defined(WIN32) && !defined(__APPLE__)
-  xi_enabled = false;
-#endif
 }

@@ -43,7 +43,6 @@
 #include "Surface.h"
 #include "Toast.h"
 #include "Viewport.h"
-#include "touch.h"
 
 #include <FL/Fl.H>
 #include <FL/Fl_Image_Surface.H>

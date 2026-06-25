@@ -40,8 +40,6 @@
 
 static rfb::LogWriter vlog("XInputTouchHandler");
 
-static bool grabbed = false;
-
 XInputTouchHandler::XInputTouchHandler(Window wnd_)
   : wnd(wnd_), fakeStateMask(0), gestureHandler(this)
 {
@@ -78,107 +76,9 @@ XInputTouchHandler::XInputTouchHandler(Window wnd_)
   //        might react to something that the window manager will
   //        also react to.
   //
-  if (!grabbed)
-    XISetMask(flags, XI_TouchOwnership);
+  XISetMask(flags, XI_TouchOwnership);
 
   XISelectEvents(fl_display, wnd, &eventmask, 1);
-}
-
-bool XInputTouchHandler::grabPointer()
-{
-  XIEventMask *curmasks;
-  int num_masks;
-
-  int ret, ndevices;
-
-  XIDeviceInfo *devices, *device;
-  bool gotGrab;
-
-  // We grab for the same events as the window is currently interested in
-  curmasks = XIGetSelectedEvents(fl_display, wnd, &num_masks);
-  if (curmasks == nullptr) {
-    if (num_masks == -1)
-      vlog.error(_("Unable to get X Input 2 event mask for window 0x%08lx"), wnd);
-    else
-      vlog.error(_("Window 0x%08lx has no X Input 2 event mask"), wnd);
-
-    return false;
-  }
-
-  // Our windows should only have a single mask, which allows us to
-  // simplify all the code handling the masks
-  if (num_masks > 1) {
-    vlog.error(_("Window 0x%08lx has more than one X Input 2 event mask"), wnd);
-    return false;
-  }
-
-  devices = XIQueryDevice(fl_display, XIAllMasterDevices, &ndevices);
-
-  // Iterate through available devices to find those which
-  // provide pointer input, and attempt to grab all such devices.
-  gotGrab = false;
-  for (int i = 0; i < ndevices; i++) {
-    device = &devices[i];
-
-    if (device->use != XIMasterPointer)
-      continue;
-
-    curmasks[0].deviceid = device->deviceid;
-
-    ret = XIGrabDevice(fl_display,
-                       device->deviceid,
-                       wnd,
-                       CurrentTime,
-                       None,
-                       XIGrabModeAsync,
-                       XIGrabModeAsync,
-                       True,
-                       &(curmasks[0]));
-
-    if (ret) {
-      if (ret == XIAlreadyGrabbed) {
-        continue;
-      } else {
-        vlog.error(_("Failure grabbing device %i"), device->deviceid);
-        continue;
-      }
-    }
-
-    gotGrab = true;
-  }
-
-  XIFreeDeviceInfo(devices);
-
-  // Did we not even grab a single device?
-  if (!gotGrab)
-    return false;
-
-  grabbed = true;
-
-  return true;
-}
-
-void XInputTouchHandler::ungrabPointer()
-{
-  int ndevices;
-  XIDeviceInfo *devices, *device;
-
-  devices = XIQueryDevice(fl_display, XIAllMasterDevices, &ndevices);
-
-  // Release all devices, hoping they are the same as when we
-  // grabbed things
-  for (int i = 0; i < ndevices; i++) {
-    device = &devices[i];
-
-    if (device->use != XIMasterPointer)
-      continue;
-
-    XIUngrabDevice(fl_display, device->deviceid, CurrentTime);
-  }
-
-  XIFreeDeviceInfo(devices);
-
-  grabbed = false;
 }
 
 void XInputTouchHandler::processEvent(const XIDeviceEvent* devev)
@@ -238,13 +138,12 @@ void XInputTouchHandler::processEvent(const XIDeviceEvent* devev)
   case XI_TouchBegin:
     // XInput2 wants us to explicitly accept touch sequences
     // for grabbed devices before it will pass events
-    if (grabbed) {
-      XIAllowTouchEvents(fl_display,
-                         devev->deviceid,
-                         devev->detail,
-                         devev->event,
-                         XIAcceptTouch);
-    }
+    // FIXME: Should we call this when not grabbing? Qt doesn't
+    XIAllowTouchEvents(fl_display,
+                       devev->deviceid,
+                       devev->detail,
+                       devev->event,
+                       XIAcceptTouch);
 
     gestureHandler.handleTouchBegin(devev->detail, devev->event_x, devev->event_y);
     break;
