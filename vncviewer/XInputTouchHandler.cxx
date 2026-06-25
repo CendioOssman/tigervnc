@@ -21,6 +21,7 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
 #include <string.h>
 
 #include <X11/extensions/XInput2.h>
@@ -43,23 +44,23 @@ static rfb::LogWriter vlog("XInputTouchHandler");
 XInputTouchHandler::XInputTouchHandler(Window wnd_)
   : wnd(wnd_), fakeStateMask(0), gestureHandler(this)
 {
-  XIEventMask eventmask;
-  unsigned char flags[XIMaskLen(XI_LASTEVENT)] = { 0 };
+  XIEventMask *curmasks;
+  int num_masks;
+
+  curmasks = XIGetSelectedEvents(fl_display, wnd, &num_masks);
+  if (curmasks == nullptr)
+    return;
+
+  assert(num_masks == 1);
 
   // Event delivery is broken when somebody else does a pointer grab,
   // so we need to listen to all devices and do filtering of master
   // devices manually
-  eventmask.deviceid = XIAllDevices;
-  eventmask.mask_len = sizeof(flags);
-  eventmask.mask = flags;
+  assert(curmasks[0].deviceid == XIAllDevices);
 
-  XISetMask(flags, XI_ButtonPress);
-  XISetMask(flags, XI_Motion);
-  XISetMask(flags, XI_ButtonRelease);
-
-  XISetMask(flags, XI_TouchBegin);
-  XISetMask(flags, XI_TouchUpdate);
-  XISetMask(flags, XI_TouchEnd);
+  XISetMask(curmasks[0].mask, XI_TouchBegin);
+  XISetMask(curmasks[0].mask, XI_TouchUpdate);
+  XISetMask(curmasks[0].mask, XI_TouchEnd);
 
   // If something has a passive grab of touches (e.g. the window
   // manager wants to have its own gestures) then we won't get the
@@ -76,9 +77,11 @@ XInputTouchHandler::XInputTouchHandler(Window wnd_)
   //        might react to something that the window manager will
   //        also react to.
   //
-  XISetMask(flags, XI_TouchOwnership);
+  XISetMask(curmasks[0].mask, XI_TouchOwnership);
 
-  XISelectEvents(fl_display, wnd, &eventmask, 1);
+  XISelectEvents(fl_display, wnd, curmasks, 1);
+
+  XFree(curmasks);
 }
 
 void XInputTouchHandler::processEvent(const XIDeviceEvent* devev)
@@ -103,38 +106,7 @@ void XInputTouchHandler::processEvent(const XIDeviceEvent* devev)
   if (isMaster && devev->evtype == XI_TouchEnd)
     return;
 
-  if (devev->flags & XIPointerEmulated) {
-    // We still want the server to do the scroll wheel to button thing
-    // though, so keep those
-    if (((devev->evtype == XI_ButtonPress) ||
-         (devev->evtype == XI_ButtonRelease)) &&
-        (devev->detail >= 4) && (devev->detail <= 7)) {
-      ;
-    } else {
-      // Sometimes the server incorrectly sends us various events with
-      // this flag set, see:
-      // https://gitlab.freedesktop.org/xorg/xserver/-/issues/1027
-      return;
-    }
-  }
-
   switch (devev->evtype) {
-  case XI_Enter:
-  case XI_Leave:
-    // We get these when the mouse is grabbed implicitly, so just ignore them
-    // https://gitlab.freedesktop.org/xorg/xserver/-/issues/1026
-    break;
-  case XI_Motion:
-    // FIXME: We also get XI_Motion for scroll wheel events, which
-    //        we might want to ignore
-    fakeMotionEvent(devev);
-    break;
-  case XI_ButtonPress:
-    fakeButtonEvent(true, devev->detail, devev);
-    break;
-  case XI_ButtonRelease:
-    fakeButtonEvent(false, devev->detail, devev);
-    break;
   case XI_TouchBegin:
     // XInput2 wants us to explicitly accept touch sequences
     // for grabbed devices before it will pass events

@@ -145,7 +145,18 @@ static int handleTouchEvent(void *event, void* /*data*/)
         else
           vlog.error(_("X Input event for unknown window"));
         XFreeEventData(fl_display, &xevent->xcookie);
-        return 1;
+        return 0;
+      }
+
+      switch (devev->evtype) {
+      case XI_TouchBegin:
+      case XI_TouchUpdate:
+      case XI_TouchEnd:
+      case XI_TouchOwnership:
+        break;
+      default:
+        XFreeEventData(fl_display, &xevent->xcookie);
+        return 0;
       }
 
       dynamic_cast<XInputTouchHandler*>(handlers[devev->event])->processEvent(devev);
