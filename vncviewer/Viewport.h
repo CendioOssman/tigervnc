@@ -65,15 +65,22 @@ public:
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* data);
 
+protected:
   // Fl_Widget callback methods
 
   void draw() override;
 
   void resize(int x, int y, int w, int h) override;
 
+  int pasteEvent();
+  int enterEvent();
+  int leaveEvent();
+  int mouseEvent();
+  int wheelEvent();
+  int focusInEvent();
+  int focusOutEvent();
   int handle(int event) override;
 
-protected:
   void handleGestureEvent(const GestureEvent& event) override;
   void handleTapGesture(const GestureEvent& ev);
   void handleLongPressGesture(const GestureEvent& ev);

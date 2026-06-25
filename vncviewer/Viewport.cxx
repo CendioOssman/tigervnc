@@ -381,100 +381,140 @@ void Viewport::resize(int x, int y, int w, int h)
 }
 
 
-int Viewport::handle(int event)
+int Viewport::pasteEvent()
 {
   std::string filtered;
+
+  if (!rfb::isValidUTF8(Fl::event_text(), Fl::event_length())) {
+    vlog.error("Invalid UTF-8 sequence in system clipboard");
+    return 1;
+  }
+
+  filtered = rfb::convertLF(Fl::event_text(), Fl::event_length());
+
+  vlog.debug("Sending clipboard data (%d bytes)", (int)filtered.size());
+
+  try {
+    cc->sendClipboardData(filtered.c_str());
+  } catch (rdr::Exception& e) {
+    vlog.error("%s", e.str());
+    abort_connection_unexpected(e);
+  }
+
+  return 1;
+}
+
+int Viewport::enterEvent()
+{
+  window()->cursor(cursor, cursorHotspot.x, cursorHotspot.y);
+  // Yes, we would like some pointer events please!
+  return 1;
+}
+
+int Viewport::leaveEvent()
+{
+  window()->cursor(FL_CURSOR_DEFAULT);
+  // We want a last move event to help trigger edge stuff
+  handlePointerEvent({Fl::event_x() - x(), Fl::event_y() - y()}, 0);
+  return 1;
+}
+
+int Viewport::mouseEvent()
+{
+  int buttonMask;
+
+  buttonMask = 0;
+  if (Fl::event_button1())
+    buttonMask |= 1;
+  if (Fl::event_button2())
+    buttonMask |= 2;
+  if (Fl::event_button3())
+    buttonMask |= 4;
+
+  handlePointerEvent({Fl::event_x() - x(), Fl::event_y() - y()}, buttonMask);
+  return 1;
+}
+
+int Viewport::wheelEvent()
+{
   int buttonMask, wheelMask;
 
+  buttonMask = 0;
+  if (Fl::event_button1())
+    buttonMask |= 1;
+  if (Fl::event_button2())
+    buttonMask |= 2;
+  if (Fl::event_button3())
+    buttonMask |= 4;
+
+  wheelMask = 0;
+  if (Fl::event_dy() < 0)
+    wheelMask |= 8;
+  if (Fl::event_dy() > 0)
+    wheelMask |= 16;
+  if (Fl::event_dx() < 0)
+    wheelMask |= 32;
+  if (Fl::event_dx() > 0)
+    wheelMask |= 64;
+
+  // A quick press of the wheel "button", followed by a immediate
+  // release below
+  handlePointerEvent({Fl::event_x() - x(), Fl::event_y() - y()},
+                      buttonMask | wheelMask);
+
+  handlePointerEvent({Fl::event_x() - x(), Fl::event_y() - y()}, buttonMask);
+  return 1;
+}
+
+int Viewport::focusInEvent()
+{
+  Fl::disable_im();
+
+  flushPendingClipboard();
+
+  // We may have gotten our lock keys out of sync with the server
+  // whilst we didn't have focus. Try to sort this out.
+  pushLEDState();
+
+  // Resend Ctrl/Alt if needed
+  if (menuCtrlKey)
+    sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+  if (menuAltKey)
+    sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+
+  // Yes, we would like some focus please!
+  return 1;
+}
+
+int Viewport::focusOutEvent()
+{
+  // We won't get more key events, so reset our knowledge about keys
+  resetKeyboard();
+
+  Fl::enable_im();
+  return 1;
+}
+
+int Viewport::handle(int event)
+{
   switch (event) {
   case FL_PASTE:
-    if (!rfb::isValidUTF8(Fl::event_text(), Fl::event_length())) {
-      vlog.error("Invalid UTF-8 sequence in system clipboard");
-      return 1;
-    }
-
-    filtered = rfb::convertLF(Fl::event_text(), Fl::event_length());
-
-    vlog.debug("Sending clipboard data (%d bytes)", (int)filtered.size());
-
-    try {
-      cc->sendClipboardData(filtered.c_str());
-    } catch (rdr::Exception& e) {
-      vlog.error("%s", e.str());
-      abort_connection_unexpected(e);
-    }
-
-    return 1;
-
+    return pasteEvent();
   case FL_ENTER:
-    window()->cursor(cursor, cursorHotspot.x, cursorHotspot.y);
-    // Yes, we would like some pointer events please!
-    return 1;
-
+    return enterEvent();
   case FL_LEAVE:
-    window()->cursor(FL_CURSOR_DEFAULT);
-    // We want a last move event to help trigger edge stuff
-    handlePointerEvent({Fl::event_x() - x(), Fl::event_y() - y()}, 0);
-    return 1;
-
+    return leaveEvent();
   case FL_PUSH:
   case FL_RELEASE:
   case FL_DRAG:
   case FL_MOVE:
+    return mouseEvent();
   case FL_MOUSEWHEEL:
-    buttonMask = 0;
-    if (Fl::event_button1())
-      buttonMask |= 1;
-    if (Fl::event_button2())
-      buttonMask |= 2;
-    if (Fl::event_button3())
-      buttonMask |= 4;
-
-    if (event == FL_MOUSEWHEEL) {
-      wheelMask = 0;
-      if (Fl::event_dy() < 0)
-        wheelMask |= 8;
-      if (Fl::event_dy() > 0)
-        wheelMask |= 16;
-      if (Fl::event_dx() < 0)
-        wheelMask |= 32;
-      if (Fl::event_dx() > 0)
-        wheelMask |= 64;
-
-      // A quick press of the wheel "button", followed by a immediate
-      // release below
-      handlePointerEvent({Fl::event_x() - x(), Fl::event_y() - y()},
-                         buttonMask | wheelMask);
-    } 
-
-    handlePointerEvent({Fl::event_x() - x(), Fl::event_y() - y()}, buttonMask);
-    return 1;
-
+    return wheelEvent();
   case FL_FOCUS:
-    Fl::disable_im();
-
-    flushPendingClipboard();
-
-    // We may have gotten our lock keys out of sync with the server
-    // whilst we didn't have focus. Try to sort this out.
-    pushLEDState();
-
-    // Resend Ctrl/Alt if needed
-    if (menuCtrlKey)
-      sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
-    if (menuAltKey)
-      sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
-
-    // Yes, we would like some focus please!
-    return 1;
-
+    return focusInEvent();
   case FL_UNFOCUS:
-    // We won't get more key events, so reset our knowledge about keys
-    resetKeyboard();
-
-    Fl::enable_im();
-    return 1;
-
+    return focusOutEvent();
   case FL_KEYDOWN:
   case FL_KEYUP:
     // Just ignore these as keys were handled in the event handler
