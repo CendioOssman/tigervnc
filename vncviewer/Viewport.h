@@ -30,6 +30,7 @@
 class Fl_Menu_Button;
 class Fl_RGB_Image;
 
+class BaseTouchHandler;
 class CConn;
 class Keyboard;
 class PlatformPixelBuffer;
@@ -112,6 +113,7 @@ private:
   uint8_t lastButtonMask;
 
   Keyboard* keyboard;
+  BaseTouchHandler* touch;
 
   bool firstLEDState;
 

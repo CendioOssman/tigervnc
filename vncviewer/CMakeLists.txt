@@ -28,7 +28,6 @@ add_executable(vncviewer
   i18n.cxx
   mainloop.cxx
   parameters.cxx
-  touch.cxx
   MonitorIndicesParameter.cxx
   vncviewer.cxx)
 
@@ -69,7 +68,7 @@ target_include_directories(vncviewer SYSTEM PUBLIC ${FLTK_INCLUDE_DIR})
 target_link_libraries(vncviewer PRIVATE ${FLTK_LIBRARIES})
 
 if(WIN32)
-  target_link_libraries(vncviewer PRIVATE msimg32)
+  target_link_libraries(vncviewer PRIVATE comctl32 msimg32)
 elseif(APPLE)
   target_link_libraries(vncviewer PRIVATE "-framework Cocoa")
   target_link_libraries(vncviewer PRIVATE "-framework Carbon")

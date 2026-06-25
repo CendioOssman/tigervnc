@@ -20,6 +20,9 @@
 #include <config.h>
 #endif
 
+#include <windows.h>
+#include <commctrl.h>
+
 #define XK_MISCELLANY
 #include <rfb/keysymdef.h>
 #include <rfb/Exception.h>
@@ -55,6 +58,38 @@ Win32TouchHandler::Win32TouchHandler(HWND hWnd_) :
   if (supportedTouches < 2)
     vlog.debug("Two touch points required, system currently supports: %d",
                supportedTouches);
+
+  // Add a special hook-in for handling events sent directly to WndProc
+  if (!SetWindowSubclass(hWnd, &windowProc, 1, (DWORD_PTR)this)) {
+    vlog.error(_("Couldn't attach event handler to window (error 0x%x)"),
+                (int)GetLastError());
+  }
+}
+
+bool Win32TouchHandler::handleEvent(const void* /*event*/)
+{
+  return false;
+}
+
+LRESULT CALLBACK Win32TouchHandler::windowProc(HWND hWnd, UINT uMsg,
+                                               WPARAM wParam,
+                                               LPARAM lParam,
+                                               UINT_PTR /*uIdSubclass*/,
+                                               DWORD_PTR dwRefData)
+{
+  bool handled = false;
+
+  if (uMsg == WM_NCDESTROY) {
+    RemoveWindowSubclass(hWnd, &windowProc, 1);
+  } else {
+    handled = ((Win32TouchHandler*)dwRefData)->processEvent(uMsg, wParam, lParam);
+  }
+
+  // Only run the normal WndProc handlers for unhandled events
+  if (handled)
+    return 0;
+  else
+    return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 
 bool Win32TouchHandler::processEvent(UINT Msg, WPARAM /*wParam*/,
