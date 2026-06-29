@@ -54,6 +54,7 @@
 
 #include <assert.h>
 
+#include <rfb/Configuration.h>
 #include <rfb/Exception.h>
 
 #include "parameters.h"

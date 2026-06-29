@@ -27,6 +27,8 @@
 #include <QLabel>
 #include <QVBoxLayout>
 
+#include <rfb/Configuration.h>
+
 #include "OptionsInput.h"
 #include "i18n.h"
 #include "menukey.h"

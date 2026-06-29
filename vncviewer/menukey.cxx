@@ -26,6 +26,7 @@
 
 // FLTK can pull in the X11 headers on some systems
 #ifndef XK_VoidSymbol
+#include <rfb/Configuration.h>
 #define XK_MISCELLANY
 #include <rfb/keysymdef.h>
 #endif

@@ -27,6 +27,7 @@
 #include <QSpinBox>
 #include <QVBoxLayout>
 
+#include <rfb/Configuration.h>
 #include <rfb/encodings.h>
 
 #include "OptionsCompression.h"

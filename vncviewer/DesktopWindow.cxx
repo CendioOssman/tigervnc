@@ -30,11 +30,13 @@
 
 #include <rdr/Exception.h>
 
+#include <rfb/Configuration.h>
 #include <rfb/LogWriter.h>
 #include <rfb/CMsgWriter.h>
 #include <rfb/util.h>
 
 #include "DesktopWindow.h"
+#include "MonitorIndicesParameter.h"
 #include "OptionsDialog.h"
 #include "i18n.h"
 #include "mainloop.h"

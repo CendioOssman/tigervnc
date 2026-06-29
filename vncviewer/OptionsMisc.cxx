@@ -23,6 +23,8 @@
 #include <QCheckBox>
 #include <QVBoxLayout>
 
+#include <rfb/Configuration.h>
+
 #include "OptionsMisc.h"
 #include "i18n.h"
 #include "parameters.h"

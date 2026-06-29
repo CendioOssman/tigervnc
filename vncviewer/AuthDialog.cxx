@@ -28,6 +28,8 @@
 #include <QLabel>
 #include <QLineEdit>
 
+#include <rfb/Configuration.h>
+
 #include "AuthDialog.h"
 #include "parameters.h"
 #include "i18n.h"

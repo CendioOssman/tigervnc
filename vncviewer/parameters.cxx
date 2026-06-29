@@ -33,6 +33,7 @@
 #include "parameters.h"
 
 #include <os/os.h>
+#include <rfb/Configuration.h>
 #include <rfb/Exception.h>
 #include <rfb/LogWriter.h>
 #include <rfb/SecurityClient.h>
@@ -44,6 +45,7 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "MonitorIndicesParameter.h"
 #include "i18n.h"
 
 using namespace rfb;

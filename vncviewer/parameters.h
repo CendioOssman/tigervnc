@@ -20,13 +20,17 @@
 #ifndef __PARAMETERS_H__
 #define __PARAMETERS_H__
 
-#include <rfb/Configuration.h>
-#include "MonitorIndicesParameter.h"
-
-#ifdef _WIN32
 #include <list>
 #include <string>
-#endif
+
+namespace rfb {
+  class AliasParameter;
+  class BoolParameter;
+  class IntParameter;
+  class StringParameter;
+}
+
+class MonitorIndicesParameter;
 
 #define SERVER_HISTORY_SIZE 20
 

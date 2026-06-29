@@ -19,6 +19,8 @@
 #ifndef __EMULATEMB__
 #define __EMULATEMB__
 
+#include <stdint.h>
+
 #include <rfb/Timer.h>
 #include <rfb/Rect.h>
 

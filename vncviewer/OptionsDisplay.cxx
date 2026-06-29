@@ -31,6 +31,9 @@
 
 #include <FL/Fl.H>
 
+#include <rfb/Configuration.h>
+
+#include "MonitorIndicesParameter.h"
 #include "OptionsDisplay.h"
 #include "i18n.h"
 #include "parameters.h"
