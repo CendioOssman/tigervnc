@@ -31,8 +31,10 @@
 
 #include <FL/Fl.H>
 
+#include <core/Configuration.h>
 #include <core/i18n.h>
 
+#include "MonitorIndicesParameter.h"
 #include "OptionsDisplay.h"
 #include "parameters.h"
 

@@ -23,6 +23,7 @@
 #include <QBoxLayout>
 #include <QCheckBox>
 
+#include <core/Configuration.h>
 #include <core/i18n.h>
 
 #include "OptionsMisc.h"

@@ -32,6 +32,7 @@
 
 #include "parameters.h"
 
+#include <core/Configuration.h>
 #include <core/Exception.h>
 #include <core/LogWriter.h>
 #include <core/i18n.h>
@@ -46,6 +47,8 @@
 #include <limits.h>
 #include <errno.h>
 #include <assert.h>
+
+#include "MonitorIndicesParameter.h"
 
 static core::LogWriter vlog("Parameters");
 

@@ -30,6 +30,7 @@
 #include <QLabel>
 #include <QLineEdit>
 
+#include <core/Configuration.h>
 #include <core/i18n.h>
 
 #include "qt/QPasswordEdit.h"

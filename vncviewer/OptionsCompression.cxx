@@ -27,6 +27,7 @@
 #include <QRadioButton>
 #include <QSpinBox>
 
+#include <core/Configuration.h>
 #include <core/i18n.h>
 
 #include <rfb/CConnection.h>

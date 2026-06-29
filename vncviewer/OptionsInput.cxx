@@ -27,6 +27,7 @@
 #include <QGroupBox>
 #include <QLabel>
 
+#include <core/Configuration.h>
 #include <core/i18n.h>
 
 #include "OptionsInput.h"

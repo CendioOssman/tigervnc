@@ -24,6 +24,7 @@
 #include <QLabel>
 #include <QPushButton>
 
+#include <core/Configuration.h>
 #include <core/i18n.h>
 #include <core/string.h>
 
