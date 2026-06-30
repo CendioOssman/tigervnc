@@ -451,6 +451,11 @@ int main(int argc, char** argv)
   // Handle any old settings specified on the command line
   migrateDeprecatedOptions();
 
+  // We don't support Wayland yet
+#if !defined(WIN32) && !defined(__APPLE__)
+  qputenv("QT_QPA_PLATFORM", "xcb");
+#endif
+
   // We don't let Qt mess with the command line
   int qtargc = 1;
   const char *qtargv[] = { argv[0] };
