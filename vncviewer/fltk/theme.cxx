@@ -303,10 +303,10 @@ void init_theme()
   Fl::set_boxtype(_FL_ROUND_DOWN_BOX, THEME_ROUND_DOWN_BOX);
 
 #if defined(WIN32)
-  NONCLIENTMETRICS metrics;
+  NONCLIENTMETRICSA metrics;
   metrics.cbSize = sizeof(metrics);
-  if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS,
-                           sizeof(metrics), &metrics, 0)) {
+  if (SystemParametersInfoA(SPI_GETNONCLIENTMETRICS,
+                            sizeof(metrics), &metrics, 0)) {
     strcpy(font_name, metrics.lfMessageFont.lfFaceName);
     Fl::set_font(FL_HELVETICA, font_name);
   }

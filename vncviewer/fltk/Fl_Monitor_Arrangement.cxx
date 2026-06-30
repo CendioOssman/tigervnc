@@ -383,12 +383,12 @@ std::string Fl_Monitor_Arrangement::get_monitor_name(int m)
                       (LPARAM)&sys_monitors);
 
   for (iter = sys_monitors.begin(); iter != sys_monitors.end(); ++iter) {
-    MONITORINFOEX info;
-    DISPLAY_DEVICE dev;
+    MONITORINFOEXA info;
+    DISPLAY_DEVICEA dev;
     std::string name;
 
     info.cbSize = sizeof(info);
-    GetMonitorInfo(*iter, (LPMONITORINFO)&info);
+    GetMonitorInfoA(*iter, (LPMONITORINFO)&info);
 
     if (info.rcMonitor.left != x)
       continue;
@@ -401,7 +401,7 @@ std::string Fl_Monitor_Arrangement::get_monitor_name(int m)
 
     for (int i = 0; ; i++) {
       dev.cb = sizeof(dev);
-      if (!EnumDisplayDevices(info.szDevice, i, &dev, 0))
+      if (!EnumDisplayDevicesA(info.szDevice, i, &dev, 0))
         break;
 
       if (!(dev.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP))
