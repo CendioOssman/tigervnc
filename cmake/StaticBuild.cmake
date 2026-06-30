@@ -146,6 +146,20 @@ if(BUILD_STATIC)
   if(QT_FOUND)
     # FIXME: this doesn't set it globally, just in this dir
     add_definitions(-DQT_STATIC_BUILD=1)
+    if(QT_VERSION_MAJOR LESS_EQUAL 5)
+      find_package(QT NAMES Qt5 COMPONENTS
+                  Gui
+                  Network
+                  Svg
+                  ThemeSupport
+                  REQUIRED)
+      find_package(Qt5 COMPONENTS
+                  Gui
+                  Network
+                  Svg
+                  ThemeSupport
+                  REQUIRED)
+    endif()
   endif()
 
   # X11 libraries change constantly on Linux systems so we have to link

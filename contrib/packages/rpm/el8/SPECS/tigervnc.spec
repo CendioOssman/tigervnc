@@ -38,7 +38,7 @@ BuildRequires:  libselinux-devel, selinux-policy-devel, systemd
 # TigerVNC 1.4.x requires fltk 1.3.3 for keyboard handling support
 # See https://github.com/TigerVNC/tigervnc/issues/8, also bug #1208814
 BuildRequires:  fltk-devel >= 1.3.3
-BuildRequires:  qt6-qtbase-devel
+BuildRequires:  qt5-qtbase-devel, qt5-qtx11extras-devel
 BuildRequires:  xorg-x11-server-devel
 
 Requires:       hicolor-icon-theme

@@ -69,8 +69,25 @@ target_link_libraries(vncviewer PRIVATE ${FLTK_LIBRARIES})
 
 set_target_properties(vncviewer PROPERTIES AUTOMOC ON)
 target_link_libraries(vncviewer PRIVATE
-  Qt6::Core
-  Qt6::Widgets)
+  Qt${QT_VERSION_MAJOR}::Core
+  Qt${QT_VERSION_MAJOR}::Widgets)
+if(UNIX AND NOT APPLE)
+  if(QT_VERSION_MAJOR LESS_EQUAL 5)
+    target_link_libraries(vncviewer PRIVATE
+      Qt${QT_VERSION_MAJOR}::X11Extras)
+  endif()
+endif()
+
+# FIXME: Not tested
+if(BUILD_STATIC)
+  if(QT_VERSION_MAJOR LESS_EQUAL 5)
+    target_link_libraries(vncviewer PRIVATE
+      Qt${QT_VERSION_MAJOR}::Gui
+      Qt${QT_VERSION_MAJOR}::Network
+      Qt${QT_VERSION_MAJOR}::Svg
+      Qt${QT_VERSION_MAJOR}::ThemeSupport)
+  endif()
+endif()
 
 if(WIN32)
   target_link_libraries(vncviewer PRIVATE comctl32 msimg32)
@@ -91,7 +108,9 @@ else()
   endif()
 endif()
 
-qt_finalize_executable(vncviewer)
+if(QT_VERSION_MAJOR EQUAL 6)
+  qt_finalize_executable(vncviewer)
+endif()
 
 install(TARGETS vncviewer DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})
 if(UNIX)
