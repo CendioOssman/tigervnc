@@ -135,6 +135,8 @@ static void CleanupSignalHandler(int sig)
 
 static void init_gui()
 {
+  i18n_qt_init();
+
   qApp->setOrganizationName("TigerVNC Team");
   qApp->setOrganizationDomain("tigervnc.org");
   qApp->setApplicationName("vncviewer");

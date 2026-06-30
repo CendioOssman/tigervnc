@@ -23,13 +23,57 @@
 
 #include <core/i18n.h>
 
+#include <QCoreApplication>
+#include <QLibraryInfo>
+#include <QLocale>
+#include <QString>
+#include <QTranslator>
+
 #include <FL/Fl_File_Chooser.H>
+
 #include <FL/fl_ask.H>
 #include <FL/x.H>
 
 #include "fltk/Fl_Password_Input.h"
 
 #include "i18n.h"
+
+static bool load_catalog(const char* catalog, const QString& location)
+{
+  QTranslator* translator;
+
+  translator = new QTranslator(QCoreApplication::instance());
+  if (!translator->load(QLocale::system(), catalog, "", location))
+    return false;
+
+  QCoreApplication::instance()->installTranslator(translator);
+
+  return true;
+}
+
+// This is based on how KDE loads Qt's translations
+static void load_catalogs(const QString& location)
+{
+  // FIXME: KDE first loads English translation for some reason. See:
+  // https://invent.kde.org/frameworks/ki18n/-/blob/master/src/i18n/main.cpp
+
+  // First try to load the primary catalog
+  if (load_catalog("qt_", location))
+    return;
+
+  // For some languages, that is just a meta catalog, which might be
+  // missing. Try loading the individual catalogs instead.
+  const char* catalogs[] = {
+      "qtbase_",
+      "qtmultimedia_",
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+      "qtscript_",
+      "qtxmlpatterns_",
+#endif
+  };
+  for (const char* catalog : catalogs)
+    load_catalog(catalog, location);
+}
 
 void i18n_init()
 {
@@ -70,4 +114,9 @@ void i18n_init()
   Fl_Mac_App_Menu::show = _("Show all");
   Fl_Mac_App_Menu::quit = _("Quit TigerVNC");
 #endif
+}
+
+void i18n_qt_init()
+{
+  load_catalogs(QLibraryInfo::location(QLibraryInfo::TranslationsPath));
 }
