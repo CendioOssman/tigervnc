@@ -281,6 +281,8 @@ if(BUILD_VIEWER)
     endif()
   endif()
 
+  find_package(Qt6 COMPONENTS Core Network Widgets REQUIRED)
+
   find_package(X11 COMPONENTS Xext Xi Xkb Xrender REQUIRED)
   find_package(X11 COMPONENTS Xrandr)
 endif()

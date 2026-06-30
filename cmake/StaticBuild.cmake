@@ -142,6 +142,12 @@ if(BUILD_STATIC)
     endif()
   endif()
 
+  # FIXME: Not tested
+  if(QT_FOUND)
+    # FIXME: this doesn't set it globally, just in this dir
+    add_definitions(-DQT_STATIC_BUILD=1)
+  endif()
+
   # X11 libraries change constantly on Linux systems so we have to link
   # them statically, even libXext. libX11 is somewhat stable, although
   # even it has had an ABI change once or twice.

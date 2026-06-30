@@ -67,6 +67,11 @@ target_link_libraries(vncviewer PRIVATE ${GETTEXT_LIBRARIES})
 target_include_directories(vncviewer SYSTEM PUBLIC ${FLTK_INCLUDE_DIR})
 target_link_libraries(vncviewer PRIVATE ${FLTK_LIBRARIES})
 
+set_target_properties(vncviewer PROPERTIES AUTOMOC ON)
+target_link_libraries(vncviewer PRIVATE
+  Qt6::Core
+  Qt6::Widgets)
+
 if(WIN32)
   target_link_libraries(vncviewer PRIVATE comctl32 msimg32)
 elseif(APPLE)
@@ -85,6 +90,8 @@ else()
     target_link_libraries(vncviewer PRIVATE ${X11_Xrandr_LIB})
   endif()
 endif()
+
+qt_finalize_executable(vncviewer)
 
 install(TARGETS vncviewer DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})
 if(UNIX)

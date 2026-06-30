@@ -14,6 +14,7 @@ jobs:
           sudo apt-get install -y libfltk1.3-dev fluid gettext appstream
           sudo apt-get install -y libpixman-1-dev libjpeg-turbo8-dev
           sudo apt-get install -y libgnutls28-dev nettle-dev libgmp-dev
+          sudo apt-get install -y qt6-base-dev
           sudo apt-get install -y libxtst-dev libxdamage-dev libxfixes-dev libxrandr-dev libpam-dev
           sudo apt-get install -y libavcodec-dev libavutil-dev libswscale-dev
       - name: Configure
@@ -45,7 +46,8 @@ jobs:
           pacman --sync --noconfirm --needed \
             mingw-w64-x86_64-fltk mingw-w64-x86_64-libjpeg-turbo \
             mingw-w64-x86_64-gnutls mingw-w64-x86_64-pixman \
-            mingw-w64-x86_64-nettle mingw-w64-x86_64-gmp
+            mingw-w64-x86_64-nettle mingw-w64-x86_64-gmp \
+            mingw-w64-x86_64-qt6-base
       - name: Configure
         run: cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
@@ -70,8 +72,11 @@ jobs:
         run: |
           brew install fltk pixman ffmpeg
           brew install gnutls nettle gmp
+          brew install qt@6
       - name: Configure
-        run: cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
+        run: |
+          export PATH="/usr/local/opt/qt@6/bin:$PATH"
+          cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
       - name: Build
         working-directory: build
         run: make
