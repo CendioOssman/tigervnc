@@ -458,7 +458,16 @@ int main(int argc, char** argv)
 
   // We don't let Qt mess with the command line
   int qtargc = 1;
-  const char *qtargv[] = { argv[0] };
+  const char *qtargv[] = { argv[0], "", "" };
+
+#if !defined(WIN32) && !defined(__APPLE__)
+  if (strcmp(display, "") != 0) {
+    qtargv[1] = "-display";
+    qtargv[2] = strdup(display);
+    qtargc = 3;
+  }
+#endif
+
   QApplication app(qtargc, (char**)qtargv);
 
   init_gui();
