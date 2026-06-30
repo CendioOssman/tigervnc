@@ -43,7 +43,7 @@ static const char* getlocaledir()
   static char localebuf[PATH_MAX];
   char *slash;
 
-  GetModuleFileName(nullptr, localebuf, sizeof(localebuf));
+  GetModuleFileNameA(nullptr, localebuf, sizeof(localebuf));
 
   slash = strrchr(localebuf, '\\');
   if (slash == nullptr)
