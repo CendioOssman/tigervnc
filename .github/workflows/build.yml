@@ -17,6 +17,7 @@ jobs:
             libfltk1.3-dev fluid gettext appstream \
             libpixman-1-dev libjpeg-turbo8-dev \
             libgnutls28-dev nettle-dev libgmp-dev \
+            qt6-base-dev \
             libxtst-dev libxdamage-dev libxfixes-dev libxrandr-dev \
             libpam-dev libsystemd-dev libpwquality-dev \
             libavcodec-dev libavutil-dev libswscale-dev \
@@ -88,6 +89,7 @@ jobs:
           sudo apt-get install -y \
             libfltk1.3-dev fluid \
             libpixman-1-dev libjpeg-turbo8-dev \
+            qt6-base-dev \
             libxtst-dev libxdamage-dev libxfixes-dev libxrandr-dev \
             uuid-dev libglib2.0-dev libpipewire-0.3-dev \
             libwayland-dev libxkbcommon-dev \
@@ -170,6 +172,7 @@ jobs:
             mingw-w64-ucrt-x86_64-pixman \
             mingw-w64-ucrt-x86_64-nettle \
             mingw-w64-ucrt-x86_64-gmp \
+            mingw-w64-ucrt-x86_64-qt6-base \
             mingw-w64-ucrt-x86_64-gtest
       - name: Configure
         run: |
@@ -230,10 +233,12 @@ jobs:
           brew install \
             fltk@1.3 pixman ffmpeg \
             gnutls nettle gmp \
+            qt@6 \
             googletest
           brew link fltk@1.3
       - name: Configure
         run: |
+          export PATH="/usr/local/opt/qt@6/bin:$PATH"
           cmake \
             -DCMAKE_BUILD_TYPE=Debug \
             -DENABLE_NLS=ON \
