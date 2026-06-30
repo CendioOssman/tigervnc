@@ -87,6 +87,41 @@ if(BUILD_STATIC)
       Qt${QT_VERSION_MAJOR}::Svg
       Qt${QT_VERSION_MAJOR}::ThemeSupport)
   endif()
+
+  # Embed all translations that Qt needs
+  get_target_property(QT${QT_VERSION_MAJOR}_QMAKE_EXECUTABLE
+    Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
+  execute_process(COMMAND
+    ${QT${QT_VERSION_MAJOR}_QMAKE_EXECUTABLE}
+      --query QT_INSTALL_TRANSLATIONS
+    OUTPUT_VARIABLE QT_TRANSLATIONS_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  file(TO_CMAKE_PATH "${QT_TRANSLATIONS_DIR}" QT_TRANSLATIONS_DIR)
+
+  set(QT_TRANSLATIONS)
+  file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qt_*.qm")
+  list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
+  file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtbase_*.qm")
+  list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
+  file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtscript_*.qm")
+  list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
+  file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtmultimedia_*.qm")
+  list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
+  file(GLOB TEMP_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtxmlpatterns_*.qm")
+  list(APPEND QT_TRANSLATIONS ${TEMP_TRANSLATIONS})
+  set(QT_TRANSLATIONS_CONFIGURE)
+  foreach(QT_TR_PATH ${QT_TRANSLATIONS})
+      get_filename_component(QT_TR_NAME ${QT_TR_PATH} NAME)
+      if (NOT QT_TR_NAME MATCHES "(help)")
+          list(APPEND QT_TRANSLATIONS_CONFIGURE
+              "<file alias='${QT_TR_NAME}'>${QT_TR_PATH}</file>"
+          )
+      endif()
+  endforeach()
+  string(REPLACE ";" "\n" QT_TRANSLATIONS_CONFIGURE "${QT_TRANSLATIONS_CONFIGURE}")
+  configure_file(qttranslations.qrc.in ${CMAKE_CURRENT_BINARY_DIR}/qttranslations.qrc @ONLY)
+  target_sources(vncviewer PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}/qttranslations.qrc)
 endif()
 
 if(WIN32)

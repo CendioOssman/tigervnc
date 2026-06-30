@@ -180,4 +180,6 @@ void i18n_init()
 void i18n_qt_init()
 {
   load_catalogs(QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+  // FIXME: Only for static builds? Only fallback?
+  load_catalogs(":/i18n");
 }
