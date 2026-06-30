@@ -32,6 +32,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include <QApplication>
+
 #include <rfb/Logger_stdio.h>
 #include <rfb/LogWriter.h>
 #include <rfb/Exception.h>
@@ -131,8 +133,16 @@ static void CleanupSignalHandler(int sig)
   exit(1);
 }
 
-static void init_fltk()
+static void init_gui()
 {
+  qApp->setOrganizationName("TigerVNC Team");
+  qApp->setOrganizationDomain("tigervnc.org");
+  qApp->setApplicationName("vncviewer");
+  qApp->setApplicationDisplayName(_("TigerVNC Viewer"));
+  qApp->setApplicationVersion(PACKAGE_VERSION);
+
+  qApp->setQuitOnLastWindowClosed(false);
+
 #if !defined(WIN32) && !defined(__APPLE__)
   if (strcmp(display, "") != 0) {
     Fl::display(display);
@@ -146,6 +156,7 @@ static void init_fltk()
   // Proper Gnome Shell integration requires that we set a sensible
   // WM_CLASS for the window.
   Fl_Window::default_xclass("vncviewer");
+  qApp->setDesktopFileName("vncviewer");
 
   // Set the default icon for all windows.
 #ifdef WIN32
@@ -425,7 +436,12 @@ int main(int argc, char** argv)
   // Handle any old settings specified on the command line
   migrateDeprecatedOptions();
 
-  init_fltk();
+  // We don't let Qt mess with the command line
+  int qtargc = 1;
+  const char *qtargv[] = { argv[0] };
+  QApplication app(qtargc, (char**)qtargv);
+
+  init_gui();
 
   create_base_dirs();
 
