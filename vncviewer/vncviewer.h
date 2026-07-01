@@ -19,6 +19,8 @@
 #ifndef __VNCVIEWER_H__
 #define __VNCVIEWER_H__
 
-void about_vncviewer();
+class QWidget;
+
+void about_vncviewer(QWidget* parent=nullptr);
 
 #endif
