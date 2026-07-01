@@ -35,6 +35,7 @@
 #include <QApplication>
 #include <QIcon>
 #include <QMenuBar>
+#include <QMessageBox>
 
 #include <rfb/Logger_stdio.h>
 #include <rfb/LogWriter.h>
@@ -45,10 +46,10 @@
 
 #include <FL/Fl.H>
 #include <FL/Fl_PNG_Image.H>
+#include <FL/Fl_Window.H>
 #include <FL/fl_ask.H>
 #include <FL/x.H>
 
-#include "fltk/Fl_Message_Box.h"
 #include "fltk/theme.h"
 #include "qt/QFLTKEventDispatcher.h"
 #include "i18n.h"
@@ -83,23 +84,18 @@ static const char *about_text()
   return buffer;
 }
 
-void about_vncviewer()
+void about_vncviewer(QWidget* parent)
 {
-  static Fl_Message_Box* dlg = nullptr;
+  QMessageBox* dlg;
 
-  if (dlg == nullptr) {
-    dlg = new Fl_Message_Box(_("About TigerVNC Viewer"),
-                             "%s", about_text());
-#ifndef __APPLE__
-    dlg->set_modal();
-#endif
-  }
-
-  if (!dlg->shown()) {
-    dlg->show();
-  } else {
-    dlg->take_focus();
-  }
+  dlg = new QMessageBox(parent);
+  dlg->setIcon(QMessageBox::Information);
+  dlg->setWindowTitle(_("About TigerVNC Viewer"));
+  dlg->setText(about_text());
+  dlg->addButton(QMessageBox::Close);
+  dlg->setAttribute(Qt::WA_DeleteOnClose);
+  // FIXME: should refocus existing dialog on macOS?
+  dlg->open();
 }
 
 #ifdef __APPLE__
