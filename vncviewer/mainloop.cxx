@@ -54,7 +54,6 @@
 using namespace network;
 using namespace rfb;
 
-static bool exitMainloop = false;
 static std::string exitError;
 
 static std::string configServerName;
@@ -84,7 +83,7 @@ static void setup_via(void*);
 static void alert_done(Fl_Widget* widget, void*)
 {
   Fl::delete_widget(widget);
-  exitMainloop = true;
+  qApp->quit();
 }
 
 static void abort_startup(const char *error, ...)
@@ -107,7 +106,7 @@ static void abort_startup(const char *error, ...)
     dlg->finished(alert_done);
     dlg->show();
   } else {
-    exitMainloop = true;
+    qApp->quit();
   }
 }
 
@@ -169,7 +168,7 @@ static void reconnect_done(Fl_Widget* widget, void*)
   if (dlg->result() == 1)
     Fl::add_idle(start_connection);
   else
-    exitMainloop = true;
+    qApp->quit();
 }
 
 static void stop_connection(void*)
@@ -182,7 +181,7 @@ static void stop_connection(void*)
   cc = nullptr;
 
   if (exitError.empty()) {
-    exitMainloop = true;
+    qApp->quit();
     return;
   }
 
@@ -210,25 +209,8 @@ static void stop_connection(void*)
     return;
   }
 
-  exitMainloop = true;
+  qApp->quit();
   return;
-}
-
-static void run_mainloop()
-{
-  exitMainloop = false;
-  while (!exitMainloop) {
-    int next_timer;
-
-    next_timer = Timer::checkTimeouts();
-    if (next_timer < 0)
-      next_timer = INT_MAX;
-
-    if (Fl::wait((double)next_timer / 1000.0) < 0.0) {
-      vlog.error(_("Internal FLTK error. Exiting."));
-      exit(-1);
-    }
-  }
 }
 
 static bool is_path(const char *maybe)
@@ -364,7 +346,7 @@ static void server_dialog_finished(Fl_Widget* widget, void*)
   Fl::delete_widget(dialog);
 
   if (!dialog->result()) {
-    exitMainloop = true;
+    qApp->quit();
     return;
   }
 
@@ -466,7 +448,8 @@ int mainloop(const char* configServerName_,
 
   Fl::add_idle(load_cmdline_config);
 
-  run_mainloop();
+  // Warning: Never returns on macOS
+  qApp->exec();
 
   return exitError.empty() ? 0 : 1;
 }

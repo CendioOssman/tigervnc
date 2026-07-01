@@ -7,6 +7,7 @@ add_executable(vncviewer
   fltk/Fl_Monitor_Arrangement.cxx
   fltk/Fl_Navigation.cxx
   fltk/theme.cxx
+  qt/QFLTKEventDispatcher.cxx
   menukey.cxx
   AuthDialog.cxx
   BaseTouchHandler.cxx
@@ -71,10 +72,18 @@ set_target_properties(vncviewer PROPERTIES AUTOMOC ON)
 target_link_libraries(vncviewer PRIVATE
   Qt${QT_VERSION_MAJOR}::Core
   Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(vncviewer PRIVATE
+  Qt${QT_VERSION_MAJOR}::GuiPrivate)
 if(UNIX AND NOT APPLE)
   if(QT_VERSION_MAJOR LESS_EQUAL 5)
     target_link_libraries(vncviewer PRIVATE
       Qt${QT_VERSION_MAJOR}::X11Extras)
+    target_link_libraries(vncviewer PRIVATE
+      Qt${QT_VERSION_MAJOR}::EdidSupportPrivate
+      Qt${QT_VERSION_MAJOR}::XcbQpa)
+  else()
+    target_link_libraries(vncviewer PRIVATE
+      Qt${QT_VERSION_MAJOR}::XcbQpaPrivate)
   endif()
 endif()
 
