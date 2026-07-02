@@ -28,6 +28,8 @@
 
 #include <stdexcept>
 
+#include <QMessageBox>
+
 #include <core/LogWriter.h>
 #include <core/i18n.h>
 #include <core/string.h>
@@ -49,7 +51,6 @@
 #define NoSymbol 0
 #endif
 
-#include "fltk/Fl_Message_Box.h"
 #include "fltk/layout.h"
 #include "fltk/util.h"
 #include "Viewport.h"
@@ -1280,15 +1281,14 @@ void Viewport::initContextMenu()
   fltk_menu_add(contextMenu, C_("ContextMenu|", "Connection &info..."), 0,
                 [](Fl_Widget*, void* data) {
                   Viewport* self = (Viewport*)data;
-
-                  Fl_Message_Box* dlg;
-
-                  dlg = new Fl_Message_Box(_("VNC connection info"), "%s",
-                                           fltk_escape(self->cc->connectionInfo().c_str()).c_str());
-                  dlg->set_modal();
-                  dlg->finished([](Fl_Widget* d, void*)
-                                { Fl::delete_widget(d); });
-                  dlg->show();
+                  QMessageBox* dlg;
+                  dlg = new QMessageBox;
+                  dlg->setIcon(QMessageBox::Information);
+                  dlg->setWindowTitle(_("VNC connection info"));
+                  dlg->setText(self->cc->connectionInfo().c_str());
+                  dlg->addButton(QMessageBox::Close);
+                  dlg->setAttribute(Qt::WA_DeleteOnClose);
+                  dlg->open();
                 }, this, 0);
 
   fltk_menu_add(contextMenu, C_("ContextMenu|",
