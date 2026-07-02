@@ -49,11 +49,7 @@
 #include "vncviewer.h"
 #include "parameters.h"
 
-
-using namespace std;
-using namespace rfb;
-
-static LogWriter vlog("ServerDialog");
+static rfb::LogWriter vlog("ServerDialog");
 
 const char* SERVER_HISTORY="tigervnc.history";
 
@@ -137,10 +133,10 @@ void ServerDialog::run(const char* servername, char *newservername)
     dialog.loadServerHistory();
 
     dialog.serverName->clear();
-    for (const string& entry : dialog.serverHistory)
+    for (const std::string& entry : dialog.serverHistory)
       fltk_menu_add(dialog.serverName->menubutton(),
                     entry.c_str(), 0, nullptr);
-  } catch (Exception& e) {
+  } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
     fl_alert(_("Unable to load the server history:\n\n%s"),
              e.str());
@@ -192,7 +188,7 @@ void ServerDialog::handleLoad(Fl_Widget* /*widget*/, void* data)
 
   try {
     dialog->serverName->value(loadViewerParameters(filename));
-  } catch (Exception& e) {
+  } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
     fl_alert(_("Unable to load the specified configuration file:\n\n%s"),
              e.str());
@@ -253,7 +249,7 @@ void ServerDialog::handleSaveAs(Fl_Widget* /*widget*/, void* data)
   
   try {
     saveViewerParameters(filename, servername);
-  } catch (Exception& e) {
+  } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
     fl_alert(_("Unable to save the specified configuration "
                "file:\n\n%s"), e.str());
@@ -287,7 +283,7 @@ void ServerDialog::handleConnect(Fl_Widget* /*widget*/, void *data)
 
   try {
     saveViewerParameters(nullptr, servername);
-  } catch (Exception& e) {
+  } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
     fl_alert(_("Unable to save the default configuration:\n\n%s"),
              e.str());
@@ -299,7 +295,7 @@ void ServerDialog::handleConnect(Fl_Widget* /*widget*/, void *data)
 
   try {
     dialog->saveServerHistory();
-  } catch (Exception& e) {
+  } catch (rfb::Exception& e) {
     vlog.error("%s", e.str());
     fl_alert(_("Unable to save the server history:\n\n%s"),
              e.str());
@@ -307,20 +303,21 @@ void ServerDialog::handleConnect(Fl_Widget* /*widget*/, void *data)
 }
 
 
-static bool same_server(const string& a, const string& b)
+static bool same_server(const std::string& a, const std::string& b)
 {
-  string hostA, hostB;
+  std::string hostA, hostB;
   int portA, portB;
 
 #ifndef WIN32
-  if ((a.find("/") != string::npos) || (b.find("/") != string::npos))
+  if ((a.find("/") != std::string::npos) ||
+      (b.find("/") != std::string::npos))
     return a == b;
 #endif
 
   try {
-    getHostAndPort(a.c_str(), &hostA, &portA);
-    getHostAndPort(b.c_str(), &hostB, &portB);
-  } catch (Exception& e) {
+    rfb::getHostAndPort(a.c_str(), &hostA, &portA);
+    rfb::getHostAndPort(b.c_str(), &hostB, &portB);
+  } catch (rfb::Exception& e) {
     return false;
   }
 
@@ -336,7 +333,7 @@ static bool same_server(const string& a, const string& b)
 
 void ServerDialog::loadServerHistory()
 {
-  list<string> rawHistory;
+  std::list<std::string> rawHistory;
 
   serverHistory.clear();
 
@@ -346,7 +343,7 @@ void ServerDialog::loadServerHistory()
 
   const char* stateDir = os::getvncstatedir();
   if (stateDir == nullptr)
-    throw Exception(_("Could not determine VNC state directory path"));
+    throw rdr::Exception(_("Could not determine VNC state directory path"));
 
   char filepath[PATH_MAX];
   snprintf(filepath, sizeof(filepath), "%s/%s", stateDir, SERVER_HISTORY);
@@ -358,7 +355,7 @@ void ServerDialog::loadServerHistory()
       // no history file
       return;
     }
-    std::string msg = format(_("Could not open \"%s\""), filepath);
+    std::string msg = rfb::format(_("Could not open \"%s\""), filepath);
     throw rdr::SystemException(msg.c_str(), errno);
   }
 
@@ -373,8 +370,8 @@ void ServerDialog::loadServerHistory()
         break;
 
       fclose(f);
-      std::string msg = format(_("Failed to read line %d in "
-                                 "file \"%s\""), lineNr, filepath);
+      std::string msg = rfb::format(_("Failed to read line %d in "
+                                      "file \"%s\""), lineNr, filepath);
       throw rdr::SystemException(msg.c_str(), errno);
     }
 
@@ -382,8 +379,8 @@ void ServerDialog::loadServerHistory()
 
     if (len == (sizeof(line) - 1)) {
       fclose(f);
-      throw Exception(_("Failed to read line %d in file %s: %s"),
-                      lineNr, filepath, _("Line too long"));
+      throw rdr::Exception(_("Failed to read line %d in file %s: %s"),
+                           lineNr, filepath, _("Line too long"));
     }
 
     if ((len > 0) && (line[len-1] == '\n')) {
@@ -405,9 +402,9 @@ void ServerDialog::loadServerHistory()
 #endif
 
   // Filter out duplicates, even if they have different formats
-  for (const string& entry : rawHistory) {
+  for (const std::string& entry : rawHistory) {
     if (std::find_if(serverHistory.begin(), serverHistory.end(),
-                     [&entry](const string& s) { return same_server(s, entry); }) != serverHistory.end())
+                     [&entry](const std::string& s) { return same_server(s, entry); }) != serverHistory.end())
       continue;
     serverHistory.push_back(entry);
   }
@@ -422,7 +419,7 @@ void ServerDialog::saveServerHistory()
 
   const char* stateDir = os::getvncstatedir();
   if (stateDir == nullptr)
-    throw Exception(_("Could not determine VNC state directory path"));
+    throw rdr::Exception(_("Could not determine VNC state directory path"));
 
   char filepath[PATH_MAX];
   snprintf(filepath, sizeof(filepath), "%s/%s", stateDir, SERVER_HISTORY);
@@ -430,13 +427,13 @@ void ServerDialog::saveServerHistory()
   /* Write server history to file */
   FILE* f = fopen(filepath, "w+");
   if (!f) {
-    std::string msg = format(_("Could not open \"%s\""), filepath);
+    std::string msg = rfb::format(_("Could not open \"%s\""), filepath);
     throw rdr::SystemException(msg.c_str(), errno);
   }
 
   // Save the last X elements to the config file.
   size_t count = 0;
-  for (const string& entry : serverHistory) {
+  for (const std::string& entry : serverHistory) {
     if (++count > SERVER_HISTORY_SIZE)
       break;
     fprintf(f, "%s\n", entry.c_str());
