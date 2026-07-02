@@ -3,7 +3,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 endif()
 
 add_executable(vncviewer
-  fltk/Fl_Message_Box.cxx
   fltk/Fl_Monitor_Arrangement.cxx
   fltk/Fl_Suggestion_Item_.cxx
   fltk/Fl_Suggestion_Window_.cxx
