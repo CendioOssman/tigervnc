@@ -26,6 +26,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <QMessageBox>
+
 #include <rfb/CMsgWriter.h>
 #include <rfb/LogWriter.h>
 #include <rfb/Exception.h>
@@ -38,7 +40,6 @@
 #include <rfb/keysymdef.h>
 #endif
 
-#include "fltk/Fl_Message_Box.h"
 #include "fltk/layout.h"
 #include "fltk/util.h"
 #include "Viewport.h"
@@ -1013,18 +1014,14 @@ void Viewport::initContextMenu()
   fltk_menu_add(contextMenu, p_("ContextMenu|", "Connection &info..."), 0,
                 [](Fl_Widget*, void* data) {
                   Viewport* self = (Viewport*)data;
-                  char buffer[1024];
-                  if (fltk_escape(self->cc->connectionInfo(), buffer,
-                                  sizeof(buffer)) < sizeof(buffer)) {
-                    Fl_Message_Box* dlg;
-
-                    dlg = new Fl_Message_Box(_("VNC connection info"),
-                                             "%s", buffer);
-                    dlg->set_modal();
-                    dlg->finished([](Fl_Widget* d, void*)
-                                  { Fl::delete_widget(d); });
-                    dlg->show();
-                  }
+                  QMessageBox* dlg;
+                  dlg = new QMessageBox;
+                  dlg->setIcon(QMessageBox::Information);
+                  dlg->setWindowTitle(_("VNC connection info"));
+                  dlg->setText(self->cc->connectionInfo());
+                  dlg->addButton(QMessageBox::Close);
+                  dlg->setAttribute(Qt::WA_DeleteOnClose);
+                  dlg->open();
                 }, this, 0);
 
   fltk_menu_add(contextMenu, p_("ContextMenu|",
