@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+    <file alias="secure.xpm">../media/secure.xpm</file>
+    <file alias="insecure.xpm">../media/insecure.xpm</file>
+    </qresource>
+</RCC>

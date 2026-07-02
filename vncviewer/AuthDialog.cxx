@@ -21,95 +21,70 @@
 #include <config.h>
 #endif
 
-#include <assert.h>
-
-#include <FL/Fl_Box.H>
-#include <FL/Fl_Button.H>
-#include <FL/Fl_Check_Button.H>
-#include <FL/Fl_Input.H>
-#include <FL/Fl_Pixmap.H>
-#include <FL/Fl_Return_Button.H>
-#include <FL/Fl_Secret_Input.H>
-#include <FL/fl_ask.H>
-
-#include "fltk/layout.h"
+#include <QBoxLayout>
+#include <QCheckBox>
+#include <QDialogButtonBox>
+#include <QFormLayout>
+#include <QLabel>
+#include <QLineEdit>
 
 #include "AuthDialog.h"
 #include "parameters.h"
 #include "i18n.h"
 
-/* xpm:s predate const, so they have invalid definitions */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wwrite-strings"
-#include "../media/secure.xpm"
-#include "../media/insecure.xpm"
-#pragma GCC diagnostic pop
-
-static Fl_Pixmap secure_icon(secure);
-static Fl_Pixmap insecure_icon(insecure);
-
-AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword)
-  : Fl_Window(410, 0, _("VNC authentication")),
-    finishedCallback(nullptr), finishedUserData(nullptr)
+AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
+                       QWidget* parent)
+  : QDialog(parent)
 {
-  int x, y;
+  setWindowTitle(_("VNC authentication"));
 
-  Fl_Box* banner;
-  Fl_Box* icon;
-  Fl_Button* button;
+  QBoxLayout* layout = new QVBoxLayout;
 
-  result_ = 0;
-
-  banner = new Fl_Box(0, 0,  w(), 20);
-  banner->align(FL_ALIGN_CENTER|FL_ALIGN_INSIDE|FL_ALIGN_IMAGE_NEXT_TO_TEXT);
-  banner->box(FL_FLAT_BOX);
+  QLabel* banner = new QLabel;
+  banner->setFixedHeight(20);
+  banner->setAlignment(Qt::AlignCenter);
   if (secure_) {
-    banner->label(_("This connection is secure"));
-    banner->color(FL_GREEN);
-    banner->image(secure_icon);
+    std::string msg;
+    msg = "<img src=':/secure.xpm' style='vertical-align: middle;' />";
+    msg += " ";
+    msg += _("This connection is secure");
+    banner->setText(msg.c_str());
+    banner->setStyleSheet("QLabel { background-color: green; "
+                          "color: black; font-size: 14px; "
+                          "padding: 0 12px; }");
   } else {
-    banner->label(_("This connection is not secure"));
-    banner->color(FL_RED);
-    banner->image(insecure_icon);
+    std::string msg;
+    msg = "<img src=':/insecure.xpm' style='vertical-align: middle;' />";
+    msg += " ";
+    msg += _("This connection is not secure");
+    banner->setText(msg.c_str());
+    banner->setStyleSheet("QLabel { background-color: red; "
+                          "color: black; font-size: 14px; "
+                          "padding: 0 12px; }");
   }
+  layout->addWidget(banner);
 
-  x = OUTER_MARGIN;
-  y = banner->h() + OUTER_MARGIN;
+  // FIXME: Add icon to match QMessageBox
 
-  /* Mimic a fl_ask() box */
-  icon = new Fl_Box(x, y, 50, 50, "?");
-  icon->box(FL_UP_BOX);
-  icon->labelfont(FL_TIMES_BOLD);
-  icon->labelsize(34);
-  icon->color(FL_WHITE);
-  icon->labelcolor(FL_BLUE);
-
-  x += icon->w() + INNER_MARGIN;
-  y += INNER_MARGIN;
+  QFormLayout* formLayout = new QFormLayout;
+  layout->addLayout(formLayout);
 
   if (needsUser) {
-    y += INPUT_LABEL_OFFSET;
-    username = new Fl_Input(x, y,  w()- x - OUTER_MARGIN,
-                            INPUT_HEIGHT, _("Username:"));
-    username->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
-    y += INPUT_HEIGHT + INNER_MARGIN;
+    username = new QLineEdit;
+    formLayout->addRow(_("Username:"), username);
   } else {
     username = nullptr;
   }
 
   if (needsPassword) {
-    y += INPUT_LABEL_OFFSET;
-    passwd = new Fl_Secret_Input(x, y,  w()- x - OUTER_MARGIN,
-                                INPUT_HEIGHT, _("Password:"));
-    passwd->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
-    y += INPUT_HEIGHT + INNER_MARGIN;
+    passwd = new QLineEdit;
+    passwd->setEchoMode(QLineEdit::Password);
+    formLayout->addRow(_("Password:"), passwd);
 
     if (reconnectOnError) {
-      keepPasswdCheckbox = new Fl_Check_Button(LBLRIGHT(x, y,
-                                                        CHECK_MIN_WIDTH,
-                                                        CHECK_HEIGHT,
-                                                        _("Keep password for reconnect")));
-      y += CHECK_HEIGHT + INNER_MARGIN;
+      keepPasswdCheckbox =
+        new QCheckBox(_("Keep password for reconnect"));
+      formLayout->addRow(keepPasswdCheckbox);
     } else {
       keepPasswdCheckbox = nullptr;
     }
@@ -118,83 +93,36 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword)
     keepPasswdCheckbox = nullptr;
   }
 
-  x = w() - OUTER_MARGIN;
-  y += OUTER_MARGIN - INNER_MARGIN;
+  QDialogButtonBox* buttonBox = new QDialogButtonBox;
+  buttonBox->addButton(QDialogButtonBox::Ok);
+  buttonBox->addButton(QDialogButtonBox::Cancel);
+  connect(buttonBox, &QDialogButtonBox::accepted,
+          this, &QDialog::accept);
+  connect(buttonBox, &QDialogButtonBox::rejected,
+          this, &QDialog::reject);
+  layout->addWidget(buttonBox);
 
-  x -= BUTTON_WIDTH;
-  button = new Fl_Return_Button(x, y, BUTTON_WIDTH,
-                                BUTTON_HEIGHT, fl_ok);
-  button->callback(button_cb, 1);
-  x -= INNER_MARGIN;
-
-  x -= BUTTON_WIDTH;
-  button = new Fl_Button(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, fl_cancel);
-  button->callback(button_cb, 0);
-  button->shortcut(FL_Escape);
-  x -= INNER_MARGIN;
-
-  y += BUTTON_HEIGHT;
-
-  y += OUTER_MARGIN;
-
-  end();
-
-  size(w(), y);
-
-  set_modal();
-}
-
-AuthDialog::~AuthDialog()
-{
-}
-
-void AuthDialog::finished(Fl_Callback* cb, void* p)
-{
-  finishedCallback = cb;
-  finishedUserData = p;
-}
-
-void AuthDialog::hide()
-{
-  Fl_Window::hide();
-
-  if (finishedCallback != nullptr)
-    finishedCallback(this, finishedUserData);
-}
-
-int AuthDialog::result()
-{
-  return result_;
+  setLayout(layout);
+  adjustSize();
 }
 
 std::string AuthDialog::getUser()
 {
   if (username)
-    return username->value();
+    return username->text().toStdString();
   return "";
 }
 
 std::string AuthDialog::getPassword()
 {
   if (passwd)
-    return passwd->value();
+    return passwd->text().toStdString();
   return "";
 }
 
 bool AuthDialog::getKeepPassword()
 {
   if (keepPasswdCheckbox)
-    return keepPasswdCheckbox->value();
+    return keepPasswdCheckbox->isChecked();
   return false;
-}
-
-void AuthDialog::button_cb(Fl_Widget *w, long val)
-{
-  AuthDialog* self;
-
-  self = dynamic_cast<AuthDialog*>(w->window());
-  assert(self != nullptr);
-
-  self->result_ = val;
-  self->hide();
 }

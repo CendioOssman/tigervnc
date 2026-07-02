@@ -31,6 +31,8 @@ add_executable(vncviewer
   MonitorIndicesParameter.cxx
   vncviewer.cxx)
 
+target_sources(vncviewer PRIVATE vncviewer.qrc)
+
 if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
   set_target_properties(vncviewer PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
@@ -68,6 +70,7 @@ target_include_directories(vncviewer SYSTEM PUBLIC ${FLTK_INCLUDE_DIR})
 target_link_libraries(vncviewer PRIVATE ${FLTK_LIBRARIES})
 
 set_target_properties(vncviewer PROPERTIES AUTOMOC ON)
+set_target_properties(vncviewer PROPERTIES AUTORCC ON)
 target_link_libraries(vncviewer PRIVATE
   Qt${QT_VERSION_MAJOR}::Core
   Qt${QT_VERSION_MAJOR}::Widgets)

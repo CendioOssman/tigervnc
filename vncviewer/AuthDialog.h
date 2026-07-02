@@ -22,40 +22,27 @@
 
 #include <string>
 
-#include <FL/Fl_Window.H>
+#include <QDialog>
 
-class Fl_Check_Button;
-class Fl_Input;
-class Fl_Secret_Input;
+class QCheckBox;
+class QLineEdit;
 
-class AuthDialog : public Fl_Window
+class AuthDialog : public QDialog
 {
+  Q_OBJECT
+
 public:
-  AuthDialog(bool secure, bool needsUser, bool needsPassword);
-  ~AuthDialog();
-
-  void finished(Fl_Callback* cb, void* p=nullptr);
-
-  void hide() override;
-
-  int result();
+  AuthDialog(bool secure, bool needsUser, bool needsPassword,
+             QWidget* parent=nullptr);
 
   std::string getUser();
   std::string getPassword();
   bool getKeepPassword();
 
 private:
-  static void button_cb(Fl_Widget *w, long val);
-
-private:
-  Fl_Check_Button* keepPasswdCheckbox;
-  Fl_Input* username;
-  Fl_Secret_Input* passwd;
-
-  int result_;
-
-  Fl_Callback* finishedCallback;
-  void* finishedUserData;
+  QCheckBox* keepPasswdCheckbox;
+  QLineEdit* username;
+  QLineEdit* passwd;
 };
 
 #endif

@@ -99,7 +99,8 @@ private:
 
   void handleUpdateTimeout(rfb::Timer*);
 
-  void handleAuthFinished();
+  void handleAuthOK();
+  void handleAuthCancel();
 
   void handleCertificateOK();
   void handleCertificateCancel();
