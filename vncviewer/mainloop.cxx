@@ -184,8 +184,8 @@ static void stop_connection()
     text = format(_("%s\n\nAttempt to reconnect?"),
                   exitError.c_str());
     dlg->setText(text.c_str());
-    dlg->addButton(QMessageBox::Yes);
-    dlg->addButton(QMessageBox::No);
+    dlg->addButton(_("Reconnect"), QMessageBox::AcceptRole);
+    dlg->addButton(QMessageBox::Close);
     QObject::connect(dlg, &QDialog::accepted, start_connection);
     QObject::connect(dlg, &QDialog::rejected, []() { qApp->quit(); });
     dlg->setAttribute(Qt::WA_DeleteOnClose);
