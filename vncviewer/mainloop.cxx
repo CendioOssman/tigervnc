@@ -29,11 +29,11 @@
 
 #include <QAbstractEventDispatcher>
 #include <QApplication>
+#include <QMessageBox>
 #include <QSocketNotifier>
 #include <QTimer>
 
 #include <FL/Fl.H>
-#include <FL/fl_ask.H>
 
 #include <rdr/Exception.h>
 
@@ -45,7 +45,6 @@
 #include <rfb/Timer.h>
 #include <rfb/util.h>
 
-#include "fltk/Fl_Message_Box.h"
 #include "CConn.h"
 #include "ServerDialog.h"
 #include "i18n.h"
@@ -83,12 +82,6 @@ static void start_server_dialog();
 static void setup_via();
 #endif
 
-static void alert_done(Fl_Widget* widget, void*)
-{
-  Fl::delete_widget(widget);
-  qApp->quit();
-}
-
 static void abort_startup(const char *error, ...)
 {
   // Prioritise the first error we get as that is probably the most
@@ -102,11 +95,15 @@ static void abort_startup(const char *error, ...)
   }
 
   if (alertOnFatalError) {
-    Fl_Alert_Box* dlg;
+    QMessageBox* dlg;
 
-    dlg = new Fl_Alert_Box(_("Error"), "%s", exitError.c_str());
-    dlg->set_modal();
-    dlg->finished(alert_done);
+    dlg = new QMessageBox;
+    dlg->setIcon(QMessageBox::Critical);
+    dlg->setWindowTitle(_("Error"));
+    dlg->setText(exitError.c_str());
+    dlg->addButton(QMessageBox::Close);
+    QObject::connect(dlg, &QDialog::finished, []() { qApp->quit(); });
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
     dlg->show();
   } else {
     qApp->quit();
@@ -163,18 +160,6 @@ static void start_connection()
   cc = new CConn(vncServerName.c_str(), sock);
 }
 
-static void reconnect_done(Fl_Widget* widget, void*)
-{
-  Fl_Choice_Box* dlg = (Fl_Choice_Box*)widget;
-
-  Fl::delete_widget(dlg);
-
-  if (dlg->result() == 1)
-    QTimer::singleShot(0, start_connection);
-  else
-    qApp->quit();
-}
-
 static void stop_connection()
 {
   assert(cc != nullptr);
@@ -190,26 +175,35 @@ static void stop_connection()
   }
 
   if(reconnectOnError && (sock == nullptr)) {
-    Fl_Choice_Box* dlg;
+    QMessageBox* dlg;
+    std::string text;
 
-    dlg = new Fl_Choice_Box(_("Connection error"),
-                            _("%s\n\nAttempt to reconnect?"),
-                            nullptr, fl_yes, fl_no,
-                            exitError.c_str());
-    exitError.clear();
-    dlg->set_modal();
-    dlg->finished(reconnect_done);
+    dlg = new QMessageBox;
+    dlg->setIcon(QMessageBox::Critical);
+    dlg->setWindowTitle(_("Connection error"));
+    text = format(_("%s\n\nAttempt to reconnect?"),
+                  exitError.c_str());
+    dlg->setText(text.c_str());
+    dlg->addButton(QMessageBox::Yes);
+    dlg->addButton(QMessageBox::No);
+    QObject::connect(dlg, &QDialog::accepted, start_connection);
+    QObject::connect(dlg, &QDialog::rejected, []() { qApp->quit(); });
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
     dlg->show();
     return;
   }
 
   if (alertOnFatalError) {
-    Fl_Alert_Box* dlg;
+    QMessageBox* dlg;
 
-    dlg = new Fl_Alert_Box(_("Connection error"),
-                            "%s", exitError.c_str());
-    dlg->set_modal();
-    dlg->finished(alert_done);
+    dlg = new QMessageBox;
+    dlg->setIcon(QMessageBox::Critical);
+    dlg->setWindowTitle(_("Connection error"));
+    dlg->setText(exitError.c_str());
+    dlg->addButton(QMessageBox::Close);
+    QObject::connect(dlg, &QDialog::finished, []() { qApp->quit(); });
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->show();
     return;
   }
 
