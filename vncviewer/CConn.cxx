@@ -1,6 +1,6 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
  * Copyright (C) 2011 D. R. Commander.  All Rights Reserved.
- * Copyright 2009-2014 Pierre Ossman for Cendio AB
+ * Copyright 2009-2026 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,8 @@
 #include <gnutls/x509.h>
 #endif
 
+#include <QMessageBox>
+
 #include <rfb/CMsgWriter.h>
 #include <rfb/CSecurity.h>
 #include <rfb/Exception.h>
@@ -50,8 +52,6 @@
 #include <FL/Fl.H>
 #include <FL/fl_ask.H>
 
-#include "fltk/Fl_Message_Box.h"
-#include "fltk/util.h"
 #include "AuthDialog.h"
 #include "CConn.h"
 #include "OptionsDialog.h"
@@ -527,7 +527,7 @@ void CConn::certificateReceived(unsigned int status,
   memcpy(pendingCertificate.data(), certificate, length);
 
   assert(verifyDialog == nullptr);
-  handleCertificateFinished();
+  handleCertificateOK();
 #endif
 }
 
@@ -535,7 +535,6 @@ void CConn::hostKeyReceived(const uint8_t* key, size_t length,
                             const char* fingerprint)
 {
   std::string text;
-  char buffer[1024];
 
   // FIXME: Should save this for TOFU
   (void)key;
@@ -549,23 +548,20 @@ void CConn::hostKeyReceived(const uint8_t* key, size_t length,
       "Do you want to continue connecting to this server?"),
     fingerprint);
 
-  if (fltk_escape(text.c_str(), buffer,
-                  sizeof(buffer)) >= sizeof(buffer)) {
-    abort_connection_unexpected(_("Failed to format server "
-                                  "host key for display: %s"),
-                                _("Host key fingerprint is too long"));
-    return;
-  }
-
   assert(verifyDialog == nullptr);
-  verifyDialog = new Fl_Choice_Box(_("Verify server key"), "%s",
-                                   nullptr, _("Cancel"), _("Continue"),
-                                   buffer);
-  verifyDialog->finished(
-    [](Fl_Widget*, void* data) {
-      ((CConn*)data)->handleHostKeyFinished();
-    },
-    this);
+  verifyDialog = new QMessageBox;
+  verifyDialog->setIcon(QMessageBox::Warning);
+  verifyDialog->setWindowTitle(_("Verify server key"));
+  verifyDialog->setText(text.c_str());
+  verifyDialog->addButton(_("Continue"), QMessageBox::AcceptRole);
+  verifyDialog->addButton(QMessageBox::Cancel);
+  verifyDialog->setDefaultButton(QMessageBox::Cancel);
+
+  QObject::connect(verifyDialog, &QDialog::accepted,
+                   [this]() { this->handleHostKeyOK(); });
+  QObject::connect(verifyDialog, &QDialog::rejected,
+                   [this]() { this->handleHostKeyCancel(); });
+
   verifyDialog->show();
 }
 
@@ -901,7 +897,7 @@ void CConn::handleAuthFinished()
 }
 
 #ifdef HAVE_GNUTLS
-void CConn::handleCertificateFinished()
+void CConn::handleCertificateOK()
 {
   gnutls_datum_t cert_datum;
   gnutls_x509_crt_t crt;
@@ -912,25 +908,14 @@ void CConn::handleCertificateFinished()
   size_t len;
 
   std::string title, text;
-  char buffer[1024];
 
   cert_datum.data = pendingCertificate.data();
   cert_datum.size = pendingCertificate.size();
 
   // This will be empty on the first run
   if (verifyDialog != nullptr) {
-    int result;
-
-    result = verifyDialog->result();
-
-    Fl::delete_widget(verifyDialog);
+    verifyDialog->deleteLater();
     verifyDialog = nullptr;
-
-    if (result != 2) {
-      vlog.info(_("Authentication cancelled"));
-      disconnect();
-      return;
-    }
 
     if (pendingCertificateStatus == 0) {
       const char *hostsDir;
@@ -1158,47 +1143,55 @@ void CConn::handleCertificateFinished()
     }
   }
 
-  if (fltk_escape(text.c_str(), buffer,
-                  sizeof(buffer)) >= sizeof(buffer)) {
-    abort_connection_unexpected(_("Failed to format server "
-                                  "certificate for display: %s"),
-                                _("Certificate description is too "
-                                  "long"));
-    return;
-  }
-
   assert(verifyDialog == nullptr);
-  verifyDialog = new Fl_Choice_Box(title.c_str(), "%s", nullptr,
-                                   _("Cancel"), _("Add exception"),
-                                   buffer);
-  verifyDialog->finished(
-    [](Fl_Widget*, void* data) {
-      ((CConn*)data)->handleCertificateFinished();
-    },
-    this);
+  verifyDialog = new QMessageBox;
+  verifyDialog->setIcon(QMessageBox::Warning);
+  verifyDialog->setWindowTitle(title.c_str());
+  verifyDialog->setText(text.c_str());
+  verifyDialog->addButton(_("Add exception"), QMessageBox::AcceptRole);
+  verifyDialog->addButton(QMessageBox::Cancel);
+  verifyDialog->setDefaultButton(QMessageBox::Cancel);
+
+  QObject::connect(verifyDialog, &QDialog::accepted,
+                   [this]() { this->handleCertificateOK(); });
+  QObject::connect(verifyDialog, &QDialog::rejected,
+                   [this]() { this->handleCertificateCancel(); });
+
   verifyDialog->show();
+}
+
+void CConn::handleCertificateCancel()
+{
+  assert(verifyDialog);
+
+  verifyDialog->deleteLater();
+  verifyDialog = nullptr;
+
+  vlog.info(_("Authentication cancelled"));
+  disconnect();
 }
 #endif
 
-void CConn::handleHostKeyFinished()
+void CConn::handleHostKeyOK()
 {
-  int result;
-
   assert(verifyDialog);
 
-  result = verifyDialog->result();
-
-  Fl::delete_widget(verifyDialog);
+  verifyDialog->deleteLater();
   verifyDialog = nullptr;
-
-  if (result != 2) {
-    vlog.info(_("Authentication cancelled"));
-    disconnect();
-    return;
-  }
 
   approveHostKey();
   resumeProcessing();
+}
+
+void CConn::handleHostKeyCancel()
+{
+  assert(verifyDialog);
+
+  verifyDialog->deleteLater();
+  verifyDialog = nullptr;
+
+  vlog.info(_("Authentication cancelled"));
+  disconnect();
 }
 
 void CConn::resumeProcessing()

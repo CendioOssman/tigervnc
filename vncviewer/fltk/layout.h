@@ -24,7 +24,10 @@
 #ifndef __FLTK_LAYOUT_H__
 #define __FLTK_LAYOUT_H__
 
+// Conflicts with Qt
+#define QPoint _FLTK_QPoint
 #include <FL/fl_draw.H>
+#undef QPoint
 
 /* Calculates the width of a string as printed by FLTK (pixels) */
 static inline int gui_str_len(const char *str)
