@@ -26,9 +26,12 @@
 
 #include <algorithm>
 
+// Conflicts with Qt
+#define QPoint _FLTK_QPoint
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Choice.H>
 #include <FL/fl_draw.H>
+#undef QPoint
 
 /* Calculates the width of a string as printed by FLTK (pixels) */
 static inline int gui_str_len(const char *str, bool bold=false)

@@ -1,5 +1,5 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
- * Copyright 2009-2014 Pierre Ossman for Cendio AB
+ * Copyright 2009-2026 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 
 #include <rfb/CConnection.h>
 
-class Fl_Choice_Box;
+class QMessageBox;
 
 namespace network { class Socket; }
 
@@ -105,8 +105,12 @@ private:
   void handleUpdateTimeout(core::Timer*);
 
   void handleAuthFinished();
-  void handleCertificateFinished();
-  void handleHostKeyFinished();
+
+  void handleCertificateOK();
+  void handleCertificateCancel();
+
+  void handleHostKeyOK();
+  void handleHostKeyCancel();
 
   void resumeProcessing();
 
@@ -117,7 +121,7 @@ private:
   core::MethodTimer<CConn> msgTimer;
 
   AuthDialog* authDialog;
-  Fl_Choice_Box* verifyDialog;
+  QMessageBox* verifyDialog;
   unsigned int pendingCertificateStatus;
   bool pendingCertificateNew;
   std::vector<uint8_t> pendingCertificate;
