@@ -27,6 +27,10 @@
 
 #include <string>
 
+#include <QAbstractEventDispatcher>
+#include <QApplication>
+#include <QTimer>
+
 #include <FL/Fl.H>
 #include <FL/fl_ask.H>
 
@@ -446,6 +450,19 @@ int mainloop(const char* configServerName_,
 {
   configServerName = configServerName_;
   cmdlineServerName = cmdlineServerName_;
+
+  QTimer* rfbTimerProxy = new QTimer(qApp);
+  QObject::connect(rfbTimerProxy, &QTimer::timeout,
+                   []() { rfb::Timer::checkTimeouts(); });
+  QObject::connect(QApplication::eventDispatcher(),
+                   &QAbstractEventDispatcher::aboutToBlock,
+                   rfbTimerProxy,
+                   [rfbTimerProxy]() {
+                     int next = rfb::Timer::checkTimeouts();
+                       if (next != -1)
+                         rfbTimerProxy->start(next);
+                   });
+  rfbTimerProxy->setSingleShot(true);
 
   Fl::add_idle(load_cmdline_config);
 
