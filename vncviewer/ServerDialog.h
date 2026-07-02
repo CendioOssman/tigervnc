@@ -25,8 +25,9 @@
 
 #include "fltk/Fl_Suggestion_Input.h"
 
+class QMessageBox;
+
 class Fl_Widget;
-class Fl_Choice_Box;
 class Fl_File_Chooser;
 class Fl_Input_Choice;
 
@@ -49,7 +50,6 @@ protected:
   void handleLoadSelected();
   void handleSaveAs();
   void handleSaveAsSelected();
-  void handleSaveConflict();
   void finishSaveAs();
   void handleCancel();
   void handleConnect();
@@ -64,7 +64,7 @@ private:
 protected:
   Fl_Suggestion_Input *serverName;
   Fl_File_Chooser* fileChooser;
-  Fl_Choice_Box* saveConflictDialog;
+  QMessageBox* saveConflictDialog;
   std::list<std::string> serverHistory;
 
 private:

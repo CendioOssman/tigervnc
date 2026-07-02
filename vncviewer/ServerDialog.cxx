@@ -29,6 +29,10 @@
 #include <winsock2.h>
 #endif
 
+#include <QMessageBox>
+
+// Conflicts with Qt
+#define QPoint _FLTK_QPoint
 #include <FL/Fl.H>
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Input_Choice.H>
@@ -37,6 +41,7 @@
 #include <FL/fl_draw.H>
 #include <FL/Fl_Box.H>
 #include <FL/Fl_File_Chooser.H>
+#undef QPoint
 
 #include <core/Exception.h>
 #include <core/LogWriter.h>
@@ -46,7 +51,6 @@
 
 #include <network/TcpSocket.h>
 
-#include "fltk/Fl_Message_Box.h"
 #include "fltk/layout.h"
 #include "fltk/util.h"
 #include "fltk/Fl_Suggestion_Input.h"
@@ -242,17 +246,20 @@ void ServerDialog::handleLoadSelected()
   try {
     serverName->value(loadViewerParameters(filename).c_str());
   } catch (std::exception& e) {
-    Fl_Alert_Box* dlg;
+    QMessageBox* dlg;
+    std::string msg;
 
     vlog.error("%s", e.what());
 
-    dlg = new Fl_Alert_Box(_("Error"),
-                           _("Unable to load the specified "
-                             "configuration file:\n\n"
-                             "%s"), e.what());
-    dlg->set_modal();
-    dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
-    dlg->show();
+    dlg = new QMessageBox;
+    dlg->setIcon(QMessageBox::Critical);
+    dlg->setWindowTitle(_("Error"));
+    msg = core::format(_("Unable to load the specified configuration "
+                         "file:\n\n%s"), e.what());
+    dlg->setText(msg.c_str());
+    dlg->addButton(QMessageBox::Ok);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->open();
   }
 }
 
@@ -293,36 +300,28 @@ void ServerDialog::handleSaveAsSelected()
   if (f) {
     // The file already exists.
     fclose(f);
+    std::string msg;
 
-    saveConflictDialog =
-      new Fl_Choice_Box(_("File already exists"),
-                        _("%s already exists. Do you want to "
-                          "overwrite?"), nullptr, _("No"),
-                        _("Overwrite"), filename);
-    saveConflictDialog->set_modal();
-    saveConflictDialog->finished(
-      [](Fl_Widget*, void* data) {
-        ((ServerDialog*)data)->handleSaveConflict();
-      },
-      this);
-    saveConflictDialog->show();
+    delete saveConflictDialog;
+    saveConflictDialog = new QMessageBox;
+    saveConflictDialog->setIcon(QMessageBox::Warning);
+    saveConflictDialog->setWindowTitle(_("File already exists"));
+    msg = core::format(_("%s already exists. Do you want to "
+                         "overwrite?"), filename);
+    saveConflictDialog->setText(msg.c_str());
+    saveConflictDialog->addButton(_("Overwrite"),
+                                  QMessageBox::AcceptRole);
+    saveConflictDialog->addButton(QMessageBox::No);
+    saveConflictDialog->setDefaultButton(QMessageBox::No);
+    QObject::connect(saveConflictDialog, &QMessageBox::accepted,
+                     [this]() { finishSaveAs(); });
+    QObject::connect(saveConflictDialog, &QMessageBox::rejected,
+                     [this]() { handleSaveAs(); });
+    saveConflictDialog->open();
     return;
   }
 
   finishSaveAs();
-}
-
-
-void ServerDialog::handleSaveConflict()
-{
-  Fl::delete_widget(saveConflictDialog);
-
-  if (saveConflictDialog->result() != 2) {
-    // If the user doesn't want to overwrite:
-    fileChooser->show();
-  } else {
-    finishSaveAs();
-  }
 }
 
 
@@ -334,17 +333,20 @@ void ServerDialog::finishSaveAs()
   try {
     saveViewerParameters(filename, servername);
   } catch (std::exception& e) {
-    Fl_Alert_Box* dlg;
+    QMessageBox* dlg;
+    std::string msg;
 
     vlog.error("%s", e.what());
 
-    dlg = new Fl_Alert_Box(_("Error"),
-                           _("Unable to save the specified "
-                             "configuration file:\n\n"
-                             "%s"), e.what());
-    dlg->set_modal();
-    dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
-    dlg->show();
+    dlg = new QMessageBox;
+    dlg->setIcon(QMessageBox::Critical);
+    dlg->setWindowTitle(_("Error"));
+    msg = core::format(_("Unable to save the specified configuration "
+                         "file:\n\n%s"), e.what());
+    dlg->setText(msg.c_str());
+    dlg->addButton(QMessageBox::Ok);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->open();
   }
 }
 
