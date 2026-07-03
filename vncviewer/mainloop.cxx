@@ -33,8 +33,6 @@
 #include <QSocketNotifier>
 #include <QTimer>
 
-#include <FL/Fl.H>
-
 #include <rdr/Exception.h>
 
 #include <network/TcpSocket.h>
@@ -350,17 +348,8 @@ static void setup_listen()
   }
 }
 
-static void server_dialog_finished(Fl_Widget* widget, void*)
+static void server_dialog_finished(ServerDialog* dialog)
 {
-  ServerDialog* dialog = (ServerDialog*)widget;
-
-  Fl::delete_widget(dialog);
-
-  if (!dialog->result()) {
-    qApp->quit();
-    return;
-  }
-
   vncServerName = dialog->getServerName();
 
 #ifndef WIN32
@@ -378,7 +367,12 @@ static void start_server_dialog()
   dialog = new ServerDialog();
   dialog->setServerName(configServerName.c_str());
 
-  dialog->finished(server_dialog_finished);
+  QObject::connect(dialog, &ServerDialog::accepted,
+                   [dialog]() { server_dialog_finished(dialog); });
+  QObject::connect(dialog, &ServerDialog::rejected,
+                   []() { qApp->quit(); });
+
+  dialog->setAttribute(Qt::WA_DeleteOnClose);
   dialog->show();
 }
 

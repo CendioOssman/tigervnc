@@ -19,28 +19,19 @@
 #ifndef __SERVERDIALOG_H__
 #define __SERVERDIALOG_H__
 
-#include <FL/Fl_Window.H>
 #include <string>
 #include <list>
 
-class QFileDialog;
-class QMessageBox;
+#include <QDialog>
+
+class QComboBox;
 class QString;
 
-class Fl_Widget;
-class Fl_File_Chooser;
-class Fl_Input_Choice;
+class ServerDialog : public QDialog {
+  Q_OBJECT
 
-class ServerDialog : public Fl_Window {
 public:
-  ServerDialog();
-  ~ServerDialog();
-
-  void finished(Fl_Callback* cb, void* p=nullptr);
-
-  void hide() override;
-
-  int result();
+  ServerDialog(QWidget* parent=nullptr);
 
   std::string getServerName();
   void setServerName(const char* servername);
@@ -51,7 +42,6 @@ protected:
   void handleSaveAs();
   void handleSaveAsSelected(const QString& filename);
   void finishSaveAs(const QString& filename);
-  void handleCancel();
   void handleConnect();
 
 private:
@@ -59,16 +49,8 @@ private:
   void saveServerHistory();
 
 protected:
-  Fl_Input_Choice *serverName;
-  QFileDialog* fileChooser;
-  QMessageBox* saveConflictDialog;
+  QComboBox* serverName;
   std::list<std::string> serverHistory;
-
-private:
-  int result_;
-
-  Fl_Callback* finishedCallback;
-  void* finishedUserData;
 };
 
 #endif

@@ -24,20 +24,16 @@
 #include <errno.h>
 #include <algorithm>
 
+#include <QBoxLayout>
+#include <QComboBox>
 #include <QFileDialog>
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QStringListModel>
 #include <QMessageBox>
 
-// Conflicts with Qt
-#define QPoint _FLTK_QPoint
 #include <FL/Fl.H>
-#include <FL/Fl_Input.H>
-#include <FL/Fl_Input_Choice.H>
-#include <FL/Fl_Button.H>
-#include <FL/Fl_Return_Button.H>
-#include <FL/fl_draw.H>
-#include <FL/Fl_Box.H>
-#include <FL/Fl_File_Chooser.H>
-#undef QPoint
 
 #include <os/os.h>
 #include <rfb/Exception.h>
@@ -45,8 +41,6 @@
 #include <rfb/LogWriter.h>
 #include <rfb/util.h>
 
-#include "fltk/layout.h"
-#include "fltk/util.h"
 #include "ServerDialog.h"
 #include "OptionsDialog.h"
 #include "i18n.h"
@@ -57,156 +51,108 @@ static rfb::LogWriter vlog("ServerDialog");
 
 const char* SERVER_HISTORY="tigervnc.history";
 
-ServerDialog::ServerDialog()
-  : Fl_Window(450, 0, _("VNC Viewer: Connection Details")),
-  serverName(nullptr), fileChooser(nullptr),
-  saveConflictDialog(nullptr),
-  finishedCallback(nullptr), finishedUserData(nullptr)
+ServerDialog::ServerDialog(QWidget* parent)
+  : QDialog(parent)
 {
-  int x, y, x2;
-  Fl_Button *button;
-  Fl_Box *divider;
+  QFormLayout* form;
+  QBoxLayout* box;
+  QPushButton* button;
 
-  result_ = 0;
+  setWindowTitle(_("VNC Viewer: Connection Details"));
 
-  x = OUTER_MARGIN;
-  y = OUTER_MARGIN;
+  QBoxLayout* layout = new QVBoxLayout;
 
-  serverName = new Fl_Input_Choice(LBLLEFT(x, y, w() - OUTER_MARGIN*2,
-                                   INPUT_HEIGHT, _("VNC server:")));
-  // Bug fix for wrong background
-  serverName->color(FL_BACKGROUND2_COLOR);
-  y += INPUT_HEIGHT + INNER_MARGIN;
+  form = new QFormLayout;
+  layout->addLayout(form);
 
-  x2 = x;
+  serverName = new QComboBox;
+  serverName->setEditable(true);
+  form->addRow(_("VNC server:"), serverName);
 
-  button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Options..."));
-  button->callback(
-    [](Fl_Widget*, void*) {
-      OptionsDialog* dlg;
+  box = new QHBoxLayout;
+  layout->addLayout(box);
 
-      dlg = new OptionsDialog();
-      dlg->set_modal();
-      dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
-      dlg->show();
-    }, this);
-  x2 += BUTTON_WIDTH + INNER_MARGIN;
+  button = new QPushButton(_("Options..."));
+  connect(button, &QPushButton::clicked, this, []() {
+    OptionsDialog* dlg;
 
-  button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Load..."));
-  button->callback(
-    [](Fl_Widget*, void* data) {
-      ((ServerDialog*)data)->handleLoad();
-    },
-    this);
-  x2 += BUTTON_WIDTH + INNER_MARGIN;
+    dlg = new OptionsDialog();
+    dlg->set_modal();
+    dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
+    dlg->show();
+  });
+  box->addWidget(button);
 
-  button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Save As..."));
-  button->callback(
-    [](Fl_Widget*, void* data) {
-      ((ServerDialog*)data)->handleSaveAs();
-    },
-    this);
-  x2 += BUTTON_WIDTH + INNER_MARGIN;
+  button = new QPushButton(_("Load..."));
+  connect(button, &QPushButton::clicked, this,
+          &ServerDialog::handleLoad);
+  box->addWidget(button);
 
-  y += BUTTON_HEIGHT + INNER_MARGIN;
+  button = new QPushButton(_("Save As..."));
+  connect(button, &QPushButton::clicked, this,
+          &ServerDialog::handleSaveAs);
+  box->addWidget(button);
 
-  divider = new Fl_Box(0, y, w(), 2);
-  divider->box(FL_THIN_DOWN_FRAME);
+  box->addStretch(1);
 
-  y += divider->h() + INNER_MARGIN;
+  layout->addStretch(1);
 
-  // Symmetric margin around bottom button bar
-  y += OUTER_MARGIN - INNER_MARGIN;
+  QFrame* divider = new QFrame;
+  divider->setFrameShape(QFrame::StyledPanel);
+  divider->setFixedHeight(1);
+  layout->addWidget(divider);
 
-  button = new Fl_Button(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("About..."));
-  button->callback([](Fl_Widget*, void*) { about_vncviewer(); }, this);
+  box = new QHBoxLayout;
+  layout->addLayout(box);
 
-  x2 = w() - OUTER_MARGIN - BUTTON_WIDTH*2 - INNER_MARGIN*1;
+  button = new QPushButton(_("About..."));
+  connect(button, &QPushButton::clicked, this,
+          [this]() { about_vncviewer(this); });
+  box->addWidget(button);
 
-  button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Cancel"));
-  button->callback(
-    [](Fl_Widget*, void* data) {
-      ((ServerDialog*)data)->handleCancel();
-    },
-    this);
-  x2 += BUTTON_WIDTH + INNER_MARGIN;
+  box->addStretch(1);
 
-  button = new Fl_Return_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Connect"));
-  button->callback(
-    [](Fl_Widget*, void* data) {
-      ((ServerDialog*)data)->handleConnect();
-    },
-    this);
-  x2 += BUTTON_WIDTH + INNER_MARGIN;
+  button = new QPushButton(_("Cancel"));
+  connect(button, &QPushButton::clicked, this,
+          &ServerDialog::reject);
+  box->addWidget(button);
 
-  y += BUTTON_HEIGHT + INNER_MARGIN;
+  button = new QPushButton(_("Connect"));
+  button->setDefault(true);
+  connect(button, &QPushButton::clicked, this,
+          &ServerDialog::handleConnect);
+  box->addWidget(button);
 
-  /* Needed for resize to work sanely */
-  resizable(nullptr);
-  h(y-INNER_MARGIN+OUTER_MARGIN);
-
-  callback(
-    [](Fl_Widget*, void* data) {
-      ((ServerDialog*)data)->handleCancel();
-    }, this);
+  setLayout(layout);
+  adjustSize();
 
   try {
     loadServerHistory();
     for (const std::string& entry : serverHistory)
-      fltk_menu_add(serverName->menubutton(),
-                    entry.c_str(), 0, nullptr);
+      serverName->addItem(entry.c_str());
   } catch (rfb::Exception& e) {
     vlog.error(_("Unable to load the server history: %s"), e.str());
   }
 }
 
 
-ServerDialog::~ServerDialog()
-{
-  delete fileChooser;
-  delete saveConflictDialog;
-}
-
-
-void ServerDialog::finished(Fl_Callback* cb, void* p)
-{
-  finishedCallback = cb;
-  finishedUserData = p;
-}
-
-
-void ServerDialog::hide()
-{
-  Fl_Window::hide();
-
-  if (finishedCallback != nullptr)
-    finishedCallback(this, finishedUserData);
-}
-
-
-int ServerDialog::result()
-{
-  return result_;
-}
-
-
 std::string ServerDialog::getServerName()
 {
-  return serverName->value();
+  return serverName->currentText().toStdString();
 }
 
 
 void ServerDialog::setServerName(const char* servername)
 {
-  serverName->value(servername);
+  serverName->setCurrentText(servername);
 }
 
 
 void ServerDialog::handleLoad()
 {
-  delete fileChooser;
+  QFileDialog *fileChooser;
 
-  fileChooser = new QFileDialog;
+  fileChooser = new QFileDialog(this);
   fileChooser->setWindowTitle(_("Select a TigerVNC configuration file"));
   fileChooser->setDirectory(os::getuserhomedir());
   fileChooser->setFileMode(QFileDialog::ExistingFile);
@@ -227,14 +173,14 @@ void ServerDialog::handleLoadSelected(const QString& filename)
   try {
     std::string servername;
     servername = loadViewerParameters(filename.toStdString().c_str());
-    serverName->value(servername.c_str());
+    serverName->setCurrentText(servername.c_str());
   } catch (rdr::Exception& e) {
     QMessageBox* dlg;
     std::string msg;
 
     vlog.error("%s", e.str());
 
-    dlg = new QMessageBox;
+    dlg = new QMessageBox(this);
     dlg->setIcon(QMessageBox::Critical);
     dlg->setWindowTitle(_("Error"));
     msg = rfb::format(_("Unable to load the specified configuration "
@@ -249,9 +195,9 @@ void ServerDialog::handleLoadSelected(const QString& filename)
 
 void ServerDialog::handleSaveAs()
 {
-  delete fileChooser;
+  QFileDialog *fileChooser;
 
-  fileChooser = new QFileDialog;
+  fileChooser = new QFileDialog(this);
   fileChooser->setWindowTitle(_("Save the TigerVNC configuration to file"));
   fileChooser->setDirectory(os::getuserhomedir());
   fileChooser->setAcceptMode(QFileDialog::AcceptSave);
@@ -275,10 +221,10 @@ void ServerDialog::handleSaveAsSelected(const QString& filename)
   if (f) {
     // The file already exists.
     fclose(f);
+    QMessageBox* saveConflictDialog;
     std::string msg;
 
-    delete saveConflictDialog;
-    saveConflictDialog = new QMessageBox;
+    saveConflictDialog = new QMessageBox(this);
     saveConflictDialog->setIcon(QMessageBox::Warning);
     saveConflictDialog->setWindowTitle(_("File already exists"));
     msg = rfb::format(_("%s already exists. Do you want to overwrite?"),
@@ -302,17 +248,18 @@ void ServerDialog::handleSaveAsSelected(const QString& filename)
 
 void ServerDialog::finishSaveAs(const QString& filename)
 {
-  const char* servername = serverName->value();
+  std::string servername = serverName->currentText().toStdString();
 
   try {
-    saveViewerParameters(filename.toStdString().c_str(), servername);
+    saveViewerParameters(filename.toStdString().c_str(),
+                         servername.c_str());
   } catch (rfb::Exception& e) {
     QMessageBox* dlg;
     std::string msg;
 
     vlog.error("%s", e.str());
 
-    dlg = new QMessageBox;
+    dlg = new QMessageBox(this);
     dlg->setIcon(QMessageBox::Critical);
     dlg->setWindowTitle(_("Error"));
     msg = rfb::format(_("Unable to save the specified configuration "
@@ -325,28 +272,19 @@ void ServerDialog::finishSaveAs(const QString& filename)
 }
 
 
-void ServerDialog::handleCancel()
-{
-  result_ = 0;
-  hide();
-}
-
-
 void ServerDialog::handleConnect()
 {
-  const char* servername = serverName->value();
-
-  result_ = 1;
+  std::string servername = serverName->currentText().toStdString();
 
   try {
-    saveViewerParameters(nullptr, servername);
+    saveViewerParameters(nullptr, servername.c_str());
   } catch (rfb::Exception& e) {
     vlog.error(_("Unable to save the default configuration: %s"), e.str());
   }
 
   // avoid duplicates in the history
-  serverHistory.remove(servername);
-  serverHistory.insert(serverHistory.begin(), servername);
+  serverHistory.remove(servername.c_str());
+  serverHistory.insert(serverHistory.begin(), servername.c_str());
 
   try {
     saveServerHistory();
@@ -354,7 +292,7 @@ void ServerDialog::handleConnect()
     vlog.error(_("Unable to save the server history: %s"), e.str());
   }
 
-  hide();
+  accept();
 }
 
 
