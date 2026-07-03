@@ -23,7 +23,9 @@
 #include <string>
 #include <list>
 
+class QFileDialog;
 class QMessageBox;
+class QString;
 
 class Fl_Widget;
 class Fl_File_Chooser;
@@ -45,10 +47,10 @@ public:
 
 protected:
   void handleLoad();
-  void handleLoadSelected();
+  void handleLoadSelected(const QString& filename);
   void handleSaveAs();
-  void handleSaveAsSelected();
-  void finishSaveAs();
+  void handleSaveAsSelected(const QString& filename);
+  void finishSaveAs(const QString& filename);
   void handleCancel();
   void handleConnect();
 
@@ -58,7 +60,7 @@ private:
 
 protected:
   Fl_Input_Choice *serverName;
-  Fl_File_Chooser* fileChooser;
+  QFileDialog* fileChooser;
   QMessageBox* saveConflictDialog;
   std::list<std::string> serverHistory;
 

@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <algorithm>
 
+#include <QFileDialog>
 #include <QMessageBox>
 
 // Conflicts with Qt
@@ -205,35 +206,28 @@ void ServerDialog::handleLoad()
 {
   delete fileChooser;
 
-  fileChooser = new Fl_File_Chooser(os::getuserhomedir(),
-                                    _("TigerVNC configuration (*.tigervnc)"),
-                                    Fl_File_Chooser::SINGLE,
-                                    _("Select a TigerVNC configuration file"));
-  fileChooser->preview(0);
-  fileChooser->previewButton->hide();
-  // Fl_File_Chooser is buggy and calls the callback before hiding
-  // when closing on Fl_Enter, hence this convoluted handling
-  fileChooser->callback(
-    [](Fl_File_Chooser*, void* data_) {
-      Fl::add_timeout(
-        0,
-        [](void* data__) {
-          ServerDialog* dialog_ = (ServerDialog*)data__;
-          if (!dialog_->fileChooser->shown())
-            dialog_->handleLoadSelected();
-        },
-        data_);
-    },
-    this);
-  fileChooser->show();
+  fileChooser = new QFileDialog;
+  fileChooser->setWindowTitle(_("Select a TigerVNC configuration file"));
+  fileChooser->setDirectory(os::getuserhomedir());
+  fileChooser->setFileMode(QFileDialog::ExistingFile);
+  fileChooser->setNameFilters({_("TigerVNC configuration (*.tigervnc)"),
+                               _("All files (*)")});
+  // Portals break in dual FLTK/Qt mode
+#if !defined(WIN32) && !defined(__APPLE__)
+  fileChooser->setOption(QFileDialog::DontUseNativeDialog);
+#endif
+  QObject::connect(
+    fileChooser, &QFileDialog::fileSelected,
+    [this](const QString& f) { handleLoadSelected(f); });
+  fileChooser->open();
 }
 
-void ServerDialog::handleLoadSelected()
+void ServerDialog::handleLoadSelected(const QString& filename)
 {
-  const char* filename = fileChooser->value();
-
   try {
-    serverName->value(loadViewerParameters(filename).c_str());
+    std::string servername;
+    servername = loadViewerParameters(filename.toStdString().c_str());
+    serverName->value(servername.c_str());
   } catch (rdr::Exception& e) {
     QMessageBox* dlg;
     std::string msg;
@@ -254,38 +248,30 @@ void ServerDialog::handleLoadSelected()
 
 
 void ServerDialog::handleSaveAs()
-{ 
+{
   delete fileChooser;
 
-  fileChooser = new Fl_File_Chooser(os::getuserhomedir(),
-                                    _("TigerVNC configuration (*.tigervnc)"),
-                                    Fl_File_Chooser::CREATE,
-                                    _("Save the TigerVNC configuration to file"));
-  
-  fileChooser->preview(0);
-  fileChooser->previewButton->hide();
-  // Fl_File_Chooser is buggy and calls the callback before hiding
-  // when closing on Fl_Enter, hence this convoluted handling
-  fileChooser->callback(
-    [](Fl_File_Chooser*, void* data_) {
-      Fl::add_timeout(
-        0,
-        [](void* data__) {
-          ServerDialog* dialog_ = (ServerDialog*)data__;
-          if (!dialog_->fileChooser->shown())
-            dialog_->handleSaveAsSelected();
-        },
-        data_);
-    },
-    this);
-  fileChooser->show();
+  fileChooser = new QFileDialog;
+  fileChooser->setWindowTitle(_("Save the TigerVNC configuration to file"));
+  fileChooser->setDirectory(os::getuserhomedir());
+  fileChooser->setAcceptMode(QFileDialog::AcceptSave);
+  fileChooser->setNameFilters({_("TigerVNC configuration (*.tigervnc)"),
+                               _("All files (*)")});
+  // FIXME: Remove this flag and our custom handling
+  fileChooser->setOptions(QFileDialog::DontConfirmOverwrite);
+  // Portals break in dual FLTK/Qt mode
+#if !defined(WIN32) && !defined(__APPLE__)
+  fileChooser->setOption(QFileDialog::DontUseNativeDialog);
+#endif
+  QObject::connect(
+    fileChooser, &QFileDialog::fileSelected,
+    [this](const QString& f) { handleSaveAsSelected(f); });
+  fileChooser->open();
 }
 
-void ServerDialog::handleSaveAsSelected()
+void ServerDialog::handleSaveAsSelected(const QString& filename)
 {
-  const char* filename = fileChooser->value();
-
-  FILE* f = fopen(filename, "r");
+  FILE* f = fopen(filename.toStdString().c_str(), "r");
   if (f) {
     // The file already exists.
     fclose(f);
@@ -296,31 +282,30 @@ void ServerDialog::handleSaveAsSelected()
     saveConflictDialog->setIcon(QMessageBox::Warning);
     saveConflictDialog->setWindowTitle(_("File already exists"));
     msg = rfb::format(_("%s already exists. Do you want to overwrite?"),
-                      filename);
+                      filename.toStdString().c_str());
     saveConflictDialog->setText(msg.c_str());
     saveConflictDialog->addButton(_("Overwrite"),
                                   QMessageBox::AcceptRole);
     saveConflictDialog->addButton(QMessageBox::No);
     saveConflictDialog->setDefaultButton(QMessageBox::No);
     QObject::connect(saveConflictDialog, &QMessageBox::accepted,
-                     [this]() { finishSaveAs(); });
+                     [this, filename]() { finishSaveAs(filename); });
     QObject::connect(saveConflictDialog, &QMessageBox::rejected,
                      [this]() { handleSaveAs(); });
     saveConflictDialog->open();
     return;
   }
 
-  finishSaveAs();
+  finishSaveAs(filename);
 }
 
 
-void ServerDialog::finishSaveAs()
+void ServerDialog::finishSaveAs(const QString& filename)
 {
   const char* servername = serverName->value();
-  const char* filename = fileChooser->value();
 
   try {
-    saveViewerParameters(filename, servername);
+    saveViewerParameters(filename.toStdString().c_str(), servername);
   } catch (rfb::Exception& e) {
     QMessageBox* dlg;
     std::string msg;
