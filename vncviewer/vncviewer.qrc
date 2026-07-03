@@ -1,6 +1,6 @@
 <RCC>
     <qresource prefix="/">
-    <file alias="secure.xpm">../media/secure.xpm</file>
-    <file alias="insecure.xpm">../media/insecure.xpm</file>
+    <file alias="secure.svg">../media/secure.svg</file>
+    <file alias="insecure.svg">../media/insecure.svg</file>
     </qresource>
 </RCC>

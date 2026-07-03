@@ -45,7 +45,7 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
   banner->setAlignment(Qt::AlignCenter);
   if (secure_) {
     std::string msg;
-    msg = "<img src=':/secure.xpm' style='vertical-align: middle;' />";
+    msg = "<img src=':/secure.svg' style='vertical-align: middle;' />";
     msg += " ";
     msg += _("This connection is secure");
     banner->setText(msg.c_str());
@@ -54,7 +54,7 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
                           "padding: 0 12px; }");
   } else {
     std::string msg;
-    msg = "<img src=':/insecure.xpm' style='vertical-align: middle;' />";
+    msg = "<img src=':/insecure.svg' style='vertical-align: middle;' />";
     msg += " ";
     msg += _("This connection is not secure");
     banner->setText(msg.c_str());
