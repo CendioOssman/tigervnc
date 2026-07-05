@@ -98,6 +98,27 @@ TEST(Signals, doubleConnect)
   }, std::logic_error);
 }
 
+TEST(Signals, connectSubclass)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal gsignal;
+  };
+
+  class SubReceiver : public Receiver {};
+
+  Sender s;
+  SubReceiver r;
+
+  GTEST_SKIP() << "Currently broken";
+
+  /* Normal handler */
+  // callCount = 0;
+  // s.connectSignal(&Sender::signal, &r, &Receiver::handler);
+  // s.emitSignal(&Sender::signal);
+  // EXPECT_EQ(callCount, 1);
+}
+
 TEST(Signals, disconnectSignal)
 {
   class Sender : public SenderBase {
