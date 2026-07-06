@@ -64,7 +64,8 @@ Object::~Object()
   }
 }
 
-void Object::emitSignalImpl(const void* signal, const std::any& info)
+void Object::emitSignalImpl(const void* signal,
+                            const std::vector<std::any>& info)
 {
   ReceiverList siglist;
   ReceiverList::iterator iter;

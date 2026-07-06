@@ -32,6 +32,7 @@
 #include <map>
 #include <set>
 #include <stdexcept>
+#include <vector>
 
 namespace core {
 
@@ -107,9 +108,10 @@ namespace core {
 
   private:
     // Wrapper to contain member function pointers
-    typedef std::function<void(const std::any&)> emitter_t;
+    typedef std::function<void(const std::vector<std::any>&)> emitter_t;
 
-    void emitSignalImpl(const void* signal, const std::any& info);
+    void emitSignalImpl(const void* signal,
+                        const std::vector<std::any>& info);
 
     Connection connectSignalImpl(const void* signal, Object* obj,
                                  const emitter_t& emitter);
@@ -169,8 +171,8 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
-    emitter_t emitter = [obj, callback](const std::any& info) {
-      assert(!info.has_value());
+    emitter_t emitter = [obj, callback](const std::vector<std::any>& info) {
+      assert(info.empty());
       (obj->*callback)();
     };
     assert(obj);
@@ -189,10 +191,10 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
-    emitter_t emitter = [obj, callback](const std::any& info) {
-      assert(info.has_value());
+    emitter_t emitter = [obj, callback](const std::vector<std::any>& info) {
+      assert(!info.empty());
       using SI_d = std::decay_t<SI>;
-      (obj->*callback)(std::any_cast<SI_d>(info));
+      (obj->*callback)(std::any_cast<SI_d>(info.front()));
     };
     assert(obj);
     return connectSignalImpl(&(sender->*signal), obj, callback,
@@ -225,8 +227,8 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
-    emitter_t emitter = [callback](const std::any& info) {
-      assert(!info.has_value());
+    emitter_t emitter = [callback](const std::vector<std::any>& info) {
+      assert(info.empty());
       callback();
     };
     // It's not guaranteed if we get unique or identical addresses for
@@ -249,10 +251,10 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
-    emitter_t emitter = [callback](const std::any& info) {
-      assert(info.has_value());
+    emitter_t emitter = [callback](const std::vector<std::any>& info) {
+      assert(!info.empty());
       using SI_d = std::decay_t<SI>;
-      callback(std::any_cast<SI_d>(info));
+      callback(std::any_cast<SI_d>(info.front()));
     };
     // It's not guaranteed if we get unique or identical addresses for
     // otherwise identical lambdas. Treat each as unique for consistent
@@ -271,8 +273,8 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
-    emitter_t emitter = [callback](const std::any& info) {
-      assert(!info.has_value());
+    emitter_t emitter = [callback](const std::vector<std::any>& info) {
+      assert(info.empty());
       callback();
     };
     assert(obj);
@@ -293,10 +295,10 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
-    emitter_t emitter = [callback](const std::any& info) {
-      assert(info.has_value());
+    emitter_t emitter = [callback](const std::vector<std::any>& info) {
+      assert(!info.empty());
       using SI_d = std::decay_t<SI>;
-      callback(std::any_cast<SI_d>(info));
+      callback(std::any_cast<SI_d>(info.front()));
     };
     assert(obj);
     // Lambdas cannot be compared, so we cannot tell if it's an
@@ -341,7 +343,7 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
-    emitSignalImpl(&(sender->*signal), std::any());
+    emitSignalImpl(&(sender->*signal), {});
   }
 
   template<class S, typename SI, typename I>
@@ -354,7 +356,7 @@ namespace core {
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
-    emitSignalImpl(&(sender->*signal), std::any((SI)info));
+    emitSignalImpl(&(sender->*signal), {std::any((SI)info)});
   }
 
   template<class T>
