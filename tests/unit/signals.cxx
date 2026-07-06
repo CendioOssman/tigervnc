@@ -42,6 +42,7 @@ public:
   Receiver() {}
 
   void handler() { callCount++; }
+  void otherHandler() { callCount++; }
 };
 
 TEST(Signals, connectSignal)
@@ -133,6 +134,62 @@ TEST(Signals, disconnectWrongObject)
   c = s.connectSignal(&Sender::othersignal, &r, &Receiver::handler);
   EXPECT_THROW({
     s2.disconnectSignal(c);
+  }, std::logic_error);
+}
+
+TEST(Signals, disconnectHelper)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal signal;
+  };
+
+  Sender s;
+  Receiver r;
+
+  /* Normal handler */
+  callCount = 0;
+  s.connectSignal(&Sender::signal, &r, &Receiver::handler);
+  s.disconnectSignal(&Sender::signal, &r, &Receiver::handler);
+  s.emitSignal(&Sender::signal);
+  EXPECT_EQ(callCount, 0);
+}
+
+TEST(Signals, disconnectSimilar)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal osignal;
+  };
+
+  Sender s;
+  Receiver r;
+
+  callCount = 0;
+  s.connectSignal(&Sender::osignal, &r, &Receiver::handler);
+  s.connectSignal(&Sender::osignal, &r, &Receiver::otherHandler);
+  s.disconnectSignal(&Sender::osignal, &r, &Receiver::handler);
+  s.emitSignal(&Sender::osignal);
+  EXPECT_EQ(callCount, 1);
+}
+
+TEST(Signals, disconnectBadSignal)
+{
+  class SenderA : public SenderBase {
+  public:
+    core::signal goodsignal;
+  };
+  class SenderB : public SenderBase {
+  public:
+    core::signal badsignal;
+  };
+
+  SenderA s;
+  Receiver r;
+
+  s.disconnectSignal(&SenderA::goodsignal, &r, &Receiver::handler);
+  EXPECT_THROW({
+    s.disconnectSignal(&SenderB::badsignal, &r, &Receiver::handler);
   }, std::logic_error);
 }
 

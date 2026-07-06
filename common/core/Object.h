@@ -55,6 +55,12 @@ namespace core {
     // registered using connectSignal()
     void disconnectSignal(const Connection connection);
 
+    // Methods can be disconnected by reference, rather than tracking
+    // the connection object
+    template<class S, class T>
+    void disconnectSignal(const signal S::* signal, T* obj,
+                          void (T::*callback)());
+
   protected:
     // emitSignal() calls all the registered object methods for the
     // specified signal
@@ -136,6 +142,19 @@ namespace core {
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
     emitSignalImpl(&(sender->*signal));
+  }
+
+  template<class S, class T>
+  void Object::disconnectSignal(const signal S::* signal, T* obj,
+                                void (T::*callback)())
+  {
+    static_assert(std::is_base_of_v<Object, S>,
+                  "Signal owner is not subclass of core::Object");
+    S* sender = dynamic_cast<S*>(this);
+    if (!sender)
+      throw std::logic_error("Signal is not owned by sending object");
+    disconnectSignal({&(sender->*signal), this, obj, callback,
+                      compareAny<typeof(callback)>});
   }
 
   template<class T>
