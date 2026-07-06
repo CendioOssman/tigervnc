@@ -22,6 +22,7 @@
 
 #include <assert.h>
 
+#include <algorithm>
 #include <stdexcept>
 
 #include <core/Object.h>
@@ -49,6 +50,7 @@ Object::~Object()
 
 void Object::emitSignalImpl(const void* signal)
 {
+  ReceiverList siglist;
   ReceiverList::iterator iter;
 
   assert(signal);
@@ -56,9 +58,18 @@ void Object::emitSignalImpl(const void* signal)
   if (signalReceivers.count(signal) == 0)
     return;
 
-  for (iter = signalReceivers[signal].begin();
-       iter != signalReceivers[signal].end(); ++iter)
+  // Convoluted iteration so that we safely handle changes to
+  // the list
+  siglist = signalReceivers[signal];
+  for (iter = siglist.begin(); iter != siglist.end(); ++iter) {
+    if (std::find_if(signalReceivers[signal].begin(),
+                     signalReceivers[signal].end(),
+                     [iter](const SignalReceiver& recv) {
+                       return recv.connection == iter->connection;
+                     }) == signalReceivers[signal].end())
+      continue;
     iter->emitter();
+  }
 }
 
 Connection Object::connectSignalImpl(const void* signal, Object* obj,
