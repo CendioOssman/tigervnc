@@ -209,6 +209,69 @@ TEST(Signals, disconnectBadSignal)
   }, std::logic_error);
 }
 
+TEST(Signals, addWhileEmitting)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal asignal;
+  };
+  class AddReceiver : public Receiver {
+  public:
+    AddReceiver(Sender* s) : sender(s) {}
+    void registerHandler()
+    {
+      sender->connectSignal(&Sender::asignal, this,
+                            &AddReceiver::handler);
+    }
+    void handler() { callCount++; }
+    void otherHandler() { callCount++; }
+  protected:
+    Sender* sender;
+  };
+
+  Sender s;
+  AddReceiver r(&s);
+
+  callCount = 0;
+  s.connectSignal(&Sender::asignal, &r, &AddReceiver::registerHandler);
+  s.connectSignal(&Sender::asignal, &r, &AddReceiver::otherHandler);
+  s.emitSignal(&Sender::asignal);
+  EXPECT_EQ(callCount, 1);
+}
+
+TEST(Signals, removeWhileEmitting)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal rsignal;
+  };
+
+  class RemoveReceiver : public Receiver {
+  public:
+    RemoveReceiver(Sender* s) : sender(s) {}
+    void unregisterHandler()
+    {
+      sender->disconnectSignal(&Sender::rsignal, this,
+                               &RemoveReceiver::handler);
+    }
+    void handler() { callCount++; }
+    void otherHandler() { callCount++; }
+  protected:
+    Sender* sender;
+  };
+
+  Sender s;
+  RemoveReceiver r(&s);
+
+  callCount = 0;
+  s.connectSignal(&Sender::rsignal, &r,
+                  &RemoveReceiver::unregisterHandler);
+  s.connectSignal(&Sender::rsignal, &r, &RemoveReceiver::handler);
+  s.connectSignal(&Sender::rsignal, &r, &RemoveReceiver::otherHandler);
+  s.emitSignal(&Sender::rsignal);
+  EXPECT_EQ(callCount, 1);
+}
+
 TEST(Signals, emitBadSignal)
 {
   class SenderA : public SenderBase {
