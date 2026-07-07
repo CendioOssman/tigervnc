@@ -157,6 +157,8 @@ namespace core {
   {
     static_assert(std::is_base_of_v<Object, S>,
                   "Signal owner is not subclass of core::Object");
+    static_assert(std::is_base_of_v<Object, T>,
+                  "Target object is not subclass of core::Object");
     static_assert(sizeof...(SigArgs) == sizeof...(Args),
                   "Wrong number of arguments for signal callback");
     static_assert((std::is_convertible_v<SigArgs, Args> && ...),
@@ -237,6 +239,8 @@ namespace core {
   {
     static_assert(std::is_base_of_v<Object, S>,
                   "Signal owner is not subclass of core::Object");
+    static_assert(std::is_base_of_v<Object, T>,
+                  "Target object is not subclass of core::Object");
     static_assert(sizeof...(SigArgs) == sizeof...(Args),
                   "Wrong number of arguments for signal callback");
     static_assert((std::is_convertible_v<SigArgs, Args> && ...),
