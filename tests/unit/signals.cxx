@@ -111,6 +111,13 @@ TYPED_TEST(SignalsArgs, connectSignalArg)
 }
 
 template<class S>
+static void connectSimpleLambda(SenderBase* s,
+                                core::signal<> S::* signal)
+{
+  s->connectSignal(signal, []() { callCount++; });
+}
+
+template<class S>
 static void connectLambdaWithCaptures(SenderBase* s,
                                       core::signal<> S::* signal,
                                       Receiver* r, int x)
@@ -123,11 +130,24 @@ TEST(Signals, connectSignalLambda)
 {
   class Sender : public SenderBase {
   public:
-    core::signal<> csignal, mcsignal;
+    core::signal<> signal, msignal, csignal, mcsignal;
   };
 
   Sender s;
   Receiver r;
+
+  /* Simple lambda */
+  callCount = 0;
+  s.connectSignal(&Sender::signal, []() { callCount++; });
+  s.emitSignal(&Sender::signal);
+  EXPECT_EQ(callCount, 1);
+
+  /* Multiple simple lambdas */
+  callCount = 0;
+  connectSimpleLambda(&s, &Sender::msignal);
+  connectSimpleLambda(&s, &Sender::msignal);
+  s.emitSignal(&Sender::msignal);
+  EXPECT_EQ(callCount, 2);
 
   /* Lambda with captures */
   callCount = 0;
@@ -161,6 +181,10 @@ TEST(Signals, connectBadSignal)
   s.connectSignal(&SenderA::goodsignal, &r, &Receiver::handler);
   EXPECT_THROW({
     s.connectSignal(&SenderB::badsignal, &r, &Receiver::handler);
+  }, std::logic_error);
+  s.connectSignal(&SenderA::goodsignal, [](){});
+  EXPECT_THROW({
+    s.connectSignal(&SenderB::badsignal, [](){});
   }, std::logic_error);
   s.connectSignal(&SenderA::goodsignal, &r, [](){});
   EXPECT_THROW({
@@ -249,7 +273,7 @@ TEST(Signals, disconnectSignal)
 {
   class Sender : public SenderBase {
   public:
-    core::signal<> signal, lcsignal;
+    core::signal<> signal, lsignal, lcsignal;
   };
 
   Sender s;
@@ -261,6 +285,13 @@ TEST(Signals, disconnectSignal)
   c = s.connectSignal(&Sender::signal, &r, &Receiver::handler);
   s.disconnectSignal(c);
   s.emitSignal(&Sender::signal);
+  EXPECT_EQ(callCount, 0);
+
+  /* Simple lambda */
+  callCount = 0;
+  c = s.connectSignal(&Sender::lsignal, []() { callCount++; });
+  s.disconnectSignal(c);
+  s.emitSignal(&Sender::lsignal);
   EXPECT_EQ(callCount, 0);
 
   /* Lambda with captures */

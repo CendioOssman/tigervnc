@@ -107,7 +107,6 @@ Connection Object::connectSignalImpl(const void* signal, Object* obj,
   Connection connection;
 
   assert(signal);
-  assert(obj);
 
   if (signalReceivers.count(signal) == 0)
     signalReceivers[signal].clear();
@@ -122,18 +121,15 @@ Connection Object::connectSignalImpl(const void* signal, Object* obj,
 
   signalReceivers[signal].push_back({connection, emitter});
 
-  obj->connectedObjects.insert(this);
+  if (obj)
+    obj->connectedObjects.insert(this);
 
   return connection;
 }
 
 void Object::disconnectSignal(const Connection connection)
 {
-  std::map<const void*, ReceiverList>::iterator sigiter;
   ReceiverList::iterator iter;
-  bool hasOthers;
-
-  assert(connection.dst);
 
   if (connection.src != this)
     throw std::logic_error("Disconnecting signal from wrong object");
@@ -146,25 +142,30 @@ void Object::disconnectSignal(const Connection connection)
     }
   }
 
-  hasOthers = false;
+  if (connection.dst) {
+    std::map<const void*, ReceiverList>::iterator sigiter;
+    bool hasOthers;
 
-  // Then check if the object is attached in more ways to this or
-  // to some other signal
-  for (sigiter = signalReceivers.begin();
-       sigiter != signalReceivers.end(); ++sigiter) {
-    for (iter = sigiter->second.begin();
-         iter != sigiter->second.end(); ++iter) {
-      if (iter->connection.dst == connection.dst) {
-        hasOthers = true;
-        break;
+    hasOthers = false;
+
+    // Then check if the object is attached in more ways to this or
+    // to some other signal
+    for (sigiter = signalReceivers.begin();
+         sigiter != signalReceivers.end(); ++sigiter) {
+      for (iter = sigiter->second.begin();
+           iter != sigiter->second.end(); ++iter) {
+        if (iter->connection.dst == connection.dst) {
+          hasOthers = true;
+          break;
+        }
       }
+      if (hasOthers)
+        break;
     }
-    if (hasOthers)
-      break;
-  }
 
-  if (!hasOthers)
-    connection.dst->connectedObjects.erase(this);
+    if (!hasOthers)
+      connection.dst->connectedObjects.erase(this);
+  }
 }
 
 void Object::disconnectSignals(Object* obj)
