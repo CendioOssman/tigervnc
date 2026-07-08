@@ -67,8 +67,15 @@ namespace core {
     template<class S, typename Functor>
     Connection connectSignal(const signal<> S::* signal,
                              Functor callback);
+    template<class S, typename SI, typename Functor>
+    Connection connectSignal(const signal<SI> S::* signal,
+                             Functor callback);
+
     template<class S, typename Functor>
     Connection connectSignal(const signal<> S::* signal, Object* obj,
+                             Functor callback);
+    template<class S, typename SI, typename Functor>
+    Connection connectSignal(const signal<SI> S::* signal, Object* obj,
                              Functor callback);
 
     // disconnectSignal() unregisters a method that was previously
@@ -228,6 +235,31 @@ namespace core {
     return connectSignalImpl(&(sender->*signal), nullptr, emitter);
   }
 
+  template<class S, typename SI, typename Functor>
+  Connection Object::connectSignal(const signal<SI> S::* signal,
+                                   Functor callback)
+  {
+    static_assert(std::is_base_of_v<Object, S>,
+                  "Signal owner is not subclass of core::Object");
+    static_assert(std::is_invocable_v<Functor, SI>,
+                  "Incompatible signal callback");
+    static_assert(!has_captures_v<Functor>,
+                  "Lambdas with captures not allowed as callbacks "
+                  "unless connected to the lifetime of an object");
+    S* sender = dynamic_cast<S*>(this);
+    if (!sender)
+      throw std::logic_error("Signal is not owned by sending object");
+    emitter_t emitter = [callback](const std::any& info) {
+      assert(info.has_value());
+      using SI_d = std::decay_t<SI>;
+      callback(std::any_cast<SI_d>(info));
+    };
+    // It's not guaranteed if we get unique or identical addresses for
+    // otherwise identical lambdas. Treat each as unique for consistent
+    // behaviour by omitting any tracking information.
+    return connectSignalImpl(&(sender->*signal), nullptr, emitter);
+  }
+
   template<class S, typename Functor>
   Connection Object::connectSignal(const signal<> S::* signal,
                                    Object* obj, Functor callback)
@@ -243,10 +275,33 @@ namespace core {
       assert(!info.has_value());
       callback();
     };
+    assert(obj);
     // Lambdas cannot be compared, so we cannot tell if it's an
     // identical lambda, or just the same body but with different
     // captures.
+    return connectSignalImpl(&(sender->*signal), obj, emitter);
+  }
+
+  template<class S, typename SI, typename Functor>
+  Connection Object::connectSignal(const signal<SI> S::* signal,
+                                   Object* obj, Functor callback)
+  {
+    static_assert(std::is_base_of_v<Object, S>,
+                  "Signal owner is not subclass of core::Object");
+    static_assert(std::is_invocable_v<Functor, SI>,
+                  "Incompatible signal callback");
+    S* sender = dynamic_cast<S*>(this);
+    if (!sender)
+      throw std::logic_error("Signal is not owned by sending object");
+    emitter_t emitter = [callback](const std::any& info) {
+      assert(info.has_value());
+      using SI_d = std::decay_t<SI>;
+      callback(std::any_cast<SI_d>(info));
+    };
     assert(obj);
+    // Lambdas cannot be compared, so we cannot tell if it's an
+    // identical lambda, or just the same body but with different
+    // captures.
     return connectSignalImpl(&(sender->*signal), obj, emitter);
   }
 
