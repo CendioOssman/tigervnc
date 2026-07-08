@@ -110,6 +110,40 @@ TYPED_TEST(SignalsArgs, connectSignalArg)
   EXPECT_EQ(callCount, 1);
 }
 
+template<class S>
+static void connectLambdaWithCaptures(SenderBase* s,
+                                      core::signal<> S::* signal,
+                                      Receiver* r, int x)
+{
+  s->connectSignal(signal, r,
+                  [s, r, x]() { (void)s; (void)r; (void)x; callCount++; });
+}
+
+TEST(Signals, connectSignalLambda)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal<> csignal, mcsignal;
+  };
+
+  Sender s;
+  Receiver r;
+
+  /* Lambda with captures */
+  callCount = 0;
+  s.connectSignal(&Sender::csignal, &r,
+                  [&s, &r]() { (void)s; (void)r; callCount++; });
+  s.emitSignal(&Sender::csignal);
+  EXPECT_EQ(callCount, 1);
+
+  /* Multiple lambdas with captures */
+  callCount = 0;
+  connectLambdaWithCaptures(&s, &Sender::mcsignal, &r, 1);
+  connectLambdaWithCaptures(&s, &Sender::mcsignal, &r, 2);
+  s.emitSignal(&Sender::mcsignal);
+  EXPECT_EQ(callCount, 2);
+}
+
 TEST(Signals, connectBadSignal)
 {
   class SenderA : public SenderBase {
@@ -127,6 +161,10 @@ TEST(Signals, connectBadSignal)
   s.connectSignal(&SenderA::goodsignal, &r, &Receiver::handler);
   EXPECT_THROW({
     s.connectSignal(&SenderB::badsignal, &r, &Receiver::handler);
+  }, std::logic_error);
+  s.connectSignal(&SenderA::goodsignal, &r, [](){});
+  EXPECT_THROW({
+    s.connectSignal(&SenderB::badsignal, &r, [](){});
   }, std::logic_error);
 }
 
@@ -211,7 +249,7 @@ TEST(Signals, disconnectSignal)
 {
   class Sender : public SenderBase {
   public:
-    core::signal<> signal;
+    core::signal<> signal, lcsignal;
   };
 
   Sender s;
@@ -223,6 +261,14 @@ TEST(Signals, disconnectSignal)
   c = s.connectSignal(&Sender::signal, &r, &Receiver::handler);
   s.disconnectSignal(c);
   s.emitSignal(&Sender::signal);
+  EXPECT_EQ(callCount, 0);
+
+  /* Lambda with captures */
+  callCount = 0;
+  c = s.connectSignal(&Sender::lcsignal, &r,
+                      [&s, &r]() { (void)s; (void)r; callCount++; });
+  s.disconnectSignal(c);
+  s.emitSignal(&Sender::lcsignal);
   EXPECT_EQ(callCount, 0);
 }
 
@@ -373,6 +419,7 @@ TEST(Signals, disconnectAll)
 
   callCount = 0;
   s.connectSignal(&Sender::signal1, &r, &Receiver::handler);
+  s.connectSignal(&Sender::signal1, &r, [] { callCount++; });
   s.connectSignal(&Sender::signal2, &r, &Receiver::handler);
   s.connectSignal(&Sender::signal3, &r,
                   &Receiver::typeHandler<const char*>);
