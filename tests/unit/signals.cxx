@@ -35,8 +35,8 @@ public:
   {
     core::Object::emitSignal(signal);
   }
-  template<class S, typename I>
-  void emitSignal(const core::signal<I> S::* signal, I info)
+  template<class S, typename SI, typename I>
+  void emitSignal(const core::signal<SI> S::* signal, I info)
   {
     core::Object::emitSignal(signal, info);
   }
@@ -518,22 +518,18 @@ TEST(Signals, emitIntConversion)
   Sender s;
   Receiver r;
 
-  GTEST_SKIP() << "Currently broken";
-
   /* Receiver casts to int */
-  // callCount = 0;
-  // s.connectSignal(&s.inthandler, &r,
-  //                 &Receiver::typeHandler<int>);
-  // s.emitSignal(&s.inthandler, 1.2);
-  // EXPECT_EQ(callCount, 1);
+  callCount = 0;
+  s.connectSignal(&Sender::inthandler, &r, &Receiver::typeHandler<int>);
+  s.emitSignal(&Sender::inthandler, 1.2);
+  EXPECT_EQ(callCount, 1);
 
   /* Sender casts to int */
-  // callCount = 0;
-  // s.connectSignal(&s.intemitter, &r,
-  //                 &Receiver::typeHandler<int>);
-  // s.emitSignal(&s.intemitter, 1.2);
-  // s.emitSignal(&s.intemitter, (unsigned long long)123);
-  // EXPECT_EQ(callCount, 2);
+  callCount = 0;
+  s.connectSignal(&Sender::intemitter, &r, &Receiver::typeHandler<int>);
+  s.emitSignal(&Sender::intemitter, 1.2);
+  s.emitSignal(&Sender::intemitter, (unsigned long long)123);
+  EXPECT_EQ(callCount, 2);
 }
 
 TYPED_TEST(SignalsArgs, emitRefConversion)
@@ -547,21 +543,19 @@ TYPED_TEST(SignalsArgs, emitRefConversion)
   Sender s;
   Receiver r;
 
-  GTEST_SKIP() << "Currently broken";
-
   /* Receiver adds reference */
-  // callCount = 0;
-  // s.connectSignal(&s.refhandler, &r,
-  //                 &Receiver::typeHandler<const TypeParam&>);
-  // s.emitSignal(&s.refhandler, TestFixture::value);
-  // EXPECT_EQ(callCount, 1);
+  callCount = 0;
+  s.connectSignal(&Sender::refhandler, &r,
+                  &Receiver::typeHandler<const TypeParam&>);
+  s.emitSignal(&Sender::refhandler, TestFixture::value);
+  EXPECT_EQ(callCount, 1);
 
   /* Sender adds reference */
-  // callCount = 0;
-  // s.connectSignal(&s.refemitter, &r,
-  //                 &Receiver::typeHandler<const TypeParam&>);
-  // s.emitSignal(&s.refemitter, TestFixture::value);
-  // EXPECT_EQ(callCount, 1);
+  callCount = 0;
+  s.connectSignal(&Sender::refemitter, &r,
+                  &Receiver::typeHandler<const TypeParam&>);
+  s.emitSignal(&Sender::refemitter, TestFixture::value);
+  EXPECT_EQ(callCount, 1);
 }
 
 TYPED_TEST(SignalsArgs, emitConstConversion)
@@ -575,21 +569,19 @@ TYPED_TEST(SignalsArgs, emitConstConversion)
   Sender s;
   Receiver r;
 
-  GTEST_SKIP() << "Currently broken";
-
   /* Receiver adds pointer const qualifier */
-  // callCount = 0;
-  // s.connectSignal(&s.consthandler, &r,
-  //                 &Receiver::typeHandler<const TypeParam*>);
-  // s.emitSignal(&s.consthandler, &TestFixture::value);
-  // EXPECT_EQ(callCount, 1);
+  callCount = 0;
+  s.connectSignal(&Sender::consthandler, &r,
+                  &Receiver::typeHandler<const TypeParam*>);
+  s.emitSignal(&Sender::consthandler, &TestFixture::value);
+  EXPECT_EQ(callCount, 1);
 
   /* Sender adds pointer const qualifier */
-  // callCount = 0;
-  // s.connectSignal(&s.constemitter, &r,
-  //                 &Receiver::typeHandler<const TypeParam*>);
-  // s.emitSignal(&s.constemitter, &TestFixture::value);
-  // EXPECT_EQ(callCount, 1);
+  callCount = 0;
+  s.connectSignal(&Sender::constemitter, &r,
+                  &Receiver::typeHandler<const TypeParam*>);
+  s.emitSignal(&Sender::constemitter, &TestFixture::value);
+  EXPECT_EQ(callCount, 1);
 }
 
 TEST(Signals, emitBadSignal)
