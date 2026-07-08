@@ -20,8 +20,6 @@
 #include <config.h>
 #endif
 
-#include <assert.h>
-
 #include <algorithm>
 
 #include <core/Object.h>
@@ -63,7 +61,7 @@ Object::~Object()
   }
 }
 
-void Object::emitSignalImpl(const void* signal)
+void Object::emitSignalImpl(const void* signal, const std::any& info)
 {
   ReceiverList siglist;
   ReceiverList::iterator iter;
@@ -83,7 +81,7 @@ void Object::emitSignalImpl(const void* signal)
                        return recv.connection == iter->connection;
                      }) == signalReceivers[signal].end())
       continue;
-    iter->emitter();
+    iter->emitter(info);
   }
 }
 
