@@ -231,6 +231,24 @@ TEST(Signals, disconnectAll)
   EXPECT_EQ(callCount, 1);
 }
 
+TEST(Signals, implicitDisconnect)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal isignal;
+  };
+
+  Sender s;
+
+  callCount = 0;
+  {
+    Receiver scoped_r;
+    s.connectSignal(&Sender::isignal, &scoped_r, &Receiver::handler);
+  }
+  s.emitSignal(&Sender::isignal);
+  EXPECT_EQ(callCount, 0);
+}
+
 TEST(Signals, disconnectBadSignal)
 {
   class SenderA : public SenderBase {

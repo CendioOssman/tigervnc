@@ -28,6 +28,7 @@
 #include <functional>
 #include <list>
 #include <map>
+#include <set>
 #include <stdexcept>
 
 namespace core {
@@ -46,7 +47,9 @@ namespace core {
     virtual ~Object();
 
     // connectSignal() registers an object and method on that object to
-    // be called whenever the specified signal is emitted
+    // be called whenever the specified signal is emitted. Any method
+    // registered will automatically be unregistered when the method's
+    // object is destroyed.
     template<class S, class T>
     Connection connectSignal(const signal S::* signal, T* obj,
                              void (T::*callback)());
@@ -62,7 +65,8 @@ namespace core {
                           void (T::*callback)());
 
     // disconnectSignals() unregisters all methods for all signals for
-    // the specified object
+    // the specified object. This is automatically called when the
+    // specified object is destroyed.
     void disconnectSignals(Object* obj);
 
   protected:
@@ -100,6 +104,9 @@ namespace core {
 
     // Mapping between signals and the methods receiving them
     std::map<const void*, ReceiverList> signalReceivers;
+
+    // Other objects that we have connected to signals on
+    std::set<Object*> connectedObjects;
   };
 
   //////////////////////////////////////////////////////////////////////

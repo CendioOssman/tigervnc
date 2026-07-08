@@ -46,6 +46,22 @@ Object::Object()
 
 Object::~Object()
 {
+  std::map<const void*, ReceiverList>::iterator sigiter;
+
+  // Disconnect from any signals we might have subscribed to
+  while (!connectedObjects.empty())
+    (*connectedObjects.begin())->disconnectSignals(this);
+
+  // And prevent other objects from trying to disconnect from us as we
+  // are going away
+  for (sigiter = signalReceivers.begin();
+       sigiter != signalReceivers.end(); ++sigiter) {
+    ReceiverList* siglist;
+
+    siglist = &sigiter->second;
+    while (!siglist->empty())
+      disconnectSignal(siglist->front().connection);
+  }
 }
 
 void Object::emitSignalImpl(const void* signal)
@@ -97,12 +113,18 @@ Connection Object::connectSignalImpl(const void* signal, Object* obj,
 
   signalReceivers[signal].push_back({connection, emitter});
 
+  obj->connectedObjects.insert(this);
+
   return connection;
 }
 
 void Object::disconnectSignal(const Connection connection)
 {
+  std::map<const void*, ReceiverList>::iterator sigiter;
   ReceiverList::iterator iter;
+  bool hasOthers;
+
+  assert(connection.dst);
 
   if (connection.src != this)
     throw std::logic_error("Disconnecting signal from wrong object");
@@ -114,6 +136,26 @@ void Object::disconnectSignal(const Connection connection)
       break;
     }
   }
+
+  hasOthers = false;
+
+  // Then check if the object is attached in more ways to this or
+  // to some other signal
+  for (sigiter = signalReceivers.begin();
+       sigiter != signalReceivers.end(); ++sigiter) {
+    for (iter = sigiter->second.begin();
+         iter != sigiter->second.end(); ++iter) {
+      if (iter->connection.dst == connection.dst) {
+        hasOthers = true;
+        break;
+      }
+    }
+    if (hasOthers)
+      break;
+  }
+
+  if (!hasOthers)
+    connection.dst->connectedObjects.erase(this);
 }
 
 void Object::disconnectSignals(Object* obj)
@@ -136,4 +178,6 @@ void Object::disconnectSignals(Object* obj)
         ++iter;
     }
   }
+
+  obj->connectedObjects.erase(this);
 }
