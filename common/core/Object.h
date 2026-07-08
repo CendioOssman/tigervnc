@@ -51,14 +51,14 @@ namespace core {
 
     // connectSignal() registers an object and method on that object to
     // be called whenever the specified signal is emitted. Inclusion of
-    // signal information must match how the signal is declared. Any
-    // method registered will automatically be unregistered when the
-    // method's object is destroyed.
+    // signal information must convertible to how the signal is
+    // declared. Any method registered will automatically be
+    // unregistered when the method's object is destroyed.
     template<class S, class T>
     Connection connectSignal(const signal<> S::* signal, T* obj,
                              void (T::*callback)());
-    template<class S, class T, typename I>
-    Connection connectSignal(const signal<I> S::* signal, T* obj,
+    template<class S, class T, typename SI, typename I>
+    Connection connectSignal(const signal<SI> S::* signal, T* obj,
                              void (T::*callback)(I));
 
     // disconnectSignal() unregisters a method that was previously
@@ -70,8 +70,8 @@ namespace core {
     template<class S, class T>
     void disconnectSignal(const signal<> S::* signal, T* obj,
                           void (T::*callback)());
-    template<class S, class T, typename I>
-    void disconnectSignal(const signal<I> S::* signal, T* obj,
+    template<class S, class T, typename SI, typename I>
+    void disconnectSignal(const signal<SI> S::* signal, T* obj,
                           void (T::*callback)(I));
 
     // disconnectSignals() unregisters all methods for all signals for
@@ -81,12 +81,12 @@ namespace core {
 
   protected:
     // emitSignal() calls all the registered object methods for the
-    // specified signal. Inclusion of signal information must match how
-    // the signal is declared.
+    // specified signal. Inclusion of signal information must be
+    // convertible to how the signal is declared.
     template<class S>
     void emitSignal(const signal<> S::* signal);
-    template<class S, typename I>
-    void emitSignal(const signal<I> S::* signal, const I& info);
+    template<class S, typename SI, typename I>
+    void emitSignal(const signal<SI> S::* signal, const I& info);
 
   private:
     // Wrapper to contain member function pointers
@@ -158,19 +158,21 @@ namespace core {
                              compareAny<typeof(callback)>, emitter);
   }
 
-  template<class S, class T, typename I>
-  Connection Object::connectSignal(const signal<I> S::* signal, T* obj,
+  template<class S, class T, typename SI, typename I>
+  Connection Object::connectSignal(const signal<SI> S::* signal, T* obj,
                                    void (T::*callback)(I))
   {
     static_assert(std::is_base_of_v<Object, S>,
                   "Signal owner is not subclass of core::Object");
+    static_assert(std::is_convertible_v<SI, I>,
+                  "Incompatible callback data argument for signal");
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
     emitter_t emitter = [obj, callback](const std::any& info) {
       assert(info.has_value());
-      using I_d = typename std::decay<I>::type;
-      (obj->*callback)(std::any_cast<I_d>(info));
+      using SI_d = std::decay_t<SI>;
+      (obj->*callback)(std::any_cast<SI_d>(info));
     };
     return connectSignalImpl(&(sender->*signal), obj, callback,
                              compareAny<typeof(callback)>, emitter);
@@ -189,12 +191,14 @@ namespace core {
                       compareAny<typeof(callback)>});
   }
 
-  template<class S, class T, typename I>
-  void Object::disconnectSignal(const signal<I> S::* signal, T* obj,
+  template<class S, class T, typename SI, typename I>
+  void Object::disconnectSignal(const signal<SI> S::* signal, T* obj,
                                 void (T::*callback)(I))
   {
     static_assert(std::is_base_of_v<Object, S>,
                   "Signal owner is not subclass of core::Object");
+    static_assert(std::is_convertible_v<SI, I>,
+                  "Incompatible callback data argument for signal");
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
@@ -213,15 +217,17 @@ namespace core {
     emitSignalImpl(&(sender->*signal), std::any());
   }
 
-  template<class S, typename I>
-  void Object::emitSignal(const signal<I> S::* signal, const I& info)
+  template<class S, typename SI, typename I>
+  void Object::emitSignal(const signal<SI> S::* signal, const I& info)
   {
     static_assert(std::is_base_of_v<Object, S>,
                   "Signal owner is not subclass of core::Object");
+    static_assert(std::is_convertible_v<I, SI>,
+                  "Incompatible signal data emitting signal");
     S* sender = dynamic_cast<S*>(this);
     if (!sender)
       throw std::logic_error("Signal is not owned by sending object");
-    emitSignalImpl(&(sender->*signal), std::any(info));
+    emitSignalImpl(&(sender->*signal), std::any((SI)info));
   }
 
   template<class T>
