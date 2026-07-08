@@ -61,6 +61,13 @@ namespace core {
     Connection connectSignal(const signal<SI> S::* signal, T* obj,
                              void (T::*callback)(I));
 
+    // Lambda friendly version to register a signal callback. An object
+    // must also be specified to control the lifetime of captured
+    // variables.
+    template<class S, typename Functor>
+    Connection connectSignal(const signal<> S::* signal, Object* obj,
+                             Functor callback);
+
     // disconnectSignal() unregisters a method that was previously
     // registered using connectSignal()
     void disconnectSignal(const Connection connection);
@@ -80,9 +87,9 @@ namespace core {
     void disconnectSignals(Object* obj);
 
   protected:
-    // emitSignal() calls all the registered object methods for the
-    // specified signal. Inclusion of signal information must be
-    // convertible to how the signal is declared.
+    // emitSignal() calls all the registered callbacks for the specified
+    // signal. Inclusion of signal information must be convertible to
+    // how the signal is declared.
     template<class S>
     void emitSignal(const signal<> S::* signal);
     template<class S, typename SI, typename I>
@@ -94,6 +101,8 @@ namespace core {
 
     void emitSignalImpl(const void* signal, const std::any& info);
 
+    Connection connectSignalImpl(const void* signal, Object* obj,
+                                 const emitter_t& emitter);
     Connection connectSignalImpl(const void* signal, Object* obj,
                                  const std::any& callback,
                                  bool (*comparer)(const std::any&,
@@ -176,6 +185,27 @@ namespace core {
     };
     return connectSignalImpl(&(sender->*signal), obj, callback,
                              compareAny<typeof(callback)>, emitter);
+  }
+
+  template<class S, typename Functor>
+  Connection Object::connectSignal(const signal<> S::* signal,
+                                   Object* obj, Functor callback)
+  {
+    static_assert(std::is_base_of_v<Object, S>,
+                  "Signal owner is not subclass of core::Object");
+    static_assert(std::is_invocable_v<Functor>,
+                  "Incompatible signal callback");
+    S* sender = dynamic_cast<S*>(this);
+    if (!sender)
+      throw std::logic_error("Signal is not owned by sending object");
+    emitter_t emitter = [callback](const std::any& info) {
+      assert(!info.has_value());
+      callback();
+    };
+    // Lambdas cannot be compared, so we cannot tell if it's an
+    // identical lambda, or just the same body but with different
+    // captures.
+    return connectSignalImpl(&(sender->*signal), obj, emitter);
   }
 
   template<class S, class T>

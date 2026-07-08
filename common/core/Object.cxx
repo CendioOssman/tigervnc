@@ -20,6 +20,8 @@
 #include <config.h>
 #endif
 
+#include <stdint.h>
+
 #include <algorithm>
 #include <stdexcept>
 
@@ -84,6 +86,16 @@ void Object::emitSignalImpl(const void* signal, const std::any& info)
       continue;
     iter->emitter(info);
   }
+}
+
+Connection Object::connectSignalImpl(const void* signal, Object* obj,
+                                     const emitter_t& emitter)
+{
+  static uint64_t index = 0;
+  // This callback is not possible to check for uniqueness, so instead
+  // we assume every call is unique and track them using an index.
+  return connectSignalImpl(signal, obj, index++,
+                           compareAny<typeof(index)>, emitter);
 }
 
 Connection Object::connectSignalImpl(const void* signal, Object* obj,
