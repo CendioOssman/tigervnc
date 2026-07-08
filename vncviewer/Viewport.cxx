@@ -137,6 +137,22 @@ Viewport::Viewport(int w, int h, CConn* cc_)
     updateTimer.repeat();
   });
 
+  cc->connectSignal(&rfb::CConnection::cursorChanged, this,
+                    &Viewport::setCursor);
+  // Make sure we have an initial blank cursor set
+  setCursor();
+
+  auto cursorCallback = [this]() {
+    if (Fl::belowmouse() == this)
+      showCursor();
+  };
+  viewOnly.connectSignal(&core::Parameter::valueChanged,
+                         this, cursorCallback);
+  alwaysCursor.connectSignal(&core::Parameter::valueChanged,
+                             this, cursorCallback);
+  cursorType.connectSignal(&core::Parameter::valueChanged,
+                           this, cursorCallback);
+
   cc->connectSignal(&rfb::CConnection::ledStateChanged, this,
                     &Viewport::handleLEDState);
 
@@ -161,19 +177,6 @@ Viewport::Viewport(int w, int h, CConn* cc_)
   setShortcutModifiers();
   shortcutModifiers.connectSignal(&core::Parameter::valueChanged, this,
                                   &Viewport::setShortcutModifiers);
-
-  // Make sure we have an initial blank cursor set
-  setCursor();
-  auto cursorCallback = [this]() {
-    if (Fl::belowmouse() == this)
-      showCursor();
-  };
-  viewOnly.connectSignal(&core::Parameter::valueChanged,
-                         this, cursorCallback);
-  alwaysCursor.connectSignal(&core::Parameter::valueChanged,
-                             this, cursorCallback);
-  cursorType.connectSignal(&core::Parameter::valueChanged,
-                           this, cursorCallback);
 }
 
 

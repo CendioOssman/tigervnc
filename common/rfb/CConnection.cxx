@@ -467,10 +467,12 @@ void CConnection::setCursor(int width, int height,
 {
   Cursor cursor(width, height, hotspot, data);
   server.setCursor(cursor);
+  emitSignal(&CConnection::cursorChanged);
 }
 
-void CConnection::setCursorPos(const core::Point& /*pos*/)
+void CConnection::setCursorPos(const core::Point& pos)
 {
+  emitSignal(&CConnection::cursorWarped, pos);
 }
 
 void CConnection::setName(const char* name)

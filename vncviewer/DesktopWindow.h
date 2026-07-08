@@ -48,12 +48,6 @@ public:
   // A previous call to writeSetDesktopSize() has completed
   void setDesktopSizeDone(unsigned result);
 
-  // New image for the locally rendered cursor
-  void setCursor();
-
-  // Server-provided cursor position
-  void setCursorPos(const core::Point& pos);
-
   // Fl_Window callback methods
   void show() override;
   void draw() override;
@@ -70,6 +64,8 @@ public:
 private:
   void resizeFramebuffer();
   void updateCaption();
+
+  void setCursorPos(core::Point pos);
 
   void handleFirstUpdate();
 

@@ -211,6 +211,15 @@ namespace rfb {
     // handler.
     core::signal<> screenLayoutChanged;
 
+    // cursorChanged is emitted whenever the server cursor sprited
+    // changes.
+    core::signal<> cursorChanged;
+
+    // cursorWarped is emitted whenever the server wants to "warp" the
+    // cursor to a new position. A core::Point is included with the new
+    // desired coordinates.
+    core::signal<core::Point> cursorWarped;
+
     // nameChanged is emitted whenever the desktop name changes.
     core::signal<> nameChanged;
 
