@@ -61,9 +61,12 @@ namespace core {
     Connection connectSignal(const signal<SI> S::* signal, T* obj,
                              void (T::*callback)(I));
 
-    // Lambda friendly version to register a signal callback. An object
-    // must also be specified to control the lifetime of captured
-    // variables.
+    // Lambda friendly versions to register a signal callback. If the
+    // lambda has a capture list, then an object must also be specified
+    // to control the lifetime.
+    template<class S, typename Functor>
+    Connection connectSignal(const signal<> S::* signal,
+                             Functor callback);
     template<class S, typename Functor>
     Connection connectSignal(const signal<> S::* signal, Object* obj,
                              Functor callback);
@@ -163,6 +166,7 @@ namespace core {
       assert(!info.has_value());
       (obj->*callback)();
     };
+    assert(obj);
     return connectSignalImpl(&(sender->*signal), obj, callback,
                              compareAny<typeof(callback)>, emitter);
   }
@@ -183,8 +187,45 @@ namespace core {
       using SI_d = std::decay_t<SI>;
       (obj->*callback)(std::any_cast<SI_d>(info));
     };
+    assert(obj);
     return connectSignalImpl(&(sender->*signal), obj, callback,
                              compareAny<typeof(callback)>, emitter);
+  }
+
+  // Determine if a lambda has a capture list by using the fact that
+  // the unary plus operator only exists without captures
+  template<typename Functor>
+  constexpr auto _test_captures(Functor* f)
+    -> decltype(+(*f), void(), false) { return false; }
+  constexpr bool _test_captures(void*) { return true; }
+  template<typename Functor>
+  struct has_captures
+      : std::bool_constant<_test_captures((Functor*)nullptr)> {};
+  template<typename Functor>
+  constexpr bool has_captures_v = has_captures<Functor>::value;
+
+  template<class S, typename Functor>
+  Connection Object::connectSignal(const signal<> S::* signal,
+                                  Functor callback)
+  {
+    static_assert(std::is_base_of_v<Object, S>,
+                  "Signal owner is not subclass of core::Object");
+    static_assert(std::is_invocable_v<Functor>,
+                  "Incompatible signal callback");
+    static_assert(!has_captures_v<Functor>,
+                  "Lambdas with captures not allowed as callbacks "
+                  "unless connected to the lifetime of an object");
+    S* sender = dynamic_cast<S*>(this);
+    if (!sender)
+      throw std::logic_error("Signal is not owned by sending object");
+    emitter_t emitter = [callback](const std::any& info) {
+      assert(!info.has_value());
+      callback();
+    };
+    // It's not guaranteed if we get unique or identical addresses for
+    // otherwise identical lambdas. Treat each as unique for consistent
+    // behaviour by omitting any tracking information.
+    return connectSignalImpl(&(sender->*signal), nullptr, emitter);
   }
 
   template<class S, typename Functor>
@@ -205,6 +246,7 @@ namespace core {
     // Lambdas cannot be compared, so we cannot tell if it's an
     // identical lambda, or just the same body but with different
     // captures.
+    assert(obj);
     return connectSignalImpl(&(sender->*signal), obj, emitter);
   }
 
