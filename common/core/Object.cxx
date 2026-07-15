@@ -84,7 +84,12 @@ void Object::emitSignalImpl(const void* signal,
                        return recv.connection == iter->connection;
                      }) == signalReceivers[signal].end())
       continue;
-    iter->emitter(info);
+    try {
+      iter->emitter(info);
+    } catch(...) {
+      // Exceptions are not allowed in signal handlers
+      std::terminate();
+    }
   }
 }
 
