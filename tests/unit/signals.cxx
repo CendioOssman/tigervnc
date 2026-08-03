@@ -30,12 +30,18 @@ class SenderBase : public core::Object {
 public:
   SenderBase() {}
 
-  template<class S, typename... SigArgs, typename... Args>
+  template<class S, typename... SigArgs>
   void emitSignal(const core::signal<SigArgs...> S::* signal,
-                  Args... args)
+                  SigArgs... args)
   {
     core::Object::emitSignal(signal, args...);
   }
+  // template<class S, typename... SigArgs, typename... Args>
+  // void emitSignal(const core::signal<SigArgs...> S::* signal,
+  //                 Args... args)
+  // {
+  //   core::Object::emitSignal(signal, args...);
+  // }
 };
 
 class Receiver : public core::Object {
@@ -841,6 +847,23 @@ TEST(Signals, removeWhileEmitting)
   s.connectSignal(&Sender::rsignal, &r, &RemoveReceiver::handler);
   s.connectSignal(&Sender::rsignal, &r, &RemoveReceiver::otherHandler);
   s.emitSignal(&Sender::rsignal);
+  EXPECT_EQ(callCount, 1);
+}
+
+TEST(Signals, emitInitializerList)
+{
+  class Sender : public SenderBase {
+  public:
+    core::signal<std::string> signal;
+  };
+
+  Sender s;
+  Receiver r;
+
+  /* Argument is specified as initializer list */
+  callCount = 0;
+  s.connectSignal(&Sender::signal, &r, &Receiver::typeHandler<std::string>);
+  s.emitSignal(&Sender::signal, {"data"});
   EXPECT_EQ(callCount, 1);
 }
 
