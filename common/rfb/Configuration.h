@@ -246,6 +246,7 @@ namespace rfb {
     StringParameter(const char* name_, const char* desc_, const char* v,
 		    ConfigurationObject co=ConfGlobal);
     ~StringParameter() override;
+    using VoidParameter::setParam;
     bool setParam(const char* value) override;
     std::string getDefaultStr() const override;
     std::string getValueStr() const override;

@@ -104,6 +104,7 @@ namespace rfb {
   class LogParameter : public StringParameter {
   public:
     LogParameter();
+    using StringParameter::setParam;
     bool setParam(const char* v) override;
   };
   extern LogParameter logParams;

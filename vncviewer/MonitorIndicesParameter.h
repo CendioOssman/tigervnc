@@ -28,6 +28,7 @@ class MonitorIndicesParameter: public rfb::StringParameter {
 public:
     MonitorIndicesParameter(const char* name_, const char* desc_, const char* v);
     std::set<int> getParam();
+    using StringParameter::setParam;
     bool setParam(std::set<int> indices);
     bool setParam(const char* v) override;
 private:
