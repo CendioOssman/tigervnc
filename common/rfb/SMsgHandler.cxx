@@ -88,7 +88,7 @@ void SMsgHandler::clientCutText(const char* /*str*/)
 {
 }
 
-void SMsgHandler::handleClipboardCaps(uint32_t flags, const uint32_t* lengths)
+void SMsgHandler::clipboardCaps(uint32_t flags, const uint32_t* lengths)
 {
   int i;
 
@@ -130,21 +130,21 @@ void SMsgHandler::handleClipboardCaps(uint32_t flags, const uint32_t* lengths)
   client.setClipboardCaps(flags, lengths);
 }
 
-void SMsgHandler::handleClipboardRequest(uint32_t /*flags*/)
+void SMsgHandler::clipboardRequest(uint32_t /*flags*/)
 {
 }
 
-void SMsgHandler::handleClipboardPeek()
+void SMsgHandler::clipboardPeek()
 {
 }
 
-void SMsgHandler::handleClipboardNotify(uint32_t /*flags*/)
+void SMsgHandler::clipboardNotify(uint32_t /*flags*/)
 {
 }
 
-void SMsgHandler::handleClipboardProvide(uint32_t /*flags*/,
-                                         const size_t* /*lengths*/,
-                                         const uint8_t* const* /*data*/)
+void SMsgHandler::clipboardProvide(uint32_t /*flags*/,
+                                   const size_t* /*lengths*/,
+                                   const uint8_t* const* /*data*/)
 {
 }
 

@@ -75,14 +75,13 @@ namespace rfb {
 
     virtual void setLEDState(unsigned int state);
 
-    virtual void handleClipboardCaps(uint32_t flags,
-                                     const uint32_t* lengths);
-    virtual void handleClipboardRequest(uint32_t flags);
-    virtual void handleClipboardPeek();
-    virtual void handleClipboardNotify(uint32_t flags);
-    virtual void handleClipboardProvide(uint32_t flags,
-                                        const size_t* lengths,
-                                        const uint8_t* const* data);
+    virtual void clipboardCaps(uint32_t flags, const uint32_t* lengths);
+    virtual void clipboardRequest(uint32_t flags);
+    virtual void clipboardPeek();
+    virtual void clipboardNotify(uint32_t flags);
+    virtual void clipboardProvide(uint32_t flags,
+                                  const size_t* lengths,
+                                  const uint8_t* const* data);
 
     ServerParams server;
   };

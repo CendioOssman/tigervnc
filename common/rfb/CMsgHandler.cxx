@@ -102,7 +102,7 @@ void CMsgHandler::setLEDState(unsigned int state)
   server.setLEDState(state);
 }
 
-void CMsgHandler::handleClipboardCaps(uint32_t flags, const uint32_t* lengths)
+void CMsgHandler::clipboardCaps(uint32_t flags, const uint32_t* lengths)
 {
   int i;
 
@@ -144,20 +144,20 @@ void CMsgHandler::handleClipboardCaps(uint32_t flags, const uint32_t* lengths)
   server.setClipboardCaps(flags, lengths);
 }
 
-void CMsgHandler::handleClipboardRequest(uint32_t /*flags*/)
+void CMsgHandler::clipboardRequest(uint32_t /*flags*/)
 {
 }
 
-void CMsgHandler::handleClipboardPeek()
+void CMsgHandler::clipboardPeek()
 {
 }
 
-void CMsgHandler::handleClipboardNotify(uint32_t /*flags*/)
+void CMsgHandler::clipboardNotify(uint32_t /*flags*/)
 {
 }
 
-void CMsgHandler::handleClipboardProvide(uint32_t /*flags*/,
-                                         const size_t* /*lengths*/,
-                                         const uint8_t* const* /*data*/)
+void CMsgHandler::clipboardProvide(uint32_t /*flags*/,
+                                   const size_t* /*lengths*/,
+                                   const uint8_t* const* /*data*/)
 {
 }
