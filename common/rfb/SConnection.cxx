@@ -419,7 +419,7 @@ void SConnection::clientCutText(const char* str)
   handleClipboardAnnounce(true);
 }
 
-void SConnection::handleClipboardCaps(uint32_t flags, const uint32_t* lengths)
+void SConnection::clipboardCaps(uint32_t flags, const uint32_t* lengths)
 {
   int i;
 
@@ -461,7 +461,7 @@ void SConnection::handleClipboardCaps(uint32_t flags, const uint32_t* lengths)
   client.setClipboardCaps(flags, lengths);
 }
 
-void SConnection::handleClipboardRequest(uint32_t flags)
+void SConnection::clipboardRequest(uint32_t flags)
 {
   if (!(flags & rfb::clipboardUTF8)) {
     vlog.debug("Ignoring clipboard request for unsupported formats 0x%x", flags);
@@ -476,13 +476,13 @@ void SConnection::handleClipboardRequest(uint32_t flags)
   handleClipboardRequest();
 }
 
-void SConnection::handleClipboardPeek()
+void SConnection::clipboardPeek()
 {
   if (client.clipboardFlags() & rfb::clipboardNotify)
     writer()->writeClipboardNotify(hasLocalClipboard ? rfb::clipboardUTF8 : 0);
 }
 
-void SConnection::handleClipboardNotify(uint32_t flags)
+void SConnection::clipboardNotify(uint32_t flags)
 {
   hasRemoteClipboard = false;
 
@@ -499,9 +499,9 @@ void SConnection::handleClipboardNotify(uint32_t flags)
 
 }
 
-void SConnection::handleClipboardProvide(uint32_t flags,
-                                         const size_t* lengths,
-                                         const uint8_t* const* data)
+void SConnection::clipboardProvide(uint32_t flags,
+                                   const size_t* lengths,
+                                   const uint8_t* const* data)
 {
   if (!(flags & rfb::clipboardUTF8)) {
     vlog.debug("Ignoring clipboard provide with unsupported formats 0x%x", flags);
