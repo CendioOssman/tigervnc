@@ -393,6 +393,11 @@ bool StringParameter::setParam(const char* v) {
   return true;
 }
 
+bool StringParameter::setParam(const std::string& v)
+{
+  return setParam(v.c_str());
+}
+
 std::string StringParameter::getDefaultStr() const {
   return def_value;
 }

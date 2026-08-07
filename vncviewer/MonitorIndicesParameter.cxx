@@ -89,6 +89,11 @@ bool MonitorIndicesParameter::setParam(const char* v)
     return StringParameter::setParam(v);
 }
 
+bool MonitorIndicesParameter::setParam(const std::string& v)
+{
+    return setParam(v.c_str());
+}
+
 bool MonitorIndicesParameter::setParam(std::set<int> indices)
 {
     static const int BUF_MAX_LEN = 1024;

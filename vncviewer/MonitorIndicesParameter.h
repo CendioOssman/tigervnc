@@ -31,6 +31,7 @@ public:
     using StringParameter::setParam;
     bool setParam(std::set<int> indices);
     bool setParam(const char* v) override;
+    bool setParam(const std::string& v) override;
 private:
     typedef struct {
         int x, y, w, h;
