@@ -22,8 +22,7 @@
 
 #include "OptionsPage.h"
 
-OptionsPage::OptionsPage(int tx, int ty, int tw, int th,
-                         const char* label)
-  : Fl_Group(tx, ty, tw, th, label)
+OptionsPage::OptionsPage(QWidget* parent)
+  : QWidget(parent)
 {
 }

@@ -21,19 +21,21 @@
 
 #include "OptionsPage.h"
 
-class Fl_Check_Button;
+class QCheckBox;
 
 class OptionsMisc : public OptionsPage
 {
+  Q_OBJECT
+
 public:
-  OptionsMisc(int tx, int ty, int tw, int th);
+  OptionsMisc(QWidget* parent=nullptr);
 
   void loadOptions() override;
   void storeOptions() override;
 
 protected:
-  Fl_Check_Button *sharedCheckbox;
-  Fl_Check_Button *reconnectCheckbox;
+  QCheckBox* sharedCheckbox;
+  QCheckBox* reconnectCheckbox;
 };
 
 #endif

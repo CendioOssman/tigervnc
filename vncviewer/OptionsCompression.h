@@ -21,14 +21,17 @@
 
 #include "OptionsPage.h"
 
-class Fl_Check_Button;
-class Fl_Round_Button;
-class Fl_Int_Input;
+class QCheckBox;
+class QGroupBox;
+class QRadioButton;
+class QSpinBox;
 
 class OptionsCompression : public OptionsPage
 {
+  Q_OBJECT
+
 public:
-  OptionsCompression(int tx, int ty, int tw, int th);
+  OptionsCompression(QWidget* parent=nullptr);
 
   void loadOptions() override;
   void storeOptions() override;
@@ -39,27 +42,27 @@ protected:
   void handleJpeg();
 
 protected:
-  Fl_Check_Button *autoselectCheckbox;
+  QCheckBox* autoselectCheckbox;
 
-  Fl_Group *encodingGroup;
-  Fl_Round_Button *tightButton;
-  Fl_Round_Button *zrleButton;
-  Fl_Round_Button *hextileButton;
+  QGroupBox* encodingGroup;
+  QRadioButton* tightButton;
+  QRadioButton* zrleButton;
+  QRadioButton* hextileButton;
 #ifdef HAVE_H264
-  Fl_Round_Button *h264Button;
+  QRadioButton* h264Button;
 #endif
-  Fl_Round_Button *rawButton;
+  QRadioButton* rawButton;
 
-  Fl_Group *colorlevelGroup;
-  Fl_Round_Button *fullcolorCheckbox;
-  Fl_Round_Button *mediumcolorCheckbox;
-  Fl_Round_Button *lowcolorCheckbox;
-  Fl_Round_Button *verylowcolorCheckbox;
+  QGroupBox* colorlevelGroup;
+  QRadioButton* fullcolorCheckbox;
+  QRadioButton* mediumcolorCheckbox;
+  QRadioButton* lowcolorCheckbox;
+  QRadioButton* verylowcolorCheckbox;
 
-  Fl_Check_Button *compressionCheckbox;
-  Fl_Check_Button *jpegCheckbox;
-  Fl_Int_Input *compressionInput;
-  Fl_Int_Input *jpegInput;
+  QCheckBox* compressionCheckbox;
+  QCheckBox* jpegCheckbox;
+  QSpinBox* compressionInput;
+  QSpinBox* jpegInput;
 };
 
 #endif

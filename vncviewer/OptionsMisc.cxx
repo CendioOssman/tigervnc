@@ -20,43 +20,37 @@
 #include <config.h>
 #endif
 
-#include <FL/Fl_Check_Button.H>
+#include <QCheckBox>
+#include <QVBoxLayout>
 
 #include "OptionsMisc.h"
 #include "i18n.h"
 #include "parameters.h"
 
-#include "fltk/layout.h"
-
-OptionsMisc::OptionsMisc(int tx, int ty, int tw, int th)
-  : OptionsPage(tx, ty, tw, th, _("Miscellaneous"))
+OptionsMisc::OptionsMisc(QWidget* parent)
+  : OptionsPage(parent)
 {
-  tx += OUTER_MARGIN;
-  ty += OUTER_MARGIN;
+  QBoxLayout* layout = new QVBoxLayout;
 
-  sharedCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                  CHECK_MIN_WIDTH,
-                                                  CHECK_HEIGHT,
-                                                  _("Shared (don't disconnect other viewers)")));
-  ty += CHECK_HEIGHT + TIGHT_MARGIN;
+  sharedCheckbox = new QCheckBox(_("Shared (don't disconnect other viewers)"));
+  layout->addWidget(sharedCheckbox);
 
-  reconnectCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                  CHECK_MIN_WIDTH,
-                                                  CHECK_HEIGHT,
-                                                  _("Ask to reconnect on connection errors")));
-  ty += CHECK_HEIGHT + TIGHT_MARGIN;
+  reconnectCheckbox = new QCheckBox(_("Ask to reconnect on connection errors"));
+  layout->addWidget(reconnectCheckbox);
 
-  end();
+  layout->addStretch(1);
+
+  setLayout(layout);
 }
 
 void OptionsMisc::loadOptions()
 {
-  sharedCheckbox->value(shared);
-  reconnectCheckbox->value(reconnectOnError);
+  sharedCheckbox->setChecked(shared);
+  reconnectCheckbox->setChecked(reconnectOnError);
 }
 
 void OptionsMisc::storeOptions()
 {
-  shared.setParam(sharedCheckbox->value());
-  reconnectOnError.setParam(reconnectCheckbox->value());
+  shared.setParam(sharedCheckbox->isChecked());
+  reconnectOnError.setParam(reconnectCheckbox->isChecked());
 }

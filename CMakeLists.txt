@@ -315,7 +315,6 @@ if(BUILD_VIEWER)
   add_definitions("-DQT_DEPRECATED_WARNINGS_SINCE=0x050f00")
 
   find_package(X11 COMPONENTS Xext Xi Xkb Xrender REQUIRED)
-  find_package(X11 COMPONENTS Xrandr)
 endif()
 
 # Check for GNUTLS library

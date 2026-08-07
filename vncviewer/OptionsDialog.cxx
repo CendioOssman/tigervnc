@@ -20,6 +20,14 @@
 #include <config.h>
 #endif
 
+#include <QDialogButtonBox>
+#include <QLabel>
+#include <QPushButton>
+#include <QTimer>
+#include <QVBoxLayout>
+
+#include "qt/QNavigation.h"
+
 #include "OptionsDialog.h"
 #include "i18n.h"
 
@@ -29,72 +37,38 @@
 #include "OptionsDisplay.h"
 #include "OptionsMisc.h"
 
-#include "fltk/layout.h"
-#include "fltk/Fl_Navigation.h"
-
-#include <FL/Fl_Button.H>
-#include <FL/Fl_Return_Button.H>
-
 std::map<OptionsCallback*, void*> OptionsDialog::callbacks;
 
-OptionsDialog::OptionsDialog()
-  : Fl_Window(580, 420, _("TigerVNC Options")),
-    finishedCallback(nullptr), finishedUserData(nullptr)
+OptionsDialog::OptionsDialog(QWidget* parent)
+  : QDialog(parent)
 {
-  int x, y;
-  Fl_Navigation *navigation;
-  Fl_Button *button;
+  setWindowTitle(_("TigerVNC Options"));
 
-  // Odd dimensions to get rid of extra borders
-  // FIXME: We need to retain the top border on Windows as they don't
-  //        have any separator for the caption, which looks odd
-#ifdef WIN32
-  navigation = new Fl_Navigation(-1, 0, w()+2,
-                                 h() - OUTER_MARGIN - BUTTON_HEIGHT - OUTER_MARGIN);
-#else
-  navigation = new Fl_Navigation(-1, -1, w()+2,
-                                 h()+1 - OUTER_MARGIN - BUTTON_HEIGHT - OUTER_MARGIN);
-#endif
-  {
-    int tx, ty, tw, th;
+  QBoxLayout* layout = new QVBoxLayout;
 
-    navigation->client_area(tx, ty, tw, th, 150);
-
-    pages.push_back(new OptionsCompression(tx, ty, tw, th));
+  navigation = new QNavigation;
+  navigation->addWidget(_("Compression"), new OptionsCompression);
 #if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
-    pages.push_back(new OptionsSecurity(tx, ty, tw, th));
+  navigation->addWidget(_("Security"), new OptionsSecurity);
 #endif
-    pages.push_back(new OptionsInput(tx, ty, tw, th));
-    pages.push_back(new OptionsDisplay(tx, ty, tw, th));
-    pages.push_back(new OptionsMisc(tx, ty, tw, th));
-  }
+  navigation->addWidget(_("Input"), new OptionsInput);
+  navigation->addWidget(_("Display"), new OptionsDisplay);
+  navigation->addWidget(_("Miscellaneous"), new OptionsMisc);
+  layout->addWidget(navigation);
 
-  navigation->end();
+  QDialogButtonBox* buttonBox = new QDialogButtonBox;
+  buttonBox->addButton(QDialogButtonBox::Ok);
+  buttonBox->addButton(QDialogButtonBox::Cancel);
+  connect(buttonBox, &QDialogButtonBox::accepted,
+          this, &QDialog::accept);
+  connect(buttonBox, &QDialogButtonBox::rejected,
+          this, &QDialog::reject);
+  layout->addWidget(buttonBox);
 
-  x = w() - BUTTON_WIDTH * 2 - INNER_MARGIN - OUTER_MARGIN;
-  y = h() - BUTTON_HEIGHT - OUTER_MARGIN;
+  setLayout(layout);
+  adjustSize();
 
-  button = new Fl_Button(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Cancel"));
-  button->callback(
-    [](Fl_Widget*, void* data) {
-      ((OptionsDialog*)data)->handleCancel();
-    },
-    this);
-
-  x += BUTTON_WIDTH + INNER_MARGIN;
-
-  button = new Fl_Return_Button(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("OK"));
-  button->callback(
-    [](Fl_Widget*, void* data) {
-      ((OptionsDialog*)data)->handleOK();
-    },
-    this);
-
-  callback(
-    [](Fl_Widget*, void* data) {
-      ((OptionsDialog*)data)->handleCancel();
-    },
-    this);
+  connect(this, &QDialog::accepted, this, &OptionsDialog::storeOptions);
 
   loadOptions();
 }
@@ -116,51 +90,27 @@ void OptionsDialog::removeCallback(OptionsCallback *cb)
   callbacks.erase(cb);
 }
 
-
-void OptionsDialog::finished(Fl_Callback* cb, void* p)
-{
-  finishedCallback = cb;
-  finishedUserData = p;
-}
-
-
-void OptionsDialog::hide()
-{
-  Fl_Window::hide();
-
-  if (finishedCallback != nullptr)
-    finishedCallback(this, finishedUserData);
-}
-
-
 void OptionsDialog::loadOptions(void)
 {
-  for (OptionsPage *page : pages)
+  OptionsPage* page;
+  for (int i = 0; i < navigation->count(); ++i) {
+    page = dynamic_cast<OptionsPage*>(navigation->widget(i));
+    assert(page);
     page->loadOptions();
+  }
 }
-
 
 void OptionsDialog::storeOptions(void)
 {
-  for (OptionsPage *page : pages)
+  OptionsPage* page;
+  for (int i = 0; i < navigation->count(); ++i) {
+    page = dynamic_cast<OptionsPage*>(navigation->widget(i));
+    assert(page);
     page->storeOptions();
+  }
 
   std::map<OptionsCallback*, void*>::const_iterator iter;
 
   for (iter = callbacks.begin();iter != callbacks.end();++iter)
     iter->first(iter->second);
-}
-
-
-void OptionsDialog::handleCancel()
-{
-  hide();
-}
-
-
-void OptionsDialog::handleOK()
-{
-  hide();
-
-  storeOptions();
 }

@@ -24,17 +24,20 @@
 
 #include <set>
 
+#include <QApplication>
+#include <QGroupBox>
+#include <QLabel>
+#include <QRadioButton>
+#include <QScreen>
+#include <QVBoxLayout>
+
 #include <FL/Fl.H>
-#include <FL/Fl_Box.H>
-#include <FL/Fl_Round_Button.H>
 
 #include "OptionsDisplay.h"
 #include "i18n.h"
 #include "parameters.h"
 
-#include "fltk/Fl_Monitor_Arrangement.h"
-#include "fltk/layout.h"
-#include "fltk/util.h"
+#include "qt/QMonitorArrangement.h"
 
 #ifdef __APPLE__
 #include "cocoa.h"
@@ -46,83 +49,39 @@
 
 static std::set<OptionsDisplay*> instances;
 
-OptionsDisplay::OptionsDisplay(int tx, int ty, int tw, int th)
-  : OptionsPage(tx, ty, tw, th, _("Display"))
+OptionsDisplay::OptionsDisplay(QWidget* parent)
+  : OptionsPage(parent)
 {
-  int orig_tx;
-  int width;
-
-  tx += OUTER_MARGIN;
-  ty += OUTER_MARGIN;
-
-  width = tw - OUTER_MARGIN * 2;
-
-  orig_tx = tx;
+  QBoxLayout* indent;
+  QBoxLayout* layout = new QVBoxLayout;
 
   /* Display mode */
-  ty += GROUP_LABEL_OFFSET;
-  displayModeGroup = new Fl_Group(tx, ty, width, 0, _("Display mode"));
-  displayModeGroup->labelfont(FL_BOLD);
-  displayModeGroup->box(FL_FLAT_BOX);
-  displayModeGroup->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
+  displayModeGroup = new QGroupBox(_("Display mode"));
+  layout->addWidget(displayModeGroup, 1);
 
   {
-    tx += INDENT;
-    ty += TIGHT_MARGIN;
-    width -= INDENT;
+    QBoxLayout* box = new QVBoxLayout;
+    displayModeGroup->setLayout(box);
 
-    windowedButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                                  RADIO_MIN_WIDTH,
-                                                  RADIO_HEIGHT,
-                                                  _("Windowed")));
-    windowedButton->type(FL_RADIO_BUTTON);
-    windowedButton->callback(
-      [](Fl_Widget*, void* data) {
-        ((OptionsDisplay*)data)->handleFullScreenMode();
-      },
-      this);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    windowedButton = new QRadioButton(_("Windowed"));
+    box->addWidget(windowedButton);
 
-    currentMonitorButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                                        RADIO_MIN_WIDTH,
-                                                        RADIO_HEIGHT,
-                                                        _("Full screen on current monitor")));
-    currentMonitorButton->type(FL_RADIO_BUTTON);
-    currentMonitorButton->callback(
-      [](Fl_Widget*, void* data) {
-        ((OptionsDisplay*)data)->handleFullScreenMode();
-      },
-      this);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    currentMonitorButton = new QRadioButton(_("Full screen on current monitor"));
+    box->addWidget(currentMonitorButton);
 
-    allMonitorsButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                            RADIO_MIN_WIDTH,
-                                            RADIO_HEIGHT,
-                                            _("Full screen on all monitors")));
-    allMonitorsButton->type(FL_RADIO_BUTTON);
-    allMonitorsButton->callback(
-      [](Fl_Widget*, void* data) {
-        ((OptionsDisplay*)data)->handleFullScreenMode();
-      },
-      this);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    allMonitorsButton = new QRadioButton(_("Full screen on all monitors"));
+    box->addWidget(allMonitorsButton);
 
-    selectedMonitorsButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                                 RADIO_MIN_WIDTH,
-                                                 RADIO_HEIGHT,
-                                                 _("Full screen on selected monitor(s)")));
-    selectedMonitorsButton->type(FL_RADIO_BUTTON);
-    selectedMonitorsButton->callback(
-      [](Fl_Widget*, void* data) {
-        ((OptionsDisplay*)data)->handleFullScreenMode();
-      },
-      this);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    selectedMonitorsButton = new QRadioButton(_("Full screen on selected monitor(s)"));
+    connect(selectedMonitorsButton, &QRadioButton::toggled,
+            this, &OptionsDisplay::handleFullScreenMode);
+    box->addWidget(selectedMonitorsButton);
 
-    monitorArrangement = new Fl_Monitor_Arrangement(
-                              tx + INDENT, ty,
-                              width - INDENT, 150);
-    ty += 150 + INNER_MARGIN;
+    indent = new QHBoxLayout;
+    indent->addSpacing(20);
+    monitorArrangement = new QMonitorArrangement;
+    indent->addWidget(monitorArrangement, 1);
+    box->addLayout(indent, 1);
 
     bool supportsMultihead;
 
@@ -140,13 +99,12 @@ OptionsDisplay::OptionsDisplay(int tx, int ty, int tw, int th)
 #endif
 
     if (!supportsMultihead) {
-      Fl_Box* box;
+      QLabel* widget;
       const char* label;
-      int w, h;
 
-      allMonitorsButton->deactivate();
-      selectedMonitorsButton->deactivate();
-      monitorArrangement->deactivate();
+      allMonitorsButton->setEnabled(false);
+      selectedMonitorsButton->setEnabled(false);
+      monitorArrangement->setEnabled(false);
 
 #if defined(WIN32)
       assert(false);
@@ -159,29 +117,15 @@ OptionsDisplay::OptionsDisplay(int tx, int ty, int tw, int th)
                 "the current desktop environment");
 #endif
 
-      fl_font(FL_HELVETICA, FL_NORMAL_SIZE);
-      w = width;
-      fl_measure(label, w, h);
-
-      box = new Fl_Box(tx, ty, w, h, label);
-      box->align(FL_ALIGN_TOP_LEFT | FL_ALIGN_INSIDE | FL_ALIGN_WRAP);
-      ty += h + INNER_MARGIN;
+      widget = new QLabel();
+      widget->setWordWrap(true);
+      widget->setTextFormat(Qt::PlainText);
+      widget->setText(label);
+      box->addWidget(widget);
     }
   }
-  ty -= INNER_MARGIN;
 
-  displayModeGroup->end();
-  /* Needed for resize to work sanely */
-  displayModeGroup->resizable(nullptr);
-  displayModeGroup->size(displayModeGroup->w(),
-                         ty - displayModeGroup->y());
-
-  /* Back to normal */
-  tx = orig_tx;
-  ty += INNER_MARGIN;
-  width = tw - OUTER_MARGIN * 2;
-
-  end();
+  setLayout(layout);
 
   if (instances.size() == 0)
     Fl::add_handler(fltk_event_handler);
@@ -199,48 +143,84 @@ OptionsDisplay::~OptionsDisplay()
 void OptionsDisplay::loadOptions()
 {
   if (!fullScreen) {
-    windowedButton->setonly();
+    windowedButton->setChecked(true);
   } else {
     if (!strcasecmp(fullScreenMode, "all")) {
-      allMonitorsButton->setonly();
+      allMonitorsButton->setChecked(true);
     } else if (!strcasecmp(fullScreenMode, "selected")) {
-      selectedMonitorsButton->setonly();
+      selectedMonitorsButton->setChecked(true);
     } else {
-      currentMonitorButton->setonly();
+      currentMonitorButton->setChecked(true);
     }
   }
 
-  monitorArrangement->value(fullScreenSelectedMonitors.getParam());
+  // The other stuff is still FLTK, so we need to map things
+  std::set<int> indices;
+  QList<QScreen*> screens;
+
+  indices = fullScreenSelectedMonitors.getParam();
+
+  for (int i : indices) {
+    int x, y, w, h;
+    QRect geom;
+
+    Fl::screen_xywh(x, y, w, h, i);
+    geom.setRect(x, y, w, h);
+
+    for (QScreen* screen : qApp->screens()) {
+      if (screen->geometry() == geom) {
+        screens.append(screen);
+        break;
+      }
+    }
+  }
+
+  monitorArrangement->setScreens(screens);
 
   handleFullScreenMode();
 }
 
 void OptionsDisplay::storeOptions()
 {
-  if (windowedButton->value()) {
+  if (windowedButton->isChecked()) {
     fullScreen.setParam(false);
   } else {
     fullScreen.setParam(true);
 
-    if (allMonitorsButton->value()) {
+    if (allMonitorsButton->isChecked()) {
       fullScreenMode.setParam("All");
-    } else if (selectedMonitorsButton->value()) {
+    } else if (selectedMonitorsButton->isChecked()) {
       fullScreenMode.setParam("Selected");
     } else {
       fullScreenMode.setParam("Current");
     }
   }
 
-  fullScreenSelectedMonitors.setParam(monitorArrangement->value());
+  // The other stuff is still FLTK, so we need to map things
+  QList<QScreen*> screens = monitorArrangement->screens();
+  std::set<int> indices;
+
+  for (int i = 0; i < Fl::screen_count(); i++) {
+    int x, y, w, h;
+    QRect geom;
+
+    Fl::screen_xywh(x, y, w, h, i);
+    geom.setRect(x, y, w, h);
+
+    for (QScreen* screen : screens) {
+      if (screen->geometry() != geom)
+        continue;
+      indices.insert(i);
+      break;
+    }
+  }
+
+  fullScreenSelectedMonitors.setParam(indices);
 }
 
 void OptionsDisplay::handleFullScreenMode()
 {
-  if (selectedMonitorsButton->value()) {
-    monitorArrangement->activate();
-  } else {
-    monitorArrangement->deactivate();
-  }
+  monitorArrangement->setEnabled(selectedMonitorsButton->isChecked());
 }
 
 int OptionsDisplay::fltk_event_handler(int event)
@@ -265,5 +245,26 @@ void OptionsDisplay::handleScreenConfigTimeout(void* data)
 
     assert(self);
 
-    self->monitorArrangement->value(fullScreenSelectedMonitors.getParam());
+    // The other stuff is still FLTK, so we need to map things
+    std::set<int> indices;
+    QList<QScreen*> screens;
+
+    indices = fullScreenSelectedMonitors.getParam();
+
+    for (int i : indices) {
+      int x, y, w, h;
+      QRect geom;
+
+      Fl::screen_xywh(x, y, w, h, i);
+      geom.setRect(x, y, w, h);
+
+      for (QScreen* screen : qApp->screens()) {
+        if (screen->geometry() == geom) {
+          screens.append(screen);
+          break;
+        }
+      }
+    }
+
+    self->monitorArrangement->setScreens(screens);
 }

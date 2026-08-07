@@ -20,8 +20,12 @@
 #include <config.h>
 #endif
 
-#include <FL/Fl_Check_Button.H>
-#include <FL/Fl_Input.H>
+#include <QCheckBox>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QLabel>
+#include <QLineEdit>
+#include <QVBoxLayout>
 
 #include <rfb/Security.h>
 #include <rfb/SecurityClient.h>
@@ -32,139 +36,81 @@
 #include "OptionsSecurity.h"
 #include "i18n.h"
 
-#include "fltk/layout.h"
-
-OptionsSecurity::OptionsSecurity(int tx, int ty, int tw, int th)
-  : OptionsPage(tx, ty, tw, th, _("Security"))
+OptionsSecurity::OptionsSecurity(QWidget* parent)
+  : OptionsPage(parent)
 {
-  int orig_tx;
-  int width;
-
-  tx += OUTER_MARGIN;
-  ty += OUTER_MARGIN;
-
-  width = tw - OUTER_MARGIN * 2;
-
-  orig_tx = tx;
+  QBoxLayout* indent;
+  QFormLayout* form;
+  QBoxLayout* layout = new QVBoxLayout;
 
   /* Encryption */
-  ty += GROUP_LABEL_OFFSET;
-  encryptionGroup = new Fl_Group(tx, ty, width, 0, _("Encryption"));
-  encryptionGroup->labelfont(FL_BOLD);
-  encryptionGroup->box(FL_FLAT_BOX);
-  encryptionGroup->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
+  encryptionGroup = new QGroupBox(_("Encryption"));
+  layout->addWidget(encryptionGroup);
 
   {
-    tx += INDENT;
-    ty += TIGHT_MARGIN;
+    QBoxLayout* box = new QVBoxLayout;
+    encryptionGroup->setLayout(box);
 
-    encNoneCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                   CHECK_MIN_WIDTH,
-                                                   CHECK_HEIGHT,
-                                                   _("None")));
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    encNoneCheckbox = new QCheckBox(_("None"));
+    box->addWidget(encNoneCheckbox);
 
 #ifdef HAVE_GNUTLS
-    encTLSCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                  CHECK_MIN_WIDTH,
-                                                  CHECK_HEIGHT,
-                                                  _("TLS with anonymous certificates")));
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    encTLSCheckbox = new QCheckBox(_("TLS with anonymous certificates"));
+    box->addWidget(encTLSCheckbox);
 
-    encX509Checkbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                   CHECK_MIN_WIDTH,
-                                                   CHECK_HEIGHT,
-                                                   _("TLS with X509 certificates")));
-    encX509Checkbox->callback(
-      [](Fl_Widget*, void* data) {
-        ((OptionsSecurity*)data)->handleX509();
-      },
-      this);
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    encX509Checkbox = new QCheckBox(_("TLS with X509 certificates"));
+    connect(encX509Checkbox, &QCheckBox::toggled,
+            this, &OptionsSecurity::handleX509);
+    box->addWidget(encX509Checkbox);
 
-    ty += INPUT_LABEL_OFFSET;
-    caInput = new Fl_Input(tx + INDENT, ty,
-                           width - INDENT * 2, INPUT_HEIGHT,
-                           _("Path to X509 CA certificate"));
-    caInput->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
-    ty += INPUT_HEIGHT + TIGHT_MARGIN;
+    indent = new QHBoxLayout;
+    indent->addSpacing(20);
+    form = new QFormLayout;
+    form->setRowWrapPolicy(QFormLayout::WrapAllRows);
+    indent->addLayout(form);
+    caInput = new QLineEdit;
+    form->addRow(_("Path to X509 CA certificate"), caInput);
+    box->addLayout(indent);
 
-    ty += INPUT_LABEL_OFFSET;
-    crlInput = new Fl_Input(tx + INDENT, ty,
-                            width - INDENT * 2, INPUT_HEIGHT,
-                            _("Path to X509 CRL file"));
-    crlInput->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
-    ty += INPUT_HEIGHT + TIGHT_MARGIN;
+    indent = new QHBoxLayout;
+    indent->addSpacing(20);
+    form = new QFormLayout;
+    form->setRowWrapPolicy(QFormLayout::WrapAllRows);
+    indent->addLayout(form);
+    crlInput = new QLineEdit;
+    form->addRow(_("Path to X509 CRL file"), crlInput);
+    box->addLayout(indent);
 #endif
+
 #ifdef HAVE_NETTLE
-    encRSAAESCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                     CHECK_MIN_WIDTH,
-                                                     CHECK_HEIGHT,
-                                                     "RSA-AES"));
-    encRSAAESCheckbox->callback(
-      [](Fl_Widget*, void* data) {
-        ((OptionsSecurity*)data)->handleRSAAES();
-      },
-      this);
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    encRSAAESCheckbox = new QCheckBox(_("RSA-AES"));
+    connect(encRSAAESCheckbox, &QCheckBox::toggled,
+            this, &OptionsSecurity::handleRSAAES);
+    box->addWidget(encRSAAESCheckbox);
 #endif
   }
-
-  ty -= TIGHT_MARGIN;
-
-  encryptionGroup->end();
-  /* Needed for resize to work sanely */
-  encryptionGroup->resizable(nullptr);
-  encryptionGroup->size(encryptionGroup->w(),
-                        ty - encryptionGroup->y());
-
-  /* Back to normal */
-  tx = orig_tx;
-  ty += INNER_MARGIN;
 
   /* Authentication */
-  ty += GROUP_LABEL_OFFSET;
-  authenticationGroup = new Fl_Group(tx, ty, width, 0, _("Authentication"));
-  authenticationGroup->labelfont(FL_BOLD);
-  authenticationGroup->box(FL_FLAT_BOX);
-  authenticationGroup->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
+  authenticationGroup = new QGroupBox(_("Authentication"));
+  layout->addWidget(authenticationGroup);
 
   {
-    tx += INDENT;
-    ty += TIGHT_MARGIN;
+    QBoxLayout* box = new QVBoxLayout;
+    authenticationGroup->setLayout(box);
 
-    authNoneCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                    CHECK_MIN_WIDTH,
-                                                    CHECK_HEIGHT,
-                                                    _("None")));
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    authNoneCheckbox = new QCheckBox(_("None"));
+    box->addWidget(authNoneCheckbox);
 
-    authVncCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                   CHECK_MIN_WIDTH,
-                                                   CHECK_HEIGHT,
-                                                   _("Standard VNC (insecure without encryption)")));
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    authVncCheckbox = new QCheckBox(_("Standard VNC (insecure without encryption)"));
+    box->addWidget(authVncCheckbox);
 
-    authPlainCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                     CHECK_MIN_WIDTH,
-                                                     CHECK_HEIGHT,
-                                                     _("Username and password (insecure without encryption)")));
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    authPlainCheckbox = new QCheckBox(_("Username and password (insecure without encryption)"));
+    box->addWidget(authPlainCheckbox);
   }
 
-  ty -= TIGHT_MARGIN;
+  layout->addStretch(1);
 
-  authenticationGroup->end();
-  /* Needed for resize to work sanely */
-  authenticationGroup->resizable(nullptr);
-  authenticationGroup->size(authenticationGroup->w(),
-                            ty - authenticationGroup->y());
-
-  /* Back to normal */
-  tx = orig_tx;
-  ty += INNER_MARGIN;
-
-  end();
+  setLayout(layout);
 }
 
 void OptionsSecurity::loadOptions()
@@ -175,29 +121,29 @@ void OptionsSecurity::loadOptions()
 
   std::list<uint32_t> secTypesExt;
 
-  encNoneCheckbox->value(false);
+  encNoneCheckbox->setChecked(false);
 #ifdef HAVE_GNUTLS
-  encTLSCheckbox->value(false);
-  encX509Checkbox->value(false);
+  encTLSCheckbox->setChecked(false);
+  encX509Checkbox->setChecked(false);
 #endif
 #ifdef HAVE_NETTLE
-  encRSAAESCheckbox->value(false);
+  encRSAAESCheckbox->setChecked(false);
 #endif
 
-  authNoneCheckbox->value(false);
-  authVncCheckbox->value(false);
-  authPlainCheckbox->value(false);
+  authNoneCheckbox->setChecked(false);
+  authVncCheckbox->setChecked(false);
+  authPlainCheckbox->setChecked(false);
 
   secTypes = security.GetEnabledSecTypes();
   for (uint8_t type : secTypes) {
     switch (type) {
     case rfb::secTypeNone:
-      encNoneCheckbox->value(true);
-      authNoneCheckbox->value(true);
+      encNoneCheckbox->setChecked(true);
+      authNoneCheckbox->setChecked(true);
       break;
     case rfb::secTypeVncAuth:
-      encNoneCheckbox->value(true);
-      authVncCheckbox->value(true);
+      encNoneCheckbox->setChecked(true);
+      authVncCheckbox->setChecked(true);
       break;
     }
   }
@@ -206,50 +152,50 @@ void OptionsSecurity::loadOptions()
   for (uint32_t type : secTypesExt) {
     switch (type) {
     case rfb::secTypePlain:
-      encNoneCheckbox->value(true);
-      authPlainCheckbox->value(true);
+      encNoneCheckbox->setChecked(true);
+      authPlainCheckbox->setChecked(true);
       break;
 #ifdef HAVE_GNUTLS
     case rfb::secTypeTLSNone:
-      encTLSCheckbox->value(true);
-      authNoneCheckbox->value(true);
+      encTLSCheckbox->setChecked(true);
+      authNoneCheckbox->setChecked(true);
       break;
     case rfb::secTypeTLSVnc:
-      encTLSCheckbox->value(true);
-      authVncCheckbox->value(true);
+      encTLSCheckbox->setChecked(true);
+      authVncCheckbox->setChecked(true);
       break;
     case rfb::secTypeTLSPlain:
-      encTLSCheckbox->value(true);
-      authPlainCheckbox->value(true);
+      encTLSCheckbox->setChecked(true);
+      authPlainCheckbox->setChecked(true);
       break;
     case rfb::secTypeX509None:
-      encX509Checkbox->value(true);
-      authNoneCheckbox->value(true);
+      encX509Checkbox->setChecked(true);
+      authNoneCheckbox->setChecked(true);
       break;
     case rfb::secTypeX509Vnc:
-      encX509Checkbox->value(true);
-      authVncCheckbox->value(true);
+      encX509Checkbox->setChecked(true);
+      authVncCheckbox->setChecked(true);
       break;
     case rfb::secTypeX509Plain:
-      encX509Checkbox->value(true);
-      authPlainCheckbox->value(true);
+      encX509Checkbox->setChecked(true);
+      authPlainCheckbox->setChecked(true);
       break;
 #endif
 #ifdef HAVE_NETTLE
     case rfb::secTypeRA2:
     case rfb::secTypeRA256:
-      encRSAAESCheckbox->value(true);
-      authVncCheckbox->value(true);
-      authPlainCheckbox->value(true);
+      encRSAAESCheckbox->setChecked(true);
+      authVncCheckbox->setChecked(true);
+      authPlainCheckbox->setChecked(true);
       break;
     case rfb::secTypeRA2ne:
     case rfb::secTypeRAne256:
-      authVncCheckbox->value(true);
+      authVncCheckbox->setChecked(true);
       /* fall through */
     case rfb::secTypeDH:
     case rfb::secTypeMSLogonII:
-      encNoneCheckbox->value(true);
-      authPlainCheckbox->value(true);
+      encNoneCheckbox->setChecked(true);
+      authPlainCheckbox->setChecked(true);
       break;
 #endif
 
@@ -257,8 +203,8 @@ void OptionsSecurity::loadOptions()
   }
 
 #ifdef HAVE_GNUTLS
-  caInput->value(rfb::CSecurityTLS::X509CA);
-  crlInput->value(rfb::CSecurityTLS::X509CRL);
+  caInput->setText((const char*)rfb::CSecurityTLS::X509CA);
+  crlInput->setText((const char*)rfb::CSecurityTLS::X509CRL);
 
   handleX509();
 #endif
@@ -269,17 +215,17 @@ void OptionsSecurity::storeOptions()
   rfb::Security security;
 
   /* Process security types which don't use encryption */
-  if (encNoneCheckbox->value()) {
-    if (authNoneCheckbox->value())
+  if (encNoneCheckbox->isChecked()) {
+    if (authNoneCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeNone);
-    if (authVncCheckbox->value()) {
+    if (authVncCheckbox->isChecked()) {
       security.EnableSecType(rfb::secTypeVncAuth);
 #ifdef HAVE_NETTLE
       security.EnableSecType(rfb::secTypeRA2ne);
       security.EnableSecType(rfb::secTypeRAne256);
 #endif
     }
-    if (authPlainCheckbox->value()) {
+    if (authPlainCheckbox->isChecked()) {
       security.EnableSecType(rfb::secTypePlain);
 #ifdef HAVE_NETTLE
       security.EnableSecType(rfb::secTypeRA2ne);
@@ -292,31 +238,31 @@ void OptionsSecurity::storeOptions()
 
 #ifdef HAVE_GNUTLS
   /* Process security types which use TLS encryption */
-  if (encTLSCheckbox->value()) {
-    if (authNoneCheckbox->value())
+  if (encTLSCheckbox->isChecked()) {
+    if (authNoneCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeTLSNone);
-    if (authVncCheckbox->value())
+    if (authVncCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeTLSVnc);
-    if (authPlainCheckbox->value())
+    if (authPlainCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeTLSPlain);
   }
 
   /* Process security types which use X509 encryption */
-  if (encX509Checkbox->value()) {
-    if (authNoneCheckbox->value())
+  if (encX509Checkbox->isChecked()) {
+    if (authNoneCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeX509None);
-    if (authVncCheckbox->value())
+    if (authVncCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeX509Vnc);
-    if (authPlainCheckbox->value())
+    if (authPlainCheckbox->isChecked())
       security.EnableSecType(rfb::secTypeX509Plain);
   }
 
-  rfb::CSecurityTLS::X509CA.setParam(caInput->value());
-  rfb::CSecurityTLS::X509CRL.setParam(crlInput->value());
+  rfb::CSecurityTLS::X509CA.setParam(caInput->text().toStdString());
+  rfb::CSecurityTLS::X509CRL.setParam(crlInput->text().toStdString());
 #endif
 
 #ifdef HAVE_NETTLE
-  if (encRSAAESCheckbox->value()) {
+  if (encRSAAESCheckbox->isChecked()) {
     security.EnableSecType(rfb::secTypeRA2);
     security.EnableSecType(rfb::secTypeRA256);
   }
@@ -326,19 +272,14 @@ void OptionsSecurity::storeOptions()
 
 void OptionsSecurity::handleX509()
 {
-  if (encX509Checkbox->value()) {
-    caInput->activate();
-    crlInput->activate();
-  } else {
-    caInput->deactivate();
-    crlInput->deactivate();
-  }
+  caInput->setEnabled(encX509Checkbox->isChecked());
+  crlInput->setEnabled(encX509Checkbox->isChecked());
 }
 
 void OptionsSecurity::handleRSAAES()
 {
-  if (encRSAAESCheckbox->value()) {
-    authVncCheckbox->value(true);
-    authPlainCheckbox->value(true);
+  if (encRSAAESCheckbox->isChecked()) {
+    authVncCheckbox->setChecked(true);
+    authPlainCheckbox->setChecked(true);
   }
 }

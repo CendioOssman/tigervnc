@@ -20,9 +20,12 @@
 #include <config.h>
 #endif
 
-#include <FL/Fl_Check_Button.H>
-#include <FL/Fl_Round_Button.H>
-#include <FL/Fl_Int_Input.H>
+#include <QCheckBox>
+#include <QGroupBox>
+#include <QLabel>
+#include <QRadioButton>
+#include <QSpinBox>
+#include <QVBoxLayout>
 
 #include <rfb/encodings.h>
 
@@ -30,288 +33,192 @@
 #include "i18n.h"
 #include "parameters.h"
 
-#include "fltk/layout.h"
-
-OptionsCompression::OptionsCompression(int tx, int ty, int tw, int th)
-  : OptionsPage(tx, ty, tw, th, _("Compression"))
+OptionsCompression::OptionsCompression(QWidget* parent)
+  : OptionsPage(parent)
 {
-  int orig_tx, orig_ty;
-  int col1_ty, col2_ty;
-  int half_width, full_width;
-
-  tx += OUTER_MARGIN;
-  ty += OUTER_MARGIN;
-
-  full_width = tw - OUTER_MARGIN * 2;
-  half_width = (full_width - INNER_MARGIN) / 2;
+  QBoxLayout* indent;
+  QBoxLayout* layout = new QVBoxLayout;
 
   /* AutoSelect checkbox */
-  autoselectCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                     CHECK_MIN_WIDTH,
-                                                     CHECK_HEIGHT,
-                                                     _("Auto select")));
-  autoselectCheckbox->callback(
-    [](Fl_Widget*, void* data) {
-      ((OptionsCompression*)data)->handleAutoselect();
-    },
-    this);
-  ty += CHECK_HEIGHT + INNER_MARGIN;
+  autoselectCheckbox = new QCheckBox(_("Auto select"));
+  connect(autoselectCheckbox, &QCheckBox::toggled,
+          this, &OptionsCompression::handleAutoselect);
+  layout->addWidget(autoselectCheckbox);
 
   /* Two columns */
-  orig_tx = tx;
-  orig_ty = ty;
+  QBoxLayout* columns = new QHBoxLayout;
 
   /* VNC encoding box */
-  ty += GROUP_LABEL_OFFSET;
-  encodingGroup = new Fl_Group(tx, ty, half_width, 0,
-                                _("Preferred encoding"));
-  encodingGroup->box(FL_FLAT_BOX);
-  encodingGroup->labelfont(FL_BOLD);
-  encodingGroup->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
+  encodingGroup = new QGroupBox(_("Preferred encoding"));
+  columns->addWidget(encodingGroup, 1);
 
   {
-    tx += INDENT;
-    ty += TIGHT_MARGIN;
+    QBoxLayout* box = new QVBoxLayout;
+    encodingGroup->setLayout(box);
 
-    tightButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                               RADIO_MIN_WIDTH,
-                                               RADIO_HEIGHT,
-                                               "Tight"));
-    tightButton->type(FL_RADIO_BUTTON);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    tightButton = new QRadioButton("Tight");
+    box->addWidget(tightButton);
 
-    zrleButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                              RADIO_MIN_WIDTH,
-                                              RADIO_HEIGHT,
-                                              "ZRLE"));
-    zrleButton->type(FL_RADIO_BUTTON);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    zrleButton = new QRadioButton("ZRLE");
+    box->addWidget(zrleButton);
 
-    hextileButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                                 RADIO_MIN_WIDTH,
-                                                 RADIO_HEIGHT,
-                                                 "Hextile"));
-    hextileButton->type(FL_RADIO_BUTTON);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    hextileButton = new QRadioButton("Hextile");
+    box->addWidget(hextileButton);
 
 #ifdef HAVE_H264
-    h264Button = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                             RADIO_MIN_WIDTH,
-                                             RADIO_HEIGHT,
-                                             "H.264"));
-    h264Button->type(FL_RADIO_BUTTON);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    h264Button = new QRadioButton("H264");
+    box->addWidget(h264Button);
 #endif
 
-    rawButton = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                             RADIO_MIN_WIDTH,
-                                             RADIO_HEIGHT,
-                                             "Raw"));
-    rawButton->type(FL_RADIO_BUTTON);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    rawButton = new QRadioButton("Raw");
+    box->addWidget(rawButton);
   }
-
-  ty -= TIGHT_MARGIN;
-
-  encodingGroup->end();
-  /* Needed for resize to work sanely */
-  encodingGroup->resizable(nullptr);
-  encodingGroup->size(encodingGroup->w(), ty - encodingGroup->y());
-  col1_ty = ty;
-
-  /* Second column */
-  tx = orig_tx + half_width + INNER_MARGIN;
-  ty = orig_ty;
 
   /* Color box */
-  ty += GROUP_LABEL_OFFSET;
-  colorlevelGroup = new Fl_Group(tx, ty, half_width, 0, _("Color level"));
-  colorlevelGroup->labelfont(FL_BOLD);
-  colorlevelGroup->box(FL_FLAT_BOX);
-  colorlevelGroup->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
+  colorlevelGroup = new QGroupBox(_("Color level"));
+  columns->addWidget(colorlevelGroup, 1);
 
   {
-    tx += INDENT;
-    ty += TIGHT_MARGIN;
+    QBoxLayout* box = new QVBoxLayout;
+    colorlevelGroup->setLayout(box);
 
-    fullcolorCheckbox = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                                     RADIO_MIN_WIDTH,
-                                                     RADIO_HEIGHT,
-                                                     _("Full")));
-    fullcolorCheckbox->type(FL_RADIO_BUTTON);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    fullcolorCheckbox = new QRadioButton(_("Full"));
+    box->addWidget(fullcolorCheckbox);
 
-    mediumcolorCheckbox = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                                       RADIO_MIN_WIDTH,
-                                                       RADIO_HEIGHT,
-                                                       _("Medium")));
-    mediumcolorCheckbox->type(FL_RADIO_BUTTON);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    mediumcolorCheckbox = new QRadioButton(_("Medium"));
+    box->addWidget(mediumcolorCheckbox);
 
-    lowcolorCheckbox = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                                    RADIO_MIN_WIDTH,
-                                                    RADIO_HEIGHT,
-                                                    _("Low")));
-    lowcolorCheckbox->type(FL_RADIO_BUTTON);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    lowcolorCheckbox = new QRadioButton(_("Low"));
+    box->addWidget(lowcolorCheckbox);
 
-    verylowcolorCheckbox = new Fl_Round_Button(LBLRIGHT(tx, ty,
-                                                        RADIO_MIN_WIDTH,
-                                                        RADIO_HEIGHT,
-                                                        _("Very low")));
-    verylowcolorCheckbox->type(FL_RADIO_BUTTON);
-    ty += RADIO_HEIGHT + TIGHT_MARGIN;
+    verylowcolorCheckbox = new QRadioButton(_("Very Low"));
+    box->addWidget(verylowcolorCheckbox);
   }
 
-  ty -= TIGHT_MARGIN;
-
-  colorlevelGroup->end();
-  /* Needed for resize to work sanely */
-  colorlevelGroup->resizable(nullptr);
-  colorlevelGroup->size(colorlevelGroup->w(),
-                        ty - colorlevelGroup->y());
-  col2_ty = ty;
-
-  /* Back to normal */
-  tx = orig_tx;
-  ty = (col1_ty > col2_ty ? col1_ty : col2_ty) + INNER_MARGIN;
+  layout->addLayout(columns);
 
   /* Checkboxes */
-  compressionCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                     CHECK_MIN_WIDTH,
-                                                     CHECK_HEIGHT,
-                                                     _("Custom compression level:")));
-  compressionCheckbox->labelfont(FL_BOLD);
-  compressionCheckbox->callback(
-    [](Fl_Widget*, void* data) {
-      ((OptionsCompression*)data)->handleCompression();
-    },
-    this);
-  ty += CHECK_HEIGHT + TIGHT_MARGIN;
+  compressionCheckbox = new QCheckBox(_("Custom compression level:"));
+  connect(compressionCheckbox, &QCheckBox::toggled,
+          this, &OptionsCompression::handleCompression);
+  layout->addWidget(compressionCheckbox);
 
-  compressionInput = new Fl_Int_Input(tx + INDENT, ty,
-                                      INPUT_HEIGHT, INPUT_HEIGHT,
-                                      _("level (0=fast, 9=best)"));
-  compressionInput->align(FL_ALIGN_RIGHT);
-  ty += INPUT_HEIGHT + INNER_MARGIN;
+  indent = new QHBoxLayout;
+  indent->addSpacing(20);
+  compressionInput = new QSpinBox;
+  compressionInput->setRange(0, 9);
+  compressionInput->setFixedWidth(80);
+  indent->addWidget(compressionInput);
+  indent->addWidget(new QLabel(_("level (0=fast, 9=best)")));
+  indent->addStretch(1);
+  layout->addLayout(indent);
 
-  jpegCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                              CHECK_MIN_WIDTH,
-                                              CHECK_HEIGHT,
-                                              _("Allow JPEG compression:")));
-  jpegCheckbox->labelfont(FL_BOLD);
-  jpegCheckbox->callback(
-    [](Fl_Widget*, void* data) {
-      ((OptionsCompression*)data)->handleJpeg();
-    },
-    this);
-  ty += CHECK_HEIGHT + TIGHT_MARGIN;
+  jpegCheckbox = new QCheckBox(_("Allow JPEG compression quality:"));
+  connect(jpegCheckbox, &QCheckBox::toggled,
+          this, &OptionsCompression::handleJpeg);
+  layout->addWidget(jpegCheckbox);
 
-  jpegInput = new Fl_Int_Input(tx + INDENT, ty,
-                               INPUT_HEIGHT, INPUT_HEIGHT,
-                               _("quality (0=poor, 9=best)"));
-  jpegInput->align(FL_ALIGN_RIGHT);
-  ty += INPUT_HEIGHT + INNER_MARGIN;
+  indent = new QHBoxLayout;
+  indent->addSpacing(20);
+  jpegInput = new QSpinBox;
+  jpegInput->setRange(0, 9);
+  jpegInput->setFixedWidth(80);
+  indent->addWidget(jpegInput);
+  indent->addWidget(new QLabel(_("quality (0=poor, 9=best)")));
+  indent->addStretch(1);
+  layout->addLayout(indent);
 
-  end();
+  layout->addStretch(1);
+
+  setLayout(layout);
 }
 
 void OptionsCompression::loadOptions()
 {
-  autoselectCheckbox->value(autoSelect);
+  autoselectCheckbox->setChecked(autoSelect);
 
   int encNum = rfb::encodingNum(preferredEncoding);
 
   switch (encNum) {
   case rfb::encodingTight:
-    tightButton->setonly();
+    tightButton->setChecked(true);
     break;
   case rfb::encodingZRLE:
-    zrleButton->setonly();
+    zrleButton->setChecked(true);
     break;
   case rfb::encodingHextile:
-    hextileButton->setonly();
+    hextileButton->setChecked(true);
     break;
 #ifdef HAVE_H264
   case rfb::encodingH264:
-    h264Button->setonly();
+    h264Button->setChecked(true);
     break;
 #endif
   case rfb::encodingRaw:
-    rawButton->setonly();
+    rawButton->setChecked(true);
     break;
   }
 
   if (fullColour)
-    fullcolorCheckbox->setonly();
+    fullcolorCheckbox->setChecked(true);
   else {
     switch (lowColourLevel) {
     case 0:
-      verylowcolorCheckbox->setonly();
+      verylowcolorCheckbox->setChecked(true);
       break;
     case 1:
-      lowcolorCheckbox->setonly();
+      lowcolorCheckbox->setChecked(true);
       break;
     case 2:
-      mediumcolorCheckbox->setonly();
+      mediumcolorCheckbox->setChecked(true);
       break;
     }
   }
 
-  char digit[2] = "0";
-
-  compressionCheckbox->value(customCompressLevel);
-  jpegCheckbox->value(!noJpeg);
-  digit[0] = '0' + compressLevel;
-  compressionInput->value(digit);
-  digit[0] = '0' + qualityLevel;
-  jpegInput->value(digit);
-
-  handleAutoselect();
-  handleCompression();
-  handleJpeg();
+  compressionCheckbox->setChecked(customCompressLevel);
+  jpegCheckbox->setChecked(!noJpeg);
+  compressionInput->setValue(compressLevel);
+  jpegInput->setValue(qualityLevel);
 }
 
 void OptionsCompression::storeOptions()
 {
-  autoSelect.setParam(autoselectCheckbox->value());
+  autoSelect.setParam(autoselectCheckbox->isChecked());
 
-  if (tightButton->value())
+  if (tightButton->isChecked())
     preferredEncoding.setParam(rfb::encodingName(rfb::encodingTight));
-  else if (zrleButton->value())
+  else if (zrleButton->isChecked())
     preferredEncoding.setParam(rfb::encodingName(rfb::encodingZRLE));
-  else if (hextileButton->value())
+  else if (hextileButton->isChecked())
     preferredEncoding.setParam(rfb::encodingName(rfb::encodingHextile));
 #ifdef HAVE_H264
-  else if (h264Button->value())
+  else if (h264Button->isChecked())
     preferredEncoding.setParam(rfb::encodingName(rfb::encodingH264));
 #endif
-  else if (rawButton->value())
+  else if (rawButton->isChecked())
     preferredEncoding.setParam(rfb::encodingName(rfb::encodingRaw));
 
-  fullColour.setParam(fullcolorCheckbox->value());
-  if (verylowcolorCheckbox->value())
+  fullColour.setParam(fullcolorCheckbox->isChecked());
+  if (verylowcolorCheckbox->isChecked())
     lowColourLevel.setParam(0);
-  else if (lowcolorCheckbox->value())
+  else if (lowcolorCheckbox->isChecked())
     lowColourLevel.setParam(1);
-  else if (mediumcolorCheckbox->value())
+  else if (mediumcolorCheckbox->isChecked())
     lowColourLevel.setParam(2);
 
-  customCompressLevel.setParam(compressionCheckbox->value());
-  noJpeg.setParam(!jpegCheckbox->value());
-  compressLevel.setParam(atoi(compressionInput->value()));
-  qualityLevel.setParam(atoi(jpegInput->value()));
+  customCompressLevel.setParam(compressionCheckbox->isChecked());
+  noJpeg.setParam(!jpegCheckbox->isChecked());
+  compressLevel.setParam(compressionInput->value());
+  qualityLevel.setParam(jpegInput->value());
 }
 
 void OptionsCompression::handleAutoselect()
 {
-  if (autoselectCheckbox->value()) {
-    encodingGroup->deactivate();
-    colorlevelGroup->deactivate();
-  } else {
-    encodingGroup->activate();
-    colorlevelGroup->activate();
-  }
+  bool isAuto;
+
+  isAuto = autoselectCheckbox->isChecked();
+  encodingGroup->setEnabled(!isAuto);
+  colorlevelGroup->setEnabled(!isAuto);
 
   // JPEG setting is also affected by autoselection
   handleJpeg();
@@ -319,16 +226,11 @@ void OptionsCompression::handleAutoselect()
 
 void OptionsCompression::handleCompression()
 {
-  if (compressionCheckbox->value())
-    compressionInput->activate();
-  else
-    compressionInput->deactivate();
+  compressionInput->setEnabled(compressionCheckbox->isChecked());
 }
 
 void OptionsCompression::handleJpeg()
 {
-  if (jpegCheckbox->value() && !autoselectCheckbox->value())
-    jpegInput->activate();
-  else
-    jpegInput->deactivate();
+  jpegInput->setEnabled(jpegCheckbox->isChecked() &&
+                        !autoselectCheckbox->isChecked());
 }
