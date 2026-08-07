@@ -89,7 +89,7 @@ namespace rfb {
     // connection
     void close();
 
-
+  protected:
     // Methods overridden from CMsgHandler
 
     // Note: These must be called by any deriving classes
@@ -177,7 +177,7 @@ namespace rfb {
     // server received the request.
     virtual void handleClipboardData(const char* data);
 
-
+  public:
     // Other methods
 
     // setCredentials() is called when the server requires authenication

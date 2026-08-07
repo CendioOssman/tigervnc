@@ -83,7 +83,7 @@ namespace rfb {
     // cleanup of the SConnection object by the server
     virtual void close(const char* reason);
 
-
+  protected:
     // Overridden from SMsgHandler
 
     void setEncodings(int nEncodings, const int32_t* encodings) override;
@@ -160,7 +160,7 @@ namespace rfb {
     // client received the request.
     virtual void handleClipboardData(const char* data);
 
-
+  public:
     // Other methods
 
     // requestClipboard() will result in a request to the client to
