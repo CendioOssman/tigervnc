@@ -34,8 +34,6 @@
 #include <QStringListModel>
 #include <QMessageBox>
 
-#include <FL/Fl.H>
-
 #include <core/Exception.h>
 #include <core/LogWriter.h>
 #include <core/i18n.h>
@@ -75,13 +73,12 @@ ServerDialog::ServerDialog(QWidget* parent)
   layout->addLayout(box);
 
   button = new QPushButton(_("Options..."));
-  connect(button, &QPushButton::clicked, this, []() {
+  connect(button, &QPushButton::clicked, this, [this]() {
     OptionsDialog* dlg;
 
-    dlg = new OptionsDialog();
-    dlg->set_modal();
-    dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
-    dlg->show();
+    dlg = new OptionsDialog(this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->open();
   });
   box->addWidget(button);
 

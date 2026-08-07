@@ -1,4 +1,5 @@
-/* Copyright 2022 Pierre Ossman for Cendio AB
+/* Copyright 2021 Hugo Lundin <huglu@cendio.se> for Cendio AB.
+ * Copyright 2021-2026 Pierre Ossman for Cendio AB
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -7,10 +8,10 @@
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -21,38 +22,31 @@
  * SOFTWARE.
  */
 
-#ifndef __FL_NAVIGATION_H__
-#define __FL_NAVIGATION_H__
+#pragma once
 
-#include <FL/Fl_Group.H>
+#include <QWidget>
 
-class Fl_Scroll;
+class QCheckBox;
 
-class Fl_Navigation: private Fl_Group {
+class QMonitorArrangement : public QWidget {
+  Q_OBJECT
+
 public:
-  Fl_Navigation(int x, int y, int w, int h);
-  ~Fl_Navigation();
+  QMonitorArrangement(QWidget* parent=nullptr);
 
-  Fl_Widget *value();
-  int value(Fl_Widget*);
+  QList<QScreen*> screens();
+  void setScreens(const QList<QScreen*>& screens);
 
-  void client_area(int &rx, int &ry, int &rw, int &rh, int lw);
-
-  void draw() override;
-
-  // Delegation to underlying widget
-  void begin();
-  void end();
+protected:
+  void showEvent(QShowEvent* event) override;
+  void resizeEvent(QResizeEvent* event) override;
 
 private:
-  void update_labels();
+  void moveCheckBoxes();
+  void updatePartiallyChecked();
 
-  static void label_pressed(Fl_Widget *widget, void *user_data);
+  void refresh();
 
-private:
-  Fl_Scroll *scroll;
-  Fl_Group *labels;
-  Fl_Group *pages;
+  QList<QCheckBox*> checkBoxes;
+  QRect selectedRect;
 };
-
-#endif

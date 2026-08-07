@@ -3,11 +3,11 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 endif()
 
 add_executable(vncviewer
-  fltk/Fl_Monitor_Arrangement.cxx
-  fltk/Fl_Navigation.cxx
   fltk/event_dispatch_handler.cxx
   fltk/theme.cxx
   qt/QFLTKEventDispatcher.cxx
+  qt/QMonitorArrangement.cxx
+  qt/QNavigation.cxx
   qt/QPasswordEdit.cxx
   AuthDialog.cxx
   BaseTouchHandler.cxx
@@ -168,10 +168,6 @@ else()
   target_link_libraries(vncviewer PRIVATE ${X11_Xext_LIB})
   target_link_libraries(vncviewer PRIVATE ${X11_Xi_LIB})
   target_link_libraries(vncviewer PRIVATE ${X11_Xrender_LIB})
-
-  if(X11_Xrandr_LIB)
-    target_link_libraries(vncviewer PRIVATE ${X11_Xrandr_LIB})
-  endif()
 
   target_link_libraries(vncviewer PRIVATE XCB::XKB)
 endif()

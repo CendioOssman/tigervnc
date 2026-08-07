@@ -20,8 +20,9 @@
 #include <config.h>
 #endif
 
-#include <FL/Fl_Box.H>
-#include <FL/Fl_Toggle_Button.H>
+#include <QBoxLayout>
+#include <QLabel>
+#include <QPushButton>
 
 #include <core/i18n.h>
 #include <core/string.h>
@@ -30,91 +31,74 @@
 #include "ShortcutHandler.h"
 #include "parameters.h"
 
-#include "fltk/layout.h"
-#include "fltk/util.h"
-
-OptionsShortcuts::OptionsShortcuts(int tx, int ty, int tw, int th)
-  : OptionsPage(tx, ty, tw, th, _("Keyboard shortcuts"))
+OptionsShortcuts::OptionsShortcuts(QWidget* parent)
+  : OptionsPage(parent)
 {
-  tx += OUTER_MARGIN;
-  ty += OUTER_MARGIN;
+  QBoxLayout* layout = new QVBoxLayout;
 
-  Fl_Box *intro = fltk_box(tx, ty, tw - OUTER_MARGIN * 2, INPUT_HEIGHT);
-  intro->align(FL_ALIGN_TOP_LEFT|FL_ALIGN_INSIDE);
-  intro->label(_("Modifier keys for keyboard shortcuts:"));
+  QLabel* intro = new QLabel;
+  intro->setText(_("Modifier keys for keyboard shortcuts:"));
+  layout->addWidget(intro);
 
-  ty += INPUT_HEIGHT + INNER_MARGIN;
+  QBoxLayout* box = new QHBoxLayout;
+  layout->addLayout(box);
 
-  int width;
-
-  width = (tw - OUTER_MARGIN * 2 - INNER_MARGIN * 3) / 4;
-
-  ctrlButton = new Fl_Toggle_Button(tx, ty,
-                                    /*
-                                     * TRANSLATORS: This refers to the
-                                     * keyboard key
-                                     * */
-                                    width, BUTTON_HEIGHT, _("Ctrl"));
-  ctrlButton->selection_color(FL_SELECTION_COLOR);
-  ctrlButton->callback(
-    [](Fl_Widget*, void* data) {
-      ((OptionsShortcuts*)data)->handleModifier();
-    },
-    this);
-  shiftButton = new Fl_Toggle_Button(tx + width + INNER_MARGIN, ty,
-                                     /*
-                                      * TRANSLATORS: This refers to the
-                                      * keyboard key
-                                      * */
-                                     width, BUTTON_HEIGHT, _("Shift"));
-  shiftButton->selection_color(FL_SELECTION_COLOR);
-  shiftButton->callback(
-    [](Fl_Widget*, void* data) {
-      ((OptionsShortcuts*)data)->handleModifier();
-    },
-    this);
-  altButton = new Fl_Toggle_Button(tx + width * 2 + INNER_MARGIN * 2, ty,
-                                    /*
-                                     * TRANSLATORS: This refers to the
-                                     * keyboard key
-                                     * */
-                                   width, BUTTON_HEIGHT, _("Alt"));
-  altButton->selection_color(FL_SELECTION_COLOR);
-  altButton->callback(
-    [](Fl_Widget*, void* data) {
-      ((OptionsShortcuts*)data)->handleModifier();
-    },
-    this);
-  superButton = new Fl_Toggle_Button(tx + width * 3 + INNER_MARGIN * 3, ty,
-                                     /*
-                                      * TRANSLATORS: This refers to the
-                                      * keyboard key
-                                      * */
-                                     width, BUTTON_HEIGHT, _("Win"));
-  superButton->selection_color(FL_SELECTION_COLOR);
-  superButton->callback(
-    [](Fl_Widget*, void* data) {
-      ((OptionsShortcuts*)data)->handleModifier();
-    },
-    this);
+  /*
+   * TRANSLATORS: This refers to the
+   * keyboard key
+   */
+  ctrlButton = new QPushButton(_("Ctrl"));
+  ctrlButton->setCheckable(true);
+  connect(ctrlButton, &QPushButton::toggled,
+          this, &OptionsShortcuts::handleModifier);
+  box->addWidget(ctrlButton);
+  /*
+   * TRANSLATORS: This refers to the
+   * keyboard key
+   */
+  shiftButton = new QPushButton(_("Shift"));
+  shiftButton->setCheckable(true);
+  connect(shiftButton, &QPushButton::toggled,
+          this, &OptionsShortcuts::handleModifier);
+  box->addWidget(shiftButton);
+  /*
+   * TRANSLATORS: This refers to the
+   * keyboard key
+   */
+  altButton = new QPushButton(_("Alt"));
+  altButton->setCheckable(true);
+  connect(altButton, &QPushButton::toggled,
+          this, &OptionsShortcuts::handleModifier);
+  box->addWidget(altButton);
+  /*
+   * TRANSLATORS: This refers to the
+   * keyboard key
+   */
+  superButton = new QPushButton(_("Win"));
+  superButton->setCheckable(true);
+  connect(superButton, &QPushButton::toggled,
+          this, &OptionsShortcuts::handleModifier);
+  box->addWidget(superButton);
 
 #ifdef __APPLE__
   /* TRANSLATORS: This refers to the keyboard key */
-  ctrlButton->label(_("⌃ Ctrl"));
+  ctrlButton->setText(_("⌃ Ctrl"));
   /* TRANSLATORS: This refers to the keyboard key */
-  shiftButton->label(_("⇧ Shift"));
+  shiftButton->setText(_("⇧ Shift"));
   /* TRANSLATORS: This refers to the keyboard key */
-  altButton->label(_("⌥ Option"));
+  altButton->setText(_("⌥ Option"));
   /* TRANSLATORS: This refers to the keyboard key */
-  superButton->label(_("⌘ Cmd"));
+  superButton->setText(_("⌘ Cmd"));
 #endif
 
-  ty += BUTTON_HEIGHT + INNER_MARGIN;
+  shortcutsText = new QLabel;
+  shortcutsText->setWordWrap(true);
+  shortcutsText->setTextFormat(Qt::PlainText);
+  layout->addWidget(shortcutsText);
 
-  shortcutsText = fltk_box(tx, ty, tw - OUTER_MARGIN * 2, th - ty - OUTER_MARGIN);
-  shortcutsText->align(FL_ALIGN_TOP_LEFT|FL_ALIGN_INSIDE|FL_ALIGN_WRAP);
+  layout->addStretch(1);
 
-  end();
+  setLayout(layout);
 }
 
 void OptionsShortcuts::loadOptions()
@@ -125,28 +109,26 @@ void OptionsShortcuts::loadOptions()
   for (core::EnumListEntry key : shortcutModifiers)
     modifierMask |= ShortcutHandler::parseModifier(key.getValueStr().c_str());
 
-  ctrlButton->value(modifierMask & ShortcutHandler::Control);
-  shiftButton->value(modifierMask & ShortcutHandler::Shift);
-  altButton->value(modifierMask & ShortcutHandler::Alt);
-  superButton->value(modifierMask & ShortcutHandler::Super);
-
-  handleModifier();
+  ctrlButton->setChecked(modifierMask & ShortcutHandler::Control);
+  shiftButton->setChecked(modifierMask & ShortcutHandler::Shift);
+  altButton->setChecked(modifierMask & ShortcutHandler::Alt);
+  superButton->setChecked(modifierMask & ShortcutHandler::Super);
 }
 
 void OptionsShortcuts::storeOptions()
 {
   std::list<std::string> modifierList;
 
-  if (ctrlButton->value())
+  if (ctrlButton->isChecked())
     modifierList.push_back(
       ShortcutHandler::modifierString(ShortcutHandler::Control));
-  if (shiftButton->value())
+  if (shiftButton->isChecked())
     modifierList.push_back(
       ShortcutHandler::modifierString(ShortcutHandler::Shift));
-  if (altButton->value())
+  if (altButton->isChecked())
     modifierList.push_back(
       ShortcutHandler::modifierString(ShortcutHandler::Alt));
-  if (superButton->value())
+  if (superButton->isChecked())
     modifierList.push_back(
       ShortcutHandler::modifierString(ShortcutHandler::Super));
 
@@ -158,17 +140,17 @@ void OptionsShortcuts::handleModifier()
   unsigned mask;
 
   mask = 0;
-  if (ctrlButton->value())
+  if (ctrlButton->isChecked())
     mask |= ShortcutHandler::Control;
-  if (shiftButton->value())
+  if (shiftButton->isChecked())
     mask |= ShortcutHandler::Shift;
-  if (altButton->value())
+  if (altButton->isChecked())
     mask |= ShortcutHandler::Alt;
-  if (superButton->value())
+  if (superButton->isChecked())
     mask |= ShortcutHandler::Super;
 
   if (mask == 0) {
-    shortcutsText->copy_label(
+    shortcutsText->setText(
       _("All keyboard shortcuts are disabled."));
   } else {
     char prefix[256];
@@ -203,6 +185,6 @@ void OptionsShortcuts::handleModifier()
         "releasing %s, and press the desired key."),
       prefix_noplus, prefix, prefix_noplus);
 
-    shortcutsText->copy_label(label.c_str());
+    shortcutsText->setText(label.c_str());
   }
 }

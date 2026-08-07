@@ -1272,10 +1272,8 @@ void Viewport::initContextMenu()
                   OptionsDialog* dlg;
 
                   dlg = new OptionsDialog();
-                  dlg->set_modal();
-                  dlg->finished([](Fl_Widget* d, void*)
-                                { Fl::delete_widget(d); });
-                  dlg->show();
+                  dlg->setAttribute(Qt::WA_DeleteOnClose);
+                  dlg->open();
                 }, nullptr, 0);
 
   fltk_menu_add(contextMenu, C_("ContextMenu|", "Connection &info..."), 0,

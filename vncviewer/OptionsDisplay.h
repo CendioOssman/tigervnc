@@ -21,13 +21,16 @@
 
 #include "OptionsPage.h"
 
-class Fl_Round_Button;
-class Fl_Monitor_Arrangement;
+class QGroupBox;
+class QMonitorArrangement;
+class QRadioButton;
 
 class OptionsDisplay : public OptionsPage
 {
+  Q_OBJECT
+
 public:
-  OptionsDisplay(int tx, int ty, int tw, int th);
+  OptionsDisplay(QWidget* parent=nullptr);
   ~OptionsDisplay();
 
   void loadOptions() override;
@@ -37,12 +40,12 @@ protected:
   void handleFullScreenMode();
 
 protected:
-  Fl_Group *displayModeGroup;
-  Fl_Round_Button *windowedButton;
-  Fl_Round_Button *currentMonitorButton;
-  Fl_Round_Button *allMonitorsButton;
-  Fl_Round_Button *selectedMonitorsButton;
-  Fl_Monitor_Arrangement *monitorArrangement;
+  QGroupBox* displayModeGroup;
+  QRadioButton* windowedButton;
+  QRadioButton* currentMonitorButton;
+  QRadioButton* allMonitorsButton;
+  QRadioButton* selectedMonitorsButton;
+  QMonitorArrangement* monitorArrangement;
 
 private:
   static int fltk_event_handler(int event);

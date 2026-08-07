@@ -21,13 +21,15 @@
 
 #include "OptionsPage.h"
 
-class Fl_Box;
-class Fl_Toggle_Button;
+class QLabel;
+class QPushButton;
 
 class OptionsShortcuts : public OptionsPage
 {
+  Q_OBJECT
+
 public:
-  OptionsShortcuts(int tx, int ty, int tw, int th);
+  OptionsShortcuts(QWidget* parent=nullptr);
 
   void loadOptions() override;
   void storeOptions() override;
@@ -36,12 +38,12 @@ protected:
   void handleModifier();
 
 protected:
-  Fl_Toggle_Button *ctrlButton;
-  Fl_Toggle_Button *altButton;
-  Fl_Toggle_Button *shiftButton;
-  Fl_Toggle_Button *superButton;
+  QPushButton* ctrlButton;
+  QPushButton* altButton;
+  QPushButton* shiftButton;
+  QPushButton* superButton;
 
-  Fl_Box *shortcutsText;
+  QLabel* shortcutsText;
 };
 
 #endif

@@ -20,58 +20,49 @@
 #include <config.h>
 #endif
 
-#include <FL/Fl_Check_Button.H>
+#include <QBoxLayout>
+#include <QCheckBox>
 
 #include <core/i18n.h>
 
 #include "OptionsMisc.h"
 #include "parameters.h"
 
-#include "fltk/layout.h"
-
-OptionsMisc::OptionsMisc(int tx, int ty, int tw, int th)
-  : OptionsPage(tx, ty, tw, th, _("Miscellaneous"))
+OptionsMisc::OptionsMisc(QWidget* parent)
+  : OptionsPage(parent)
 {
-  tx += OUTER_MARGIN;
-  ty += OUTER_MARGIN;
+  QBoxLayout* layout = new QVBoxLayout;
 
-  sharedCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                  CHECK_MIN_WIDTH,
-                                                  CHECK_HEIGHT,
-                                                  _("Shared (don't disconnect other viewers)")));
-  ty += CHECK_HEIGHT + TIGHT_MARGIN;
+  sharedCheckbox = new QCheckBox(_("Shared (don't disconnect other viewers)"));
+  layout->addWidget(sharedCheckbox);
 
-  reconnectCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                  CHECK_MIN_WIDTH,
-                                                  CHECK_HEIGHT,
-                                                  _("Ask to reconnect on connection errors")));
-  ty += CHECK_HEIGHT + TIGHT_MARGIN;
+  reconnectCheckbox = new QCheckBox(_("Ask to reconnect on connection errors"));
+  layout->addWidget(reconnectCheckbox);
 
 #ifdef HAVE_AUDIO
-  audioCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                               CHECK_MIN_WIDTH,
-                                               CHECK_HEIGHT,
-                                               _("Play audio from the server")));
-  ty += CHECK_HEIGHT + TIGHT_MARGIN;
+  audioCheckbox = new QCheckBox(_("Play audio from the server"));
+  layout->addWidget(audioCheckbox);
 #endif
 
-  end();
+  layout->addStretch(1);
+
+  setLayout(layout);
 }
 
 void OptionsMisc::loadOptions()
 {
-  sharedCheckbox->value(shared);
-  reconnectCheckbox->value(reconnectOnError);
+  sharedCheckbox->setChecked(shared);
+  reconnectCheckbox->setChecked(reconnectOnError);
 #ifdef HAVE_AUDIO
-  audioCheckbox->value(playAudio);
+  audioCheckbox->setChecked(playAudio);
 #endif
 }
 
 void OptionsMisc::storeOptions()
 {
-  shared.setParam(sharedCheckbox->value());
-  reconnectOnError.setParam(reconnectCheckbox->value());
+  shared.setParam(sharedCheckbox->isChecked());
+  reconnectOnError.setParam(reconnectCheckbox->isChecked());
 #ifdef HAVE_AUDIO
-  playAudio.setParam(audioCheckbox->value());
+  playAudio.setParam(audioCheckbox->isChecked());
 #endif
 }

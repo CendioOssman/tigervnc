@@ -19,12 +19,14 @@
 #ifndef __OPTIONSPAGE_H__
 #define __OPTIONSPAGE_H__
 
-#include <FL/Fl_Group.H>
+#include <QWidget>
 
-class OptionsPage : public Fl_Group
+class OptionsPage : public QWidget
 {
+  Q_OBJECT
+
 public:
-  OptionsPage(int tx, int ty, int tw, int th, const char* label);
+  OptionsPage(QWidget* parent=nullptr);
 
   virtual void loadOptions() = 0;
   virtual void storeOptions() = 0;

@@ -21,13 +21,16 @@
 
 #include "OptionsPage.h"
 
-class Fl_Check_Button;
-class Fl_Choice;
+class QCheckBox;
+class QComboBox;
+class QGroupBox;
 
 class OptionsInput : public OptionsPage
 {
+  Q_OBJECT
+
 public:
-  OptionsInput(int tx, int ty, int tw, int th);
+  OptionsInput(QWidget* parent=nullptr);
 
   void loadOptions() override;
   void storeOptions() override;
@@ -40,21 +43,21 @@ protected:
   void handleClipboard();
 
 protected:
-  Fl_Check_Button *viewOnlyCheckbox;
-  Fl_Group *mouseGroup;
-  Fl_Check_Button *emulateMBCheckbox;
-  Fl_Check_Button *alwaysCursorCheckbox;
-  Fl_Choice *cursorTypeChoice;
-  Fl_Group *keyboardGroup;
-  Fl_Check_Button *systemKeysCheckbox;
-  Fl_Group *clipboardGroup;
-  Fl_Check_Button *acceptClipboardCheckbox;
+  QCheckBox* viewOnlyCheckbox;
+  QGroupBox* mouseGroup;
+  QCheckBox* emulateMBCheckbox;
+  QCheckBox* alwaysCursorCheckbox;
+  QComboBox* cursorTypeChoice;
+  QGroupBox* keyboardGroup;
+  QCheckBox* systemKeysCheckbox;
+  QGroupBox* clipboardGroup;
+  QCheckBox* acceptClipboardCheckbox;
 #if !defined(WIN32) && !defined(__APPLE__)
-  Fl_Check_Button *setPrimaryCheckbox;
+  QCheckBox* setPrimaryCheckbox;
 #endif
-  Fl_Check_Button *sendClipboardCheckbox;
+  QCheckBox* sendClipboardCheckbox;
 #if !defined(WIN32) && !defined(__APPLE__)
-  Fl_Check_Button *sendPrimaryCheckbox;
+  QCheckBox* sendPrimaryCheckbox;
 #endif
 };
 

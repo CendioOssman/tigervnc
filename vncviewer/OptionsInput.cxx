@@ -20,244 +20,171 @@
 #include <config.h>
 #endif
 
-#include <FL/Fl_Check_Button.H>
-#include <FL/Fl_Choice.H>
+#include <QBoxLayout>
+#include <QCheckBox>
+#include <QComboBox>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QLabel>
 
 #include <core/i18n.h>
 
 #include "OptionsInput.h"
 #include "parameters.h"
 
-#include "fltk/layout.h"
-#include "fltk/util.h"
-
 #ifdef __APPLE__
 #include "cocoa.h"
 #endif
 
-OptionsInput::OptionsInput(int tx, int ty, int tw, int th)
-  : OptionsPage(tx, ty, tw, th, _("Input"))
+OptionsInput::OptionsInput(QWidget* parent)
+  : OptionsPage(parent)
 {
-  int orig_tx;
-  int width;
+  QBoxLayout* indent;
+  QFormLayout* form;
+  QBoxLayout* layout = new QVBoxLayout;
 
-  tx += OUTER_MARGIN;
-  ty += OUTER_MARGIN;
-
-  width = tw - OUTER_MARGIN * 2;
-
-  viewOnlyCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                  CHECK_MIN_WIDTH,
-                                                  CHECK_HEIGHT,
-                                                  _("View only (ignore mouse and keyboard)")));
-  ty += CHECK_HEIGHT + INNER_MARGIN;
-
-  orig_tx = tx;
+  viewOnlyCheckbox = new QCheckBox(_("View only (ignore mouse and keyboard)"));
+  layout->addWidget(viewOnlyCheckbox);
 
   /* Mouse */
-  ty += GROUP_LABEL_OFFSET;
-  mouseGroup = new Fl_Group(tx, ty, width, 0, _("Mouse"));
-  mouseGroup->labelfont(FL_BOLD);
-  mouseGroup->box(FL_FLAT_BOX);
-  mouseGroup->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
+  mouseGroup = new QGroupBox(_("Mouse"));
+  layout->addWidget(mouseGroup);
 
   {
-    tx += INDENT;
-    ty += TIGHT_MARGIN;
+    QBoxLayout* box = new QVBoxLayout;
+    mouseGroup->setLayout(box);
 
-    emulateMBCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                     CHECK_MIN_WIDTH,
-                                                     CHECK_HEIGHT,
-                                                     _("Emulate middle mouse button")));
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    emulateMBCheckbox = new QCheckBox(_("Emulate middle mouse button"));
+    box->addWidget(emulateMBCheckbox);
 
-    alwaysCursorCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                       CHECK_MIN_WIDTH,
-                                                       CHECK_HEIGHT,
-                                                       _("Show local cursor when not provided by server")));
-    alwaysCursorCheckbox->callback(
-      [](Fl_Widget*, void* data) {
-        ((OptionsInput*)data)->handleAlwaysCursor();
-      },
-      this);
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    alwaysCursorCheckbox = new QCheckBox(_("Show local cursor when not provided by server"));
+    connect(alwaysCursorCheckbox, &QCheckBox::toggled,
+            this, &OptionsInput::handleAlwaysCursor);
+    box->addWidget(alwaysCursorCheckbox);
 
     /* Cursor type */
-    cursorTypeChoice = new Fl_Choice(LBLLEFT(tx, ty, 150, CHOICE_HEIGHT, _("Cursor type")));
+    form = new QFormLayout;
+    form->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
+    box->addLayout(form);
+    cursorTypeChoice = new QComboBox;
+    form->addRow(_("Cursor type"), cursorTypeChoice);
 
-    fltk_menu_add(cursorTypeChoice, _("Dot"), 0, nullptr, nullptr, 0);
-    fltk_menu_add(cursorTypeChoice, _("System"), 0, nullptr, nullptr, 0);
-
-    fltk_adjust_choice(cursorTypeChoice);
-
-    ty += CHOICE_HEIGHT + TIGHT_MARGIN;
-
+    cursorTypeChoice->addItem(_("Dot"));
+    cursorTypeChoice->addItem(_("System"));
   }
-  ty -= TIGHT_MARGIN;
-
-  mouseGroup->end();
-  /* Needed for resize to work sanely */
-  mouseGroup->resizable(nullptr);
-  mouseGroup->size(mouseGroup->w(), ty - mouseGroup->y());
-
-  /* Back to normal */
-  tx = orig_tx;
-  ty += INNER_MARGIN;
 
   /* Keyboard */
-  ty += GROUP_LABEL_OFFSET;
-  keyboardGroup = new Fl_Group(tx, ty, width, 0, _("Keyboard"));
-  keyboardGroup->labelfont(FL_BOLD);
-  keyboardGroup->box(FL_FLAT_BOX);
-  keyboardGroup->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
+  keyboardGroup = new QGroupBox(_("Keyboard"));
+  layout->addWidget(keyboardGroup);
 
   {
-    tx += INDENT;
-    ty += TIGHT_MARGIN;
+    QBoxLayout* box = new QVBoxLayout;
+    keyboardGroup->setLayout(box);
 
-    systemKeysCheckbox = new Fl_Check_Button(
-      LBLRIGHT(tx, ty, CHECK_MIN_WIDTH, CHECK_HEIGHT,
-               _("Always send all keyboard input in full screen")));
-    systemKeysCheckbox->callback(
-      [](Fl_Widget*, void* data) {
-        ((OptionsInput*)data)->handleSystemKeys();
-      },
-      this);
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    systemKeysCheckbox = new QCheckBox(_("Always send all keyboard input in full screen"));
+    connect(systemKeysCheckbox, &QCheckBox::toggled,
+            this, &OptionsInput::handleSystemKeys);
+    box->addWidget(systemKeysCheckbox);
   }
-  ty -= TIGHT_MARGIN;
-
-  keyboardGroup->end();
-  /* Needed for resize to work sanely */
-  keyboardGroup->resizable(nullptr);
-  keyboardGroup->size(keyboardGroup->w(), ty - keyboardGroup->y());
-
-  /* Back to normal */
-  tx = orig_tx;
-  ty += INNER_MARGIN;
 
   /* Clipboard */
-  ty += GROUP_LABEL_OFFSET;
-  clipboardGroup = new Fl_Group(tx, ty, width, 0, _("Clipboard"));
-  clipboardGroup->labelfont(FL_BOLD);
-  clipboardGroup->box(FL_FLAT_BOX);
-  clipboardGroup->align(FL_ALIGN_LEFT | FL_ALIGN_TOP);
+  clipboardGroup = new QGroupBox(_("Clipboard"));
+  layout->addWidget(clipboardGroup);
 
   {
-    tx += INDENT;
-    ty += TIGHT_MARGIN;
+    QBoxLayout* box = new QVBoxLayout;
+    clipboardGroup->setLayout(box);
 
-    acceptClipboardCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                           CHECK_MIN_WIDTH,
-                                                           CHECK_HEIGHT,
-                                                           _("Accept clipboard from server")));
-    acceptClipboardCheckbox->callback(
-      [](Fl_Widget*, void* data) {
-        ((OptionsInput*)data)->handleClipboard();
-      },
-      this);
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    acceptClipboardCheckbox = new QCheckBox(_("Accept clipboard from server"));
+    connect(acceptClipboardCheckbox, &QCheckBox::toggled,
+            this, &OptionsInput::handleClipboard);
+    box->addWidget(acceptClipboardCheckbox);
 
 #if !defined(WIN32) && !defined(__APPLE__)
-    setPrimaryCheckbox = new Fl_Check_Button(LBLRIGHT(tx + INDENT, ty,
-                                                      CHECK_MIN_WIDTH,
-                                                      CHECK_HEIGHT,
-                                                      _("Also set primary selection")));
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    indent = new QHBoxLayout;
+    indent->addSpacing(20);
+    setPrimaryCheckbox = new QCheckBox(_("Also set primary selection"));
+    indent->addWidget(setPrimaryCheckbox);
+    box->addLayout(indent);
+#else
+    (void)indent;
 #endif
 
-    sendClipboardCheckbox = new Fl_Check_Button(LBLRIGHT(tx, ty,
-                                                         CHECK_MIN_WIDTH,
-                                                         CHECK_HEIGHT,
-                                                         _("Send clipboard to server")));
-    sendClipboardCheckbox->callback(
-      [](Fl_Widget*, void* data) {
-        ((OptionsInput*)data)->handleClipboard();
-      },
-      this);
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    sendClipboardCheckbox = new QCheckBox(_("Send clipboard to server"));
+    connect(sendClipboardCheckbox, &QCheckBox::toggled,
+            this, &OptionsInput::handleClipboard);
+    box->addWidget(sendClipboardCheckbox);
 
 #if !defined(WIN32) && !defined(__APPLE__)
-    sendPrimaryCheckbox = new Fl_Check_Button(LBLRIGHT(tx + INDENT, ty,
-                                                       CHECK_MIN_WIDTH,
-                                                       CHECK_HEIGHT,
-                                                       _("Send primary selection as clipboard")));
-    ty += CHECK_HEIGHT + TIGHT_MARGIN;
+    indent = new QHBoxLayout;
+    indent->addSpacing(20);
+    sendPrimaryCheckbox = new QCheckBox(_("Send primary selection as clipboard"));
+    indent->addWidget(sendPrimaryCheckbox);
+    box->addLayout(indent);
+#else
+    (void)indent;
 #endif
   }
-  ty -= TIGHT_MARGIN;
 
-  clipboardGroup->end();
-  /* Needed for resize to work sanely */
-  clipboardGroup->resizable(nullptr);
-  clipboardGroup->size(clipboardGroup->w(), ty - clipboardGroup->y());
+  layout->addStretch(1);
 
-  /* Back to normal */
-  tx = orig_tx;
-  ty += INNER_MARGIN;
-
-  end();
+  setLayout(layout);
 }
 
 void OptionsInput::loadOptions()
 {
-  viewOnlyCheckbox->value(viewOnly);
-  emulateMBCheckbox->value(emulateMiddleButton);
-  alwaysCursorCheckbox->value(alwaysCursor);
+  viewOnlyCheckbox->setChecked(viewOnly);
+  emulateMBCheckbox->setChecked(emulateMiddleButton);
+  alwaysCursorCheckbox->setChecked(alwaysCursor);
   if (cursorType == "system") {
-    cursorTypeChoice->value(1);
+    cursorTypeChoice->setCurrentIndex(1);
   } else {
     // Default
-    cursorTypeChoice->value(0);
+    cursorTypeChoice->setCurrentIndex(0);
   }
-  handleAlwaysCursor();
-  acceptClipboardCheckbox->value(acceptClipboard);
+  acceptClipboardCheckbox->setChecked(acceptClipboard);
 #if !defined(WIN32) && !defined(__APPLE__)
-  setPrimaryCheckbox->value(setPrimary);
+  setPrimaryCheckbox->setChecked(setPrimary);
 #endif
-  sendClipboardCheckbox->value(sendClipboard);
+  sendClipboardCheckbox->setChecked(sendClipboard);
 #if !defined(WIN32) && !defined(__APPLE__)
-  sendPrimaryCheckbox->value(sendPrimary);
+  sendPrimaryCheckbox->setChecked(sendPrimary);
 #endif
-  systemKeysCheckbox->value(fullscreenSystemKeys);
+  systemKeysCheckbox->setChecked(fullscreenSystemKeys);
 }
 
 void OptionsInput::storeOptions()
 {
-  viewOnly.setParam(viewOnlyCheckbox->value());
-  emulateMiddleButton.setParam(emulateMBCheckbox->value());
-  alwaysCursor.setParam(alwaysCursorCheckbox->value());
-  if (cursorTypeChoice->value() == 1) {
+  viewOnly.setParam(viewOnlyCheckbox->isChecked());
+  emulateMiddleButton.setParam(emulateMBCheckbox->isChecked());
+  alwaysCursor.setParam(alwaysCursorCheckbox->isChecked());
+  if (cursorTypeChoice->currentIndex() == 1) {
     cursorType.setParam("System");
   } else {
     // Default
     cursorType.setParam("Dot");
   }
-  acceptClipboard.setParam(acceptClipboardCheckbox->value());
+  acceptClipboard.setParam(acceptClipboardCheckbox->isChecked());
 #if !defined(WIN32) && !defined(__APPLE__)
-  setPrimary.setParam(setPrimaryCheckbox->value());
+  setPrimary.setParam(setPrimaryCheckbox->isChecked());
 #endif
-  sendClipboard.setParam(sendClipboardCheckbox->value());
+  sendClipboard.setParam(sendClipboardCheckbox->isChecked());
 #if !defined(WIN32) && !defined(__APPLE__)
-  sendPrimary.setParam(sendPrimaryCheckbox->value());
+  sendPrimary.setParam(sendPrimaryCheckbox->isChecked());
 #endif
-  fullscreenSystemKeys.setParam(systemKeysCheckbox->value());
+  fullscreenSystemKeys.setParam(systemKeysCheckbox->isChecked());
 }
 
 void OptionsInput::handleAlwaysCursor()
 {
-  if (alwaysCursorCheckbox->value()) {
-    cursorTypeChoice->activate();
-  } else {
-    cursorTypeChoice->deactivate();
-  }
+  cursorTypeChoice->setEnabled(alwaysCursorCheckbox->isChecked());
 }
 
 void OptionsInput::handleSystemKeys()
 {
 #ifdef __APPLE__
   // Pop up the access dialog if needed
-  if (systemKeysCheckbox->value())
+  if (systemKeysCheckbox->isChecked())
     cocoa_is_trusted(true);
 #endif
 }
@@ -265,13 +192,7 @@ void OptionsInput::handleSystemKeys()
 void OptionsInput::handleClipboard()
 {
 #if !defined(WIN32) && !defined(__APPLE__)
-  if (acceptClipboardCheckbox->value())
-    setPrimaryCheckbox->activate();
-  else
-    setPrimaryCheckbox->deactivate();
-  if (sendClipboardCheckbox->value())
-    sendPrimaryCheckbox->activate();
-  else
-    sendPrimaryCheckbox->deactivate();
+  setPrimaryCheckbox->setEnabled(acceptClipboardCheckbox->isChecked());
+  sendPrimaryCheckbox->setEnabled(sendClipboardCheckbox->isChecked());
 #endif
 }

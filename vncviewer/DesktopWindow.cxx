@@ -45,11 +45,14 @@
 #include "Viewport.h"
 #include "fltk/event_dispatch_handler.h"
 
+// Conflicts with Qt
+#define QPoint _FLTK_QPoint
 #include <FL/Fl.H>
 #include <FL/Fl_Image_Surface.H>
 #include <FL/Fl_Scrollbar.H>
 #include <FL/fl_draw.H>
 #include <FL/x.H>
+#undef QPoint
 
 #if defined(WIN32)
 #include "win32.h"

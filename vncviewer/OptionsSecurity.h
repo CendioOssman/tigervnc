@@ -21,13 +21,16 @@
 
 #include "OptionsPage.h"
 
-class Fl_Check_Button;
-class Fl_Input;
+class QCheckBox;
+class QGroupBox;
+class QLineEdit;
 
 class OptionsSecurity : public OptionsPage
 {
+  Q_OBJECT
+
 public:
-  OptionsSecurity(int tx, int ty, int tw, int th);
+  OptionsSecurity(QWidget* parent=nullptr);
 
   void loadOptions() override;
   void storeOptions() override;
@@ -38,24 +41,24 @@ protected:
 
 protected:
 #if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
-  Fl_Group *encryptionGroup;
-  Fl_Check_Button *encNoneCheckbox;
+  QGroupBox* encryptionGroup;
+  QCheckBox* encNoneCheckbox;
 #ifdef HAVE_GNUTLS
-  Fl_Check_Button *encTLSCheckbox;
-  Fl_Check_Button *encX509Checkbox;
+  QCheckBox* encTLSCheckbox;
+  QCheckBox* encX509Checkbox;
 #endif
 #ifdef HAVE_NETTLE
-  Fl_Check_Button *encRSAAESCheckbox;
+  QCheckBox* encRSAAESCheckbox;
 #endif
 #ifdef HAVE_GNUTLS
-  Fl_Input *caInput;
-  Fl_Input *crlInput;
+  QLineEdit* caInput;
+  QLineEdit* crlInput;
 #endif
 
-  Fl_Group *authenticationGroup;
-  Fl_Check_Button *authNoneCheckbox;
-  Fl_Check_Button *authVncCheckbox;
-  Fl_Check_Button *authPlainCheckbox;
+  QGroupBox* authenticationGroup;
+  QCheckBox* authNoneCheckbox;
+  QCheckBox* authVncCheckbox;
+  QCheckBox* authPlainCheckbox;
 #endif
 };
 
