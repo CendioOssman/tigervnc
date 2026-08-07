@@ -22,8 +22,6 @@
 
 #include <assert.h>
 
-#include <set>
-
 #include <QApplication>
 #include <QGroupBox>
 #include <QLabel>
@@ -46,8 +44,6 @@
 #if !defined(WIN32) && !defined(__APPLE__)
 #include "x11.h"
 #endif
-
-static std::set<OptionsDisplay*> instances;
 
 OptionsDisplay::OptionsDisplay(QWidget* parent)
   : OptionsPage(parent)
@@ -127,17 +123,17 @@ OptionsDisplay::OptionsDisplay(QWidget* parent)
 
   setLayout(layout);
 
-  if (instances.size() == 0)
-    Fl::add_handler(fltk_event_handler);
-  instances.insert(this);
+  // Refresh monitor arrangement widget to match the parameter settings after
+  // screen configuration has changed. The MonitorArrangement index doesn't work
+  // the same way as the FLTK screen index.
+  connect(qApp, &QGuiApplication::screenAdded,
+          this, &OptionsDisplay::handleScreenConfigChange);
+  connect(qApp, &QGuiApplication::screenRemoved,
+          this, &OptionsDisplay::handleScreenConfigChange);
 }
 
 OptionsDisplay::~OptionsDisplay()
 {
-  instances.erase(this);
-
-  if (instances.size() == 0)
-    Fl::remove_handler(fltk_event_handler);
 }
 
 void OptionsDisplay::loadOptions()
@@ -223,28 +219,8 @@ void OptionsDisplay::handleFullScreenMode()
   monitorArrangement->setEnabled(selectedMonitorsButton->isChecked());
 }
 
-int OptionsDisplay::fltk_event_handler(int event)
+void OptionsDisplay::handleScreenConfigChange()
 {
-  std::set<OptionsDisplay*>::iterator iter;
-
-  if (event != FL_SCREEN_CONFIGURATION_CHANGED)
-    return 0;
-
-  // Refresh monitor arrangement widget to match the parameter settings after
-  // screen configuration has changed. The MonitorArrangement index doesn't work
-  // the same way as the FLTK screen index.
-  for (iter = instances.begin(); iter != instances.end(); iter++)
-      Fl::add_timeout(0, handleScreenConfigTimeout, (*iter));
-
-  return 0;
-}
-
-void OptionsDisplay::handleScreenConfigTimeout(void* data)
-{
-    OptionsDisplay* self = (OptionsDisplay*)data;
-
-    assert(self);
-
     // The other stuff is still FLTK, so we need to map things
     std::set<int> indices;
     QList<QScreen*> screens;
@@ -266,5 +242,5 @@ void OptionsDisplay::handleScreenConfigTimeout(void* data)
       }
     }
 
-    self->monitorArrangement->setScreens(screens);
+    monitorArrangement->setScreens(screens);
 }

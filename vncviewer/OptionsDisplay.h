@@ -48,8 +48,7 @@ protected:
   QMonitorArrangement* monitorArrangement;
 
 private:
-  static int fltk_event_handler(int event);
-  static void handleScreenConfigTimeout(void *data);
+  void handleScreenConfigChange();
 };
 
 #endif
