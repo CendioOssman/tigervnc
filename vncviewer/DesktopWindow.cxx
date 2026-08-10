@@ -28,6 +28,8 @@
 #include <string.h>
 #include <sys/time.h>
 
+#include <QScreen>
+
 #include <rdr/Exception.h>
 
 #include <rfb/Configuration.h>
@@ -831,8 +833,22 @@ void DesktopWindow::fullscreen_on()
     std::set<int> monitors;
 
     if (selectedMonitors and not allMonitors) {
-      std::set<int> selected = fullScreenSelectedMonitors.getParam();
-      monitors.insert(selected.begin(), selected.end());
+      // We're still using FLTK, so we need to map things
+      QList<QScreen*> selected = fullScreenSelectedMonitors.getParam();
+      for (const QScreen* screen : selected) {
+        for (int idx = 0; idx < Fl::screen_count(); idx++) {
+          int x, y, w, h;
+          QRect geom;
+
+          Fl::screen_xywh(x, y, w, h, idx);
+          geom.setRect(x, y, w, h);
+
+          if (screen->geometry() == geom) {
+            monitors.insert(idx);
+            break;
+          }
+        }
+      }
     } else {
       for (int idx = 0; idx < Fl::screen_count(); idx++)
         monitors.insert(idx);

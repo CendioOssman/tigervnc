@@ -29,8 +29,6 @@
 #include <QScreen>
 #include <QVBoxLayout>
 
-#include <FL/Fl.H>
-
 #include <rfb/Configuration.h>
 
 #include "MonitorIndicesParameter.h"
@@ -128,7 +126,7 @@ OptionsDisplay::OptionsDisplay(QWidget* parent)
 
   // Refresh monitor arrangement widget to match the parameter settings after
   // screen configuration has changed. The MonitorArrangement index doesn't work
-  // the same way as the FLTK screen index.
+  // the same way as Qt's list of QScreen:s.
   connect(qApp, &QGuiApplication::screenAdded,
           this, &OptionsDisplay::handleScreenConfigChange);
   connect(qApp, &QGuiApplication::screenRemoved,
@@ -153,28 +151,7 @@ void OptionsDisplay::loadOptions()
     }
   }
 
-  // The other stuff is still FLTK, so we need to map things
-  std::set<int> indices;
-  QList<QScreen*> screens;
-
-  indices = fullScreenSelectedMonitors.getParam();
-
-  for (int i : indices) {
-    int x, y, w, h;
-    QRect geom;
-
-    Fl::screen_xywh(x, y, w, h, i);
-    geom.setRect(x, y, w, h);
-
-    for (QScreen* screen : qApp->screens()) {
-      if (screen->geometry() == geom) {
-        screens.append(screen);
-        break;
-      }
-    }
-  }
-
-  monitorArrangement->setScreens(screens);
+  monitorArrangement->setScreens(fullScreenSelectedMonitors.getParam());
 
   handleFullScreenMode();
 }
@@ -195,26 +172,7 @@ void OptionsDisplay::storeOptions()
     }
   }
 
-  // The other stuff is still FLTK, so we need to map things
-  QList<QScreen*> screens = monitorArrangement->screens();
-  std::set<int> indices;
-
-  for (int i = 0; i < Fl::screen_count(); i++) {
-    int x, y, w, h;
-    QRect geom;
-
-    Fl::screen_xywh(x, y, w, h, i);
-    geom.setRect(x, y, w, h);
-
-    for (QScreen* screen : screens) {
-      if (screen->geometry() != geom)
-        continue;
-      indices.insert(i);
-      break;
-    }
-  }
-
-  fullScreenSelectedMonitors.setParam(indices);
+  fullScreenSelectedMonitors.setParam(monitorArrangement->screens());
 }
 
 void OptionsDisplay::handleFullScreenMode()
@@ -224,26 +182,5 @@ void OptionsDisplay::handleFullScreenMode()
 
 void OptionsDisplay::handleScreenConfigChange()
 {
-    // The other stuff is still FLTK, so we need to map things
-    std::set<int> indices;
-    QList<QScreen*> screens;
-
-    indices = fullScreenSelectedMonitors.getParam();
-
-    for (int i : indices) {
-      int x, y, w, h;
-      QRect geom;
-
-      Fl::screen_xywh(x, y, w, h, i);
-      geom.setRect(x, y, w, h);
-
-      for (QScreen* screen : qApp->screens()) {
-        if (screen->geometry() == geom) {
-          screens.append(screen);
-          break;
-        }
-      }
-    }
-
-    monitorArrangement->setScreens(screens);
+  monitorArrangement->setScreens(fullScreenSelectedMonitors.getParam());
 }

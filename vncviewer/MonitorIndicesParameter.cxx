@@ -1,5 +1,5 @@
 /* Copyright 2021 Hugo Lundin <huglu@cendio.se> for Cendio AB.
- * Copyright 2021 Pierre Ossman for Cendio AB
+ * Copyright 2021-2026 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,8 +29,10 @@
 #include <stdlib.h>
 #include <stdexcept>
 
+#include <QApplication>
+#include <QScreen>
+
 #include "i18n.h"
-#include <FL/Fl.H>
 #include <rfb/LogWriter.h>
 
 #include "MonitorIndicesParameter.h"
@@ -41,34 +43,34 @@ static LogWriter vlog("MonitorIndicesParameter");
 MonitorIndicesParameter::MonitorIndicesParameter(const char* name_, const char* desc_, const char* v)
 : StringParameter(name_, desc_, v) {}
 
-std::set<int> MonitorIndicesParameter::getParam()
+QList<QScreen*> MonitorIndicesParameter::getParam()
 {
     bool valid = false;
-    std::set<int> indices;
+    QList<QScreen*> screens;
     std::set<int> configIndices;
     std::vector<MonitorIndicesParameter::Monitor> monitors = fetchMonitors();
 
     if (monitors.size() <= 0) {
         vlog.error(_("Failed to get system monitor configuration"));
-        return indices;
+        return screens;
     }
 
     valid = parseIndices(value.c_str(), &configIndices);
     if (!valid) {
-        return indices;
+        return screens;
     }
 
     if (configIndices.size() <= 0) {
-        return indices;
+        return screens;
     }
 
-    // Go through the monitors and see what indices are present in the config.
+    // Go through the monitors and see which ones are present in the config.
     for (int i = 0; i < ((int) monitors.size()); i++) {
         if (std::find(configIndices.begin(), configIndices.end(), i) != configIndices.end())
-            indices.insert(monitors[i].fltkIndex);
+            screens.push_back(monitors[i].screen);
     }
 
-    return indices;
+    return screens;
 }
 
 bool MonitorIndicesParameter::setParam(const char* v)
@@ -80,9 +82,10 @@ bool MonitorIndicesParameter::setParam(const char* v)
         return false;
     }
 
+    QList<QScreen*> screens = QApplication::screens();
     for (int index : indices) {
         index += 1;
-        if (index <= 0 || index > Fl::screen_count())
+        if (index <= 0 || index > screens.count())
             vlog.error(_("Monitor index %d does not exist"), index);
     }
 
@@ -94,7 +97,7 @@ bool MonitorIndicesParameter::setParam(const std::string& v)
     return setParam(v.c_str());
 }
 
-bool MonitorIndicesParameter::setParam(std::set<int> indices)
+bool MonitorIndicesParameter::setParam(const QList<QScreen*>& screens)
 {
     static const int BUF_MAX_LEN = 1024;
     char buf[BUF_MAX_LEN] = {0};
@@ -107,8 +110,10 @@ bool MonitorIndicesParameter::setParam(std::set<int> indices)
     }
 
     for (int i = 0; i < ((int) monitors.size()); i++) {
-        if (std::find(indices.begin(), indices.end(), monitors[i].fltkIndex) != indices.end())
-            configIndices.insert(i);
+        for (const QScreen* screen : screens) {
+            if (screen->geometry() == monitors[i].screen->geometry())
+                configIndices.insert(i);
+        }
     }
 
     int bytesWritten = 0;
@@ -197,18 +202,18 @@ std::vector<MonitorIndicesParameter::Monitor> MonitorIndicesParameter::fetchMoni
     std::vector<Monitor> monitors;
 
     // Start by creating a struct for every monitor.
-    for (int i = 0; i < Fl::screen_count(); i++) {
+    QList<QScreen*> screens = QApplication::screens();
+    for (QScreen* screen : screens) {
+        QRect geometry;
         Monitor monitor;
         bool match;
 
         // Get the properties of the monitor at the current index;
-        Fl::screen_xywh(
-            monitor.x,
-            monitor.y,
-            monitor.w,
-            monitor.h,
-            i
-        );
+        geometry = screen->geometry();
+        monitor.x = geometry.x();
+        monitor.y = geometry.y();
+        monitor.w = geometry.width();
+        monitor.h = geometry.height();
 
         // Only keep a single entry for mirrored screens
         match = false;
@@ -228,7 +233,7 @@ std::vector<MonitorIndicesParameter::Monitor> MonitorIndicesParameter::fetchMoni
         if (match)
             continue;
 
-        monitor.fltkIndex = i;
+        monitor.screen = screen;
         monitors.push_back(monitor);
     }
 

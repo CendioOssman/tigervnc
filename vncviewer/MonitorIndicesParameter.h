@@ -1,4 +1,5 @@
 /* Copyright 2021 Hugo Lundin <huglu@cendio.se> for Cendio AB.
+ * Copyright 2021-2026 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,20 +23,24 @@
 #include <set>
 #include <vector>
 
+#include <QList>
+
 #include <rfb/Configuration.h>
+
+class QScreen;
 
 class MonitorIndicesParameter: public rfb::StringParameter {
 public:
     MonitorIndicesParameter(const char* name_, const char* desc_, const char* v);
-    std::set<int> getParam();
+    QList<QScreen*> getParam();
     using StringParameter::setParam;
-    bool setParam(std::set<int> indices);
+    bool setParam(const QList<QScreen*>& indices);
     bool setParam(const char* v) override;
     bool setParam(const std::string& v) override;
 private:
     typedef struct {
         int x, y, w, h;
-        int fltkIndex;
+        QScreen* screen;
     } Monitor;
 
     static bool parseIndices(const char* value, std::set<int> *indices,
