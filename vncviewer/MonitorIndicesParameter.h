@@ -1,4 +1,5 @@
 /* Copyright 2021 Hugo Lundin <huglu@cendio.se> for Cendio AB.
+ * Copyright 2021-2026 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,20 +23,24 @@
 #include <set>
 #include <vector>
 
+#include <QList>
+
 #include <core/Configuration.h>
+
+class QScreen;
 
 class MonitorIndicesParameter: public core::IntListParameter {
 public:
     MonitorIndicesParameter(const char* name_, const char* desc_,
                             const ListType& v);
-    std::set<int> getMonitors() const;
+    QList<QScreen*> getMonitors() const;
     using IntListParameter::setParam;
     bool setParam(const char* value) override;
-    void setMonitors(const std::set<int>& v);
+    void setMonitors(const QList<QScreen*>& screens);
 private:
     typedef struct {
         int x, y, w, h;
-        int fltkIndex;
+        QScreen* screen;
     } Monitor;
 
     static std::vector<MonitorIndicesParameter::Monitor> fetchMonitors();
