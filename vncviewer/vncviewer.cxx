@@ -100,11 +100,6 @@ void about_vncviewer()
 }
 
 #ifdef __APPLE__
-static void about_callback(Fl_Widget* /*widget*/, void* /*data*/)
-{
-  about_vncviewer();
-}
-
 static void new_connection_cb(Fl_Widget* /*widget*/, void* /*data*/)
 {
   const char *argv[2];
@@ -217,7 +212,7 @@ static void init_fltk()
   fl_message_title_default(_("TigerVNC Viewer"));
 
 #ifdef __APPLE__
-  fl_mac_set_about(about_callback, nullptr);
+  fl_mac_set_about([](Fl_Widget*, void*) { about_vncviewer(); }, nullptr);
 
   Fl_Sys_Menu_Bar *menubar;
   char buffer[1024];
