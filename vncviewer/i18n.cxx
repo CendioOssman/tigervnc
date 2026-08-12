@@ -32,6 +32,9 @@
 #include <Carbon/Carbon.h>
 #endif
 
+#include <FL/fl_ask.H>
+#include <FL/x.H>
+
 #include "i18n.h"
 
 static const char* getlocaledir()
@@ -104,4 +107,29 @@ void i18n_init()
   // be in GUI codeset as well.
   bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
   bind_textdomain_codeset("libc", "UTF-8");
+
+  // FLTK exposes these so that we can translate them.
+  fl_no     = _("No");
+  fl_yes    = _("Yes");
+  fl_ok     = _("OK");
+  fl_cancel = _("Cancel");
+  fl_close  = _("Close");
+
+#ifdef __APPLE__
+  /* Needs trailing space */
+  static char fltk_about[16];
+  snprintf(fltk_about, sizeof(fltk_about), "%s ", _("About"));
+  Fl_Mac_App_Menu::about = fltk_about;
+  static char fltk_hide[16];
+  snprintf(fltk_hide, sizeof(fltk_hide), "%s ", _("Hide"));
+  Fl_Mac_App_Menu::hide = fltk_hide;
+  static char fltk_quit[16];
+  snprintf(fltk_quit, sizeof(fltk_quit), "%s ", _("Quit"));
+  Fl_Mac_App_Menu::quit = fltk_quit;
+
+  Fl_Mac_App_Menu::print = ""; // Don't want the print item
+  Fl_Mac_App_Menu::services = _("Services");
+  Fl_Mac_App_Menu::hide_others = _("Hide Others");
+  Fl_Mac_App_Menu::show = _("Show All");
+#endif
 }

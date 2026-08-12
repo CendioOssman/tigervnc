@@ -333,30 +333,7 @@ static void init_fltk()
   // Avoid empty titles for popups
   fl_message_title_default(_("TigerVNC Viewer"));
 
-  // FLTK exposes these so that we can translate them.
-  fl_no     = _("No");
-  fl_yes    = _("Yes");
-  fl_ok     = _("OK");
-  fl_cancel = _("Cancel");
-  fl_close  = _("Close");
-
 #ifdef __APPLE__
-  /* Needs trailing space */
-  static char fltk_about[16];
-  snprintf(fltk_about, sizeof(fltk_about), "%s ", _("About"));
-  Fl_Mac_App_Menu::about = fltk_about;
-  static char fltk_hide[16];
-  snprintf(fltk_hide, sizeof(fltk_hide), "%s ", _("Hide"));
-  Fl_Mac_App_Menu::hide = fltk_hide;
-  static char fltk_quit[16];
-  snprintf(fltk_quit, sizeof(fltk_quit), "%s ", _("Quit"));
-  Fl_Mac_App_Menu::quit = fltk_quit;
-
-  Fl_Mac_App_Menu::print = ""; // Don't want the print item
-  Fl_Mac_App_Menu::services = _("Services");
-  Fl_Mac_App_Menu::hide_others = _("Hide Others");
-  Fl_Mac_App_Menu::show = _("Show All");
-
   fl_mac_set_about(about_callback, nullptr);
 
   Fl_Sys_Menu_Bar *menubar;
