@@ -86,6 +86,7 @@ bool QFLTKEventDispatcher::processEvents(QEventLoop::ProcessEventsFlags flags)
   connection->processXcbEvents(flags);
 #endif
 
+  // FIXME: We get a segfault on quit() on macOS
   return QWindowSystemInterface::sendWindowSystemEvents(flags) || sentEvents;
 }
 
