@@ -53,17 +53,16 @@
 
 #include <network/TcpSocket.h>
 
-#include <FL/Fl_File_Chooser.H>
 #include <FL/Fl_PNG_Image.H>
 #include <FL/Fl_Sys_Menu_Bar.H>
 #include <FL/fl_ask.H>
 
-#include "fltk/Fl_Password_Input.h"
 #include "fltk/theme.h"
 #include "fltk/util.h"
 #include "parameters.h"
 #include "CConn.h"
 #include "ServerDialog.h"
+#include "i18n.h"
 #include "touch.h"
 #include "vncviewer.h"
 
@@ -325,43 +324,7 @@ static void init_fltk()
   // Avoid empty titles for popups
   fl_message_title_default("TigerVNC");
 
-  // FLTK exposes these so that we can translate them.
-  fl_no     = _("No");
-  fl_yes    = _("Yes");
-  fl_ok     = _("OK");
-  fl_cancel = _("Cancel");
-  fl_close  = _("Close");
-
-  Fl_Password_Input::caps_warning_tooltip = _("Caps lock is active");
-
-  Fl_File_Chooser::add_favorites_label = _("Add to Favorites");
-  Fl_File_Chooser::all_files_label = _("All Files (*)");
-  Fl_File_Chooser::custom_filter_label = _("Custom Filter");
-  Fl_File_Chooser::existing_file_label = _("Please choose an existing file!");
-  Fl_File_Chooser::favorites_label = _("Favorites");
-  Fl_File_Chooser::filename_label = _("Filename:");
-#ifdef WIN32
-  Fl_File_Chooser::filesystems_label = _("My Computer");
-#else
-  Fl_File_Chooser::filesystems_label = _("File Systems");
-#endif // WIN32
-  Fl_File_Chooser::manage_favorites_label = _("Manage Favorites");
-  Fl_File_Chooser::new_directory_label = _("New Directory?");
-  Fl_File_Chooser::new_directory_tooltip = _("Create a new directory.");
-  Fl_File_Chooser::preview_label = _("Preview");
-  Fl_File_Chooser::save_label = _("Save");
-  Fl_File_Chooser::show_label = _("Show:");
-  Fl_File_Chooser::hidden_label = _("Show hidden files");
-
 #ifdef __APPLE__
-  Fl_Mac_App_Menu::about = _("About TigerVNC");
-  Fl_Mac_App_Menu::print = ""; // Don't want the print item
-  Fl_Mac_App_Menu::services = _("Services");
-  Fl_Mac_App_Menu::hide = _("Hide TigerVNC");
-  Fl_Mac_App_Menu::hide_others = _("Hide others");
-  Fl_Mac_App_Menu::show = _("Show all");
-  Fl_Mac_App_Menu::quit = _("Quit TigerVNC");
-
   fl_mac_set_about(about_callback, nullptr);
 
   Fl_Sys_Menu_Bar *menubar;
@@ -570,6 +533,7 @@ int main(int argc, char** argv)
   argv0 = argv[0];
 
   setlocale(LC_ALL, "");
+  i18n_init();
 
   fprintf(stderr,"\n%s\n", about_text());
 

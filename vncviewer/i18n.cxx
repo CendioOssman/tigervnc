@@ -1,0 +1,73 @@
+/* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
+ * Copyright 2011-2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
+ *
+ * This is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this software; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+ * USA.
+ */
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <core/i18n.h>
+
+#include <FL/Fl_File_Chooser.H>
+#include <FL/fl_ask.H>
+#include <FL/x.H>
+
+#include "fltk/Fl_Password_Input.h"
+
+#include "i18n.h"
+
+void i18n_init()
+{
+  // FLTK exposes these so that we can translate them.
+  fl_no     = _("No");
+  fl_yes    = _("Yes");
+  fl_ok     = _("OK");
+  fl_cancel = _("Cancel");
+  fl_close  = _("Close");
+
+  Fl_Password_Input::caps_warning_tooltip = _("Caps lock is active");
+
+  Fl_File_Chooser::add_favorites_label = _("Add to Favorites");
+  Fl_File_Chooser::all_files_label = _("All Files (*)");
+  Fl_File_Chooser::custom_filter_label = _("Custom Filter");
+  Fl_File_Chooser::existing_file_label = _("Please choose an existing file!");
+  Fl_File_Chooser::favorites_label = _("Favorites");
+  Fl_File_Chooser::filename_label = _("Filename:");
+#ifdef WIN32
+  Fl_File_Chooser::filesystems_label = _("My Computer");
+#else
+  Fl_File_Chooser::filesystems_label = _("File Systems");
+#endif // WIN32
+  Fl_File_Chooser::manage_favorites_label = _("Manage Favorites");
+  Fl_File_Chooser::new_directory_label = _("New Directory?");
+  Fl_File_Chooser::new_directory_tooltip = _("Create a new directory.");
+  Fl_File_Chooser::preview_label = _("Preview");
+  Fl_File_Chooser::save_label = _("Save");
+  Fl_File_Chooser::show_label = _("Show:");
+  Fl_File_Chooser::hidden_label = _("Show hidden files");
+
+#ifdef __APPLE__
+  Fl_Mac_App_Menu::about = _("About TigerVNC");
+  Fl_Mac_App_Menu::print = ""; // Don't want the print item
+  Fl_Mac_App_Menu::services = _("Services");
+  Fl_Mac_App_Menu::hide = _("Hide TigerVNC");
+  Fl_Mac_App_Menu::hide_others = _("Hide others");
+  Fl_Mac_App_Menu::show = _("Show all");
+  Fl_Mac_App_Menu::quit = _("Quit TigerVNC");
+#endif
+}

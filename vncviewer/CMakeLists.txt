@@ -22,6 +22,7 @@ add_executable(vncviewer
   OptionsDialog.cxx
   PlatformPixelBuffer.cxx
   Viewport.cxx
+  i18n.cxx
   parameters.cxx
   touch.cxx
   MonitorIndicesParameter.cxx
