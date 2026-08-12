@@ -35,6 +35,7 @@
 
 #include <QApplication>
 #include <QIcon>
+#include <QMenuBar>
 
 #include <core/Logger_stdio.h>
 #include <core/LogWriter.h>
@@ -45,12 +46,11 @@
 
 #include <FL/Fl.H>
 #include <FL/Fl_PNG_Image.H>
-#include <FL/Fl_Sys_Menu_Bar.H>
 #include <FL/fl_ask.H>
+#include <FL/x.H>
 
 #include "fltk/Fl_Message_Box.h"
 #include "fltk/theme.h"
-#include "fltk/util.h"
 #include "mainloop.h"
 #include "parameters.h"
 #include "i18n.h"
@@ -101,7 +101,7 @@ void about_vncviewer()
 }
 
 #ifdef __APPLE__
-static void new_connection_cb(Fl_Widget* /*widget*/, void* /*data*/)
+static void new_connection_cb()
 {
   const char *argv[2];
   pid_t pid;
@@ -236,18 +236,22 @@ static void init_gui()
   fl_message_title_default("TigerVNC");
 
 #ifdef __APPLE__
-  fl_mac_set_about([](Fl_Widget*, void*) { about_vncviewer(); }, nullptr);
+  // Global menu bar
+  QMenuBar* menuBar = new QMenuBar(nullptr);
+  QMenu* appMenu = new QMenu(menuBar);
+  menuBar->addMenu(appMenu);
 
-  Fl_Sys_Menu_Bar *menubar;
-  menubar = new Fl_Sys_Menu_Bar(0, 0, 500, 25);
-  // Fl_Sys_Menu_Bar overrides methods without them being virtual,
-  // which means we cannot use our generic Fl_Menu_ helpers.
-  menubar->add(
-    fltk_menu_escape(C_("SysMenu|", "&File")).c_str(),
-    0, nullptr, nullptr, FL_SUBMENU);
-  menubar->insert(
-    1, fltk_menu_escape(C_("SysMenu|File|", "&New connection")).c_str(),
-    FL_COMMAND | 'n', new_connection_cb);
+  QAction* aboutAction = new QAction(appMenu);
+  QObject::connect(aboutAction, &QAction::triggered,
+                   []() { about_vncviewer(); });
+  aboutAction->setMenuRole(QAction::AboutRole);
+  appMenu->addAction(aboutAction);
+
+  QMenu *file = new QMenu(C_("SysMenu|", "&File"), menuBar);
+  file->addAction(C_("SysMenu|File|", "&New Connection"),
+                  []() { new_connection_cb(); },
+                  QKeySequence("Ctrl+N"));
+  menuBar->addMenu(file);
 #endif
 }
 

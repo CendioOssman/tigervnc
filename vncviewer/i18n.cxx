@@ -32,7 +32,6 @@
 #include <FL/Fl_File_Chooser.H>
 
 #include <FL/fl_ask.H>
-#include <FL/x.H>
 
 #include "fltk/Fl_Password_Input.h"
 
@@ -104,16 +103,6 @@ void i18n_init()
   Fl_File_Chooser::save_label = _("Save");
   Fl_File_Chooser::show_label = _("Show:");
   Fl_File_Chooser::hidden_label = _("Show hidden files");
-
-#ifdef __APPLE__
-  Fl_Mac_App_Menu::about = _("About TigerVNC");
-  Fl_Mac_App_Menu::print = ""; // Don't want the print item
-  Fl_Mac_App_Menu::services = _("Services");
-  Fl_Mac_App_Menu::hide = _("Hide TigerVNC");
-  Fl_Mac_App_Menu::hide_others = _("Hide others");
-  Fl_Mac_App_Menu::show = _("Show all");
-  Fl_Mac_App_Menu::quit = _("Quit TigerVNC");
-#endif
 }
 
 void i18n_qt_init()
