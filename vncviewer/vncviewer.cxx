@@ -33,6 +33,7 @@
 #include <sys/stat.h>
 
 #include <QApplication>
+#include <QIcon>
 
 #include <rfb/Logger_stdio.h>
 #include <rfb/LogWriter.h>
@@ -161,6 +162,7 @@ static void init_gui()
   // Set the default icon for all windows.
 #ifdef WIN32
   HICON lg, sm;
+  QIcon icon;
 
   lg = (HICON)LoadImage(GetModuleHandle(nullptr),
                         MAKEINTRESOURCE(IDI_ICON),
@@ -174,11 +176,18 @@ static void init_gui()
                         LR_DEFAULTCOLOR | LR_SHARED);
 
   Fl_Window::default_icons(lg, sm);
+
+  icon.addPixmap(QPixmap::fromImage(QImage::fromHICON(lg)));
+  icon.addPixmap(QPixmap::fromImage(QImage::fromHICON(sm)));
+
+  qApp->setWindowIcon(icon);
 #elif ! defined(__APPLE__)
   const int icon_sizes[] = {128, 64, 48, 32, 24, 22, 16};
 
   Fl_PNG_Image *icons[sizeof(icon_sizes)/sizeof(icon_sizes[0])];
   int count;
+
+  QIcon fallback;
 
   count = 0;
 
@@ -207,12 +216,16 @@ static void init_gui()
 
           count++;
       }
+
+      fallback.addFile(icon_path, QSize(icon_size, icon_size));
   }
 
   Fl_Window::default_icons((const Fl_RGB_Image**)icons, count);
 
   for (int i = 0;i < count;i++)
       delete icons[i];
+
+  qApp->setWindowIcon(QIcon::fromTheme("tigervnc", fallback));
 #endif
 
   // Turn off the annoying behaviour where popups track the mouse.
