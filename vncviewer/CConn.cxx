@@ -31,6 +31,7 @@
 #include <gnutls/x509.h>
 #endif
 
+#include <QApplication>
 #include <QMessageBox>
 
 #include <core/Exception.h>
@@ -58,7 +59,6 @@
 #endif
 
 #include <FL/Fl.H>
-#include <FL/fl_ask.H>
 
 #include "AudioOutput.h"
 #include "AuthDialog.h"
@@ -702,7 +702,7 @@ void CConn::framebufferUpdateEnd()
 
 void CConn::bell()
 {
-  fl_beep();
+  qApp->beep();
 }
 
 bool CConn::dataRect(const core::Rect& r, int encoding)
