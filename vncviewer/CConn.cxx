@@ -63,10 +63,6 @@
 std::string CConn::savedUsername;
 std::string CConn::savedPassword;
 
-#ifdef WIN32
-#include "win32.h"
-#endif
-
 using namespace rfb;
 
 static rfb::LogWriter vlog("CConn");
