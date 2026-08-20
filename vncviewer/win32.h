@@ -21,10 +21,6 @@
 #ifndef __VNCVIEWER_WIN32_H__
 #define __VNCVIEWER_WIN32_H__
 
-#ifdef _MSC_VER
-#define snprintf(str, n, format, ...) _snprintf_s(str, n, _TRUNCATE, format, __VA_ARGS__)
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
