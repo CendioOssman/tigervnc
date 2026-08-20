@@ -31,6 +31,7 @@
 #include <gnutls/x509.h>
 #endif
 
+#include <QApplication>
 #include <QMessageBox>
 
 #include <rfb/CMsgWriter.h>
@@ -50,7 +51,6 @@
 #include <os/os.h>
 
 #include <FL/Fl.H>
-#include <FL/fl_ask.H>
 
 #include "AuthDialog.h"
 #include "CConn.h"
@@ -667,7 +667,7 @@ void CConn::setColourMapEntries(int /*firstColour*/, int /*nColours*/,
 
 void CConn::bell()
 {
-  fl_beep();
+  qApp->beep();
 }
 
 bool CConn::dataRect(const Rect& r, int encoding)
