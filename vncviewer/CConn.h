@@ -25,6 +25,7 @@
 #include <rfb/CConnection.h>
 
 class QMessageBox;
+class QSocketNotifier;
 
 namespace network { class Socket; }
 
@@ -49,7 +50,8 @@ public:
 protected:
 
   // Callback when socket is ready (or broken)
-  void socketEvent();
+  void socketReadEvent();
+  void socketWriteEvent();
 
   void processNextMsg(core::Timer*);
 
@@ -119,6 +121,8 @@ private:
   std::string serverHost;
   int serverPort;
   network::Socket* sock;
+  QSocketNotifier* socketReadNotifier;
+  QSocketNotifier* socketWriteNotifier;
   core::MethodTimer<CConn> msgTimer;
 
   AuthDialog* authDialog;
