@@ -32,6 +32,7 @@
 #endif
 
 #include <QApplication>
+#include <QSocketNotifier>
 #include <QMessageBox>
 
 #include <rfb/CMsgWriter.h>
@@ -49,8 +50,6 @@
 #include <network/UnixSocket.h>
 #endif
 #include <os/os.h>
-
-#include <FL/Fl.H>
 
 #include "AuthDialog.h"
 #include "CConn.h"
@@ -81,7 +80,9 @@ static const PixelFormat mediumColourPF(8, 8, false, true,
 static const unsigned bpsEstimateWindow = 1000;
 
 CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
-  : serverPort(0), msgTimer(this, &CConn::processNextMsg),
+  : serverPort(0),
+    socketReadNotifier(nullptr), socketWriteNotifier(nullptr),
+    msgTimer(this, &CConn::processNextMsg),
     authDialog(nullptr), verifyDialog(nullptr), desktop(nullptr),
     updateCount(0), pixelCount(0),
     lastServerEncoding((unsigned int)-1), bpsEstimate(20000000),
@@ -125,10 +126,16 @@ CConn::CConn(const char* vncServerName, network::Socket* socket=nullptr)
     }
   }
 
-  Fl::add_fd(sock->getFd(), FL_READ | FL_EXCEPT,
-             [](FL_SOCKET, void* data) {
-               ((CConn*)data)->socketEvent();
-             }, this);
+  socketReadNotifier = new QSocketNotifier(sock->getFd(),
+                                           QSocketNotifier::Read);
+  QObject::connect(socketReadNotifier, &QSocketNotifier::activated,
+                   [this](int) { socketReadEvent(); });
+
+  socketWriteNotifier = new QSocketNotifier(sock->getFd(),
+                                            QSocketNotifier::Write);
+  socketWriteNotifier->setEnabled(false);
+  QObject::connect(socketWriteNotifier, &QSocketNotifier::activated,
+                   [this](int) { socketWriteEvent(); });
 
   setServerName(serverHost.c_str());
   setStreams(&sock->inStream(), &sock->outStream());
@@ -150,8 +157,8 @@ CConn::~CConn()
   if (desktop)
     delete desktop;
 
-  if (sock)
-    Fl::remove_fd(sock->getFd());
+  delete socketReadNotifier;
+  delete socketWriteNotifier;
   delete sock;
 }
 
@@ -233,22 +240,28 @@ unsigned CConn::getPosition()
   return sock->inStream().pos();
 }
 
-void CConn::socketEvent()
+void CConn::socketReadEvent()
 {
   // Stop monitoring the socket for now and start processing incoming
   // data asynchronously
-  Fl::remove_fd(sock->getFd());
+  socketReadNotifier->setEnabled(false);
   msgTimer.start(0);
 
   // Coalesce data until we're fully done processing things
   getOutStream()->cork(true);
 }
 
+void CConn::socketWriteEvent()
+{
+  sock->outStream().flush();
+
+  socketWriteNotifier->setEnabled(sock->outStream().hasBufferedData());
+}
+
 void CConn::processNextMsg(Timer*)
 {
   static bool recursing = false;
   bool again;
-  int when;
 
   // I don't think processMsg() is recursion safe, so add this check
   assert(!recursing);
@@ -257,9 +270,6 @@ void CConn::processNextMsg(Timer*)
 
   again = false;
   try {
-    // We might have been called to flush unwritten socket data
-    sock->outStream().flush();
-
     again = processMsg();
   } catch (rdr::EndOfStream& e) {
     if (authDialog)
@@ -305,14 +315,8 @@ void CConn::processNextMsg(Timer*)
 
   getOutStream()->cork(false);
 
-  when = FL_READ | FL_EXCEPT;
-  if (sock->outStream().hasBufferedData())
-    when |= FL_WRITE;
-
-  Fl::add_fd(sock->getFd(), when,
-             [](FL_SOCKET, void* data) {
-               ((CConn*)data)->socketEvent();
-             }, this);
+  socketReadNotifier->setEnabled(true);
+  socketWriteNotifier->setEnabled(sock->outStream().hasBufferedData());
 }
 
 ////////////////////// CConnection callback methods //////////////////////
@@ -1196,5 +1200,5 @@ void CConn::handleHostKeyCancel()
 
 void CConn::resumeProcessing()
 {
-  socketEvent();
+  socketReadEvent();
 }
