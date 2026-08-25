@@ -29,7 +29,8 @@
 #include "Keyboard.h"
 #include "ShortcutHandler.h"
 
-class Fl_Menu_Button;
+class QMenu;
+
 class Fl_RGB_Image;
 
 class BaseTouchHandler;
@@ -148,7 +149,7 @@ private:
 
   int clipboardSource;
 
-  Fl_Menu_Button *contextMenu;
+  QMenu* contextMenu;
 
   bool menuCtrlKey;
   bool menuAltKey;

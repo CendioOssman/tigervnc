@@ -28,6 +28,8 @@
 
 #include <stdexcept>
 
+#include <QAction>
+#include <QMenu>
 #include <QMessageBox>
 
 #include <core/LogWriter.h>
@@ -66,8 +68,6 @@
 #include <FL/fl_draw.H>
 
 #include <FL/Fl.H>
-#include <FL/Fl_Menu.H>
-#include <FL/Fl_Menu_Button.H>
 #include <FL/x.H>
 
 #if defined(WIN32)
@@ -141,16 +141,21 @@ Viewport::Viewport(int w, int h, CConn* cc_)
   assert(frameBuffer);
   cc->setFramebuffer(frameBuffer);
 
-  contextMenu = new Fl_Menu_Button(0, 0, 0, 0);
-  // Setting box type to FL_NO_BOX prevents it from trying to draw the
-  // button component (which we don't want)
-  contextMenu->box(FL_NO_BOX);
+  contextMenu = new QMenu();
 
-  // The (invisible) button associated with this widget can mess with
-  // things like Fl_Scroll so we need to get rid of any parents.
-  // Unfortunately that's not possible because of STR #2654, but
-  // reparenting to the current window works for most cases.
-  window()->add(contextMenu);
+  // Set the default mouse pointer whilst the context menu is open, as
+  // it is annoying if the pointer disappears when you move it outside
+  // the menu
+  QObject::connect(contextMenu, &QMenu::aboutToShow,
+                   [this]() {
+                     if (Fl::belowmouse() == this)
+                       window()->cursor(FL_CURSOR_DEFAULT);
+                   });
+  QObject::connect(contextMenu, &QMenu::aboutToHide,
+                   [this]() {
+                     if (Fl::belowmouse() == this)
+                       showCursor();
+                   });
 
   unsigned modifierMask = 0;
   for (core::EnumListEntry key : shortcutModifiers)
@@ -186,6 +191,8 @@ Viewport::~Viewport()
   delete keyboard;
   delete touch;
   Fl::enable_im();
+
+  delete contextMenu;
 
   // FLTK automatically deletes all child widgets, so we shouldn't touch
   // them ourselves here
@@ -1179,149 +1186,155 @@ int Viewport::handleSystemEvent(void *event, void *data)
 
 void Viewport::initContextMenu()
 {
+  QAction* action;
+
   contextMenu->clear();
 
-  fltk_menu_add(contextMenu, C_("ContextMenu|", "Disconn&ect"), 0,
-                [](Fl_Widget*, void*) {
-                  disconnect();
-                }, nullptr, FL_MENU_DIVIDER);
+  action = new QAction(C_("ContextMenu|", "Dis&connect"), contextMenu);
+  QObject::connect(action, &QAction::triggered,
+                   []() {
+                     disconnect();
+                   });
+  contextMenu->addAction(action);
 
-  fltk_menu_add(contextMenu, C_("ContextMenu|", "&Full screen"), 0,
-                [](Fl_Widget*, void* data) {
-                  Viewport* self = (Viewport*)data;
-                  if (self->window()->fullscreen_active())
-                    self->window()->fullscreen_off();
-                  else
-                    ((DesktopWindow*)self->window())->fullscreen_on();
-                }, this,
-                FL_MENU_TOGGLE | (window()->fullscreen_active()?FL_MENU_VALUE:0));
+  contextMenu->addSeparator();
 
-  fltk_menu_add(contextMenu, C_("ContextMenu|", "Minimi&ze"), 0,
-                [](Fl_Widget*, void* data) {
-                  Viewport* self = (Viewport*)data;
+  action = new QAction(C_("ContextMenu|", "&Full screen"), contextMenu);
+  QObject::connect(action, &QAction::triggered,
+                   [this](bool checked) {
+                     if (!checked)
+                       window()->fullscreen_off();
+                     else
+                       ((DesktopWindow*)window())->fullscreen_on();
+                   });
+  action->setCheckable(true);
+  action->setChecked(window()->fullscreen_active());
+  contextMenu->addAction(action);
+
+  action = new QAction(C_("ContextMenu|", "Minimi&ze"), contextMenu);
+  QObject::connect(action, &QAction::triggered,
+                   [this]() {
 #ifdef __APPLE__
-                  // FIXME: Workaround for not being able to minimize in fullscreen
-                  // https://github.com/TigerVNC/tigervnc/pull/1813
-                  if (self->window()->fullscreen_active())
-                    cocoa_enable_minimize(self->window());
+                     // FIXME: Workaround for not being able to minimize in fullscreen
+                     // https://github.com/TigerVNC/tigervnc/pull/1813
+                     if (window()->fullscreen_active())
+                       cocoa_enable_minimize(window());
 #endif
-                  self->window()->iconize();
-                }, this, 0);
+                     window()->iconize();
+                   });
+  contextMenu->addAction(action);
 
-  fltk_menu_add(contextMenu, C_("ContextMenu|",
-                                "Resize &window to session"), 0,
-                [](Fl_Widget*, void* data) {
-                  Viewport* self = (Viewport*)data;
-                  if (self->window()->fullscreen_active())
-                    return;
-                  self->window()->size(self->w(), self->h());
-                }, this,
-                (window()->fullscreen_active()?FL_MENU_INACTIVE:0) |
-                FL_MENU_DIVIDER);
+  action = new QAction(C_("ContextMenu|", "Resize &window to session"),
+                       contextMenu);
+  QObject::connect(action, &QAction::triggered,
+                   [this]() {
+                     if (window()->fullscreen_active())
+                       return;
+                     window()->size(w(), h());
+                   });
+  contextMenu->addAction(action);
 
-  fltk_menu_add(contextMenu, C_("ContextMenu|", "&Ctrl"), 0,
-                [](Fl_Widget* w, void* data) {
-                  const Fl_Menu_Item* m = ((Fl_Menu_*)w)->mvalue();
-                  Viewport* self = (Viewport*)data;
-                  if (m->value())
-                    self->sendKeyPress(FAKE_CTRL_KEY_CODE,
-                                       0x1d, XK_Control_L);
-                  else
-                    self->sendKeyRelease(FAKE_CTRL_KEY_CODE);
-                  self->menuCtrlKey = !(self->menuCtrlKey);
-                }, this,
-                FL_MENU_TOGGLE | (menuCtrlKey?FL_MENU_VALUE:0));
+  contextMenu->addSeparator();
 
-  fltk_menu_add(contextMenu, C_("ContextMenu|", "&Alt"), 0,
-                [](Fl_Widget* w, void* data) {
-                  const Fl_Menu_Item* m = ((Fl_Menu_*)w)->mvalue();
-                  Viewport* self = (Viewport*)data;
-                  if (m->value())
-                    self->sendKeyPress(FAKE_ALT_KEY_CODE,
-                                       0x38, XK_Alt_L);
-                  else
-                    self->sendKeyRelease(FAKE_ALT_KEY_CODE);
-                  self->menuAltKey = !(self->menuAltKey);
-                }, this,
-                FL_MENU_TOGGLE | (menuAltKey?FL_MENU_VALUE:0));
+  action = new QAction(C_("ContextMenu|", "&Ctrl"), contextMenu);
+  QObject::connect(action, &QAction::triggered,
+                   [this](bool checked) {
+                     if (checked)
+                       sendKeyPress(FAKE_CTRL_KEY_CODE,
+                                    0x1d, XK_Control_L);
+                     else
+                       sendKeyRelease(FAKE_CTRL_KEY_CODE);
+                     menuCtrlKey = checked;
+                   });
+  action->setCheckable(true);
+  action->setChecked(menuCtrlKey);
+  contextMenu->addAction(action);
 
-  fltk_menu_add(contextMenu, C_("ContextMenu|", "Send Ctrl-Alt-&Del"), 0,
-                [](Fl_Widget*, void* data) {
-                  Viewport* self = (Viewport*)data;
+  action = new QAction(C_("ContextMenu|", "&Alt"), contextMenu);
+  QObject::connect(action, &QAction::triggered,
+                   [this](bool checked) {
+                     if (checked)
+                       sendKeyPress(FAKE_ALT_KEY_CODE,
+                                    0x38, XK_Alt_L);
+                     else
+                       sendKeyRelease(FAKE_ALT_KEY_CODE);
+                     menuAltKey = checked;
+                   });
+  action->setCheckable(true);
+  action->setChecked(menuAltKey);
+  contextMenu->addAction(action);
 
-                  self->sendKeyPress(FAKE_CTRL_KEY_CODE,
-                                     0x1d, XK_Control_L);
-                  self->sendKeyPress(FAKE_ALT_KEY_CODE,
-                                     0x38, XK_Alt_L);
-                  self->sendKeyPress(FAKE_DEL_KEY_CODE,
-                                     0xd3, XK_Delete);
+  action = new QAction(C_("ContextMenu|", "Send Ctrl-Alt-&Del"),
+                       contextMenu);
+  QObject::connect(action, &QAction::triggered,
+                   [this]() {
+                     sendKeyPress(FAKE_CTRL_KEY_CODE,
+                                  0x1d, XK_Control_L);
+                     sendKeyPress(FAKE_ALT_KEY_CODE,
+                                  0x38, XK_Alt_L);
+                     sendKeyPress(FAKE_DEL_KEY_CODE,
+                                  0xd3, XK_Delete);
+                     sendKeyRelease(FAKE_DEL_KEY_CODE);
+                     sendKeyRelease(FAKE_ALT_KEY_CODE);
+                     sendKeyRelease(FAKE_CTRL_KEY_CODE);
+                   });
+  contextMenu->addAction(action);
 
-                  self->sendKeyRelease(FAKE_DEL_KEY_CODE);
-                  self->sendKeyRelease(FAKE_ALT_KEY_CODE);
-                  self->sendKeyRelease(FAKE_CTRL_KEY_CODE);
-                }, this, FL_MENU_DIVIDER);
+  contextMenu->addSeparator();
 
-  fltk_menu_add(contextMenu, C_("ContextMenu|", "&Refresh screen"), 0,
-                [](Fl_Widget*, void* data) {
-                  Viewport* self = (Viewport*)data;
-                  self->cc->refreshFramebuffer();
-                }, this, FL_MENU_DIVIDER);
+  action = new QAction(C_("ContextMenu|", "&Refresh screen"),
+                       contextMenu);
+  QObject::connect(action, &QAction::triggered,
+                   [this]() {
+                     cc->refreshFramebuffer();
+                   });
+  contextMenu->addAction(action);
 
-  fltk_menu_add(contextMenu, C_("ContextMenu|", "&Options..."), 0,
-                [](Fl_Widget*, void*) {
-                  OptionsDialog* dlg;
+  contextMenu->addSeparator();
 
-                  dlg = new OptionsDialog();
-                  dlg->setAttribute(Qt::WA_DeleteOnClose);
-                  dlg->open();
-                }, nullptr, 0);
+  action = new QAction(C_("ContextMenu|", "&Options..."), contextMenu);
+  QObject::connect(action, &QAction::triggered,
+                   []() {
+                     OptionsDialog* dlg;
 
-  fltk_menu_add(contextMenu, C_("ContextMenu|", "Connection &info..."), 0,
-                [](Fl_Widget*, void* data) {
-                  Viewport* self = (Viewport*)data;
-                  QMessageBox* dlg;
-                  dlg = new QMessageBox;
-                  dlg->setIcon(QMessageBox::Information);
-                  dlg->setWindowTitle(_("VNC connection info"));
-                  dlg->setText(self->cc->connectionInfo().c_str());
-                  dlg->addButton(QMessageBox::Close);
-                  dlg->setAttribute(Qt::WA_DeleteOnClose);
-                  dlg->open();
-                }, this, 0);
+                     dlg = new OptionsDialog();
+                     dlg->setAttribute(Qt::WA_DeleteOnClose);
+                     dlg->open();
+                   });
+  contextMenu->addAction(action);
 
-  fltk_menu_add(contextMenu, C_("ContextMenu|",
-                                "About &TigerVNC..."), 0,
-                [](Fl_Widget*, void*) {
-                  about_vncviewer();
-                }, nullptr, 0);
+  action = new QAction(C_("ContextMenu|", "Connection &info..."),
+                       contextMenu);
+  QObject::connect(action, &QAction::triggered,
+                   [this]() {
+                     QMessageBox* dlg;
+                     dlg = new QMessageBox;
+                     dlg->setIcon(QMessageBox::Information);
+                     dlg->setWindowTitle(_("VNC connection info"));
+                     dlg->setText(cc->connectionInfo().c_str());
+                     dlg->addButton(QMessageBox::Close);
+                     dlg->setAttribute(Qt::WA_DeleteOnClose);
+                     dlg->open();
+                   });
+  contextMenu->addAction(action);
+
+  action = new QAction(C_("ContextMenu|", "About &TigerVNC..."),
+                       contextMenu);
+  QObject::connect(action, &QAction::triggered,
+                   []() {
+                     about_vncviewer();
+                   });
+  contextMenu->addAction(action);
 }
 
 void Viewport::popupContextMenu()
 {
-  // Make sure the menu is reset to its initial state between goes or
-  // it will start up highlighting the previously selected entry.
-  contextMenu->value(-1);
-
   // initialize context menu before display
   initContextMenu();
 
-  // Unfortunately FLTK doesn't reliably restore the mouse pointer for
-  // menus, so we have to help it out.
-  if (Fl::belowmouse() == this)
-    window()->cursor(FL_CURSOR_DEFAULT);
-
-  // FLTK also doesn't switch focus properly for menus
-  Fl::handle(FL_UNFOCUS, window());
-
-  // FIXME: This is blocking, but FLTK has no non-blocking API
-  contextMenu->popup();
-
-  Fl::handle(FL_FOCUS, window());
-
-  // Back to our proper mouse pointer.
-  if (Fl::belowmouse() == this)
-    showCursor();
+  contextMenu->popup(QCursor::pos());
 }
+
 
 void Viewport::handleOptions(void *data)
 {
