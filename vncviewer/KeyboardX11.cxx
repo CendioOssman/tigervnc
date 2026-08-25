@@ -95,13 +95,15 @@ bool KeyboardX11::handleEvent(const void* event)
 
   if (xevent->type == KeyPress) {
     int keycode;
-    char str;
+    Bool ret;
+    unsigned mods;
     KeySym keysym;
 
     keycode = code_map_keycode_to_qnum[xevent->xkey.keycode];
 
-    XLookupString((XKeyEvent*)&xevent->xkey, &str, 1, &keysym, nullptr);
-    if (keysym == NoSymbol) {
+    ret = XkbLookupKeySym(fl_display, xevent->xkey.keycode,
+                          xevent->xkey.state, &mods, &keysym);
+    if (!ret || (keysym == NoSymbol)) {
       vlog.error(_("No symbol for key code %d (in the current state)"),
                  (int)xevent->xkey.keycode);
     }
