@@ -206,7 +206,8 @@ static const char * dotcursor_xpm[] = {
   "     "};
 
 void Viewport::setCursor(int width, int height,
-                         const rfb::Point& hotspot, const uint8_t* data)
+                         const rfb::Point& hotspot,
+                         const uint8_t* pixels)
 {
   int i;
 
@@ -217,7 +218,7 @@ void Viewport::setCursor(int width, int height,
   }
 
   for (i = 0; i < width*height; i++)
-    if (data[i*4 + 3] != 0) break;
+    if (pixels[i*4 + 3] != 0) break;
 
   if ((i == width*height) && dotWhenNoCursor) {
     vlog.debug("cursor is empty - using dot");
@@ -233,7 +234,7 @@ void Viewport::setCursor(int width, int height,
       cursorHotspot.x = cursorHotspot.y = 0;
     } else {
       uint8_t *buffer = new uint8_t[width * height * 4];
-      memcpy(buffer, data, width * height * 4);
+      memcpy(buffer, pixels, width * height * 4);
       cursor = new Fl_RGB_Image(buffer, width, height, 4);
       cursorHotspot = hotspot;
     }
@@ -269,14 +270,14 @@ void Viewport::handleClipboardAnnounce(bool available)
   cc->requestClipboard();
 }
 
-void Viewport::handleClipboardData(const char* data)
+void Viewport::handleClipboardData(const char* cbdata)
 {
   size_t len;
 
   if (!hasFocus())
     return;
 
-  len = strlen(data);
+  len = strlen(cbdata);
 
   vlog.debug("Got clipboard data (%d bytes)", (int)len);
 
@@ -284,9 +285,9 @@ void Viewport::handleClipboardData(const char* data)
   // dump the data into both variants.
 #if !defined(WIN32) && !defined(__APPLE__)
   if (setPrimary)
-    Fl::copy(data, len, 0);
+    Fl::copy(cbdata, len, 0);
 #endif
-  Fl::copy(data, len, 1);
+  Fl::copy(cbdata, len, 1);
 }
 
 void Viewport::setLEDState(unsigned int ledState)

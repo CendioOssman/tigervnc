@@ -338,9 +338,9 @@ void DesktopWindow::setDesktopSizeDone(unsigned result)
 
 void DesktopWindow::setCursor(int width, int height,
                               const rfb::Point& hotspot,
-                              const uint8_t* data)
+                              const uint8_t* pixels)
 {
-  viewport->setCursor(width, height, hotspot, data);
+  viewport->setCursor(width, height, hotspot, pixels);
 }
 
 
@@ -509,9 +509,9 @@ void DesktopWindow::handleClipboardAnnounce(bool available)
   viewport->handleClipboardAnnounce(available);
 }
 
-void DesktopWindow::handleClipboardData(const char* data)
+void DesktopWindow::handleClipboardData(const char* text)
 {
-  viewport->handleClipboardData(data);
+  viewport->handleClipboardData(text);
 }
 
 

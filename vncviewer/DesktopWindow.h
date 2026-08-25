@@ -54,7 +54,7 @@ public:
 
   // New image for the locally rendered cursor
   void setCursor(int width, int height, const rfb::Point& hotspot,
-                 const uint8_t* data);
+                 const uint8_t* pixels);
 
   // Server-provided cursor position
   void setCursorPos(const rfb::Point& pos);
@@ -65,7 +65,7 @@ public:
   // Clipboard events
   void handleClipboardRequest();
   void handleClipboardAnnounce(bool available);
-  void handleClipboardData(const char* data);
+  void handleClipboardData(const char* text);
 
   // Fl_Window callback methods
   void draw() override;
