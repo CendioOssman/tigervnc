@@ -28,7 +28,8 @@
 #include "Keyboard.h"
 #include "GestureHandler.h"
 
-class Fl_Menu_Button;
+class QMenu;
+
 class Fl_RGB_Image;
 
 class BaseTouchHandler;
@@ -143,8 +144,8 @@ private:
   int clipboardSource;
 
   uint32_t menuKeySym;
-  int menuKeyCode, menuKeyFLTK;
-  Fl_Menu_Button *contextMenu;
+  int menuKeyCode, menuKeyQt;
+  QMenu* contextMenu;
 
   bool menuCtrlKey;
   bool menuAltKey;
