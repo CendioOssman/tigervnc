@@ -323,14 +323,14 @@ void Viewport::handleClipboardAnnounce(bool available)
   cc->requestClipboard();
 }
 
-void Viewport::handleClipboardData(const char* data)
+void Viewport::handleClipboardData(const char* cbdata)
 {
   size_t len;
 
   if (!hasFocus())
     return;
 
-  len = strlen(data);
+  len = strlen(cbdata);
 
   vlog.debug("Got clipboard data (%d bytes)", (int)len);
 
@@ -338,9 +338,9 @@ void Viewport::handleClipboardData(const char* data)
   // dump the data into both variants.
 #if !defined(WIN32) && !defined(__APPLE__)
   if (setPrimary)
-    Fl::copy(data, len, 0);
+    Fl::copy(cbdata, len, 0);
 #endif
-  Fl::copy(data, len, 1);
+  Fl::copy(cbdata, len, 1);
 }
 
 void Viewport::setLEDState(unsigned int ledState)

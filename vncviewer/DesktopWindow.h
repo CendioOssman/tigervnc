@@ -68,7 +68,7 @@ public:
   // Clipboard events
   void handleClipboardRequest();
   void handleClipboardAnnounce(bool available);
-  void handleClipboardData(const char* data);
+  void handleClipboardData(const char* text);
 
   // Fl_Window callback methods
   void draw() override;
