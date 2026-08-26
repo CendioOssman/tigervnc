@@ -92,7 +92,6 @@ private:
     __attribute__((__format__ (__printf__, 2, 3)));
 
   static int fltkDispatch(int event, Fl_Window *win);
-  static int fltkHandle(int event);
 
   bool hasFocus();
 
