@@ -40,8 +40,6 @@ int x11_xinput_major();
 bool x11_grab_pointer(QWidget* win);
 void x11_ungrab_pointer(QWidget* win);
 
-void x11_warp_pointer(unsigned x, unsigned y);
-
 bool x11_is_pointer_on_same_screen(QWidget* win);
 
 #endif
