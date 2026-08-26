@@ -407,13 +407,6 @@ void x11_ungrab_pointer(QWidget* win)
   XFree(curmasks);
 }
 
-void x11_warp_pointer(unsigned x, unsigned y)
-{
-  Display* display = qt_display();
-  Window rootwindow = DefaultRootWindow(display);
-  XWarpPointer(display, rootwindow, rootwindow, 0, 0, 0, 0, x, y);
-}
-
 bool x11_is_pointer_on_same_screen(QWidget* win)
 {
   Display* display = qt_display();

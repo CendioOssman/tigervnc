@@ -335,12 +335,10 @@ void DesktopWindow::setCursorPos(const rfb::Point& pos)
 
   global = mapToGlobal(QPoint(pos.x, pos.y) + viewport->pos());
 
-#if defined(WIN32)
-  SetCursorPos(global.x(), global.y());
-#elif defined(__APPLE__)
+#if defined(__APPLE__)
   cocoa_set_cursor_pos(global.x(), global.y());
-#else // Assume this is Xlib
-  x11_warp_pointer(global.x(), global.y());
+#else
+  QCursor::setPos(global.x(), global.y());
 #endif
 }
 
