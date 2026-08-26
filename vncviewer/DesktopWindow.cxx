@@ -117,6 +117,9 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_, QWidget* parent)
   connect(resizeTimer, &QTimer::timeout, this,
           &DesktopWindow::handleResizeTimeout);
 
+  // FIXME: Not sure why this is needed
+  viewport->setFocus();
+
   // Screens removed or added. Recreate fullscreen window if
   // necessary. On Windows, adding a second screen only works
   // reliable if we are using a timer. Otherwise, the window will
