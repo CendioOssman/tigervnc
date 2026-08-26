@@ -24,6 +24,7 @@ Build-Depends:
  libgmp-dev,
  libpam0g-dev,
  libpng-dev,
+ libxinerama-dev,
  libxrandr-dev,
  libxdamage-dev,
  libxcb-xkb-dev,

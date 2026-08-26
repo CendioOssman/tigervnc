@@ -28,6 +28,7 @@
 #include <string.h>
 #include <sys/time.h>
 
+#include <QApplication>
 #include <QScreen>
 
 #include <core/Configuration.h>
@@ -68,10 +69,6 @@
 
 static core::LogWriter vlog("DesktopWindow");
 
-// Global due to http://www.fltk.org/str.php?L2177 and the similar
-// issue for Fl::event_dispatch.
-static std::set<DesktopWindow *> instances;
-
 DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
   : Fl_Window(w, h), cc(cc_), offscreen(nullptr),
     firstUpdate(true),
@@ -109,13 +106,23 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
 
   OptionsDialog::addCallback(handleOptions, this);
 
-  // Some events need to be caught globally
-  if (instances.size() == 0)
-    Fl::add_handler(fltkHandle);
-  instances.insert(this);
-
   // Hack. See below...
   fl_add_event_dispatch(fltkDispatch, this);
+
+  // Screens removed or added. Recreate fullscreen window if
+  // necessary. On Windows, adding a second screen only works
+  // reliable if we are using a timer. Otherwise, the window will
+  // not be resized to cover the new screen. A timer makes sense
+  // also on other systems, to make sure that whatever desktop
+  // environment has a chance to deal with things before we do.
+  QObject::connect(qApp, &QGuiApplication::screenAdded, [this]() {
+    Fl::remove_timeout(reconfigureFullscreen);
+    Fl::add_timeout(0.5, reconfigureFullscreen, this);
+  });
+  QObject::connect(qApp, &QGuiApplication::screenRemoved, [this]() {
+    Fl::remove_timeout(reconfigureFullscreen);
+    Fl::add_timeout(0.5, reconfigureFullscreen, this);
+  });
 
   // Support for -geometry option. Note that although we do support
   // negative coordinates, we do not support -XOFF-YOFF (ie
@@ -247,6 +254,7 @@ DesktopWindow::~DesktopWindow()
   // Unregister all timeouts in case they get a change tro trigger
   // again later when this object is already gone.
   Fl::remove_timeout(handleResizeTimeout, this);
+  Fl::remove_timeout(reconfigureFullscreen, this);
   Fl::remove_timeout(handleFullscreenTimeout, this);
   Fl::remove_idle(checkFocus, this);
 
@@ -254,11 +262,6 @@ DesktopWindow::~DesktopWindow()
 
   delete toast;
   delete offscreen;
-
-  instances.erase(this);
-
-  if (instances.size() == 0)
-    Fl::remove_handler(fltkHandle);
 
   fl_remove_event_dispatch(fltkDispatch, this);
 
@@ -808,23 +811,6 @@ int DesktopWindow::fltkDispatch(int event, Fl_Window *win, void *)
   return 0;
 }
 
-int DesktopWindow::fltkHandle(int event)
-{
-  switch (event) {
-  case FL_SCREEN_CONFIGURATION_CHANGED:
-    // Screens removed or added. Recreate fullscreen window if
-    // necessary. On Windows, adding a second screen only works
-    // reliable if we are using a timer. Otherwise, the window will
-    // not be resized to cover the new screen. A timer makes sense
-    // also on other systems, to make sure that whatever desktop
-    // environment has a chance to deal with things before we do.
-    Fl::remove_timeout(reconfigureFullscreen);
-    Fl::add_timeout(0.5, reconfigureFullscreen);
-  }
-
-  return 0;
-}
-
 void DesktopWindow::fullscreen_on()
 {
   bool allMonitors = fullScreenMode == "all";
@@ -1102,14 +1088,14 @@ void DesktopWindow::handleResizeTimeout(void *data)
 }
 
 
-void DesktopWindow::reconfigureFullscreen(void* /*data*/)
+void DesktopWindow::reconfigureFullscreen(void *data)
 {
-  std::set<DesktopWindow *>::iterator iter;
+  DesktopWindow *self = (DesktopWindow *)data;
 
-  for (iter = instances.begin(); iter != instances.end(); ++iter) {
-    if ((*iter)->fullscreen_active())
-      (*iter)->fullscreen_on();
-  }
+  assert(self);
+
+  if (self->fullscreen_active())
+    self->fullscreen_on();
 }
 
 

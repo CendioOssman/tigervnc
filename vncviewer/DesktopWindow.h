@@ -94,7 +94,6 @@ protected:
 
 private:
   static int fltkDispatch(int event, Fl_Window *win, void *);
-  static int fltkHandle(int event);
 
   bool hasFocus();
   static void checkFocus(void *data);
