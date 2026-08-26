@@ -246,24 +246,6 @@ void cocoa_set_presentation_full_screen()
          NSApplicationPresentationAutoHideDock];
 }
 
-bool cocoa_win_is_zoomed(QWidget *win)
-{
-  NSView *view;
-  NSWindow *nsw;
-  view = (NSView*)win->winId();
-  nsw = [view window];
-  return [nsw isZoomed];
-}
-
-void cocoa_win_zoom(QWidget *win)
-{
-  NSView *view;
-  NSWindow *nsw;
-  view = (NSView*)win->winId();
-  nsw = [view window];
-  [nsw zoom:nsw];
-}
-
 void cocoa_event_delay(double seconds)
 {
   CGEventSourceRef event = CGEventSourceCreate(kCGEventSourceStateCombinedSessionState);

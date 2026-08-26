@@ -195,15 +195,6 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_, QWidget* parent)
       h = screenGeometry.height();
   }
 
-#ifdef __APPLE__
-  // On OS X we can do the maximize thing properly before the
-  // window is showned. Other platforms handled further down...
-  if (::maximize) {
-    w = screenGeometry.width();
-    h = screenGeometry.height();
-  }
-#endif
-
   // FIXME: This doesn't adjust for title, like FLTK does
   if (force_position)
     move(geom_x, geom_y);
@@ -228,20 +219,14 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_, QWidget* parent)
     delayedFullscreen = true;
   }
 
+  if (maximize)
+    setWindowState(windowState() ^ Qt::WindowMaximized);
+
   show();
 
 #ifdef __APPLE__
   // We do our own full screen, so disable the system one
   cocoa_prevent_native_fullscreen(this);
-#endif
-
-  // Unfortunately, current FLTK does not allow us to set the
-  // maximized property on Windows and X11 before showing the window.
-  // See STR #2083 and STR #2178
-#ifndef __APPLE__
-  if (::maximize) {
-    maximizeWindow();
-  }
 #endif
 
   // Show hint about menu shortcut
@@ -343,32 +328,13 @@ void DesktopWindow::updateWindow()
 
 void DesktopWindow::resizeFramebuffer(int new_w, int new_h)
 {
-  bool maximized;
-
   if ((new_w == viewport->width()) && (new_h == viewport->height()))
     return;
-
-  maximized = false;
-
-#ifdef WIN32
-  WINDOWPLACEMENT wndpl;
-  memset(&wndpl, 0, sizeof(WINDOWPLACEMENT));
-  wndpl.length = sizeof(WINDOWPLACEMENT);
-  GetWindowPlacement((HWND)winId(), &wndpl);
-  if (wndpl.showCmd == SW_SHOWMAXIMIZED)
-    maximized = true;
-#elif defined(__APPLE__)
-  if (cocoa_win_is_zoomed(this))
-    maximized = true;
-#else
-  if (x11_win_is_maximized(this))
-    maximized = true;
-#endif
 
   // If we're letting the viewport match the window perfectly, then
   // keep things that way for the new size, otherwise just keep things
   // like they are.
-  if (!isFullScreen() && !maximized && !pendingRemoteResize &&
+  if (!isFullScreen() && !isMaximized() && !pendingRemoteResize &&
       !resizeTimer->isActive()) {
     if (size() == viewport->size())
       resize(new_w, new_h);
@@ -945,28 +911,6 @@ void DesktopWindow::ungrabPointer()
 
 #if !defined(WIN32) && !defined(__APPLE__)
   x11_ungrab_pointer(this);
-#endif
-}
-
-void DesktopWindow::maximizeWindow()
-{
-#if defined(WIN32)
-  // We cannot use ShowWindow() in full screen mode as it will
-  // resize things implicitly. Fortunately modifying the style
-  // directly results in a maximized state once we leave full screen.
-  if (isFullScreen()) {
-    WINDOWINFO wi;
-    wi.cbSize = sizeof(WINDOWINFO);
-    GetWindowInfo((HWND)winId(), &wi);
-    SetWindowLongPtr((HWND)winId(), GWL_STYLE, wi.dwStyle | WS_MAXIMIZE);
-  } else
-    ShowWindow((HWND)winId(), SW_MAXIMIZE);
-#elif defined(__APPLE__)
-  if (isFullScreen())
-    return;
-  cocoa_win_zoom(this);
-#else
-  x11_win_maximize(this);
 #endif
 }
 

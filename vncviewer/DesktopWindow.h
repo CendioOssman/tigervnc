@@ -112,8 +112,6 @@ private:
   void grabPointer();
   void ungrabPointer();
 
-  void maximizeWindow();
-
   void handleResizeTimeout();
   void reconfigureFullscreen();
   void remoteResize();

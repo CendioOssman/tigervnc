@@ -33,9 +33,6 @@ bool cocoa_screens_have_separate_spaces();
 void cocoa_set_presentation_default();
 void cocoa_set_presentation_full_screen();
 
-bool cocoa_win_is_zoomed(QWidget *win);
-void cocoa_win_zoom(QWidget *win);
-
 void cocoa_event_delay(double seconds);
 
 void cocoa_set_cursor_pos(int x, int y);
