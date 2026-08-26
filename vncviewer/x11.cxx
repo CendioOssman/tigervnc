@@ -114,60 +114,6 @@ bool x11_wm_supports(const char* atom)
   return false;
 }
 
-void x11_win_maximize(QWidget* win)
-{
-  Display* display = qt_display();
-
-  Atom net_wm_state = XInternAtom (display, "_NET_WM_STATE", 0);
-  Atom net_wm_state_maximized_vert = XInternAtom (display, "_NET_WM_STATE_MAXIMIZED_VERT", 0);
-  Atom net_wm_state_maximized_horz = XInternAtom (display, "_NET_WM_STATE_MAXIMIZED_HORZ", 0);
-
-  XEvent e;
-  e.xany.type = ClientMessage;
-  e.xany.window = win->winId();
-  e.xclient.message_type = net_wm_state;
-  e.xclient.format = 32;
-  e.xclient.data.l[0] = _NET_WM_STATE_ADD;
-  e.xclient.data.l[1] = net_wm_state_maximized_vert;
-  e.xclient.data.l[2] = net_wm_state_maximized_horz;
-  e.xclient.data.l[3] = 0;
-  e.xclient.data.l[4] = 0;
-  XSendEvent(display, XRootWindow(display, DefaultScreen(display)), 0, SubstructureNotifyMask | SubstructureRedirectMask, &e);
-}
-
-bool x11_win_is_maximized(QWidget* win)
-{
-  Display* display = qt_display();
-
-  bool maximized;
-
-  Atom net_wm_state = XInternAtom (display, "_NET_WM_STATE", 0);
-  Atom net_wm_state_maximized_vert = XInternAtom (display, "_NET_WM_STATE_MAXIMIZED_VERT", 0);
-  Atom net_wm_state_maximized_horz = XInternAtom (display, "_NET_WM_STATE_MAXIMIZED_HORZ", 0);
-
-  Atom type;
-  int format;
-  unsigned long nitems, remain;
-  Atom *atoms;
-
-  XGetWindowProperty(display, win->winId(), net_wm_state, 0, 1024,
-                     False, XA_ATOM, &type, &format, &nitems, &remain,
-                     (unsigned char**)&atoms);
-
-  maximized = false;
-  for (unsigned long n = 0;n < nitems;n++) {
-    if ((atoms[n] == net_wm_state_maximized_vert) ||
-        (atoms[n] == net_wm_state_maximized_horz)) {
-      maximized = true;
-      break;
-    }
-  }
-
-  XFree(atoms);
-
-  return maximized;
-}
-
 static bool x11_is_qscreen(QScreen* qscreen,
                            XineramaScreenInfo* xscreen)
 {

@@ -25,9 +25,6 @@ class QWidget;
 bool x11_has_wm();
 bool x11_wm_supports(const char* atom);
 
-void x11_win_maximize(QWidget* win);
-bool x11_win_is_maximized(QWidget* win);
-
 bool x11_fullscreen_screens(QWidget* window,
                             QScreen* top, QScreen* bottom,
                             QScreen* left, QScreen* right);

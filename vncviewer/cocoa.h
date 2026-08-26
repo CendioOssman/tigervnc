@@ -33,9 +33,6 @@ typedef struct CGColorSpace *CGColorSpaceRef;
 
 CGColorSpaceRef cocoa_win_color_space(Fl_Window *win);
 
-bool cocoa_win_is_zoomed(QWidget *win);
-void cocoa_win_zoom(QWidget *win);
-
 void cocoa_event_delay(double seconds);
 
 void cocoa_set_cursor_pos(int x, int y);

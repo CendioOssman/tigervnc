@@ -114,8 +114,6 @@ private:
 
   void handleActiveChanged();
 
-  void maximizeWindow();
-
   void handleResizeTimeout();
   void reconfigureFullscreen();
   void remoteResize();
