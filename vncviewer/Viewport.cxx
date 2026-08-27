@@ -1067,6 +1067,10 @@ void Viewport::popupContextMenu()
   initContextMenu();
 
   contextMenu->popup(QCursor::pos());
+  // FIXME: We get Qt::PopupFocusReason, but focus still remains with
+  // us, so force it again to fully move focus
+  // https://qt-project.atlassian.net/browse/QTBUG-145865
+  contextMenu->setFocus(Qt::PopupFocusReason);
 }
 
 
