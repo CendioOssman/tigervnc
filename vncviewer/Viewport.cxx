@@ -930,6 +930,7 @@ void Viewport::initContextMenu()
   contextMenu->addAction(action);
 
   if (menuKeySym) {
+    QAction* secretAction;
     char sendMenuKey[64];
     snprintf(sendMenuKey, 64, p_("ContextMenu|", "Send %s"), (const char *)menuKey);
     action = new QAction(sendMenuKey, contextMenu);
@@ -941,6 +942,21 @@ void Viewport::initContextMenu()
     action->setShortcut(QKeySequence(menuKeyQt));
     action->setShortcutVisibleInContextMenu(false);
     contextMenu->addAction(action);
+
+    // FIXME: Qt doesn't respect the shortcut set on a menu entry, but
+    //        it works if we attach it to ourselves
+    secretAction = new QAction(action);
+    connect(secretAction, &QAction::triggered, this,
+            [this, action]() {
+              action->trigger();
+              contextMenu->hide();
+            });
+    secretAction->setShortcut(QKeySequence(menuKeyQt));
+    secretAction->setShortcutContext(Qt::ApplicationShortcut);
+    connect(contextMenu, &QMenu::aboutToShow, secretAction,
+            [this, secretAction]() { addAction(secretAction); });
+    connect(contextMenu, &QMenu::aboutToHide, secretAction,
+            [this, secretAction]() { removeAction(secretAction); });
   }
 
   action = new QAction(p_("ContextMenu|", "Send Ctrl-Alt-&Del"),
