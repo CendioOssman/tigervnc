@@ -1,0 +1,27 @@
+diff -up xserver/hw/meson.build.tvnc xserver/hw/meson.build
+--- xserver/hw/meson.build.tvnc	2026-10-07 03:35:17.000000000 +0200
++++ xserver/hw/meson.build	2026-10-08 16:33:32.420126649 +0200
+@@ -6,6 +6,8 @@ if build_xvfb
+     subdir('vfb')
+ endif
+ 
++subdir('vnc')
++
+ if build_xnest
+     subdir('xnest')
+ endif
+diff -up xserver/meson_options.txt.tvnc xserver/meson_options.txt
+--- xserver/meson_options.txt.tvnc	2026-10-07 03:35:17.000000000 +0200
++++ xserver/meson_options.txt	2026-10-08 16:33:32.420645386 +0200
+@@ -135,6 +135,11 @@ option('sparkle-public-edkey', type: 'st
+ option('xpbproxy', type: 'boolean', value: false,
+         description: 'Build a standalone X pasteboard proxy')
+ 
++option('tigervnc_srcdir', type: 'string', value: '',
++       description: 'Location of TigerVNC source directory')
++option('tigervnc_builddir', type: 'string', value: '',
++       description: 'Location of TigerVNC build directory')
++
+ option('libunwind', type: 'boolean', value: false,
+         description: 'Use libunwind for backtrace reporting')
+ 
