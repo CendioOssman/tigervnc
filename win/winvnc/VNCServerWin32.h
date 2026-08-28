@@ -28,8 +28,9 @@
 #include <rfb_win32/RegConfig.h>
 #include <rfb_win32/SDisplay.h>
 #include <rfb_win32/SocketManager.h>
-#include <winvnc/QueryConnectDialog.h>
-#include <winvnc/ManagedListener.h>
+
+#include "QueryConnectDialog.h"
+#include "ManagedListener.h"
 
 namespace core {
     class Thread;

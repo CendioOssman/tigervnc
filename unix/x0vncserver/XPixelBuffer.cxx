@@ -32,7 +32,7 @@
 
 #include <core/Region.h>
 
-#include <x0vncserver/XPixelBuffer.h>
+#include "XPixelBuffer.h"
 
 XPixelBuffer::XPixelBuffer(Display *dpy, ImageFactory &factory,
                            const core::Rect& rect)

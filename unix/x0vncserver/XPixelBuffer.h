@@ -25,8 +25,8 @@
 
 #include <rfb/PixelBuffer.h>
 
-#include <x0vncserver/Image.h>
-#include <x0vncserver/PollingManager.h>
+#include "Image.h"
+#include "PollingManager.h"
 
 namespace rfb { class VNCServer; }
 

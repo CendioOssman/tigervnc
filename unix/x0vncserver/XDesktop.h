@@ -30,7 +30,7 @@
 #include <X11/extensions/Xdamage.h>
 #endif
 
-#include <vncconfig/QueryConnectDialog.h>
+#include "../vncconfig/QueryConnectDialog.h"
 
 #include "XSelection.h"
 

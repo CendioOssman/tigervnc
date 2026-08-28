@@ -22,7 +22,7 @@
 
 #include <core/LogWriter.h>
 
-#include <winvnc/ManagedListener.h>
+#include "ManagedListener.h"
 
 using namespace winvnc;
 using namespace core;

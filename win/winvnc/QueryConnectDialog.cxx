@@ -20,9 +20,9 @@
 #include <config.h>
 #endif
 
-#include <winvnc/VNCServerWin32.h>
-#include <winvnc/QueryConnectDialog.h>
-#include <winvnc/resource.h>
+#include "VNCServerWin32.h"
+#include "QueryConnectDialog.h"
+#include "resource.h"
 
 #include <core/LogWriter.h>
 #include <core/i18n.h>

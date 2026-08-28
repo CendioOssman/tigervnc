@@ -24,9 +24,9 @@
 
 #include <string.h>
 
-#include <winvnc/VNCServerWin32.h>
-#include <winvnc/VNCServerService.h>
-#include <winvnc/AddNewClientDialog.h>
+#include "VNCServerWin32.h"
+#include "VNCServerService.h"
+#include "AddNewClientDialog.h"
 
 #include <core/Logger_file.h>
 #include <core/Logger_stdio.h>

@@ -27,7 +27,7 @@
 #ifndef __POLLINGSCHEDULER_H__
 #define __POLLINGSCHEDULER_H__
 
-#include <x0vncserver/TimeMillis.h>
+#include "TimeMillis.h"
 
 class PollingScheduler {
 

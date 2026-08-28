@@ -22,7 +22,7 @@
 #include <config.h>
 #endif
 
-#include <winvnc/VNCServerService.h>
+#include "VNCServerService.h"
 
 #include <core/LogWriter.h>
 #include <core/string.h>

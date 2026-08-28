@@ -22,7 +22,7 @@
 #include <mutex>
 #include <thread>
 
-#include <winvnc/VNCServerWin32.h>
+#include "VNCServerWin32.h"
 
 #include <core/Configuration.h>
 

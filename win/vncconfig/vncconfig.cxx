@@ -42,13 +42,13 @@ using namespace rfb::win32;
 static LogWriter vlog("main");
 
 
-#include <vncconfig/Authentication.h>
-#include <vncconfig/Connections.h>
-#include <vncconfig/Sharing.h>
-#include <vncconfig/Hooking.h>
-#include <vncconfig/Inputs.h>
-#include <vncconfig/Legacy.h>
-#include <vncconfig/Desktop.h>
+#include "Authentication.h"
+#include "Connections.h"
+#include "Sharing.h"
+#include "Hooking.h"
+#include "Inputs.h"
+#include "Legacy.h"
+#include "Desktop.h"
 
 
 const char* rfb::win32::AppName = "TigerVNC Configuration";

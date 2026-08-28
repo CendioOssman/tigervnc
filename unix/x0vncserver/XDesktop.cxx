@@ -35,8 +35,6 @@
 
 #include <rfb/ScreenSet.h>
 
-#include <x0vncserver/XDesktop.h>
-
 #include <X11/XKBlib.h>
 #include <X11/Xutil.h>
 #ifdef HAVE_XTEST
@@ -56,8 +54,10 @@ extern "C" {
 void vncSetGlueContext(Display *dpy, void *res);
 }
 #endif
-#include <x0vncserver/Geometry.h>
-#include <x0vncserver/XPixelBuffer.h>
+
+#include "Geometry.h"
+#include "XDesktop.h"
+#include "XPixelBuffer.h"
 
 extern const unsigned short code_map_qnum_to_xorgevdev[];
 extern const unsigned int code_map_qnum_to_xorgevdev_len;

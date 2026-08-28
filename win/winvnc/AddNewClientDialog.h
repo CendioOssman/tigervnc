@@ -21,7 +21,8 @@
 #ifndef __WINVNC_ADD_NEW_CLIENT_DIALOG_H__
 #define __WINVNC_ADD_NEW_CLIENT_DIALOG_H__
 
-#include <winvnc/resource.h>
+#include "resource.h"
+
 #include <rfb_win32/Dialog.h>
 
 namespace winvnc {
