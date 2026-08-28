@@ -20,7 +20,7 @@
 #define __XSELECTION_H__
 
 #include <string>
-#include <tx/TXWindow.h>
+#include <TXWindow.h>
 
 class XSelectionHandler
 {

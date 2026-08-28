@@ -22,7 +22,7 @@
 #define __XDESKTOP_H__
 
 #include <rfb/SDesktop.h>
-#include <tx/TXWindow.h>
+#include <TXWindow.h>
 #include <unixcommon.h>
 
 #include <X11/XKBlib.h>
