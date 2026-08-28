@@ -19,7 +19,6 @@ add_executable(x0vncserver
 )
 
 target_include_directories(x0vncserver SYSTEM PUBLIC ${X11_INCLUDE_DIR})
-target_include_directories(x0vncserver PUBLIC ${CMAKE_SOURCE_DIR}/unix/tx)
 target_link_libraries(x0vncserver tx rfbserver rfb network rdr unixcommon core)
 
 # systemd support (socket activation)
