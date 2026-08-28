@@ -38,4 +38,5 @@ if(BUILD_WINVNC)
   target_sources(rfb_win32 PRIVATE ${RFB_WIN32_SOURCES} CleanDesktop.cxx)
 endif()
 
+target_link_libraries(rfb_win32 rfbserver rfb network rdr core)
 target_link_libraries(rfb_win32 user32.lib comctl32.lib wtsapi32.lib version.lib)
