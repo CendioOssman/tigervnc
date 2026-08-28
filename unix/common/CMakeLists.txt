@@ -5,7 +5,6 @@ endif()
 add_library(unixcommon STATIC
   randr.cxx)
 
-target_include_directories(unixcommon PUBLIC ${CMAKE_SOURCE_DIR}/common)
 target_include_directories(unixcommon PUBLIC ${CMAKE_SOURCE_DIR}/unix/common)
 target_link_libraries(unixcommon core rfb)
 

@@ -9,7 +9,6 @@ add_executable(vncconfig
 
 target_include_directories(vncconfig SYSTEM PUBLIC ${X11_INCLUDE_DIR})
 
-target_include_directories(vncconfig PUBLIC ${CMAKE_SOURCE_DIR}/common)
 target_include_directories(vncconfig PUBLIC ${CMAKE_SOURCE_DIR}/unix/tx)
 
 target_link_libraries(vncconfig core tx rfb ${X11_LIBRARIES})
