@@ -31,7 +31,7 @@ namespace rdr {
 
   public:
 
-    FdInStream(int fd, bool closeWhenDone_=false);
+    FdInStream(int fd);
     virtual ~FdInStream();
 
     int getFd() { return fd; }
@@ -42,7 +42,6 @@ namespace rdr {
     size_t readFd(uint8_t* buf, size_t len);
 
     int fd;
-    bool closeWhenDone;
   };
 
 } // end of namespace rdr
