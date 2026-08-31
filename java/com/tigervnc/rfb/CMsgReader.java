@@ -110,61 +110,86 @@ public class CMsgReader {
         state = MSGSTATE_IDLE;
       return ret;
     } else {
-      if (!is.checkNoWait(2 + 2 + 2 + 2 + 4))
-        return false;
+      if (state != MSGSTATE_RECT_DATA) {
+        if (!is.checkNoWait(2 + 2 + 2 + 2 + 4))
+          return false;
 
-      int x = is.readU16();
-      int y = is.readU16();
-      int w = is.readU16();
-      int h = is.readU16();
-      int encoding = is.readS32();
+        int x = is.readU16();
+        int y = is.readU16();
+        int w = is.readU16();
+        int h = is.readU16();
 
-      switch (encoding) {
+        // Fresh Rect each time: DecodeManager queues the reference, and
+        // cursor handlers may hand tl through to invokeLater callbacks.
+        dataRect = new Rect(x, y, x+w, y+h);
+        rectEncoding = is.readS32();
+
+        state = MSGSTATE_RECT_DATA;
+      }
+
+      boolean ret;
+
+      switch (rectEncoding) {
       case Encodings.pseudoEncodingLastRect:
         nUpdateRectsLeft = 1;     // this rectangle is the last one
+        ret = true;
         break;
       case Encodings.pseudoEncodingXCursor:
-        readSetXCursor(w, h, new Point(x,y));
+        ret = readSetXCursor(dataRect.width(), dataRect.height(), dataRect.tl);
         break;
       case Encodings.pseudoEncodingCursor:
-        readSetCursor(w, h, new Point(x,y));
+        ret = readSetCursor(dataRect.width(), dataRect.height(), dataRect.tl);
         break;
       case Encodings.pseudoEncodingCursorWithAlpha:
-        readSetCursorWithAlpha(w, h, new Point(x,y));
+        ret = readSetCursorWithAlpha(dataRect.width(), dataRect.height(), dataRect.tl);
         break;
       case Encodings.pseudoEncodingVMwareCursor:
-        readSetVMwareCursor(w, h, new Point(x,y));
+        ret = readSetVMwareCursor(dataRect.width(), dataRect.height(), dataRect.tl);
         break;
       case Encodings.pseudoEncodingVMwareCursorPosition:
-        handler.setCursorPos(new Point(x,y));
+        handler.setCursorPos(dataRect.tl);
+        ret = true;
         break;
       case Encodings.pseudoEncodingDesktopName:
-        readSetDesktopName(x, y, w, h);
+        ret = readSetDesktopName(dataRect.tl.x, dataRect.tl.y,
+                                 dataRect.width(), dataRect.height());
         break;
       case Encodings.pseudoEncodingDesktopSize:
-        handler.setDesktopSize(w, h);
+        handler.setDesktopSize(dataRect.width(), dataRect.height());
+        ret = true;
         break;
       case Encodings.pseudoEncodingExtendedDesktopSize:
-        readExtendedDesktopSize(x, y, w, h);
+        ret = readExtendedDesktopSize(dataRect.tl.x, dataRect.tl.y,
+                                      dataRect.width(), dataRect.height());
         break;
       case Encodings.pseudoEncodingClientRedirect:
-        nUpdateRectsLeft = 0;
-        readClientRedirect(x, y, w, h);
-        return true;
+        ret = readClientRedirect(dataRect.tl.x, dataRect.tl.y,
+                                 dataRect.width(), dataRect.height());
+        if (ret) {
+          state = MSGSTATE_IDLE;
+          nUpdateRectsLeft = 0;
+        }
+        return ret;
       case Encodings.pseudoEncodingQEMUKeyEvent:
         handler.supportsQEMUKeyEvent();
+        ret = true;
         break;
       case Encodings.pseudoEncodingLEDState:
-        readLEDState();
+        ret = readLEDState();
         break;
       case Encodings.pseudoEncodingVMwareLEDState:
-        readVMwareLEDState();
+        ret = readVMwareLEDState();
         break;
       default:
-        readRect(new Rect(x, y, x+w, y+h), encoding);
+        readRect(dataRect, rectEncoding);
+        ret = true;
         break;
       };
 
+      if (!ret)
+        return false;
+
+      state = MSGSTATE_IDLE;
       nUpdateRectsLeft--;
       if (nUpdateRectsLeft == 0)
         handler.framebufferUpdateEnd();
@@ -406,21 +431,27 @@ public class CMsgReader {
     handler.dataRect(r, encoding);
   }
 
-  protected void readSetXCursor(int width, int height, Point hotspot)
+  protected boolean readSetXCursor(int width, int height, Point hotspot)
   {
+    if (width * height == 0) {
+      handler.setCursor(0, 0, hotspot, new byte[0]);
+      return true;
+    }
+
     byte pr, pg, pb;
     byte sr, sg, sb;
     int data_len = ((width+7)/8) * height;
     int mask_len = ((width+7)/8) * height;
+
+    if (!is.checkNoWait(3 + 3 + data_len + mask_len))
+      return false;
+
     ByteBuffer data = ByteBuffer.allocate(data_len);
     ByteBuffer mask = ByteBuffer.allocate(mask_len);
 
     int x, y;
     byte[] buf = new byte[width*height*4];
     ByteBuffer out;
-
-    if (width * height == 0)
-      return;
 
     pr = (byte)is.readU8();
     pg = (byte)is.readU8();
@@ -461,12 +492,22 @@ public class CMsgReader {
     }
 
     handler.setCursor(width, height, hotspot, buf);
+    return true;
   }
 
-  protected void readSetCursor(int width, int height, Point hotspot)
+  protected boolean readSetCursor(int width, int height, Point hotspot)
   {
+    if (width * height == 0) {
+      handler.setCursor(0, 0, hotspot, new byte[0]);
+      return true;
+    }
+
     int data_len = width * height * (handler.server.pf().bpp/8);
     int mask_len = ((width+7)/8) * height;
+
+    if (!is.checkNoWait(data_len + mask_len))
+      return false;
+
     ByteBuffer data = ByteBuffer.allocate(data_len);
     ByteBuffer mask = ByteBuffer.allocate(mask_len);
 
@@ -500,12 +541,11 @@ public class CMsgReader {
     }
 
     handler.setCursor(width, height, hotspot, buf);
+    return true;
   }
 
-  protected void readSetCursorWithAlpha(int width, int height, Point hotspot)
+  protected boolean readSetCursorWithAlpha(int width, int height, Point hotspot)
   {
-    int encoding;
-
     PixelFormat rgbaPF =
       new PixelFormat(32, 32, false, true, 255, 255, 255, 16, 8, 0);
     ManagedPixelBuffer pb =
@@ -515,15 +555,22 @@ public class CMsgReader {
     ByteBuffer buf =
       ByteBuffer.allocate(pb.area()*4).order(rgbaPF.getByteOrder());;
 
-    encoding = is.readS32();
+    // The decoder may use restore points internally, so track the
+    // encoding across calls instead.
+    if (cursorEncoding == -1) {
+      if (!is.checkNoWait(4))
+        return false;
+      cursorEncoding = is.readS32();
+    }
 
     origPF = handler.server.pf();
     handler.server.setPF(rgbaPF);
     try {
-      handler.readAndDecodeRect(pb.getRect(), encoding, pb);
+      handler.readAndDecodeRect(pb.getRect(), cursorEncoding, pb);
     } finally {
       handler.server.setPF(origPF);
     }
+    cursorEncoding = -1;
 
     // ARGB with pre-multiplied alpha works best for BufferedImage
     if (pb.area() > 0) {
@@ -545,9 +592,10 @@ public class CMsgReader {
     }
 
     handler.setCursor(width, height, hotspot, buf.array());
+    return true;
   }
 
-  protected void readSetVMwareCursor(int width, int height, Point hotspot)
+  protected boolean readSetVMwareCursor(int width, int height, Point hotspot)
   {
     // VMware cursor sends RGBA, java BufferedImage needs ARGB
     if (width > maxCursorSize || height > maxCursorSize)
@@ -555,11 +603,21 @@ public class CMsgReader {
 
     byte type;
 
+    if (!is.checkNoWait(1 + 1))
+      return false;
+
+    is.setRestorePoint();
+
     type = (byte)is.readU8();
     is.skip(1);
 
     if (type == 0) {
       int len = width * height * (handler.server.pf().bpp/8);
+
+      if (!is.hasDataOrRestore(len + len))
+        return false;
+      is.clearRestorePoint();
+
       ByteBuffer andMask = ByteBuffer.allocate(len);
       ByteBuffer xorMask = ByteBuffer.allocate(len);
 
@@ -627,6 +685,10 @@ public class CMsgReader {
 
       handler.setCursor(width, height, hotspot, data.array());
     } else if (type == 1) {
+      if (!is.hasDataOrRestore(width*height*4))
+        return false;
+      is.clearRestorePoint();
+
       ByteBuffer data = ByteBuffer.allocate(width*height*4);
 
       // FIXME: Is alpha premultiplied?
@@ -640,13 +702,27 @@ public class CMsgReader {
 
       handler.setCursor(width, height, hotspot, data.array());
     } else {
+      is.clearRestorePoint();
       throw new Exception("Unknown cursor type");
     }
+    return true;
   }
 
-  protected void readSetDesktopName(int x, int y, int w, int h)
+  protected boolean readSetDesktopName(int x, int y, int w, int h)
   {
-    String name = is.readString();
+    if (!is.checkNoWait(4))
+      return false;
+
+    is.setRestorePoint();
+    int len = is.readU32();
+
+    if (!is.hasDataOrRestore(len))
+      return false;
+    is.clearRestorePoint();
+
+    byte[] nameBytes = new byte[len];
+    is.readBytes(ByteBuffer.wrap(nameBytes), len);
+    String name = new String(nameBytes, java.nio.charset.StandardCharsets.UTF_8);
 
     if (x != 0 || y != 0 || w != 0 || h != 0) {
       vlog.error("Ignoring DesktopName rect with non-zero position/size");
@@ -654,31 +730,46 @@ public class CMsgReader {
       handler.setName(name);
     }
 
+    return true;
   }
 
-  protected void readLEDState()
+  protected boolean readLEDState()
   {
+    if (!is.checkNoWait(1))
+      return false;
     int ledState = is.readU8();
     handler.setLEDState(ledState);
+    return true;
   }
 
-  protected void readVMwareLEDState()
+  protected boolean readVMwareLEDState()
   {
+    if (!is.checkNoWait(4))
+      return false;
     // As luck has it, this extension uses the same bit definitions,
     // so no conversion required.
     int ledState = is.readU32();
     handler.setLEDState(ledState);
+    return true;
   }
 
-  protected void readExtendedDesktopSize(int x, int y, int w, int h)
+  protected boolean readExtendedDesktopSize(int x, int y, int w, int h)
   {
     int screens, i;
     int id, flags;
     int sx, sy, sw, sh;
     ScreenSet layout = new ScreenSet();
 
+    if (!is.checkNoWait(1 + 3))
+      return false;
+
+    is.setRestorePoint();
     screens = is.readU8();
     is.skip(3);
+
+    if (!is.hasDataOrRestore(16 * screens))
+      return false;
+    is.clearRestorePoint();
 
     for (i = 0;i < screens;i++) {
       id = is.readU32();
@@ -692,18 +783,40 @@ public class CMsgReader {
     }
 
     handler.setExtendedDesktopSize(x, y, w, h, layout);
+    return true;
   }
 
-  protected void readClientRedirect(int x, int y, int w, int h)
+  protected boolean readClientRedirect(int x, int y, int w, int h)
   {
+    if (!is.checkNoWait(2 + 4))
+      return false;
+
+    is.setRestorePoint();
     int port = is.readU16();
-    String host = is.readString();
-    String x509subject = is.readString();
+    int hostLen = is.readU32();
+
+    if (!is.hasDataOrRestore(hostLen + 4))
+      return false;
+
+    byte[] hostBytes = new byte[hostLen];
+    is.readBytes(ByteBuffer.wrap(hostBytes), hostLen);
+    int subjLen = is.readU32();
+
+    if (!is.hasDataOrRestore(subjLen))
+      return false;
+    is.clearRestorePoint();
+
+    byte[] subjBytes = new byte[subjLen];
+    is.readBytes(ByteBuffer.wrap(subjBytes), subjLen);
+
+    String host = new String(hostBytes, java.nio.charset.StandardCharsets.UTF_8);
+    String x509subject = new String(subjBytes, java.nio.charset.StandardCharsets.UTF_8);
 
     if (x != 0 || y != 0 || w != 0 || h != 0)
       vlog.error("Ignoring ClientRedirect rect with non-zero position/size");
     else
       handler.clientRedirect(port, host, x509subject);
+    return true;
   }
 
   public int[] getImageBuf(int required) { return getImageBuf(required, 0, 0); }
@@ -733,12 +846,16 @@ public class CMsgReader {
 
   private static final int MSGSTATE_IDLE = 0;
   private static final int MSGSTATE_MESSAGE = 1;
+  private static final int MSGSTATE_RECT_DATA = 2;
 
   protected CMsgHandler handler;
   protected InStream is;
   protected int state = MSGSTATE_IDLE;
   protected int currentMsgType;
   protected int nUpdateRectsLeft;
+  protected Rect dataRect;
+  protected int rectEncoding;
+  protected int cursorEncoding = -1;
   protected final int maxCursorSize = 256;
   protected int[] imageBuf;
   protected int imageBufSize;
