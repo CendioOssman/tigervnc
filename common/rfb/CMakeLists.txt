@@ -74,6 +74,13 @@ add_library(rfbclient STATIC
 target_include_directories(rfbclient PUBLIC ${CMAKE_SOURCE_DIR}/common)
 target_link_libraries(rfbclient core rdr rfb)
 
+# libstdc++ doesn't implicitly include this, although it is very much
+# required when using any of the C++ threading features (at least on
+# systems where pthread is a separate library, e.g. glibc < 2.34)
+if(UNIX)
+  target_link_libraries(rfbclient pthread)
+endif()
+
 if(ENABLE_H264)
   target_sources(rfbclient PRIVATE
                  H264Decoder.cxx H264DecoderContext.cxx)
