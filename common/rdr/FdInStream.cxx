@@ -27,13 +27,13 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #define errorNumber WSAGetLastError()
-#define close closesocket
 #include <core/winerrno.h>
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #define errorNumber errno
+#define closesocket close
 #endif
 
 /* Old systems have select() in sys/time.h */
@@ -54,7 +54,7 @@ FdInStream::FdInStream(int fd_, bool closeWhenDone_)
 
 FdInStream::~FdInStream()
 {
-  if (closeWhenDone) close(fd);
+  if (closeWhenDone) closesocket(fd);
 }
 
 
