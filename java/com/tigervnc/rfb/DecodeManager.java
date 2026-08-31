@@ -204,7 +204,7 @@ public class DecodeManager {
     throwThreadException();
   }
 
-  private void setThreadException(Exception e)
+  private void setThreadException(Throwable e)
   {
     queueMutex.lock();
 
@@ -212,8 +212,11 @@ public class DecodeManager {
       if (threadException != null)
         return;
 
+      String msg = e.getMessage();
+      if (msg == null)
+        msg = e.getClass().getName();
       threadException =
-        new Exception("Exception on worker thread: "+e.getMessage());
+        new Exception("Exception on worker thread: "+msg);
       producerCond.signalAll();
     } finally {
       queueMutex.unlock();
@@ -310,10 +313,8 @@ public class DecodeManager {
           entry.decoder.decodeRect(entry.rect, entry.bufferStream.data(),
                                    entry.bufferStream.length(),
                                    entry.server, entry.pb);
-        } catch (com.tigervnc.rdr.Exception e) {
+        } catch (Throwable e) {
           manager.setThreadException(e);
-        } catch(java.lang.Exception e) {
-          assert(false);
         }
 
         manager.queueMutex.lock();

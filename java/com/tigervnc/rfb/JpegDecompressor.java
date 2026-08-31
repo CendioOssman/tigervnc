@@ -39,6 +39,8 @@ public class JpegDecompressor {
       ImageIO.setUseCache(false);
       BufferedImage jpeg =
         ImageIO.read(new MemoryCacheImageInputStream(new ByteArrayInputStream(src)));
+      if (jpeg == null)
+        throw new Exception("Tight JPEG: ImageIO could not decode image data");
       jpeg.setAccelerationPriority(1);
       synchronized(pb.getImage()) {
         Graphics2D g2 = (Graphics2D)pb.getImage().getGraphics();

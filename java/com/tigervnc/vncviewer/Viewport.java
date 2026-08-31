@@ -179,8 +179,8 @@ class Viewport extends JPanel implements ActionListener {
       cursorHotspot.x = cursorHotspot.y = 3;
     } else {
       if ((width == 0) || (height == 0)) {
-        cursor = new BufferedImage(tk.getBestCursorSize(0, 0).width,
-                                   tk.getBestCursorSize(0, 0).height,
+        Dimension d = tk.getBestCursorSize(0, 0);
+        cursor = new BufferedImage(Math.max(d.width, 1), Math.max(d.height, 1),
                                    BufferedImage.TYPE_INT_ARGB_PRE);
         cursorHotspot.x = cursorHotspot.y = 0;
       } else {
@@ -198,7 +198,8 @@ class Viewport extends JPanel implements ActionListener {
     int x = cursorHotspot.x;
     int y = cursorHotspot.y;
     Dimension cs = tk.getBestCursorSize(cw, ch);
-    if (cs.width != cursor.getWidth() || cs.height != cursor.getHeight()) {
+    if (cs.width > 0 && cs.height > 0 &&
+        (cs.width != cursor.getWidth() || cs.height != cursor.getHeight())) {
       cw = VncViewer.os.startsWith("windows") ?  Math.min(cw, cs.width) : cs.width;
       ch = VncViewer.os.startsWith("windows") ?  Math.min(ch, cs.height) : cs.height;
       BufferedImage tmp = new BufferedImage(cs.width, cs.height, BufferedImage.TYPE_INT_ARGB_PRE);

@@ -519,8 +519,11 @@ public class CMsgReader {
 
     origPF = handler.server.pf();
     handler.server.setPF(rgbaPF);
-    handler.readAndDecodeRect(pb.getRect(), encoding, pb);
-    handler.server.setPF(origPF);
+    try {
+      handler.readAndDecodeRect(pb.getRect(), encoding, pb);
+    } finally {
+      handler.server.setPF(origPF);
+    }
 
     // ARGB with pre-multiplied alpha works best for BufferedImage
     if (pb.area() > 0) {

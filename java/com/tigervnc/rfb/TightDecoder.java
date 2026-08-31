@@ -538,7 +538,7 @@ public class TightDecoder extends Decoder {
       while (h > 0) {
         int endOfRow = ptr.position() + w;
         while (ptr.position() < endOfRow) {
-          ptr.put(palette.get(srcPtr.get()));
+          ptr.put(palette.get(srcPtr.get() & 0xff));
         }
         ptr.position(ptr.position() + pad);
         h--;
@@ -578,7 +578,7 @@ public class TightDecoder extends Decoder {
       while (h > 0) {
         int endOfRow = ptr.position() + w;
         while (ptr.position() < endOfRow) {
-          ptr.put(palette.get(srcPtr.get()));
+          ptr.put(palette.get(srcPtr.get() & 0xff));
         }
         ptr.position(ptr.position() + pad);
         h--;
