@@ -400,10 +400,6 @@ public final class CConn extends CConnection implements
       desktop.getToolkit().beep();
   }
 
-  // handleClipboardData() is called (via CConnection's clipboard state
-  // machine) whenever clipboard text has arrived from the server, via
-  // either the classic ServerCutText message or the negotiated extended
-  // clipboard protocol.
   public void handleClipboardData(String data)
   {
     if (!acceptClipboard.getValue())
@@ -412,13 +408,24 @@ public final class CConn extends CConnection implements
     ClipboardDialog.serverCutText(data);
   }
 
-  // handleClipboardRequest() is called when the server explicitly asks
-  // for our clipboard contents as part of the extended clipboard
-  // protocol. The clipboard dialog is the closest thing this viewer has
-  // to a "current outgoing clipboard", so offer up whatever it holds.
+  public void handleClipboardAnnounce(boolean available)
+  {
+    if (available && acceptClipboard.getValue())
+      requestClipboard();
+  }
+
   public void handleClipboardRequest()
   {
-    sendClipboardData(ClipboardDialog.getText());
+    final String data = ClipboardDialog.getText();
+    clipboardSender.execute(() -> {
+      try {
+        if ((state() != stateEnum.RFBSTATE_NORMAL) || shuttingDown)
+          return;
+        sendClipboardData(data);
+      } catch (java.lang.Exception e) {
+        vlog.error("Failed to send clipboard data: " + e.getMessage());
+      }
+    });
   }
 
   public void dataRect(Rect r, int encoding)
@@ -632,15 +639,16 @@ public final class CConn extends CConnection implements
     tunnelSession = null;
   }
 
-  // Run off the EDT -- large clipboard sends can block on socket I/O.
+  // Go through announceClipboard() so the server gets a Notify first;
+  // Xvnc drops a Provide from a client that hasn't announced.
   public void writeClientCutText(String str, int len) {
     clipboardSender.execute(() -> {
       try {
         if ((state() != stateEnum.RFBSTATE_NORMAL) || shuttingDown)
           return;
-        sendClipboardData(str);
+        announceClipboard(true);
       } catch (java.lang.Exception e) {
-        vlog.error("Failed to send clipboard data: " + e.getMessage());
+        vlog.error("Failed to announce clipboard data: " + e.getMessage());
       }
     });
   }
