@@ -337,9 +337,6 @@ public class CMsgReader {
             continue;
           }
 
-          if (!zis.checkNoWait(flen))
-            throw new Exception("Invalid extended clipboard message");
-
           byte[] buf = new byte[flen];
           zis.readBytes(ByteBuffer.wrap(buf), flen);
           lengths[num] = flen;

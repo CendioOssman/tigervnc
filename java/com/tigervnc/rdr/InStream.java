@@ -110,6 +110,8 @@ abstract public class InStream {
 
   public static int maxStringLength = 65535;
 
+  public static final int maxBufSize = 32 * 1024 * 1024;
+
   public final void skip(int bytes) {
     while (bytes > 0) {
       int n = check(1, bytes);

@@ -62,8 +62,10 @@ public class TLSInStream extends InStream {
   }
 
   protected final int overrun(int itemSize, int nItems, boolean wait) {
-    if (itemSize > bufSize)
-      throw new Exception("TLSInStream overrun: max itemSize exceeded");
+    if (itemSize > InStream.maxBufSize)
+      throw new Exception("TLSInStream overrun: requested size of " +
+                          itemSize + " exceeds maximum of " +
+                          InStream.maxBufSize);
 
     if (end > ptr)
       System.arraycopy(b, ptr, b, 0, end - ptr);
@@ -71,6 +73,16 @@ public class TLSInStream extends InStream {
     offset += ptr - start;
     end = start + Math.max(0, end - ptr);
     ptr = start;
+
+    if (itemSize > bufSize) {
+      int newSize = bufSize;
+      while (newSize < itemSize)
+        newSize *= 2;
+      byte[] newBuf = new byte[newSize];
+      System.arraycopy(b, 0, newBuf, 0, end);
+      b = newBuf;
+      bufSize = newSize;
+    }
 
     while ((end - start) < itemSize) {
       int n = readTLS(b, end, start + bufSize - end, wait);
