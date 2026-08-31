@@ -19,7 +19,8 @@
 #ifndef __WINVNC_SERVICEMODE_H__
 #define __WINVNC_SERVICEMODE_H__
 
-#include <winvnc/VNCServerWin32.h>
+#include "VNCServerWin32.h"
+
 #include <rfb_win32/Service.h>
 
 namespace winvnc {

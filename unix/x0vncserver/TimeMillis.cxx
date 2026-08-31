@@ -24,7 +24,7 @@
 #include <config.h>
 #endif
 
-#include <x0vncserver/TimeMillis.h>
+#include "TimeMillis.h"
 
 TimeMillis::TimeMillis()
 {

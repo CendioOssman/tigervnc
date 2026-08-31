@@ -22,10 +22,10 @@
 #include <config.h>
 #endif
 
-#include <winvnc/VNCServerWin32.h>
-#include <winvnc/resource.h>
-#include <winvnc/ListConnInfo.h>
-#include <winvnc/STrayIcon.h>
+#include "VNCServerWin32.h"
+#include "resource.h"
+#include "ListConnInfo.h"
+#include "STrayIcon.h"
 
 #include <core/LogWriter.h>
 #include <core/i18n.h>

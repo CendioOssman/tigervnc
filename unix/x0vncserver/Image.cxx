@@ -37,7 +37,7 @@
 #include <core/LogWriter.h>
 #include <core/i18n.h>
 
-#include <x0vncserver/Image.h>
+#include "Image.h"
 
 //
 // ImageCleanup is used to delete Image instances automatically on

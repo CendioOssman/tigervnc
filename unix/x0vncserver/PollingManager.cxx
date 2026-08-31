@@ -37,7 +37,7 @@
 #include <rfb/VNCServer.h>
 #include <rfb/ServerCore.h>
 
-#include <x0vncserver/PollingManager.h>
+#include "PollingManager.h"
 
 static core::LogWriter vlog("PollingMgr");
 

@@ -24,7 +24,7 @@
 #include <windows.h>
 #include <commctrl.h>
 
-#include <vncconfig/PasswordDialog.h>
+#include "PasswordDialog.h"
 
 #include <core/i18n.h>
 

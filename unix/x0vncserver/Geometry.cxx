@@ -30,7 +30,7 @@
 #include <core/LogWriter.h>
 #include <core/i18n.h>
 
-#include <x0vncserver/Geometry.h>
+#include "Geometry.h"
 
 static core::LogWriter vlog("Geometry");
 

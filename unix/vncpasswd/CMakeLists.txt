@@ -5,7 +5,6 @@ endif()
 add_executable(vncpasswd 
   vncpasswd.cxx)
 
-target_include_directories(vncpasswd PUBLIC ${CMAKE_SOURCE_DIR}/common)
 target_link_libraries(vncpasswd core tx rfb)
 
 if(PWQUALITY_FOUND)

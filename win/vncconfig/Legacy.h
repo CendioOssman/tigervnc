@@ -21,12 +21,13 @@
 
 #include <windows.h>
 #include <lmcons.h>
-#include <vncconfig/resource.h>
 #include <rfb_win32/Registry.h>
 #include <rfb_win32/Dialog.h>
 #include <rfb_win32/MsgBox.h>
 #include <rfb/ServerCore.h>
 #include <rfb/Security.h>
+
+#include "resource.h"
 
 namespace rfb {
 

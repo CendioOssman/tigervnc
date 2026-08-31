@@ -10,11 +10,12 @@
 
 
 #include <list>
-#include <winvnc/resource.h>
-#include <winvnc/ListConnInfo.h>
 #include <rfb_win32/Dialog.h>
 #include <rfb_win32/ListViewControl.h>
 #include <rfb_win32/Win32Util.h>
+
+#include "resource.h"
+#include "ListConnInfo.h"
 
 namespace winvnc {
   

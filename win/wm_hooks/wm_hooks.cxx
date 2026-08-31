@@ -24,7 +24,7 @@
 #include <config.h>
 #endif
 
-#include <wm_hooks/wm_hooks.h>
+#include "wm_hooks.h"
 
 #define SHARED __attribute__((section ("shared"), shared))
 

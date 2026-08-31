@@ -2,8 +2,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(FATAL_ERROR "cmake must be invoked with the top level directory")
 endif()
 
-include_directories(${CMAKE_SOURCE_DIR}/common)
-
 add_library(test_util STATIC util.cxx)
 
 add_executable(convperf convperf.cxx)

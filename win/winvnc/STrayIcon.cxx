@@ -22,9 +22,9 @@
 #include <config.h>
 #endif
 
-#include <winvnc/STrayIcon.h>
-#include <winvnc/VNCServerService.h>
-#include <winvnc/resource.h>
+#include "STrayIcon.h"
+#include "VNCServerService.h"
+#include "resource.h"
 
 #include <core/Configuration.h>
 #include <core/LogWriter.h>
@@ -37,7 +37,7 @@
 #include <rfb_win32/Service.h>
 #include <rfb_win32/CurrentUser.h>
 
-#include <winvnc/ControlPanel.h>
+#include "ControlPanel.h"
 
 using namespace core;
 using namespace rfb;

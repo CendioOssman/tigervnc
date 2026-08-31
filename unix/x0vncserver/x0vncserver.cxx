@@ -57,10 +57,10 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
-#include <x0vncserver/XDesktop.h>
-#include <x0vncserver/Geometry.h>
-#include <x0vncserver/Image.h>
-#include <x0vncserver/PollingScheduler.h>
+#include "XDesktop.h"
+#include "Geometry.h"
+#include "Image.h"
+#include "PollingScheduler.h"
 
 static core::LogWriter vlog("Main");
 

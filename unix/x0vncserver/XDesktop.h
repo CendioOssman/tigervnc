@@ -22,7 +22,7 @@
 #define __XDESKTOP_H__
 
 #include <rfb/SDesktop.h>
-#include <tx/TXWindow.h>
+#include <TXWindow.h>
 #include <unixcommon.h>
 
 #include <X11/XKBlib.h>
@@ -30,7 +30,7 @@
 #include <X11/extensions/Xdamage.h>
 #endif
 
-#include <vncconfig/QueryConnectDialog.h>
+#include "../vncconfig/QueryConnectDialog.h"
 
 #include "XSelection.h"
 

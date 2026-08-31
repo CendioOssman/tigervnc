@@ -20,7 +20,7 @@
 #include <config.h>
 #endif
 
-#include <vncconfig/Legacy.h>
+#include "Legacy.h"
 
 #include <core/LogWriter.h>
 #include <core/i18n.h>

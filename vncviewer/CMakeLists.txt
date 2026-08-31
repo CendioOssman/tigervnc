@@ -67,7 +67,6 @@ if(HAVE_AUDIO)
 endif()
 
 target_include_directories(vncviewer SYSTEM PUBLIC ${FLTK_INCLUDE_DIR})
-target_include_directories(vncviewer PUBLIC ${CMAKE_SOURCE_DIR}/common)
 target_link_libraries(vncviewer rfbclient rfb network rdr core)
 target_link_libraries(vncviewer ${FLTK_LIBRARIES})
 

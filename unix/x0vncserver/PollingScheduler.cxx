@@ -31,7 +31,7 @@
 #include <stdio.h>
 #endif
 
-#include <x0vncserver/PollingScheduler.h>
+#include "PollingScheduler.h"
 
 PollingScheduler::PollingScheduler(int interval, int maxload)
 {

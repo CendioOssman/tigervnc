@@ -27,7 +27,7 @@
 #include <core/i18n.h>
 #include <core/string.h>
 
-#include <x0vncserver/XSelection.h>
+#include "XSelection.h"
 
 core::BoolParameter
   setPrimary("SetPrimary",

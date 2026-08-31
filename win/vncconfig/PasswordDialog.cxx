@@ -20,8 +20,9 @@
 #include <config.h>
 #endif
 
-#include <vncconfig/resource.h>
-#include <vncconfig/PasswordDialog.h>
+#include "resource.h"
+#include "PasswordDialog.h"
+
 #include <rfb_win32/MsgBox.h>
 #include <rfb/obfuscate.h>
 
