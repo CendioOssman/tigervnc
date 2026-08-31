@@ -431,11 +431,15 @@ abstract public class CConnection extends CMsgHandler {
     } else {
 
       if (!is.checkNoWait(1)) return false;
+      is.setRestorePoint();
       int nServerSecTypes = is.readU8();
-      if (nServerSecTypes == 0)
+      if (nServerSecTypes == 0) {
+        is.clearRestorePoint();
         throwConnFailedException();
+      }
 
-      if (!is.checkNoWait(nServerSecTypes)) return false;
+      if (!is.hasDataOrRestore(nServerSecTypes)) return false;
+      is.clearRestorePoint();
 
       Iterator<Integer> j;
 
