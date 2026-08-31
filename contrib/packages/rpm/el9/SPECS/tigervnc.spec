@@ -15,33 +15,65 @@ URL:            http://www.tigervnc.com
 Source0:        %{name}-%{version}%{?snap:-%{snap}}.tar.bz2
 Source3:        10-libvnc.conf
 
+
 BuildRequires:  make
 BuildRequires:  gcc-c++
-BuildRequires:  automake, autoconf, libtool, gettext, gettext-autopoint
-BuildRequires:  cmake, desktop-file-utils, appstream
-BuildRequires:  libxkbfile-devel, openssl-devel, libpciaccess-devel
-BuildRequires:  freetype-devel, libjpeg-turbo-devel, pam-devel
-BuildRequires:  gnutls-devel, nettle-devel, gmp-devel
-BuildRequires:  zlib-devel
-BuildRequires:  libuuid-devel, glib2-devel, pipewire-devel
-BuildRequires:  pulseaudio-libs-devel
-BuildRequires:  wayland-devel, libxkbcommon-devel
-# X11/graphics dependencies
-BuildRequires: xorg-x11-server-source
-BuildRequires: libXext-devel, libX11-devel, libXi-devel, libXfixes-devel
-BuildRequires: libXdamage-devel, libXrandr-devel, libXt-devel, libXdmcp-devel
-BuildRequires: libXinerama-devel, mesa-libGL-devel, libxshmfence-devel
-BuildRequires: pixman-devel, libdrm-devel, mesa-libgbm-devel
-BuildRequires: xorg-x11-util-macros, xorg-x11-xtrans-devel, libXtst-devel
-BuildRequires:  libXfont2-devel
-# SELinux
-BuildRequires:  libselinux-devel, selinux-policy-devel
-BuildRequires:  systemd-devel
+BuildRequires:  gettext
+BuildRequires:  cmake
 
-# TigerVNC 1.4.x requires fltk 1.3.3 for keyboard handling support
-# See https://github.com/TigerVNC/tigervnc/issues/8, also bug #1208814
-BuildRequires:  fltk-devel >= 1.3.3
-BuildRequires:  xorg-x11-server-devel
+BuildRequires:  appstream
+BuildRequires:  desktop-file-utils
+BuildRequires:  fltk-devel
+BuildRequires:  glib2-devel
+BuildRequires:  gmp-devel
+BuildRequires:  gnutls-devel
+BuildRequires:  libjpeg-turbo-devel
+BuildRequires:  libselinux-devel
+BuildRequires:  libuuid-devel
+BuildRequires:  libX11-devel
+BuildRequires:  libXdamage-devel
+BuildRequires:  libXext-devel
+BuildRequires:  libXfixes-devel
+BuildRequires:  libXi-devel
+BuildRequires:  libXrandr-devel
+BuildRequires:  libXtst-devel
+BuildRequires:  libxkbcommon-devel
+BuildRequires:  nettle-devel
+BuildRequires:  pam-devel
+BuildRequires:  pipewire-devel
+BuildRequires:  pixman-devel
+BuildRequires:  pulseaudio-libs-devel
+BuildRequires:  selinux-policy-devel
+BuildRequires:  systemd-devel
+BuildRequires:  wayland-devel
+BuildRequires:  zlib-devel
+
+# Xorg dependencies
+BuildRequires:  xorg-x11-server-source
+
+BuildRequires:  automake
+BuildRequires:  autoconf
+BuildRequires:  bison
+BuildRequires:  flex
+BuildRequires:  libtool
+
+BuildRequires:  libdrm-devel
+BuildRequires:  libX11-devel
+BuildRequires:  libXdmcp-devel
+BuildRequires:  libXext-devel
+BuildRequires:  libXfont2-devel
+BuildRequires:  libXi-devel
+BuildRequires:  libXtst-devel
+BuildRequires:  libxkbfile-devel
+BuildRequires:  libxshmfence-devel
+BuildRequires:  mesa-libEGL-devel
+BuildRequires:  mesa-libGL-devel
+BuildRequires:  mesa-libgbm-devel
+BuildRequires:  openssl-devel
+BuildRequires:  pixman-devel
+BuildRequires:  xorg-x11-proto-devel
+BuildRequires:  xorg-x11-util-macros
+BuildRequires:  xorg-x11-xtrans-devel
 
 Requires:       tigervnc-common
 
