@@ -67,6 +67,9 @@ Build requirements (Unix)
 -- If building vncpasswd with password quality check support:
    * libpwquality
 
+-- If building with audio support:
+   * PulseAudio
+
 ============================
 Build requirements (Windows)
 ============================
