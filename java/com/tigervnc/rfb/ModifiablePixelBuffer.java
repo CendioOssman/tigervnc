@@ -90,6 +90,9 @@ public abstract class ModifiablePixelBuffer extends PixelBuffer
   // Copy pixel data to the buffer
   public void imageRect(Rect r, byte[] pixels)
   {
+    if (r.is_empty())
+      return;
+
     WritableRaster dest = getBufferRW(r);
 
     int length = r.area()*format.bpp/8;
@@ -219,6 +222,9 @@ public abstract class ModifiablePixelBuffer extends PixelBuffer
   //   pixel values are defined by the given PixelFormat. 
   public void fillRect(PixelFormat pf, Rect dest, byte[] pix)
   {
+    if (dest.is_empty())
+      return;
+
     WritableRaster dstBuffer = getBufferRW(dest);
 
     ColorModel cm = pf.getColorModel();
@@ -242,6 +248,9 @@ public abstract class ModifiablePixelBuffer extends PixelBuffer
 
   public void imageRect(PixelFormat pf, Rect dest, byte[] pixels)
   {
+    if (dest.is_empty())
+      return;
+
     WritableRaster dstBuffer = getBufferRW(dest);
 
     ColorModel cm = pf.getColorModel();
@@ -263,6 +272,9 @@ public abstract class ModifiablePixelBuffer extends PixelBuffer
 
   public void imageRect(PixelFormat pf, Rect dest, Raster pixels)
   {
+    if (dest.is_empty())
+      return;
+
     WritableRaster dstBuffer = getBufferRW(dest);
 
     ColorModel cm = pf.getColorModel();

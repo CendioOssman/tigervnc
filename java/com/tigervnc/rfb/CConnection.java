@@ -288,8 +288,10 @@ abstract public class CConnection extends CMsgHandler {
       rect.setXYWH(0, 0,
                    Math.min(fb.width(), framebuffer.width()),
                    Math.min(fb.height(), framebuffer.height()));
-      data = framebuffer.getBuffer(rect);
-      fb.imageRect(framebuffer.getPF(), rect, data);
+      if (!rect.is_empty()) {
+        data = framebuffer.getBuffer(rect);
+        fb.imageRect(framebuffer.getPF(), rect, data);
+      }
 
       // Black out any new areas
 
