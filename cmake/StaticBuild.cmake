@@ -115,6 +115,12 @@ if(BUILD_STATIC)
       endif()
     endif()
 
+    if(UNIX)
+      if(ZSTD_LIBRARY)
+        set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lpthread")
+      endif()
+    endif()
+
     if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
       # nanosleep() lives here on Solaris
       set(GNUTLS_LIBRARIES "${GNUTLS_LIBRARIES} -lrt")
