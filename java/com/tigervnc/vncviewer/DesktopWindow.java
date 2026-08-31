@@ -256,8 +256,12 @@ public final class DesktopWindow extends JFrame
     return viewport.getPreferredPF();
   }
 
-  public void setName(String name)
+  public void setName(final String name)
   {
+    if (!javax.swing.SwingUtilities.isEventDispatchThread()) {
+      javax.swing.SwingUtilities.invokeLater(() -> setName(name));
+      return;
+    }
     setTitle(name);
   }
 
@@ -337,9 +341,14 @@ public final class DesktopWindow extends JFrame
     validate();
   }
 
-  public void setCursor(int width, int height, Point hotspot,
-                        byte[] data)
+  public void setCursor(final int width, final int height,
+                        final Point hotspot, final byte[] data)
   {
+    if (!javax.swing.SwingUtilities.isEventDispatchThread()) {
+      javax.swing.SwingUtilities.invokeLater(
+        () -> setCursor(width, height, hotspot, data));
+      return;
+    }
     viewport.setCursor(width, height, hotspot, data);
   }
 
