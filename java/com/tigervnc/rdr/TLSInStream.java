@@ -93,8 +93,10 @@ public class TLSInStream extends InStream {
 
     try {
       n = manager.read(ByteBuffer.wrap(buf, bufPtr, len), len);
+    } catch (SSLException e) {
+      throw new TLSException("readTLS: " + e.getMessage(), 0);
     } catch (java.io.IOException e) {
-      e.printStackTrace();
+      throw new Exception("readTLS: " + e.getMessage());
     }
 
     if (n < 0) throw new TLSException("readTLS", n);

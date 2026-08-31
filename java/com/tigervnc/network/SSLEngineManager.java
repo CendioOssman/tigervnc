@@ -88,7 +88,7 @@ public class SSLEngineManager {
             break;
           case CLOSED:
             engine.closeInbound();
-            break;
+            throw new SSLException("TLS connection closed during handshake");
         }
         break;
 
@@ -105,9 +105,12 @@ public class SSLEngineManager {
             os.flush();
             myNetData.compact();
             break;
+          case BUFFER_OVERFLOW:
+            myNetData = growPacketBuffer(myNetData);
+            break;
           case CLOSED:
             engine.closeOutbound();
-            break;
+            throw new SSLException("TLS connection closed during handshake");
         }
         break;
 
@@ -118,6 +121,16 @@ public class SSLEngineManager {
       }
       hs = engine.getHandshakeStatus();
     }
+  }
+
+  private ByteBuffer growPacketBuffer(ByteBuffer buf) {
+    int want = engine.getSession().getPacketBufferSize();
+    if (want <= buf.capacity())
+      want = buf.capacity() * 2;
+    ByteBuffer nb = ByteBuffer.allocate(want);
+    buf.flip();
+    nb.put(buf);
+    return nb;
   }
 
   private void executeTasks() {
@@ -135,11 +148,19 @@ public class SSLEngineManager {
       } else if (hs == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
         ByteBuffer empty = ByteBuffer.allocate(0);
         SSLEngineResult wrapRes = engine.wrap(empty, myNetData);
-        if (wrapRes.getStatus() == SSLEngineResult.Status.OK) {
+        switch (wrapRes.getStatus()) {
+        case OK:
           myNetData.flip();
           os.writeBytes(myNetData, myNetData.remaining());
           os.flush();
           myNetData.compact();
+          break;
+        case BUFFER_OVERFLOW:
+          myNetData = growPacketBuffer(myNetData);
+          break;
+        case CLOSED:
+          engine.closeOutbound();
+          throw new EndOfStream();
         }
       }
       hs = engine.getHandshakeStatus();
