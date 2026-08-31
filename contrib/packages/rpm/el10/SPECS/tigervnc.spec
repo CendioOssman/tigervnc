@@ -2,7 +2,7 @@
 %global selinuxtype targeted
 %global modulename vncsession
 
-%global xorgversion 21.1.23
+%global xorgversion 26.0.99.901
 
 Name:           tigervnc
 Version:        @VERSION@
@@ -16,8 +16,6 @@ URL:            http://www.tigervnc.com
 
 Source0:        %{name}-%{version}%{?snap:-%{snap}}.tar.bz2
 Source1:        https://xorg.freedesktop.org/releases/individual/xserver/xorg-server-%{xorgversion}.tar.xz
-# Patch from RHEL to avoid dependency on xorg-x11-font-utils
-Source2:        0001-configure.ac-search-for-the-fontrootdir-ourselves.patch
 
 BuildRequires:  make
 BuildRequires:  gcc-c++
@@ -52,19 +50,18 @@ BuildRequires:  wayland-devel
 BuildRequires:  zlib-devel
 
 # Xorg dependencies
-BuildRequires:  automake
-BuildRequires:  autoconf
 BuildRequires:  bison
 BuildRequires:  flex
-BuildRequires:  libtool
+BuildRequires:  meson
 
+BuildRequires:  audit-libs-devel
 BuildRequires:  libdrm-devel
+BuildRequires:  libepoxy-devel
+BuildRequires:  libunwind-devel
 BuildRequires:  libX11-devel
 BuildRequires:  libXdmcp-devel
 BuildRequires:  libXext-devel
 BuildRequires:  libXfont2-devel
-BuildRequires:  libXi-devel
-BuildRequires:  libXtst-devel
 BuildRequires:  libxkbfile-devel
 BuildRequires:  libxshmfence-devel
 BuildRequires:  mesa-libEGL-devel
@@ -73,7 +70,6 @@ BuildRequires:  mesa-libgbm-devel
 BuildRequires:  openssl-devel
 BuildRequires:  pixman-devel
 BuildRequires:  xorg-x11-proto-devel
-BuildRequires:  xorg-x11-util-macros
 BuildRequires:  xorg-x11-xtrans-devel
 
 Requires:       tigervnc-common
@@ -153,8 +149,7 @@ pushd unix/xserver
 for all in `find . -type f -perm -001`; do
         chmod -x "$all"
 done
-patch -p1 -b --suffix .fontrootdir < %{SOURCE2}
-patch -p1 -b --suffix .vnc < ../xserver21.patch
+patch -p1 -b --suffix .vnc < ../xserver26.patch
 popd
 
 %build
@@ -173,22 +168,56 @@ popd
 
 pushd unix/xserver
 
-autoreconf -fiv
-%configure \
-        --disable-xorg --disable-xnest --disable-xvfb --disable-dmx \
-        --disable-xwin --disable-xephyr --disable-kdrive --disable-xwayland \
-        --with-pic --disable-static \
-        --with-default-font-path="catalogue:%{_sysconfdir}/X11/fontpath.d,built-ins" \
-        --with-xkb-output=%{_localstatedir}/lib/xkb \
-        --enable-glx --disable-dri --enable-dri2 --enable-dri3 \
-        --disable-unit-tests \
-        --disable-config-hal \
-        --disable-config-udev \
-        --without-dtrace \
-        --disable-devel-docs \
-        --disable-selective-werror
+builddir="`pwd`/../../%{__cmake_builddir}"
 
-make TIGERVNC_BUILDDIR="`pwd`/../../%{__cmake_builddir}" %{?_smp_mflags}
+# RHEL 10 has an old and buggy meson
+builddir=`realpath "$builddir"`
+
+%meson \
+    -D tigervnc_builddir="$builddir" \
+    -D builder_string="Build ID: %{name} %{version}-%{release}" \
+    -D default_font_path="catalogue:/etc/X11/fontpath.d,built-ins" \
+    -D devel-docs=false \
+    -D docs-pdf=false \
+    -D docs=false \
+    -D dpms=true \
+    -D dri1=false \
+    -D dri2=true \
+    -D dri3=true \
+    -D drm=true \
+    -D dtrace=false \
+    -D glamor=true \
+    -D glx=true \
+    -D input_thread=true \
+    -D ipv6=true \
+    -D libunwind=true \
+    -D listen_local=true \
+    -D listen_tcp=false \
+    -D listen_unix=true \
+    -D mitshm=auto \
+    -D screensaver=true \
+    -D sha1=libcrypto \
+    -D xace=true \
+    -D xcsecurity=true \
+    -D xdm-auth-1=true \
+    -D xdmcp=true \
+    -D xephyr=false \
+    -D xf86bigfont=false \
+    -D xf86-input-inputtest=true \
+    -D xinerama=true \
+    -D xkb_output_dir="%{_localstatedir}/lib/xkb" \
+    -D xnest=false \
+    -D xorg=false \
+    -D xpbproxy=false \
+    -D xquartz=false \
+    -D xres=true \
+    -D xselinux=true \
+    -D xvfb=false \
+    -D xvmc=true \
+    -D xv=true \
+    -D xwin=false
+
+%meson_build
 popd
 
 # SELinux
@@ -199,8 +228,8 @@ popd
 %install
 %cmake_install
 
-pushd unix/xserver/hw/vnc
-%make_install TIGERVNC_BUILDDIR="`pwd`/../../../../%{__cmake_builddir}"
+pushd unix/xserver
+%meson_install
 popd
 
 # Install systemd unit file
@@ -261,6 +290,11 @@ fi
 %{_mandir}/man1/vncpasswd.1*
 %{_mandir}/man1/vncconfig.1*
 
+# FIXME: Should we really ship these? Users can need them, and there is
+#        no other package that provides them.
+%{_libdir}/xorg/protocol.txt
+%{_mandir}/man1/Xserver.1*
+
 %files common -f %{name}.lang
 %doc %{_docdir}/%{name}/LICENCE.TXT
 %{_datadir}/icons/hicolor/*/apps/*
@@ -270,6 +304,9 @@ fi
 %ghost %verify(not md5 size mtime) %{_sharedstatedir}/selinux/%{selinuxtype}/active/modules/200/%{modulename}
 
 %changelog
+* Tue Sep 01 2026 Pierre Ossman <ossman@cendio.se> 1.16.80-1
+- Switched to Xorg 26 and Meson.
+
 * Mon Jul 28 2025 Pierre Ossman <ossman@cendio.se> 1.15.80-1
 - Replaced license and icons package with a common package.
 
