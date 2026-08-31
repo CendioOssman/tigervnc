@@ -21,17 +21,17 @@ chmod a+w ${CURDIR}/rpmbuild/{BUILD,BUILDROOT,SRPMS,RPMS}
 
 ## Copy over the packaging files
 
-cp ${RPMDIR}/SOURCES/* ${CURDIR}/rpmbuild/SOURCES
 cp ${RPMDIR}/SPECS/tigervnc.spec ${CURDIR}/rpmbuild/SPECS
 sed -i "s/@VERSION@/${VERSION}/" ${CURDIR}/rpmbuild/SPECS/tigervnc.spec
 
 ## Copy over the source code
 
+mkdir -p ${CURDIR}/rpmbuild/SOURCES
 (cd ${TOPDIR} && git archive --prefix tigervnc-${VERSION}/ HEAD) | bzip2 > ${CURDIR}/rpmbuild/SOURCES/tigervnc-${VERSION}.tar.bz2
 
 ## Download the xorg-server source code
 
-XORGVERSION=21.1.23
+XORGVERSION=26.0.99.901
 curl -L https://xorg.freedesktop.org/releases/individual/xserver/xorg-server-${XORGVERSION}.tar.xz > ${CURDIR}/rpmbuild/SOURCES/xorg-server-${XORGVERSION}.tar.xz
 
 ## Start the build
