@@ -151,8 +151,10 @@ public class SSLEngineManager {
         switch (wrapRes.getStatus()) {
         case OK:
           myNetData.flip();
-          os.writeBytes(myNetData, myNetData.remaining());
-          os.flush();
+          synchronized (os) {
+            os.writeBytes(myNetData, myNetData.remaining());
+            os.flush();
+          }
           myNetData.compact();
           break;
         case BUFFER_OVERFLOW:
@@ -212,15 +214,19 @@ public class SSLEngineManager {
       switch (res.getStatus()) {
         case OK:
           myNetData.flip();
-          os.writeBytes(myNetData, myNetData.remaining());
-          os.flush();
+          synchronized (os) {
+            os.writeBytes(myNetData, myNetData.remaining());
+            os.flush();
+          }
           myNetData.compact();
           break;
 
         case BUFFER_OVERFLOW:
           // Make room in the buffer by flushing the outstream
           myNetData.flip();
-          os.writeBytes(myNetData, myNetData.remaining());
+          synchronized (os) {
+            os.writeBytes(myNetData, myNetData.remaining());
+          }
           myNetData.compact();
           break;
 
