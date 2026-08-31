@@ -33,7 +33,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #define errorNumber errno
-#define closesocket close
 #endif
 
 /* Old systems have select() in sys/time.h */
@@ -47,14 +46,13 @@
 
 using namespace rdr;
 
-FdInStream::FdInStream(int fd_, bool closeWhenDone_)
-  : fd(fd_), closeWhenDone(closeWhenDone_)
+FdInStream::FdInStream(int fd_)
+  : fd(fd_)
 {
 }
 
 FdInStream::~FdInStream()
 {
-  if (closeWhenDone) closesocket(fd);
 }
 
 
