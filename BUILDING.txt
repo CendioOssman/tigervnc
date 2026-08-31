@@ -53,7 +53,7 @@ Build requirements (Unix)
 -- If building w0vncserver:
    * GLib (Gio + GObject)
    * libpipewire
-   * libuuuid
+   * libuuid
    * libwayland-client
    * libxkbcommon
 
