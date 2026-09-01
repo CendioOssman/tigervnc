@@ -56,6 +56,7 @@ using namespace network;
 using namespace rfb;
 
 static std::string exitError;
+static bool disconnecting = false;
 
 static std::string configServerName;
 static std::string cmdlineServerName;
@@ -72,14 +73,14 @@ static rfb::LogWriter vlog("mainloop");
 static void abort_startup(const char *error, ...)
   __attribute__((__format__ (__printf__, 1, 2)));
 
-static void start_connection(void*);
-static void stop_connection(void*);
+static void start_connection();
+static void stop_connection();
 
-static void load_cmdline_config(void*);
-static void setup_listen(void*);
-static void start_server_dialog(void*);
+static void load_cmdline_config();
+static void setup_listen();
+static void start_server_dialog();
 #ifndef WIN32
-static void setup_via(void*);
+static void setup_via();
 #endif
 
 static void alert_done(Fl_Widget* widget, void*)
@@ -124,8 +125,10 @@ void abort_connection(const char *error, ...)
     va_end(ap);
   }
 
-  if (!Fl::has_idle(stop_connection))
-    Fl::add_idle(stop_connection);
+  if (!disconnecting) {
+    disconnecting = true;
+    QTimer::singleShot(0, stop_connection);
+  }
 }
 
 void abort_connection_unexpected(const rdr::Exception &e)
@@ -148,16 +151,15 @@ void abort_connection_unexpected(const char *error, ...)
 
 void disconnect()
 {
-  if (!Fl::has_idle(stop_connection))
-    Fl::add_idle(stop_connection);
+  if (!disconnecting) {
+    disconnecting = true;
+    QTimer::singleShot(0, stop_connection);
+  }
 }
 
-static void start_connection(void*)
+static void start_connection()
 {
   assert(cc == nullptr);
-
-  Fl::remove_idle(start_connection);
-
   cc = new CConn(vncServerName.c_str(), sock);
 }
 
@@ -168,16 +170,16 @@ static void reconnect_done(Fl_Widget* widget, void*)
   Fl::delete_widget(dlg);
 
   if (dlg->result() == 1)
-    Fl::add_idle(start_connection);
+    QTimer::singleShot(0, start_connection);
   else
     qApp->quit();
 }
 
-static void stop_connection(void*)
+static void stop_connection()
 {
   assert(cc != nullptr);
 
-  Fl::remove_idle(stop_connection);
+  disconnecting = false;
 
   delete cc;
   cc = nullptr;
@@ -244,10 +246,8 @@ static bool is_unix_socket(const char *filename)
   return false;
 }
 
-static void load_cmdline_config(void*)
+static void load_cmdline_config()
 {
-  Fl::remove_idle(load_cmdline_config);
-
   // Check if the server name in reality is a configuration file
   if (is_path(cmdlineServerName.c_str()) &&
       !is_unix_socket(cmdlineServerName.c_str())) {
@@ -264,15 +264,15 @@ static void load_cmdline_config(void*)
   }
 
   if (listenMode)
-    Fl::add_idle(setup_listen);
+    QTimer::singleShot(0, setup_listen);
   else if (vncServerName.empty())
-    Fl::add_idle(start_server_dialog);
+    QTimer::singleShot(0, start_server_dialog);
 #ifndef WIN32
   else if (strlen(via) > 0)
-    Fl::add_idle(setup_via);
+    QTimer::singleShot(0, setup_via);
 #endif
   else
-    Fl::add_idle(start_connection);
+    QTimer::singleShot(0, start_connection);
 }
 
 static void handle_connection(int socket)
@@ -309,13 +309,11 @@ static void handle_connection(int socket)
   }
 
   if (sock)
-    Fl::add_idle(start_connection);
+    QTimer::singleShot(0, start_connection);
 }
 
-static void setup_listen(void*)
+static void setup_listen()
 {
-  Fl::remove_idle(setup_listen);
-
   assert(listenMode);
 
 #ifndef WIN32
@@ -373,17 +371,15 @@ static void server_dialog_finished(Fl_Widget* widget, void*)
 
 #ifndef WIN32
   if (strlen(via) > 0)
-    Fl::add_idle(setup_via);
+    QTimer::singleShot(0, setup_via);
   else
 #endif
-    Fl::add_idle(start_connection);
+    QTimer::singleShot(0, start_connection);
 }
 
-static void start_server_dialog(void*)
+static void start_server_dialog()
 {
   ServerDialog* dialog;
-
-  Fl::remove_idle(start_server_dialog);
 
   dialog = new ServerDialog();
   dialog->setServerName(configServerName.c_str());
@@ -430,10 +426,8 @@ static std::string mktunnel(const char* server)
   return format("localhost::%d", localPort);
 }
 
-static void setup_via(void*)
+static void setup_via()
 {
-  Fl::remove_idle(setup_via);
-
   try {
     vncServerName = mktunnel(vncServerName.c_str());
   } catch (rdr::Exception& e) {
@@ -442,7 +436,7 @@ static void setup_via(void*)
     return;
   }
 
-  Fl::add_idle(start_connection);
+  QTimer::singleShot(0, start_connection);
 }
 #endif /* !WIN32 */
 
@@ -465,7 +459,7 @@ int mainloop(const char* configServerName_,
                    });
   rfbTimerProxy->setSingleShot(true);
 
-  Fl::add_idle(load_cmdline_config);
+  QTimer::singleShot(0, load_cmdline_config);
 
   // Warning: Never returns on macOS
   qApp->exec();
