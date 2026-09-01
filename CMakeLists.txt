@@ -280,6 +280,9 @@ if(BUILD_VIEWER)
       set(FLTK_LIBRARIES ${FLTK_LIBRARIES} ${X11_Xrender_LIB})
     endif()
   endif()
+
+  find_package(X11 COMPONENTS Xext Xi Xkb Xrender REQUIRED)
+  find_package(X11 COMPONENTS Xrandr)
 endif()
 
 # Check for GNUTLS library
