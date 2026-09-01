@@ -15,7 +15,6 @@ add_executable(vncviewer
   EmulateMB.cxx
   ServerDialog.cxx
   ShortcutHandler.cxx
-  Surface.cxx
   OptionsCompression.cxx
   OptionsDialog.cxx
   OptionsDisplay.cxx
@@ -50,16 +49,13 @@ endif()
 if(WIN32)
   target_sources(vncviewer PRIVATE Win32TouchHandler.cxx win32.c)
   target_sources(vncviewer PRIVATE KeyboardWin32.cxx keysym2ucs.c)
-  target_sources(vncviewer PRIVATE Surface_Win32.cxx)
 elseif(APPLE)
   target_sources(vncviewer PRIVATE cocoa.mm)
   target_sources(vncviewer PRIVATE KeyboardMacOS.mm osx_to_qnum.c keysym2ucs.c)
-  target_sources(vncviewer PRIVATE Surface_OSX.cxx)
 else()
   target_sources(vncviewer PRIVATE x11.cxx)
   target_sources(vncviewer PRIVATE GestureHandler.cxx XInputTouchHandler.cxx)
   target_sources(vncviewer PRIVATE KeyboardX11.cxx xkb_to_qnum.c)
-  target_sources(vncviewer PRIVATE Surface_X11.cxx)
 endif()
 
 if(HAVE_AUDIO)
@@ -164,10 +160,8 @@ else()
   target_include_directories(vncviewer SYSTEM PUBLIC ${X11_INCLUDE_DIR})
 
   target_link_libraries(vncviewer PRIVATE ${X11_X11_LIB})
-  target_link_libraries(vncviewer PRIVATE ${X11_Xext_LIB})
   target_link_libraries(vncviewer PRIVATE ${X11_Xi_LIB})
   target_link_libraries(vncviewer PRIVATE ${X11_Xinerama_LIB})
-  target_link_libraries(vncviewer PRIVATE ${X11_Xrender_LIB})
 
   target_link_libraries(vncviewer PRIVATE XCB::XKB)
 endif()
