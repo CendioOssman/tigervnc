@@ -19,21 +19,12 @@
 #ifndef __PLATFORMPIXELBUFFER_H__
 #define __PLATFORMPIXELBUFFER_H__
 
-#if !defined(WIN32) && !defined(__APPLE__)
-#include <X11/Xlib.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <X11/extensions/XShm.h>
-#endif
-
 #include <os/Mutex.h>
 
 #include <rfb/PixelBuffer.h>
 #include <rfb/Region.h>
 
-#include "Surface.h"
-
-class PlatformPixelBuffer: public rfb::FullFramePixelBuffer, public Surface {
+class PlatformPixelBuffer: public rfb::ManagedPixelBuffer {
 public:
   PlatformPixelBuffer(int width, int height);
   ~PlatformPixelBuffer();
@@ -42,21 +33,9 @@ public:
 
   rfb::Rect getDamage(void);
 
-  using rfb::FullFramePixelBuffer::width;
-  using rfb::FullFramePixelBuffer::height;
-
 protected:
   os::Mutex mutex;
   rfb::Region damage;
-
-#if !defined(WIN32) && !defined(__APPLE__)
-protected:
-  bool setupShm(int width, int height);
-
-protected:
-  XShmSegmentInfo *shminfo;
-  XImage *xim;
-#endif
 };
 
 #endif

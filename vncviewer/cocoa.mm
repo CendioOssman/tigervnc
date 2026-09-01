@@ -119,28 +119,6 @@ void cocoa_set_presentation_full_screen()
          NSApplicationPresentationAutoHideDock];
 }
 
-CGColorSpaceRef cocoa_win_color_space(Fl_Window *win)
-{
-  NSWindow *nsw;
-  NSColorSpace *nscs;
-
-  nsw = (NSWindow*)fl_xid(win);
-
-  nscs = [nsw colorSpace];
-  if (nscs == nil) {
-    // Offscreen, so return standard SRGB color space
-    assert(false);
-    return CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-  }
-
-  CGColorSpaceRef lut = [nscs CGColorSpace];
-
-  // We want a permanent reference, not an autorelease
-  CGColorSpaceRetain(lut);
-
-  return lut;
-}
-
 void cocoa_event_delay(double seconds)
 {
   CGEventSourceRef event = CGEventSourceCreate(kCGEventSourceStateCombinedSessionState);

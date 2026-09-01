@@ -29,10 +29,6 @@ bool cocoa_screens_have_separate_spaces();
 void cocoa_set_presentation_default();
 void cocoa_set_presentation_full_screen();
 
-typedef struct CGColorSpace *CGColorSpaceRef;
-
-CGColorSpaceRef cocoa_win_color_space(Fl_Window *win);
-
 void cocoa_event_delay(double seconds);
 
 void cocoa_set_cursor_pos(int x, int y);
