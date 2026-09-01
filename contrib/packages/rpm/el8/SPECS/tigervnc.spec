@@ -109,6 +109,7 @@ Requires(postun): systemd
 Requires(post): systemd
 
 Requires:       mesa-dri-drivers, xkeyboard-config, xkbcomp
+Requires:       xorg-x11-server-common
 Requires:       tigervnc-common, dbus-x11
 
 %description server-minimal
