@@ -195,7 +195,7 @@ autoreconf -fiv
         --disable-devel-docs \
         --disable-selective-werror
 
-make TIGERVNC_BUILDDIR="`pwd`/../../%{__cmake_builddir}" %{?_smp_mflags}
+make TIGERVNC_BUILDDIR="`pwd`/../../%{__cmake_builddir}" V=1 %{?_smp_mflags}
 popd
 
 # SELinux
