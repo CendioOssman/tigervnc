@@ -195,7 +195,7 @@ autoreconf -fiv
         --disable-devel-docs \
         --disable-selective-werror
 
-make %{?_smp_mflags}
+make V=1 %{?_smp_mflags}
 popd
 
 # SELinux
