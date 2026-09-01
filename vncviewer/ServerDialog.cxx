@@ -165,10 +165,6 @@ void ServerDialog::handleLoad()
   fileChooser->setFileMode(QFileDialog::ExistingFile);
   fileChooser->setNameFilters({_("TigerVNC configuration (*.tigervnc)"),
                                _("All files (*)")});
-  // Portals break in dual FLTK/Qt mode
-#if !defined(WIN32) && !defined(__APPLE__)
-  fileChooser->setOption(QFileDialog::DontUseNativeDialog);
-#endif
   QObject::connect(
     fileChooser, &QFileDialog::fileSelected,
     [this](const QString& f) { handleLoadSelected(f); });
@@ -212,10 +208,6 @@ void ServerDialog::handleSaveAs()
                                _("All files (*)")});
   // FIXME: Remove this flag and our custom handling
   fileChooser->setOptions(QFileDialog::DontConfirmOverwrite);
-  // Portals break in dual FLTK/Qt mode
-#if !defined(WIN32) && !defined(__APPLE__)
-  fileChooser->setOption(QFileDialog::DontUseNativeDialog);
-#endif
   QObject::connect(
     fileChooser, &QFileDialog::fileSelected,
     [this](const QString& f) { handleSaveAsSelected(f); });
