@@ -30,6 +30,7 @@
 
 #include <QAbstractEventDispatcher>
 #include <QApplication>
+#include <QSocketNotifier>
 #include <QTimer>
 
 #include <FL/Fl.H>
@@ -60,6 +61,7 @@ static network::Socket* sock = nullptr;
 static CConn* cc = nullptr;
 
 static std::list<network::SocketListener*> listeners;
+static std::list<QSocketNotifier*> listenNotifiers;
 
 static core::LogWriter vlog("mainloop");
 
@@ -270,9 +272,16 @@ static void load_cmdline_config(void*)
     Fl::add_idle(start_connection);
 }
 
-static void handle_connection(FL_SOCKET, void* data)
+static void handle_connection(int socket)
 {
-  network::SocketListener* listener = (network::SocketListener*)data;
+  network::SocketListener* listener = nullptr;
+
+  for (network::SocketListener* l : listeners) {
+    if (l->getFd() == socket) {
+      listener = l;
+      break;
+    }
+  }
 
   assert(listener);
 
@@ -286,8 +295,12 @@ static void handle_connection(FL_SOCKET, void* data)
     /* Continue for cleanup */
   }
 
+  while (!listenNotifiers.empty()) {
+    delete listenNotifiers.back();
+    listenNotifiers.pop_back();
+  }
+
   while (!listeners.empty()) {
-    Fl::remove_fd(listeners.back()->getFd());
     delete listeners.back();
     listeners.pop_back();
   }
@@ -331,9 +344,15 @@ static void setup_listen(void*)
   }
 
   /* Wait for a connection */
-  for (network::SocketListener* listener : listeners)
-    Fl::add_fd(listener->getFd(), FL_READ | FL_EXCEPT,
-                handle_connection, listener);
+  for (network::SocketListener* listener : listeners) {
+    QSocketNotifier* notifier;
+
+    notifier =
+      new QSocketNotifier(listener->getFd(), QSocketNotifier::Read);
+    listenNotifiers.push_back(notifier);
+    QObject::connect(notifier, &QSocketNotifier::activated,
+                     handle_connection);
+  }
 }
 
 static void server_dialog_finished(Fl_Widget* widget, void*)
