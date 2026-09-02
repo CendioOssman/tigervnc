@@ -252,10 +252,8 @@ core::BoolParameter
                          "the server when in full-screen mode"),
                        true);
 
-#ifndef WIN32
 core::StringParameter
   via("via", _("SSH gateway to tunnel the connection via"), "");
-#endif
 
 static const char* IDENTIFIER_STRING = "TigerVNC Configuration file Version 1.0";
 

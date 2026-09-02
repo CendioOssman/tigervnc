@@ -47,6 +47,7 @@
 #include "i18n.h"
 #include "mainloop.h"
 #include "parameters.h"
+#include "tunnelfactory.h"
 
 static std::string exitError;
 static bool disconnecting = false;
@@ -61,6 +62,8 @@ static CConn* cc = nullptr;
 static std::list<network::SocketListener*> listeners;
 static std::list<QSocketNotifier*> listenNotifiers;
 
+static TunnelFactory* tunnelFactory = nullptr;
+
 static core::LogWriter vlog("mainloop");
 
 static void abort_startup(const char *error, ...)
@@ -72,9 +75,7 @@ static void stop_connection();
 static void load_cmdline_config();
 static void setup_listen();
 static void start_server_dialog();
-#ifndef WIN32
 static void setup_via();
-#endif
 
 static void abort_startup(const char *error, ...)
 {
@@ -256,10 +257,8 @@ static void load_cmdline_config()
     QTimer::singleShot(0, setup_listen);
   else if (vncServerName.empty())
     QTimer::singleShot(0, start_server_dialog);
-#ifndef WIN32
   else if (strlen(via) > 0)
     QTimer::singleShot(0, setup_via);
-#endif
   else
     QTimer::singleShot(0, start_connection);
 }
@@ -305,7 +304,6 @@ static void setup_listen()
 {
   assert(listenMode);
 
-#ifndef WIN32
   /* Specifying -via and -listen together is nonsense */
   if (strlen(via) > 0) {
     // TRANSLATORS: "Parameters" are command line arguments, or settings
@@ -314,7 +312,6 @@ static void setup_listen()
     abort_startup(_("Parameters -listen and -via are incompatible"));
     return;
   }
-#endif
 
   try {
     int port = 5500;
@@ -349,11 +346,9 @@ static void server_dialog_finished(ServerDialog* dialog)
 {
   vncServerName = dialog->getServerName();
 
-#ifndef WIN32
   if (strlen(via) > 0)
     QTimer::singleShot(0, setup_via);
   else
-#endif
     QTimer::singleShot(0, start_connection);
 }
 
@@ -373,60 +368,24 @@ static void start_server_dialog()
   dialog->show();
 }
 
-#ifndef WIN32
-static void
-createTunnel(const char *gatewayHost, const char *remoteHost,
-             int remotePort, int localPort)
-{
-  const char *cmd = getenv("VNC_VIA_CMD");
-  char *cmd2, *percent;
-  char lport[10], rport[10];
-  sprintf(lport, "%d", localPort);
-  sprintf(rport, "%d", remotePort);
-  setenv("G", gatewayHost, 1);
-  setenv("H", remoteHost, 1);
-  setenv("R", rport, 1);
-  setenv("L", lport, 1);
-  if (!cmd)
-    cmd = "/usr/bin/ssh -f -L \"$L\":\"$H\":\"$R\" -- \"$G\" sleep 20";
-  /* Compatibility with TigerVNC's method. */
-  cmd2 = strdup(cmd);
-  while ((percent = strchr(cmd2, '%')) != nullptr)
-    *percent = '$';
-  int res = system(cmd2);
-  if (res != 0)
-    vlog.error(_("Failed to create tunnel: '%s' returned %d"),
-               cmd2, res);
-  free(cmd2);
-}
-
-static std::string mktunnel(const char* server)
+static void setup_via()
 {
   const char *gatewayHost;
   std::string remoteHost;
   int localPort = network::findFreeTcpPort();
   int remotePort;
 
-  network::getHostAndPort(server, &remoteHost, &remotePort);
+  network::getHostAndPort(vncServerName.c_str(), &remoteHost, &remotePort);
+  vncServerName = core::format("localhost::%d", localPort);
   gatewayHost = (const char*)via;
-  createTunnel(gatewayHost, remoteHost.c_str(), remotePort, localPort);
 
-  return core::format("localhost::%d", localPort);
-}
-
-static void setup_via()
-{
-  try {
-    vncServerName = mktunnel(vncServerName.c_str());
-  } catch (std::exception& e) {
-    vlog.error("%s", e.what());
-    abort_startup(_("Failure setting up encrypted tunnel:\n\n%s"), e.what());
-    return;
-  }
+  tunnelFactory = new TunnelFactory(gatewayHost, remoteHost.c_str(),
+                                    remotePort, localPort);
+  tunnelFactory->start();
+  tunnelFactory->wait(QDeadlineTimer(20000));
 
   QTimer::singleShot(0, start_connection);
 }
-#endif /* !WIN32 */
 
 int mainloop(const char* configServerName_,
              const char* cmdlineServerName_)
@@ -451,6 +410,8 @@ int mainloop(const char* configServerName_,
 
   // Warning: Never returns on macOS
   qApp->exec();
+
+  delete tunnelFactory;
 
   return exitError.empty() ? 0 : 1;
 }
