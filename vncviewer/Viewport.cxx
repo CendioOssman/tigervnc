@@ -355,6 +355,9 @@ void Viewport::handleClipboardData(const char* cbdata)
 
   // RFB doesn't have separate selection and clipboard concepts, so we
   // dump the data into both variants.
+#ifdef __APPLE__
+  serverReceivedData = cbdata;
+#endif
 #if !defined(WIN32) && !defined(__APPLE__)
   if (setPrimary)
     QGuiApplication::clipboard()->setText(cbdata,
@@ -879,6 +882,17 @@ void Viewport::handleClipboardChange(QClipboard::Mode mode)
     }
     return;
   }
+
+#ifdef __APPLE__
+  // FIXME: This shouldn't be needed, as Qt checks for
+  // kPasteboardModified from PasteboardSynchronize(), but we can
+  // use [[NSPasteboard generalPasteboard] changeCount] otherwise
+  // https://qt-project.atlassian.net/browse/QTBUG-124214
+  if (QGuiApplication::clipboard()->text(mode) == serverReceivedData) {
+    serverReceivedData = "";
+    return;
+  }
+#endif
 
   clipboardMode = mode;
 

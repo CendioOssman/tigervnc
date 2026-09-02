@@ -155,6 +155,9 @@ private:
   bool pendingClientClipboard;
 
   QClipboard::Mode clipboardMode;
+#ifdef __APPLE__
+  QString serverReceivedData;
+#endif
 
   QMenu* contextMenu;
 
