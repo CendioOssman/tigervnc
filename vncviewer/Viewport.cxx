@@ -32,6 +32,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QTimer>
 
 #include <rfb/CMsgWriter.h>
 #include <rfb/LogWriter.h>
@@ -151,15 +152,17 @@ Viewport::Viewport(int w, int h, CConn* cc_)
 
   // Make sure we have an initial blank cursor set
   setCursor(0, 0, rfb::Point(0, 0), nullptr);
+
+  mousePointerTimer = new QTimer(this);
+  mousePointerTimer->setInterval(::pointerEventInterval);
+  mousePointerTimer->setSingleShot(true);
+  connect(mousePointerTimer, &QTimer::timeout, this,
+          &Viewport::handlePointerTimeout);
 }
 
 
 Viewport::~Viewport()
 {
-  // Unregister all timeouts in case they get a change tro trigger
-  // again later when this object is already gone.
-  Fl::remove_timeout(handlePointerTimeout, this);
-
   Fl::remove_system_handler(handleSystemEvent);
 
   OptionsDialog::removeCallback(handleOptions);
@@ -711,9 +714,8 @@ void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
       abort_connection_unexpected(e);
     }
   } else {
-    if (!Fl::has_timeout(handlePointerTimeout, this))
-      Fl::add_timeout((double)pointerEventInterval/1000.0,
-                      handlePointerTimeout, this);
+    if (!mousePointerTimer->isActive())
+      mousePointerTimer->start();
   }
   lastPointerPos = pos;
   lastButtonMask = buttonMask;
@@ -807,15 +809,10 @@ void Viewport::handlePointerEvent(const rfb::Point& pos, uint8_t buttonMask)
 }
 
 
-void Viewport::handlePointerTimeout(void *data)
+void Viewport::handlePointerTimeout()
 {
-  Viewport *self = (Viewport *)data;
-
-  assert(self);
-
   try {
-    self->cc->writer()->writePointerEvent(self->lastPointerPos,
-                                          self->lastButtonMask);
+    cc->writer()->writePointerEvent(lastPointerPos, lastButtonMask);
   } catch (rdr::Exception& e) {
     vlog.error("%s", e.str());
     abort_connection_unexpected(e);

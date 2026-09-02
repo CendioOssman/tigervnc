@@ -106,7 +106,7 @@ private:
   void flushPendingClipboard();
 
   void handlePointerEvent(const rfb::Point& pos, uint8_t buttonMask);
-  static void handlePointerTimeout(void *data);
+  void handlePointerTimeout();
 
   void resetKeyboard();
 
@@ -135,6 +135,7 @@ private:
 
   rfb::Point lastPointerPos;
   uint8_t lastButtonMask;
+  QTimer* mousePointerTimer;
 
   double lastMagnitudeX;
   double lastMagnitudeY;
