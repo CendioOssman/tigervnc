@@ -182,6 +182,7 @@ void Viewport::updateWindow()
   rfb::Rect r;
 
   r = frameBuffer->getDamage();
+  damage += QRect(r.tl.x, r.tl.y, r.width(), r.height());
   update(r.tl.x, r.tl.y, r.width(), r.height());
 }
 
@@ -348,34 +349,53 @@ void Viewport::pushLEDState()
 
 void Viewport::paintEvent(QPaintEvent* event)
 {
+  // Shadow pixmap size out of sync with framebuffer?
+  if ((frameBuffer->width() != pixmap.width()) ||
+      (frameBuffer->height() != pixmap.height())) {
+    pixmap = QPixmap(frameBuffer->width(), frameBuffer->height());
+    damage = QRegion(0, 0, frameBuffer->width(), frameBuffer->height());
+  }
+
+  // Shadow pixmap contents out of sync with framebuffer?
+  if (!damage.isEmpty()) {
+    QPainter pixmapPainter(&pixmap);
+
+    QRect bounds;
+    int x, y, w, h;
+    rfb::Rect rfbrect;
+
+    const uint8_t* fbdata;
+    int stride;
+
+    bounds = damage.boundingRect();
+    damage = QRegion();
+    x = bounds.x();
+    y = bounds.y();
+    w = bounds.width();
+    h = bounds.height();
+    rfbrect.setXYWH(x, y, w, h);
+
+    fbdata = frameBuffer->getBuffer(rfbrect, &stride);
+    QImage image(fbdata, w, h, stride * 4, QImage::Format_RGB32);
+
+#ifdef __APPLE__
+    // Qt assumes that the alpha channel is always 0xff, which we cannot
+    // guarantee
+    pixmapPainter.fillRect(bounds, QColor("#ff000000"));
+    pixmapPainter.setCompositionMode(QPainter::CompositionMode_Plus);
+#endif
+
+    pixmapPainter.drawImage(bounds, image);
+  }
+
   QPainter painter(this);
 
   QRect rect;
-  int x, y, w, h;
-  rfb::Rect rfbrect;
-
-  const uint8_t* fbdata;
-  int stride;
 
   // Check what actually needs updating
   rect = event->rect();
-  x = rect.x();
-  y = rect.y();
-  w = rect.width();
-  h = rect.height();
-  rfbrect.setXYWH(x, y, w, h);
 
-  fbdata = frameBuffer->getBuffer(rfbrect, &stride);
-  QImage image(fbdata, w, h, stride * 4, QImage::Format_RGB32);
-
-#ifdef __APPLE__
-  // Qt assumes that the alpha channel is always 0xff, which we cannot
-  // guarantee
-  painter.fillRect(rect, QColor("#ff000000"));
-  painter.setCompositionMode(QPainter::CompositionMode_Plus);
-#endif
-
-  painter.drawImage(rect, image);
+  painter.drawPixmap(rect, pixmap, rect);
 }
 
 void Viewport::resizeEvent(QResizeEvent* e)
