@@ -32,6 +32,10 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 #include <QApplication>
 #include <QIcon>
 #include <QMenuBar>
@@ -44,14 +48,6 @@
 
 #include <os/os.h>
 
-#include <FL/Fl.H>
-#include <FL/Fl_PNG_Image.H>
-#include <FL/Fl_Window.H>
-#include <FL/fl_ask.H>
-#include <FL/x.H>
-
-#include "fltk/theme.h"
-#include "qt/QFLTKEventDispatcher.h"
 #include "i18n.h"
 #include "mainloop.h"
 #include "parameters.h"
@@ -143,19 +139,8 @@ static void init_gui()
 
   qApp->setQuitOnLastWindowClosed(false);
 
-#if !defined(WIN32) && !defined(__APPLE__)
-  if (strcmp(display, "") != 0) {
-    Fl::display(display);
-  }
-  fl_open_display();
-#endif
-
-  // Adjust look of FLTK
-  init_theme();
-
   // Proper Gnome Shell integration requires that we set a sensible
   // WM_CLASS for the window.
-  Fl_Window::default_xclass("vncviewer");
   qApp->setDesktopFileName("vncviewer");
 
   // Set the default icon for all windows.
@@ -174,64 +159,25 @@ static void init_gui()
                         GetSystemMetrics(SM_CYSMICON),
                         LR_DEFAULTCOLOR | LR_SHARED);
 
-  Fl_Window::default_icons(lg, sm);
-
   icon.addPixmap(QPixmap::fromImage(QImage::fromHICON(lg)));
   icon.addPixmap(QPixmap::fromImage(QImage::fromHICON(sm)));
 
   qApp->setWindowIcon(icon);
 #elif ! defined(__APPLE__)
   const int icon_sizes[] = {128, 64, 48, 32, 24, 22, 16};
-
-  Fl_PNG_Image *icons[sizeof(icon_sizes)/sizeof(icon_sizes[0])];
-  int count;
-
   QIcon fallback;
 
-  count = 0;
-
-  // FIXME: Follow icon theme specification
   for (int icon_size : icon_sizes) {
       char icon_path[PATH_MAX];
-      bool exists;
 
       sprintf(icon_path, "%s/icons/hicolor/%dx%d/apps/tigervnc.png",
               CMAKE_INSTALL_FULL_DATADIR, icon_size, icon_size);
 
-      struct stat st;
-      if (stat(icon_path, &st) != 0)
-        exists = false;
-      else
-        exists = true;
-
-      if (exists) {
-          icons[count] = new Fl_PNG_Image(icon_path);
-          if (icons[count]->w() == 0 ||
-              icons[count]->h() == 0 ||
-              icons[count]->d() != 4) {
-              delete icons[count];
-              continue;
-          }
-
-          count++;
-      }
-
       fallback.addFile(icon_path, QSize(icon_size, icon_size));
   }
 
-  Fl_Window::default_icons((const Fl_RGB_Image**)icons, count);
-
-  for (int i = 0;i < count;i++)
-      delete icons[i];
-
   qApp->setWindowIcon(QIcon::fromTheme("tigervnc", fallback));
 #endif
-
-  // Turn off the annoying behaviour where popups track the mouse.
-  fl_message_hotspot(false);
-
-  // Avoid empty titles for popups
-  fl_message_title_default(_("TigerVNC Viewer"));
 
 #ifdef __APPLE__
   // Global menu bar
@@ -468,7 +414,6 @@ int main(int argc, char** argv)
   }
 #endif
 
-  QCoreApplication::setEventDispatcher(new QFLTKEventDispatcher);
   QApplication app(qtargc, (char**)qtargv);
 
   init_gui();

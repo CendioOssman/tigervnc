@@ -38,8 +38,6 @@
 #include <QString>
 #include <QTranslator>
 
-#include <FL/fl_ask.H>
-
 #include "i18n.h"
 
 static const char* getlocaledir()
@@ -149,13 +147,6 @@ void i18n_init()
   // be in GUI codeset as well.
   bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
   bind_textdomain_codeset("libc", "UTF-8");
-
-  // FLTK exposes these so that we can translate them.
-  fl_no     = _("No");
-  fl_yes    = _("Yes");
-  fl_ok     = _("OK");
-  fl_cancel = _("Cancel");
-  fl_close  = _("Close");
 }
 
 void i18n_qt_init()

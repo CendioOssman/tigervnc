@@ -25,7 +25,6 @@ Build-Depends:
  libpng-dev,
  libxrandr-dev,
  libxdamage-dev,
- libfltk1.3-dev,
  qt6-base-dev,
  xorg-server-source,
  xserver-xorg-dev,

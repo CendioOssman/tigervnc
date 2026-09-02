@@ -3,8 +3,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 endif()
 
 add_executable(vncviewer
-  fltk/theme.cxx
-  qt/QFLTKEventDispatcher.cxx
   qt/QMonitorArrangement.cxx
   qt/QNavigation.cxx
   menukey.cxx
@@ -62,26 +60,15 @@ target_link_libraries(vncviewer PRIVATE rfb network rdr os)
 target_include_directories(vncviewer SYSTEM PUBLIC ${GETTEXT_INCLUDE_DIR})
 target_link_libraries(vncviewer PRIVATE ${GETTEXT_LIBRARIES})
 
-target_include_directories(vncviewer SYSTEM PUBLIC ${FLTK_INCLUDE_DIR})
-target_link_libraries(vncviewer PRIVATE ${FLTK_LIBRARIES})
-
 set_target_properties(vncviewer PROPERTIES AUTOMOC ON)
 set_target_properties(vncviewer PROPERTIES AUTORCC ON)
 target_link_libraries(vncviewer PRIVATE
   Qt${QT_VERSION_MAJOR}::Core
   Qt${QT_VERSION_MAJOR}::Widgets)
-target_link_libraries(vncviewer PRIVATE
-  Qt${QT_VERSION_MAJOR}::GuiPrivate)
 if(UNIX AND NOT APPLE)
   if(QT_VERSION_MAJOR LESS_EQUAL 5)
     target_link_libraries(vncviewer PRIVATE
       Qt${QT_VERSION_MAJOR}::X11Extras)
-    target_link_libraries(vncviewer PRIVATE
-      Qt${QT_VERSION_MAJOR}::EdidSupportPrivate
-      Qt${QT_VERSION_MAJOR}::XcbQpa)
-  else()
-    target_link_libraries(vncviewer PRIVATE
-      Qt${QT_VERSION_MAJOR}::XcbQpaPrivate)
   endif()
 endif()
 
