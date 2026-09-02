@@ -223,39 +223,6 @@ void x11_ungrab_keyboard()
   XUngrabKeyboard(qt_display(), CurrentTime);
 }
 
-static int xi_major;
-
-bool x11_has_xinput22()
-{
-  static bool checked = false;
-  static bool has_xinput22 = false;
-
-  Display* display = qt_display();
-
-  int ev, err;
-  int major_ver, minor_ver;
-
-  if (checked)
-    return has_xinput22;
-
-  checked = true;
-
-  if (!XQueryExtension(display, "XInputExtension", &xi_major, &ev, &err))
-    return false;
-
-  major_ver = 2;
-  minor_ver = 2;
-  if (XIQueryVersion(display, &major_ver, &minor_ver) != Success)
-    return false;
-
-  if ((major_ver == 2) && (minor_ver < 2))
-    return false;
-
-  has_xinput22 = true;
-
-  return true;
-}
-
 bool x11_grab_pointer(QWidget* win)
 {
   Display* display = qt_display();
@@ -271,17 +238,6 @@ bool x11_grab_pointer(QWidget* win)
   bool gotGrab;
 
   window = win->winId();
-
-  if (!x11_has_xinput22()) {
-    int status;
-
-    status = XGrabPointer(display, window, True,
-                          ButtonPressMask | ButtonReleaseMask |
-                          ButtonMotionMask | PointerMotionMask,
-                          GrabModeAsync, GrabModeAsync,
-                          None, None, CurrentTime);
-    return status == Success;
-  }
 
   // We grab for the same events as the window is currently interested in
   curmasks = XIGetSelectedEvents(display, window, &num_masks);
@@ -340,11 +296,6 @@ void x11_ungrab_pointer()
 
   int ndevices;
   XIDeviceInfo *devices, *device;
-
-  if (!x11_has_xinput22()) {
-    XUngrabPointer(display, CurrentTime);
-    return;
-  }
 
   devices = XIQueryDevice(display, XIAllMasterDevices, &ndevices);
 
