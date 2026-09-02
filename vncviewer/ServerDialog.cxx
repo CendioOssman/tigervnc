@@ -57,6 +57,11 @@ ServerDialog::ServerDialog(QWidget* parent)
   QPushButton* button;
 
   setWindowTitle(_("VNC Viewer: Connection Details"));
+#ifdef __APPLE__
+  setWindowFlag(Qt::CustomizeWindowHint, true);
+  setWindowFlag(Qt::WindowMaximizeButtonHint, false);
+  setWindowFlag(Qt::WindowFullscreenButtonHint, false);
+#endif
 
   QBoxLayout* layout = new QVBoxLayout;
 

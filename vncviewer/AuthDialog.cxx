@@ -39,6 +39,11 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
   : QDialog(parent)
 {
   setWindowTitle(_("VNC authentication"));
+#ifdef __APPLE__
+  setWindowFlag(Qt::CustomizeWindowHint, true);
+  setWindowFlag(Qt::WindowMaximizeButtonHint, false);
+  setWindowFlag(Qt::WindowFullscreenButtonHint, false);
+#endif
 
   QBoxLayout* layout = new QVBoxLayout;
   layout->setContentsMargins(0, 0, 0, 0);
