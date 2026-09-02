@@ -20,6 +20,7 @@
 #ifndef __VIEWPORT_H__
 #define __VIEWPORT_H__
 
+#include <QClipboard>
 #include <QObject>
 
 #include <rfb/Rect.h>
@@ -81,7 +82,6 @@ protected:
 
   void resize(int x, int y, int w, int h) override;
 
-  int pasteEvent();
   int enterEvent();
   int leaveEvent();
   int mouseEvent();
@@ -101,7 +101,7 @@ protected:
 private:
   bool hasFocus();
 
-  static void handleClipboardChange(int source, void *data);
+  void handleClipboardChange(QClipboard::Mode mode);
 
   void flushPendingClipboard();
 
@@ -149,7 +149,7 @@ private:
 
   bool pendingClientClipboard;
 
-  int clipboardSource;
+  QClipboard::Mode clipboardMode;
 
   uint32_t menuKeySym;
   int menuKeyCode, menuKeyQt;
