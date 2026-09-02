@@ -45,6 +45,8 @@ OptionsDialog::OptionsDialog(QWidget* parent)
   setWindowTitle(_("TigerVNC Options"));
 
   QBoxLayout* layout = new QVBoxLayout;
+  layout->setContentsMargins(0,0,0,0);
+  layout->setSpacing(0);
 
   navigation = new QNavigation;
   navigation->addWidget(_("Compression"), new OptionsCompression);
@@ -56,6 +58,14 @@ OptionsDialog::OptionsDialog(QWidget* parent)
   navigation->addWidget(_("Miscellaneous"), new OptionsMisc);
   layout->addWidget(navigation);
 
+  QFrame* hFrame = new QFrame;
+  hFrame->setFrameShape(QFrame::StyledPanel);
+  hFrame->setFixedHeight(1);
+  layout->addWidget(hFrame);
+
+  QHBoxLayout* btnsLayout = new QHBoxLayout;
+  btnsLayout->setContentsMargins(10,10,10,10);
+
   QDialogButtonBox* buttonBox = new QDialogButtonBox;
   buttonBox->addButton(QDialogButtonBox::Ok);
   buttonBox->addButton(QDialogButtonBox::Cancel);
@@ -63,7 +73,9 @@ OptionsDialog::OptionsDialog(QWidget* parent)
           this, &QDialog::accept);
   connect(buttonBox, &QDialogButtonBox::rejected,
           this, &QDialog::reject);
-  layout->addWidget(buttonBox);
+  btnsLayout->addWidget(buttonBox);
+
+  layout->addLayout(btnsLayout);
 
   setLayout(layout);
   adjustSize();

@@ -77,6 +77,8 @@ QNavigation::QNavigation(QWidget* parent)
   setFrameShape(QFrame::StyledPanel);
 
   QBoxLayout* layout = new QHBoxLayout;
+  layout->setContentsMargins(0,0,0,0);
+  layout->setSpacing(0);
 
   listWidget = new QListWidget;
 #if !defined(WIN32) && !defined(__APPLE__)
