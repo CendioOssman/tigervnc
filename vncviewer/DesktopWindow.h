@@ -20,9 +20,15 @@
 #ifndef __DESKTOPWINDOW_H__
 #define __DESKTOPWINDOW_H__
 
+#include <QObject>
+
 #include <FL/Fl_Window.H>
 
-namespace rfb { class ModifiablePixelBuffer; }
+namespace rfb {
+  class ModifiablePixelBuffer;
+  class PixelFormat;
+  struct Point;
+}
 
 class CConn;
 class Surface;
@@ -31,7 +37,9 @@ class Viewport;
 
 class Fl_Scrollbar;
 
-class DesktopWindow : public Fl_Window {
+class DesktopWindow : public QObject, public Fl_Window {
+  Q_OBJECT
+
 public:
 
   DesktopWindow(int w, int h, const char *name, CConn* cc_);

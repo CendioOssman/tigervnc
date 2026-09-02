@@ -100,7 +100,7 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
 
   toast = new Toast(this);
 
-  callback([](Fl_Widget*, void*) { disconnect(); });
+  callback([](Fl_Widget*, void*) { ::disconnect(); });
 
   setName(name);
 
@@ -123,14 +123,16 @@ DesktopWindow::DesktopWindow(int w, int h, const char *name,
   // display. Other applications and system services are not allowed
   // to use the display or change its configuration. In addition,
   // they are not notified of display changes"
-  QObject::connect(qApp, &QGuiApplication::screenAdded, [this]() {
-    Fl::remove_timeout(reconfigureFullscreen);
-    Fl::add_timeout(0.5, reconfigureFullscreen, this);
-  });
-  QObject::connect(qApp, &QGuiApplication::screenRemoved, [this]() {
-    Fl::remove_timeout(reconfigureFullscreen);
-    Fl::add_timeout(0.5, reconfigureFullscreen, this);
-  });
+  connect(qApp, &QGuiApplication::screenAdded, this,
+          [this]() {
+            Fl::remove_timeout(reconfigureFullscreen);
+            Fl::add_timeout(0.5, reconfigureFullscreen, this);
+          });
+  connect(qApp, &QGuiApplication::screenRemoved, this,
+          [this]() {
+            Fl::remove_timeout(reconfigureFullscreen);
+            Fl::add_timeout(0.5, reconfigureFullscreen, this);
+          });
 
   // Support for -geometry option. Note that although we do support
   // negative coordinates, we do not support -XOFF-YOFF (ie
