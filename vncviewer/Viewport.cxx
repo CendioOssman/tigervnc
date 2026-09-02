@@ -562,6 +562,10 @@ void Viewport::mouseEvent(QMouseEvent* event)
 {
   int buttonMask;
 
+  // FIXME: Is this really needed?
+  if(event->source() != Qt::MouseEventNotSynthesized)
+    return;
+
   event->accept();
 
   buttonMask = 0;
