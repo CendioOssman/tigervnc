@@ -75,6 +75,9 @@ public:
 protected:
   // Qt event handlers
   void paintEvent(QPaintEvent* event) override;
+#ifdef QT_DEBUG
+  void handleTimeout(core::Timer* t) override;
+#endif
   void resizeEvent(QResizeEvent* e) override;
   void leaveEvent(QEvent* event) override;
   void mouseEvent(QMouseEvent* event);
@@ -166,6 +169,14 @@ private:
 
   QCursor* cursor;
   bool cursorIsBlank;
+
+#ifdef QT_DEBUG
+  QAtomicInt fpsCounter;
+  int fpsValue = 0;
+  QRect fpsRect = {10, 10, 100, 20};
+  struct timeval fpsLast;
+  core::Timer fpsTimer;
+#endif
 };
 
 #endif

@@ -120,6 +120,9 @@ Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
     firstLEDState(true), pendingClientClipboard(false),
     menuCtrlKey(false), menuAltKey(false), cursor(nullptr),
     cursorIsBlank(false)
+#ifdef QT_DEBUG
+    , fpsTimer(this)
+#endif
 {
   setAttribute(Qt::WA_OpaquePaintEvent, true);
   setAttribute(Qt::WA_AcceptTouchEvents);
@@ -183,6 +186,11 @@ Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
   mousePointerTimer->setSingleShot(true);
   connect(mousePointerTimer, &QTimer::timeout, this,
           &Viewport::handlePointerTimeout);
+
+#ifdef QT_DEBUG
+  gettimeofday(&fpsLast, nullptr);
+  fpsTimer.start(5000);
+#endif
 }
 
 Viewport::~Viewport()
@@ -480,7 +488,52 @@ void Viewport::paintEvent(QPaintEvent* event)
   rect = event->rect();
 
   painter.drawPixmap(rect, pixmap, rect);
+
+#ifdef QT_DEBUG
+  fpsCounter++;
+  QFont f;
+  f.setBold(true);
+  f.setPixelSize(14);
+  painter.setFont(f);
+  painter.setPen(Qt::NoPen);
+  painter.setRenderHint(QPainter::Antialiasing);
+  painter.setBrush(QColor("#96101010"));
+  painter.drawRect(fpsRect);
+  QPen p;
+  p.setColor("#e0ffffff");
+  painter.setPen(p);
+  QString text = QString("%1 fps").arg(fpsValue);
+  painter.drawText(fpsRect, text, QTextOption(Qt::AlignCenter));
+#endif
 }
+
+#ifdef QT_DEBUG
+void Viewport::handleTimeout(core::Timer* t)
+{
+  struct timeval now;
+  int count;
+
+  EmulateMB::handleTimeout(t);
+
+  if (t != &fpsTimer)
+    return;
+
+  gettimeofday(&now, nullptr);
+  count = fpsCounter;
+
+  fpsValue = int(count * 1000.0 / core::msSince(&fpsLast));
+
+  vlog.info("%d frames in %g seconds = %d FPS", count, core::msSince(&fpsLast) / 1000.0, fpsValue);
+
+  fpsCounter -= count;
+  fpsLast = now;
+
+  damage += fpsRect;
+  update(damage);
+
+  t->repeat();
+}
+#endif
 
 void Viewport::resizeEvent(QResizeEvent* e)
 {
