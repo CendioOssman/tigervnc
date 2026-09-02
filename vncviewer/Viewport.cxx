@@ -859,6 +859,11 @@ void Viewport::panZoomGesture(QPanZoomGesture* gesture)
 bool Viewport::event(QEvent *event)
 {
   switch (event->type()) {
+  case QEvent::CursorChange:
+    // FIXME: Check this
+    // event->setAccepted(true); // This event must be ignored, otherwise setCursor() may crash.
+    // return true;
+    break;
   case QEvent::Gesture:
     return gestureEvent((QGestureEvent*)event);
   default:
