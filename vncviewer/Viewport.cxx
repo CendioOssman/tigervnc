@@ -30,6 +30,8 @@
 #include <QAction>
 #include <QApplication>
 #include <QClipboard>
+#include <QGesture>
+#include <QGestureRecognizer>
 #include <QEvent>
 #include <QMenu>
 #include <QMessageBox>
@@ -57,17 +59,21 @@
 #include "menukey.h"
 #include "vncviewer.h"
 
+#include "clicksalternativegesture.h"
+#include "clicksalternativegesturerecognizer.h"
+#include "panzoomgesture.h"
+#include "panzoomgesturerecognizer.h"
+#include "tapdraggesture.h"
+#include "tapdraggesturerecognizer.h"
+
 #include "PlatformPixelBuffer.h"
 
 #if defined(WIN32)
 #include "KeyboardWin32.h"
-#include "Win32TouchHandler.h"
 #elif defined(__APPLE__)
 #include "KeyboardMacOS.h"
-#include "BaseTouchHandler.h"
 #else
 #include "KeyboardX11.h"
-#include "XInputTouchHandler.h"
 #endif
 
 #ifdef __APPLE__
@@ -94,6 +100,10 @@ static const int SCRLSENS = 50;
 static const unsigned DOUBLE_TAP_TIMEOUT   = 1000;
 static const unsigned DOUBLE_TAP_THRESHOLD = 50;
 
+static Qt::GestureType ClicksAlternativeGesture;
+static Qt::GestureType PanZoomGesture;
+static Qt::GestureType TapDragGesture;
+
 Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
   : QWidget(parent), cc(cc_), frameBuffer(nullptr),
     lastPointerPos(0, 0), lastButtonMask(0),
@@ -102,6 +112,7 @@ Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
     menuCtrlKey(false), menuAltKey(false), cursor(nullptr)
 {
   setAttribute(Qt::WA_OpaquePaintEvent, true);
+  setAttribute(Qt::WA_AcceptTouchEvents);
   setFocusPolicy(Qt::StrongFocus);
   setMouseTracking(true);
 
@@ -116,8 +127,13 @@ Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
   keyboard = new KeyboardX11(this);
 #endif
 
-  // We need a window handle before we can create these
-  touch = nullptr;
+  ClicksAlternativeGesture = QGestureRecognizer::registerRecognizer(new QClicksAlternativeGestureRecognizer);
+  PanZoomGesture = QGestureRecognizer::registerRecognizer(new QPanZoomGestureRecognizer);
+  TapDragGesture = QGestureRecognizer::registerRecognizer(new QTapDragGestureRecognizer);
+
+  grabGesture(ClicksAlternativeGesture);
+  grabGesture(PanZoomGesture);
+  grabGesture(TapDragGesture);
 
   gettimeofday(&lastTapTime, nullptr);
 
@@ -164,7 +180,13 @@ Viewport::~Viewport()
   delete cursor;
 
   delete keyboard;
-  delete touch;
+
+  QGestureRecognizer::unregisterRecognizer(ClicksAlternativeGesture);
+  ClicksAlternativeGesture = (Qt::GestureType)0;
+  QGestureRecognizer::unregisterRecognizer(PanZoomGesture);
+  PanZoomGesture = (Qt::GestureType)0;
+  QGestureRecognizer::unregisterRecognizer(TapDragGesture);
+  TapDragGesture = (Qt::GestureType)0;
 }
 
 
@@ -511,67 +533,67 @@ void Viewport::focusOutEvent(QFocusEvent* event)
   QWidget::focusOutEvent(event);
 }
 
-void Viewport::handleGestureEvent(const GestureEvent& ev)
+bool Viewport::gestureEvent(QGestureEvent* event)
 {
-  switch (ev.gesture) {
-  case GestureOneTap:
-  case GestureTwoTap:
-  case GestureThreeTap:
-    handleTapGesture(ev);
-    break;
-  case GestureLongPress:
-    handleLongPressGesture(ev);
-    break;
-  case GestureDrag:
-  case GestureTwoDrag:
-    handleDragGesture(ev);
-    break;
-  case GesturePinch:
-    handlePinchGesture(ev);
-    break;
+  QGesture* gesture;
+
+  for(QGesture* g: event->gestures()) {
+    vlog.debug("Viewport::gestureEvent: %d %s",
+               g->gestureType(),
+               QVariant::fromValue(g->state()).toString().toStdString().c_str());
   }
+
+  gesture = event->gesture(ClicksAlternativeGesture);
+  if (gesture)
+    clicksAlternativeGesture((QClicksAlternativeGesture*)gesture);
+  gesture = event->gesture(PanZoomGesture);
+  if (gesture)
+    panZoomGesture((QPanZoomGesture*)gesture);
+  gesture = event->gesture(TapDragGesture);
+  if (gesture)
+    tapDragGesture((QTapDragGesture*)gesture);
+
+  return true;
 }
 
-void Viewport::handleTapGesture(const GestureEvent& ev)
+void Viewport::clicksAlternativeGesture(QClicksAlternativeGesture* gesture)
 {
-  GestureEvent newEv = ev;
   rfb::Point pos;
   int buttonMask;
 
-  if (ev.type != GestureBegin)
+  if (gesture->state() != Qt::GestureFinished)
     return;
+
+  pos.x = gesture->getPosition().x();
+  pos.y = gesture->getPosition().y();
 
   // If the user quickly taps multiple times we assume they meant to
   // hit the same spot, so slightly adjust coordinates
   if ((rfb::msSince(&lastTapTime) < DOUBLE_TAP_TIMEOUT) &&
-      (firstDoubleTapEvent.type == ev.type)) {
+      (firstDoubleTapType == gesture->getType())) {
 
-    double dx = firstDoubleTapEvent.eventX - ev.eventX;
-    double dy = firstDoubleTapEvent.eventY - ev.eventY;
+    double dx = firstDoubleTapPos.x() - gesture->getPosition().x();
+    double dy = firstDoubleTapPos.y() - gesture->getPosition().y();
     double distance = hypot(dx, dy);
 
     if (distance < DOUBLE_TAP_THRESHOLD) {
-     newEv.eventX = firstDoubleTapEvent.eventX;
-     newEv.eventY = firstDoubleTapEvent.eventY;
+      pos.x = firstDoubleTapPos.x();
+      pos.y = firstDoubleTapPos.y();
     } else {
-      firstDoubleTapEvent = ev;
+      firstDoubleTapType = gesture->getType();
+      firstDoubleTapPos = gesture->getPosition();
     }
   } else {
-    firstDoubleTapEvent = ev;
+    firstDoubleTapType = gesture->getType();
+    firstDoubleTapPos = gesture->getPosition();
   }
   gettimeofday(&lastTapTime, nullptr);
 
-  pos.x = newEv.eventX - x();
-  pos.y = newEv.eventY - y();
-
-  switch (ev.gesture) {
-  case GestureOneTap:
-    buttonMask = 1<<0;
-    break;
-  case GestureTwoTap:
+  switch (gesture->getType()) {
+  case QClicksAlternativeGesture::TwoPoints:
     buttonMask = 1<<2;
     break;
-  case GestureThreeTap:
+  case QClicksAlternativeGesture::ThreePoints:
     buttonMask = 1<<1;
     break;
   default:
@@ -582,101 +604,139 @@ void Viewport::handleTapGesture(const GestureEvent& ev)
   handlePointerEvent(pos, 0);
 }
 
-void Viewport::handleLongPressGesture(const GestureEvent& ev)
+void Viewport::tapDragGesture(QTapDragGesture* gesture)
 {
   rfb::Point pos;
+  int buttonMask;
 
-  pos.x = ev.eventX - x();
-  pos.y = ev.eventY - y();
+  if (gesture->state() != Qt::GestureFinished)
+    return;
 
-  if (ev.type == GestureEnd)
+  pos.x = gesture->getPosition().x();
+  pos.y = gesture->getPosition().y();
+
+  if (gesture->getType() == QTapDragGesture::Tap) {
+    if (gesture->state() != Qt::GestureFinished)
+      return;
+
+    // If the user quickly taps multiple times we assume they meant to
+    // hit the same spot, so slightly adjust coordinates
+    if ((rfb::msSince(&lastTapTime) < DOUBLE_TAP_TIMEOUT) &&
+        (firstDoubleTapType == gesture->getType())) {
+
+      double dx = firstDoubleTapPos.x() - gesture->getPosition().x();
+      double dy = firstDoubleTapPos.y() - gesture->getPosition().y();
+      double distance = hypot(dx, dy);
+
+      if (distance < DOUBLE_TAP_THRESHOLD) {
+        pos.x = firstDoubleTapPos.x();
+        pos.y = firstDoubleTapPos.y();
+      } else {
+        firstDoubleTapType = gesture->getType();
+        firstDoubleTapPos = gesture->getPosition();
+      }
+    } else {
+      firstDoubleTapType = gesture->getType();
+      firstDoubleTapPos = gesture->getPosition();
+    }
+    gettimeofday(&lastTapTime, nullptr);
+
+    buttonMask = 1<<0;
+    handlePointerEvent(pos, buttonMask);
     handlePointerEvent(pos, 0);
-  else
-    handlePointerEvent(pos, 1<<2);
-}
+  }
 
-void Viewport::handleDragGesture(const GestureEvent& ev)
-{
-  rfb::Point pos;
+  if (gesture->getType() == QTapDragGesture::TapAndHold) {
+    if (gesture->state() == Qt::GestureFinished)
+      handlePointerEvent(pos, 0);
+    else
+      handlePointerEvent(pos, 1<<2);
+  }
 
-  pos.x = ev.eventX - x();
-  pos.y = ev.eventY - y();
-
-  if (ev.gesture == GestureDrag) {
-    if (ev.type == GestureEnd)
+  if (gesture->getType() == QTapDragGesture::Drag) {
+    if (gesture->state() == Qt::GestureFinished)
       handlePointerEvent(pos, 0);
     else
       handlePointerEvent(pos, 1<<0);
-  } else {
-    switch (ev.type) {
-    case GestureBegin:
-      lastMagnitudeX = ev.magnitudeX;
-      lastMagnitudeY = ev.magnitudeY;
+  }
+}
+
+void Viewport::panZoomGesture(QPanZoomGesture* gesture)
+{
+   rfb::Point pos;
+
+  pos.x = gesture->getPosition().x();
+  pos.y = gesture->getPosition().y();
+
+  if (gesture->getType() == QPanZoomGesture::Pan) {
+    switch (gesture->state()) {
+    case Qt::GestureStarted:
+      lastMagnitudeX = gesture->getOffsetDelta().x();
+      lastMagnitudeY = gesture->getOffsetDelta().y();
       handlePointerEvent(pos, 0);
       break;
-    case GestureUpdate:
-      while ((ev.magnitudeY - lastMagnitudeY) > SCRLSENS) {
+    case Qt::GestureUpdated:
+      while ((gesture->getOffsetDelta().y() - lastMagnitudeY) > SCRLSENS) {
         handlePointerEvent(pos, 1<<3);
         handlePointerEvent(pos, 0);
         lastMagnitudeY += SCRLSENS;
       }
-      while ((ev.magnitudeY - lastMagnitudeY) < -SCRLSENS) {
+      while ((gesture->getOffsetDelta().y() - lastMagnitudeY) < -SCRLSENS) {
         handlePointerEvent(pos, 1<<4);
         handlePointerEvent(pos, 0);
         lastMagnitudeY -= SCRLSENS;
       }
-      while ((ev.magnitudeX - lastMagnitudeX) > SCRLSENS) {
+      while ((gesture->getOffsetDelta().x() - lastMagnitudeX) > SCRLSENS) {
         handlePointerEvent(pos, 1<<5);
         handlePointerEvent(pos, 0);
         lastMagnitudeX += SCRLSENS;
       }
-      while ((ev.magnitudeX - lastMagnitudeX) < -SCRLSENS) {
+      while ((gesture->getOffsetDelta().x() - lastMagnitudeX) < -SCRLSENS) {
         handlePointerEvent(pos, 1<<6);
         handlePointerEvent(pos, 0);
         lastMagnitudeX -= SCRLSENS;
       }
+    default:
       break;
-    case GestureEnd:
+    }
+  } else {
+    switch (gesture->state()) {
+    case Qt::GestureStarted:
+      lastMagnitudeX = gesture->getScaleFactor();
+      handlePointerEvent(pos, 0);
+      break;
+    case Qt::GestureUpdated:
+      if (abs(gesture->getScaleFactor() - lastMagnitudeX) > ZOOMSENS) {
+        sendKeyPress(FAKE_GESTURE_KEY_CODE, 0x1d, XK_Control_L);
+
+        while ((gesture->getScaleFactor() - lastMagnitudeX) > ZOOMSENS) {
+          handlePointerEvent(pos, 1<<3);
+          handlePointerEvent(pos, 0);
+          lastMagnitudeX += ZOOMSENS;
+        }
+        while ((gesture->getScaleFactor() - lastMagnitudeX) < -ZOOMSENS) {
+          handlePointerEvent(pos, 1<<4);
+          handlePointerEvent(pos, 0);
+          lastMagnitudeX -= ZOOMSENS;
+        }
+
+        sendKeyRelease(FAKE_GESTURE_KEY_CODE);
+      }
+    default:
       break;
     }
   }
 }
 
-void Viewport::handlePinchGesture(const GestureEvent& ev)
+bool Viewport::event(QEvent *event)
 {
-  rfb::Point pos;
-  double magnitude;
-
-  pos.x = ev.eventX - x();
-  pos.y = ev.eventY - y();
-
-  switch (ev.type) {
-  case GestureBegin:
-    lastMagnitudeX = hypot(ev.magnitudeX, ev.magnitudeY);
-    handlePointerEvent(pos, 0);
-    break;
-  case GestureUpdate:
-    magnitude = hypot(ev.magnitudeX, ev.magnitudeY);
-    if (abs(magnitude - lastMagnitudeX) > ZOOMSENS) {
-      sendKeyPress(FAKE_GESTURE_KEY_CODE, 0x1d, XK_Control_L);
-
-      while ((magnitude - lastMagnitudeX) > ZOOMSENS) {
-        handlePointerEvent(pos, 1<<3);
-        handlePointerEvent(pos, 0);
-        lastMagnitudeX += ZOOMSENS;
-      }
-      while ((magnitude - lastMagnitudeX) < -ZOOMSENS) {
-        handlePointerEvent(pos, 1<<4);
-        handlePointerEvent(pos, 0);
-        lastMagnitudeX -= ZOOMSENS;
-      }
-
-      sendKeyRelease(FAKE_GESTURE_KEY_CODE);
-    }
-    break;
-  case GestureEnd:
+  switch (event->type()) {
+  case QEvent::Gesture:
+    return gestureEvent((QGestureEvent*)event);
+  default:
     break;
   }
+  return QWidget::event(event);
 }
 
 void Viewport::sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask)
@@ -853,21 +913,6 @@ bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, qin
 #endif
 {
   bool consumed;
-
-#ifndef __APPLE__
-  // We need a window handle before we can create these
-  if (touch == nullptr) {
-#if defined(WIN32)
-    touch = new Win32TouchHandler((HWND)window()->winId(), this);
-#else
-    touch = new XInputTouchHandler(window()->winId(), this);
-#endif
-  }
-
-  consumed = touch->handleEvent(eventType, message);
-  if (consumed)
-    return 1;
-#endif
 
   if (!hasFocus())
     return false;
