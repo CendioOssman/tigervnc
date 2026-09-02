@@ -50,6 +50,8 @@
 
 #include <rfb/CMsgWriter.h>
 
+#include "qt/QStyles.h"
+
 #include "DesktopWindow.h"
 #include "MonitorIndicesParameter.h"
 #include "OptionsDialog.h"
@@ -99,6 +101,13 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_, QWidget* parent)
   QPalette bg(scrollArea->viewport()->palette());
   bg.setColor(QPalette::Window, QColor::fromRgb(40, 40, 40));
   scrollArea->viewport()->setPalette(bg);
+
+  // We don't have any alternative way of scrolling, so we cannot let
+  // scrollbars be transient (hidden) when idle
+  QStyle* style = scrollArea->horizontalScrollBar()->style();
+  style = new QNonTransientStyle(style);
+  scrollArea->horizontalScrollBar()->setStyle(style);
+  scrollArea->verticalScrollBar()->setStyle(style);
 
   toast = new Toast(this);
   layout->addWidget(toast, 0, 0);

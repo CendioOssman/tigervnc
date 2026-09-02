@@ -6,6 +6,7 @@ add_executable(vncviewer
   qt/QMonitorArrangement.cxx
   qt/QNavigation.cxx
   qt/QPasswordEdit.cxx
+  qt/QStyles.cxx
   AuthDialog.cxx
   CConn.cxx
   DesktopWindow.cxx
