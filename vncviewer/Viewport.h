@@ -20,6 +20,7 @@
 #ifndef __VIEWPORT_H__
 #define __VIEWPORT_H__
 
+#include <QClipboard>
 #include <QObject>
 
 #include <core/Rect.h>
@@ -81,7 +82,6 @@ protected:
 
   void resize(int x, int y, int w, int h) override;
 
-  int pasteEvent();
   int enterEvent();
   int leaveEvent();
   int mouseEvent();
@@ -105,7 +105,7 @@ private:
   // Show the currently set (or system) cursor
   void showCursor();
 
-  static void handleClipboardChange(int source, void *data);
+  void handleClipboardChange(QClipboard::Mode mode);
 
   void flushPendingClipboard();
 
@@ -155,7 +155,7 @@ private:
 
   bool pendingClientClipboard;
 
-  int clipboardSource;
+  QClipboard::Mode clipboardMode;
 
   QMenu* contextMenu;
 

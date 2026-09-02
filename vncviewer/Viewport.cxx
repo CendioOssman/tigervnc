@@ -29,8 +29,11 @@
 #include <stdexcept>
 
 #include <QAction>
+#include <QApplication>
+#include <QClipboard>
 #include <QMenu>
 #include <QMessageBox>
+#include <QMimeData>
 
 #include <core/LogWriter.h>
 #include <core/i18n.h>
@@ -126,7 +129,8 @@ Viewport::Viewport(int w, int h, CConn* cc_)
 
   gettimeofday(&lastTapTime, nullptr);
 
-  Fl::add_clipboard_notify(handleClipboardChange, this);
+  connect(QGuiApplication::clipboard(), &QClipboard::changed, this,
+          &Viewport::handleClipboardChange);
 
   // We need to intercept keyboard events early
   Fl::add_system_handler(handleSystemEvent, this);
@@ -177,8 +181,6 @@ Viewport::~Viewport()
   Fl::remove_timeout(handlePointerTimeout, this);
 
   Fl::remove_system_handler(handleSystemEvent);
-
-  Fl::remove_clipboard_notify(handleClipboardChange);
 
   OptionsDialog::removeCallback(handleOptions);
 
@@ -293,10 +295,36 @@ void Viewport::showCursor()
 
 void Viewport::handleClipboardRequest()
 {
+  std::string text, filtered;
+
   if (viewOnly)
     return;
 
-  Fl::paste(*this, clipboardSource);
+  text = QGuiApplication::clipboard()->text(clipboardMode).toStdString();
+
+  if (!core::isValidUTF8(text.c_str())) {
+    vlog.error(_("Invalid UTF-8 sequence in clipboard"));
+    // Reset the state as if we don't have any clipboard data at all
+    this->pendingClientClipboard = false;
+    try {
+      this->cc->announceClipboard(false);
+    } catch (std::exception& e) {
+      vlog.error("%s", e.what());
+      abort_connection_unexpected(e);
+    }
+    return;
+  }
+
+  filtered = core::convertLF(text.c_str());
+
+  vlog.debug("Sending clipboard data (%d bytes)", (int)filtered.size());
+
+  try {
+    cc->sendClipboardData(filtered.c_str());
+  } catch (std::exception& e) {
+    vlog.error("%s", e.what());
+    abort_connection_unexpected(e);
+  }
 }
 
 void Viewport::handleClipboardAnnounce(bool available)
@@ -338,9 +366,11 @@ void Viewport::handleClipboardData(const char* cbdata)
   // dump the data into both variants.
 #if !defined(WIN32) && !defined(__APPLE__)
   if (setPrimary)
-    Fl::copy(cbdata, len, 0);
+    QGuiApplication::clipboard()->setText(cbdata,
+                                          QClipboard::Mode::Selection);
 #endif
-  Fl::copy(cbdata, len, 1);
+  QGuiApplication::clipboard()->setText(cbdata,
+                                        QClipboard::Mode::Clipboard);
 }
 
 void Viewport::setLEDState(unsigned int ledState)
@@ -448,37 +478,6 @@ void Viewport::resize(int x, int y, int w, int h)
   Fl_Widget::resize(x, y, w, h);
 }
 
-
-int Viewport::pasteEvent()
-{
-  std::string filtered;
-
-  if (!core::isValidUTF8(Fl::event_text(), Fl::event_length())) {
-    vlog.error(_("Invalid UTF-8 sequence in clipboard"));
-    // Reset the state as if we don't have any clipboard data at all
-    this->pendingClientClipboard = false;
-    try {
-      this->cc->announceClipboard(false);
-    } catch (std::exception& e) {
-      vlog.error("%s", e.what());
-      abort_connection_unexpected(e);
-    }
-    return 1;
-  }
-
-  filtered = core::convertLF(Fl::event_text(), Fl::event_length());
-
-  vlog.debug("Sending clipboard data (%d bytes)", (int)filtered.size());
-
-  try {
-    cc->sendClipboardData(filtered.c_str());
-  } catch (std::exception& e) {
-    vlog.error("%s", e.what());
-    abort_connection_unexpected(e);
-  }
-
-  return 1;
-}
 
 int Viewport::enterEvent()
 {
@@ -590,8 +589,6 @@ int Viewport::focusOutEvent()
 int Viewport::handle(int event)
 {
   switch (event) {
-  case FL_PASTE:
-    return pasteEvent();
   case FL_ENTER:
     return enterEvent();
   case FL_LEAVE:
@@ -818,12 +815,8 @@ bool Viewport::hasFocus()
   return focus == this;
 }
 
-void Viewport::handleClipboardChange(int source, void *data)
+void Viewport::handleClipboardChange(QClipboard::Mode mode)
 {
-  Viewport *self = (Viewport *)data;
-
-  assert(self);
-
   if (viewOnly)
     return;
 
@@ -831,17 +824,29 @@ void Viewport::handleClipboardChange(int source, void *data)
     return;
 
 #if !defined(WIN32) && !defined(__APPLE__)
-  if (!sendPrimary && (source == 0))
+  if (!sendPrimary && (mode == QClipboard::Mode::Selection))
     return;
 #endif
 
-  if (!self->hasFocus()) {
+  if ((mode != QClipboard::Mode::Clipboard) &&
+      (mode != QClipboard::Mode::Selection))
+    return;
+
+  if ((mode == QClipboard::Mode::Clipboard) &&
+      QGuiApplication::clipboard()->ownsClipboard())
+    return;
+
+  if ((mode == QClipboard::Mode::Selection) &&
+      QGuiApplication::clipboard()->ownsSelection())
+    return;
+
+  if (!hasFocus()) {
     vlog.debug("Local clipboard changed whilst not focused, will notify server later");
-    self->clipboardSource = source;
-    self->pendingClientClipboard = true;
+    clipboardMode = mode;
+    pendingClientClipboard = true;
     // Clear any older client clipboard from the server
     try {
-      self->cc->announceClipboard(false);
+      cc->announceClipboard(false);
     } catch (std::exception& e) {
       vlog.error("%s", e.what());
       abort_connection_unexpected(e);
@@ -849,13 +854,12 @@ void Viewport::handleClipboardChange(int source, void *data)
     return;
   }
 
-  if (source != 0 &&
-      !Fl::clipboard_contains(Fl::clipboard_plain_text)) {
+  if (!QGuiApplication::clipboard()->mimeData(mode)->hasText()) {
     vlog.debug("Got non-plain text in local clipboard, ignoring.");
     // Reset the state as if we don't have any clipboard data at all
-    self->pendingClientClipboard = false;
+    pendingClientClipboard = false;
     try {
-      self->cc->announceClipboard(false);
+      cc->announceClipboard(false);
     } catch (std::exception& e) {
       vlog.error("%s", e.what());
       abort_connection_unexpected(e);
@@ -863,11 +867,11 @@ void Viewport::handleClipboardChange(int source, void *data)
     return;
   }
 
-  self->clipboardSource = source;
+  clipboardMode = mode;
 
   vlog.debug("Local clipboard changed, notifying server");
   try {
-    self->cc->announceClipboard(true);
+    cc->announceClipboard(true);
   } catch (std::exception& e) {
     vlog.error("%s", e.what());
     abort_connection_unexpected(e);
@@ -878,8 +882,7 @@ void Viewport::handleClipboardChange(int source, void *data)
 void Viewport::flushPendingClipboard()
 {
   if (pendingClientClipboard) {
-    if (clipboardSource != 0 &&
-        !Fl::clipboard_contains(Fl::clipboard_plain_text)) {
+    if (!QGuiApplication::clipboard()->mimeData(clipboardMode)->hasText()) {
       vlog.debug("Pending local clipboard has no plain text, ignoring.");
       pendingClientClipboard = false;
       return;
