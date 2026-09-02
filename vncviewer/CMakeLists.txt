@@ -32,6 +32,7 @@ add_executable(vncviewer
   MonitorIndicesParameter.cxx
   tapdraggesture.cxx
   tapdraggesturerecognizer.cxx
+  tunnelfactory.cxx
   vncviewer.cxx)
 
 target_sources(vncviewer PRIVATE vncviewer.qrc)
