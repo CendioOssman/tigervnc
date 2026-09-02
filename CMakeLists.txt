@@ -278,7 +278,9 @@ if(BUILD_VIEWER)
   add_definitions("-DQT_DISABLE_DEPRECATED_BEFORE=0x050f00")
   add_definitions("-DQT_DEPRECATED_WARNINGS_SINCE=0x050f00")
 
-  find_package(X11 COMPONENTS Xi Xinerama Xkb REQUIRED)
+  if(UNIX AND NOT APPLE)
+    find_package(X11 COMPONENTS Xi Xinerama Xkb REQUIRED)
+  endif()
 endif()
 
 # Check for GNUTLS library
