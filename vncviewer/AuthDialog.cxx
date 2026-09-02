@@ -45,6 +45,7 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
   setWindowTitle(_("VNC authentication"));
 
   QBoxLayout* layout = new QVBoxLayout;
+  layout->setContentsMargins(0, 0, 0, 0);
 
   QLabel* banner = new QLabel;
   banner->setFixedHeight(20);
@@ -73,6 +74,7 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
   // FIXME: Add icon to match QMessageBox
 
   QFormLayout* formLayout = new QFormLayout;
+  formLayout->setContentsMargins(5, 5, 5, 5);
   layout->addLayout(formLayout);
 
   if (needsUser) {
@@ -98,6 +100,9 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
     keepPasswdCheckbox = nullptr;
   }
 
+  QHBoxLayout* btnsLayout = new QHBoxLayout;
+  btnsLayout->setContentsMargins(5, 5, 5, 5);
+
   QDialogButtonBox* buttonBox = new QDialogButtonBox;
   buttonBox->addButton(QDialogButtonBox::Ok);
   buttonBox->addButton(QDialogButtonBox::Cancel);
@@ -105,7 +110,9 @@ AuthDialog::AuthDialog(bool secure_, bool needsUser, bool needsPassword,
           this, &QDialog::accept);
   connect(buttonBox, &QDialogButtonBox::rejected,
           this, &QDialog::reject);
-  layout->addWidget(buttonBox);
+  btnsLayout->addWidget(buttonBox);
+
+  layout->addLayout(btnsLayout);
 
   setLayout(layout);
   adjustSize();
