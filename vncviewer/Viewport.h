@@ -129,6 +129,8 @@ private:
   CConn* cc;
 
   PlatformPixelBuffer* frameBuffer;
+  QPixmap pixmap;
+  QRegion damage;
 
   core::Point lastPointerPos;
   uint16_t lastButtonMask;
