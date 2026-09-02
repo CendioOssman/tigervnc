@@ -852,7 +852,7 @@ void DesktopWindow::ungrabPointer()
   mouseGrabbed = false;
 
 #if !defined(WIN32) && !defined(__APPLE__)
-  x11_ungrab_pointer(this);
+  x11_ungrab_pointer();
 #endif
 }
 
