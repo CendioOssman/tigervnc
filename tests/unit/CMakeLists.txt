@@ -20,10 +20,6 @@ add_executable(convertlf convertlf.cxx)
 target_link_libraries(convertlf PRIVATE core GTest::gtest_main)
 gtest_discover_tests(convertlf)
 
-add_executable(gesturehandler gesturehandler.cxx ../../vncviewer/GestureHandler.cxx)
-target_link_libraries(gesturehandler PRIVATE core GTest::gtest_main)
-gtest_discover_tests(gesturehandler)
-
 add_executable(hostport hostport.cxx)
 target_link_libraries(hostport PRIVATE network GTest::gtest_main)
 gtest_discover_tests(hostport)

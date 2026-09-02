@@ -256,14 +256,6 @@ bool x11_has_xinput22()
   return true;
 }
 
-int x11_xinput_major()
-{
-  if (!x11_has_xinput22())
-    return -1;
-
-  return xi_major;
-}
-
 bool x11_grab_pointer(QWidget* win)
 {
   Display* display = qt_display();

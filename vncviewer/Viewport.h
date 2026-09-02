@@ -27,26 +27,28 @@
 #include <core/Rect.h>
 
 #include "EmulateMB.h"
-#include "GestureHandler.h"
 #include "Keyboard.h"
 #include "ShortcutHandler.h"
 
 class QCursor;
+class QGestureEvent;
+class QGestureRecognizer;
 class QMenu;
 
 namespace rfb {
   class PixelFormat;
 }
 
-class BaseTouchHandler;
 class CConn;
 class Keyboard;
 class PlatformPixelBuffer;
+class QClicksAlternativeGesture;
+class QPanZoomGesture;
+class QTapDragGesture;
 
 class Viewport : public QWidget, protected EmulateMB,
                  protected QAbstractNativeEventFilter,
-                 protected KeyboardHandler,
-                 protected GestureCallback {
+                 protected KeyboardHandler {
   Q_OBJECT
 
 public:
@@ -82,12 +84,11 @@ protected:
   void wheelEvent(QWheelEvent* event) override;
   void focusInEvent(QFocusEvent* event) override;
   void focusOutEvent(QFocusEvent* event) override;
-
-  void handleGestureEvent(const GestureEvent& event) override;
-  void handleTapGesture(const GestureEvent& ev);
-  void handleLongPressGesture(const GestureEvent& ev);
-  void handleDragGesture(const GestureEvent& ev);
-  void handlePinchGesture(const GestureEvent& ev);
+  bool gestureEvent(QGestureEvent *event);
+  void clicksAlternativeGesture(QClicksAlternativeGesture* gesture);
+  void tapDragGesture(QTapDragGesture* gesture);
+  void panZoomGesture(QPanZoomGesture* gesture);
+  bool event(QEvent* event) override;
 
   void sendPointerEvent(const core::Point& pos,
                         uint16_t buttonMask) override;
@@ -139,7 +140,8 @@ private:
   double lastMagnitudeX;
   double lastMagnitudeY;
 
-  GestureEvent firstDoubleTapEvent;
+  int firstDoubleTapType;
+  QPoint firstDoubleTapPos;
   struct timeval lastTapTime;
 
   Keyboard* keyboard;
@@ -147,7 +149,6 @@ private:
   bool shortcutBypass;
   bool shortcutActive;
   std::set<int> pressedKeys;
-  BaseTouchHandler* touch;
 
   bool firstLEDState;
 

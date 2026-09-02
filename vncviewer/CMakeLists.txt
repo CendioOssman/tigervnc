@@ -7,7 +7,6 @@ add_executable(vncviewer
   qt/QNavigation.cxx
   qt/QPasswordEdit.cxx
   AuthDialog.cxx
-  BaseTouchHandler.cxx
   CConn.cxx
   DesktopWindow.cxx
   EmulateMB.cxx
@@ -24,10 +23,16 @@ add_executable(vncviewer
   PlatformPixelBuffer.cxx
   Toast.cxx
   Viewport.cxx
+  clicksalternativegesture.cxx
+  clicksalternativegesturerecognizer.cxx
   i18n.cxx
   mainloop.cxx
+  panzoomgesture.cxx
+  panzoomgesturerecognizer.cxx
   parameters.cxx
   MonitorIndicesParameter.cxx
+  tapdraggesture.cxx
+  tapdraggesturerecognizer.cxx
   vncviewer.cxx)
 
 target_sources(vncviewer PRIVATE vncviewer.qrc)
@@ -45,14 +50,13 @@ if(WIN32)
 endif()
 
 if(WIN32)
-  target_sources(vncviewer PRIVATE Win32TouchHandler.cxx win32.c)
+  target_sources(vncviewer PRIVATE win32.c)
   target_sources(vncviewer PRIVATE KeyboardWin32.cxx keysym2ucs.c)
 elseif(APPLE)
   target_sources(vncviewer PRIVATE cocoa.mm)
   target_sources(vncviewer PRIVATE KeyboardMacOS.mm osx_to_qnum.c keysym2ucs.c)
 else()
   target_sources(vncviewer PRIVATE x11.cxx)
-  target_sources(vncviewer PRIVATE GestureHandler.cxx XInputTouchHandler.cxx)
   target_sources(vncviewer PRIVATE KeyboardX11.cxx xkb_to_qnum.c)
 endif()
 
@@ -139,7 +143,7 @@ if(GNUTLS_FOUND)
 endif()
 
 if(WIN32)
-  target_link_libraries(vncviewer PRIVATE comctl32 msimg32 winmm)
+  target_link_libraries(vncviewer PRIVATE msimg32 winmm)
 elseif(APPLE)
   target_link_libraries(vncviewer PRIVATE "-framework Cocoa")
   target_link_libraries(vncviewer PRIVATE "-framework Carbon")
