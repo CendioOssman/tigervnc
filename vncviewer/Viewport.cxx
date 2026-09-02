@@ -368,6 +368,13 @@ void Viewport::paintEvent(QPaintEvent* event)
   fbdata = frameBuffer->getBuffer(rfbrect, &stride);
   QImage image(fbdata, w, h, stride * 4, QImage::Format_RGB32);
 
+#ifdef __APPLE__
+  // Qt assumes that the alpha channel is always 0xff, which we cannot
+  // guarantee
+  painter.fillRect(rect, QColor("#ff000000"));
+  painter.setCompositionMode(QPainter::CompositionMode_Plus);
+#endif
+
   painter.drawImage(rect, image);
 }
 
