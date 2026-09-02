@@ -34,8 +34,6 @@ void x11_win_may_grab(QWidget* win);
 bool x11_grab_keyboard(QWidget* win);
 void x11_ungrab_keyboard();
 
-bool x11_has_xinput22();
-
 bool x11_grab_pointer(QWidget* win);
 void x11_ungrab_pointer();
 
