@@ -1,4 +1,4 @@
-/* Copyright 2011 Pierre Ossman <ossman@cendio.se> for Cendio AB
+/* Copyright 2011-2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,22 +19,22 @@
 #ifndef __VNCVIEWER_COCOA_H__
 #define __VNCVIEWER_COCOA_H__
 
-class Fl_Window;
+class QWidget;
 
-int cocoa_get_level(Fl_Window *win);
-void cocoa_set_level(Fl_Window *win, int level);
-
-int cocoa_capture_displays(Fl_Window *win);
-void cocoa_release_displays(Fl_Window *win);
+int cocoa_capture_displays(QWidget* win);
+void cocoa_release_displays(QWidget* win);
 
 bool cocoa_screens_have_separate_spaces();
+
+void cocoa_set_presentation_default();
+void cocoa_set_presentation_full_screen();
 
 typedef struct CGColorSpace *CGColorSpaceRef;
 
 CGColorSpaceRef cocoa_win_color_space(Fl_Window *win);
 
-bool cocoa_win_is_zoomed(Fl_Window *win);
-void cocoa_win_zoom(Fl_Window *win);
+bool cocoa_win_is_zoomed(QWidget *win);
+void cocoa_win_zoom(QWidget *win);
 
 void cocoa_event_delay(double seconds);
 

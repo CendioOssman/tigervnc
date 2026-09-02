@@ -35,7 +35,7 @@ public:
   Keyboard(KeyboardHandler* handler_) : handler(handler_) {};
   virtual ~Keyboard() {};
 
-  virtual bool handleEvent(const void* event) = 0;
+  virtual bool handleEvent(const char* eventType, void* message) = 0;
 
   virtual void reset() {};
 

@@ -19,29 +19,32 @@
 #ifndef __X11_H__
 #define __X11_H__
 
-class Fl_Window;
+class QScreen;
+class QWidget;
 
 bool x11_has_wm();
 bool x11_wm_supports(const char* atom);
 
-void x11_win_maximize(Fl_Window* win);
-bool x11_win_is_maximized(Fl_Window* win);
+void x11_win_maximize(QWidget* win);
+bool x11_win_is_maximized(QWidget* win);
 
-void x11_win_get_coords(Fl_Window* win, int* x, int* y, int* w, int* h);
+bool x11_fullscreen_screens(QWidget* window,
+                            QScreen* top, QScreen* bottom,
+                            QScreen* left, QScreen* right);
 
-void x11_win_may_grab(Fl_Window* win);
+void x11_win_may_grab(QWidget* win);
 
-bool x11_grab_keyboard(Fl_Window* win);
+bool x11_grab_keyboard(QWidget* win);
 void x11_ungrab_keyboard();
 
 bool x11_has_xinput22();
 int x11_xinput_major();
 
-bool x11_grab_pointer(Fl_Window* win);
-void x11_ungrab_pointer(Fl_Window* win);
+bool x11_grab_pointer(QWidget* win);
+void x11_ungrab_pointer(QWidget* win);
 
 void x11_warp_pointer(unsigned x, unsigned y);
 
-bool x11_is_pointer_on_same_screen(Fl_Window* win);
+bool x11_is_pointer_on_same_screen(QWidget* win);
 
 #endif

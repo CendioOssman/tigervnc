@@ -22,8 +22,17 @@
 
 #include <assert.h>
 
+#include <QtGlobal>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QX11Info>
+#else
+#include <QGuiApplication>
+#include <xcb/xcb.h>
+#endif
+
 #include <X11/XKBlib.h>
-#include <FL/x.H>
+#define XK_MISCELLANY
+#include <X11/keysymdef.h>
 
 #include <rfb/Exception.h>
 #include <rfb/LogWriter.h>
@@ -40,19 +49,31 @@ extern const unsigned int code_map_xkb_to_qnum_len;
 
 static rfb::LogWriter vlog("KeyboardX11");
 
+static Display* qt_display()
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  return QX11Info::display();
+#else
+  return qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+}
+
 KeyboardX11::KeyboardX11(KeyboardHandler* handler_)
   : Keyboard(handler_)
 {
+  Display* display;
   XkbDescPtr xkb;
   Status status;
 
-  XkbSetDetectableAutoRepeat(fl_display, True, nullptr);
+  display = qt_display();
 
-  xkb = XkbGetMap(fl_display, 0, XkbUseCoreKbd);
+  XkbSetDetectableAutoRepeat(display, True, nullptr);
+
+  xkb = XkbGetMap(display, 0, XkbUseCoreKbd);
   if (!xkb)
     throw rfb::Exception("XkbGetMap");
 
-  status = XkbGetNames(fl_display, XkbKeyNamesMask, xkb);
+  status = XkbGetNames(display, XkbKeyNamesMask, xkb);
   if (status != Success)
     throw rfb::Exception("XkbGetNames");
 
@@ -87,31 +108,46 @@ KeyboardX11::~KeyboardX11()
 {
 }
 
-bool KeyboardX11::handleEvent(const void* event)
+bool KeyboardX11::handleEvent(const char* eventType, void* message)
 {
-  const XEvent *xevent = (const XEvent*)event;
+  Display* display;
+  const xcb_generic_event_t* xcbevent;
 
-  assert(event);
+  assert(eventType);
+  assert(message);
 
-  if (xevent->type == KeyPress) {
+  if (strcmp(eventType, "xcb_generic_event_t") != 0)
+    return false;
+
+  display = qt_display();
+
+  xcbevent = (xcb_generic_event_t*)message;
+
+  if (xcbevent->response_type == XCB_KEY_PRESS) {
+    const xcb_key_press_event_t* xcbkey;
+
     int keycode;
     Bool ret;
     unsigned mods;
     KeySym keysym;
 
-    keycode = code_map_keycode_to_qnum[xevent->xkey.keycode];
+    xcbkey = (xcb_key_press_event_t*)xcbevent;
 
-    ret = XkbLookupKeySym(fl_display, xevent->xkey.keycode,
-                          xevent->xkey.state, &mods, &keysym);
+    keycode = code_map_keycode_to_qnum[xcbkey->detail];
+
+    ret = XkbLookupKeySym(display, xcbkey->detail, xcbkey->state,
+                          &mods, &keysym);
     if (!ret || (keysym == NoSymbol)) {
       vlog.error(_("No symbol for key code %d (in the current state)"),
-                 (int)xevent->xkey.keycode);
+                 (int)xcbkey->detail);
     }
 
-    handler->handleKeyPress(xevent->xkey.keycode, keycode, keysym);
+    handler->handleKeyPress(xcbkey->detail, keycode, keysym);
     return true;
-  } else if (xevent->type == KeyRelease) {
-    handler->handleKeyRelease(xevent->xkey.keycode);
+  } else if (xcbevent->response_type == XCB_KEY_RELEASE) {
+    const xcb_key_release_event_t* xcbkey;
+    xcbkey = (xcb_key_release_event_t*)xcbevent;
+    handler->handleKeyRelease(xcbkey->detail);
     return true;
   }
 
@@ -124,10 +160,13 @@ unsigned KeyboardX11::getLEDState()
 
   unsigned int mask;
 
+  Display* display;
   Status status;
   XkbStateRec xkbState;
 
-  status = XkbGetState(fl_display, XkbUseCoreKbd, &xkbState);
+  display = qt_display();
+
+  status = XkbGetState(display, XkbUseCoreKbd, &xkbState);
   if (status != Success) {
     vlog.error(_("Failed to get keyboard LED state: %d"), status);
     return rfb::ledUnknown;
@@ -154,7 +193,10 @@ void KeyboardX11::setLEDState(unsigned state)
   unsigned int affect, values;
   unsigned int mask;
 
+  Display* display;
   Bool ret;
+
+  display = qt_display();
 
   affect = values = 0;
 
@@ -172,20 +214,23 @@ void KeyboardX11::setLEDState(unsigned state)
   if (state & rfb::ledScrollLock)
     values |= mask;
 
-  ret = XkbLockModifiers(fl_display, XkbUseCoreKbd, affect, values);
+  ret = XkbLockModifiers(display, XkbUseCoreKbd, affect, values);
   if (!ret)
     vlog.error(_("Failed to update keyboard LED state"));
 }
 
 unsigned KeyboardX11::getModifierMask(uint32_t keysym)
 {
+  Display* display;
   XkbDescPtr xkb;
   unsigned int mask, keycode;
   XkbAction *act;
 
+  display = qt_display();
+
   mask = 0;
 
-  xkb = XkbGetMap(fl_display, XkbAllComponentsMask, XkbUseCoreKbd);
+  xkb = XkbGetMap(display, XkbAllComponentsMask, XkbUseCoreKbd);
   if (xkb == nullptr)
     return 0;
 

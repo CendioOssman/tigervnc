@@ -1,4 +1,4 @@
-/* Copyright 2011 Pierre Ossman <ossman@cendio.se> for Cendio AB
+/* Copyright 2011-2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,9 @@
 #include <config.h>
 #endif
 
-#include <FL/Fl.H>
-#include <FL/Fl_Window.H>
-#include <FL/x.H>
+#include <QApplication>
+#include <QScreen>
+#include <QWidget>
 
 #import <Cocoa/Cocoa.h>
 
@@ -30,53 +30,33 @@
 
 static bool captured = false;
 
-int cocoa_get_level(Fl_Window *win)
+int cocoa_capture_displays(QWidget* win)
 {
-  NSWindow *nsw;
-  nsw = (NSWindow*)fl_xid(win);
-  return [nsw level];
-}
-
-void cocoa_set_level(Fl_Window *win, int level)
-{
-  NSWindow *nsw;
-  nsw = (NSWindow*)fl_xid(win);
-  [nsw setLevel:level];
-}
-
-int cocoa_capture_displays(Fl_Window *win)
-{
+  NSView *view;
   NSWindow *nsw;
 
-  nsw = (NSWindow*)fl_xid(win);
+  QList<QScreen*> screens;
 
-  CGDisplayCount count;
-  CGDirectDisplayID displays[16];
+  view = (NSView*)win->winId();
+  nsw = [view window];
 
-  int sx, sy, sw, sh;
-  rfb::Rect windows_rect, screen_rect;
+  screens = qApp->screens();
+  for (QScreen* screen : screens) {
+    NSScreen *nsscreen;
+    CGDirectDisplayID display;
 
-  windows_rect.setXYWH(win->x(), win->y(), win->w(), win->h());
+    nsscreen = screen->nativeInterface<QNativeInterface::QCocoaScreen>()->nativeScreen();
+    display = [(NSNumber*)[nsscreen deviceDescription][@"NSScreenNumber"] unsignedIntValue];
 
-  if (CGGetActiveDisplayList(16, displays, &count) != kCGErrorSuccess)
-    return 1;
-
-  if (count != (unsigned)Fl::screen_count())
-    return 1;
-
-  for (int i = 0; i < Fl::screen_count(); i++) {
-    Fl::screen_xywh(sx, sy, sw, sh, i);
-
-    screen_rect.setXYWH(sx, sy, sw, sh);
-    if (screen_rect.enclosed_by(windows_rect)) {
-      if (CGDisplayCapture(displays[i]) != kCGErrorSuccess)
+    if (win->geometry().contains(screen->geometry())) {
+      if (CGDisplayCapture(display) != kCGErrorSuccess)
         return 1;
 
     } else {
       // A display might have been captured with the previous
       // monitor selection. In that case we don't want to keep
       // it when its no longer inside the window_rect.
-      CGDisplayRelease(displays[i]);
+      CGDisplayRelease(display);
     }
   }
 
@@ -95,8 +75,9 @@ int cocoa_capture_displays(Fl_Window *win)
   return 0;
 }
 
-void cocoa_release_displays(Fl_Window *win)
+void cocoa_release_displays(QWidget* win)
 {
+  NSView *view;
   NSWindow *nsw;
   int newlevel;
 
@@ -105,18 +86,15 @@ void cocoa_release_displays(Fl_Window *win)
 
   captured = false;
 
-  nsw = (NSWindow*)fl_xid(win);
+  view = (NSView*)win->winId();
+  nsw = [view window];
 
   // Someone else has already changed the level of this window
   if ([nsw level] != CGShieldingWindowLevel())
     return;
 
-  // FIXME: Store the previous level somewhere so we don't have to hard
-  //        code a level here.
-  if (win->fullscreen_active() && win->contains(Fl::focus()))
-    newlevel = NSStatusWindowLevel;
-  else
-    newlevel = NSNormalWindowLevel;
+  // FIXME: what's the right level for Qt?
+  newlevel = NSNormalWindowLevel;
 
   // Only change if different as the level change also moves the window
   // to the top of that level.
@@ -127,6 +105,18 @@ void cocoa_release_displays(Fl_Window *win)
 bool cocoa_screens_have_separate_spaces()
 {
   return [NSScreen screensHaveSeparateSpaces];
+}
+
+void cocoa_set_presentation_default()
+{
+  [NSApp setPresentationOptions: NSApplicationPresentationDefault];
+}
+
+void cocoa_set_presentation_full_screen()
+{
+  [NSApp setPresentationOptions:
+         NSApplicationPresentationAutoHideMenuBar |
+         NSApplicationPresentationAutoHideDock];
 }
 
 CGColorSpaceRef cocoa_win_color_space(Fl_Window *win)
@@ -151,17 +141,21 @@ CGColorSpaceRef cocoa_win_color_space(Fl_Window *win)
   return lut;
 }
 
-bool cocoa_win_is_zoomed(Fl_Window *win)
+bool cocoa_win_is_zoomed(QWidget *win)
 {
+  NSView *view;
   NSWindow *nsw;
-  nsw = (NSWindow*)fl_xid(win);
+  view = (NSView*)win->winId();
+  nsw = [view window];
   return [nsw isZoomed];
 }
 
-void cocoa_win_zoom(Fl_Window *win)
+void cocoa_win_zoom(QWidget *win)
 {
+  NSView *view;
   NSWindow *nsw;
-  nsw = (NSWindow*)fl_xid(win);
+  view = (NSView*)win->winId();
+  nsw = [view window];
   [nsw zoom:nsw];
 }
 

@@ -1,5 +1,5 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
- * Copyright 2011 Pierre Ossman <ossman@cendio.se> for Cendio AB
+ * Copyright 2011-2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,9 @@
 #ifndef __DESKTOPWINDOW_H__
 #define __DESKTOPWINDOW_H__
 
-#include <QObject>
+#include <QWidget>
 
-#include <FL/Fl_Window.H>
+class QScrollArea;
 
 namespace rfb {
   class ModifiablePixelBuffer;
@@ -31,18 +31,16 @@ namespace rfb {
 }
 
 class CConn;
-class Surface;
 class Toast;
 class Viewport;
 
-class Fl_Scrollbar;
-
-class DesktopWindow : public QObject, public Fl_Window {
+class DesktopWindow : public QWidget {
   Q_OBJECT
 
 public:
 
-  DesktopWindow(int w, int h, const char *name, CConn* cc_);
+  DesktopWindow(int w, int h, const char *name, CConn* cc_,
+                QWidget* parent=nullptr);
   ~DesktopWindow();
 
   // Most efficient format (from DesktopWindow's point of view)
@@ -75,23 +73,32 @@ public:
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* text);
 
-  // Fl_Window callback methods
-  void draw() override;
-  void resize(int x, int y, int w, int h) override;
+  // QWidget methods (poorly overridden)
+  void resize(int w, int h);
+  void resize(const QSize& size);
 
-  int handle(int event) override;
-
-  void fullscreen_on();
+  bool isFullScreen() const;
+  void setFullScreen(bool enabled);
 
 protected:
-  void moveEvent();
-  void resizeEvent();
+  // Qt event handlers
+  void moveEvent(QMoveEvent* e) override;
+  void resizeEvent(QResizeEvent* e) override;
+  void changeEvent(QEvent* e) override;
   void fullScreenEvent();
-  void enterEvent();
-  void leaveEvent();
-  void mouseMoveEvent();
-  void mouseReleaseEvent();
-  void showEvent();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  void enterEvent(QEvent* event) override;
+#else
+  void enterEvent(QEnterEvent* event) override;
+#endif
+  void leaveEvent(QEvent* event) override;
+  void mouseMoveEvent(QMouseEvent* event) override;
+  void mouseReleaseEvent(QMouseEvent* event) override;
+  void showEvent(QShowEvent* event) override;
+  void exposeEvent(QEvent* event);
+  void closeEvent(QCloseEvent* e) override;
+
+  bool eventFilter(QObject* obj, QEvent* event) override;
 
 private:
   void menuToast();
@@ -99,17 +106,13 @@ private:
   void setToast(const char *text, ...)
     __attribute__((__format__ (__printf__, 2, 3)));
 
-  static int fltkDispatch(int event, Fl_Window *win);
-
-  bool hasFocus();
-
   void maybeGrabKeyboard();
   void grabKeyboard();
   void ungrabKeyboard();
   void grabPointer();
   void ungrabPointer();
 
-  void handleFocusedChanged(bool focused);
+  void handleActiveChanged();
 
   void maximizeWindow();
 
@@ -117,19 +120,14 @@ private:
   void reconfigureFullscreen();
   void remoteResize();
 
-  void repositionWidgets();
-
   static void handleOptions(void *data);
 
   void handleFullscreenTimeout();
 
-  void scrollTo(int x, int y);
-
 private:
   CConn* cc;
-  Fl_Scrollbar *hscroll, *vscroll;
+  QScrollArea* scrollArea;
   Viewport *viewport;
-  Surface *offscreen;
   Toast* toast;
 
   bool firstUpdate;
@@ -140,6 +138,9 @@ private:
   bool pendingRemoteResize;
   struct timeval lastResize;
   QTimer* resizeTimer;
+
+  bool fakeFullScreen;
+  QByteArray previousGeometry;
 
   bool keyboardGrabbed;
   bool mouseGrabbed;

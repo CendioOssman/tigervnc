@@ -1,5 +1,5 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
- * Copyright 2011-2021 Pierre Ossman <ossman@cendio.se> for Cendio AB
+ * Copyright 2011-2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,20 +20,18 @@
 #ifndef __VIEWPORT_H__
 #define __VIEWPORT_H__
 
+#include <QAbstractNativeEventFilter>
 #include <QClipboard>
-#include <QObject>
+#include <QWidget>
 
 #include <rfb/Rect.h>
-
-#include <FL/Fl_Widget.H>
 
 #include "EmulateMB.h"
 #include "Keyboard.h"
 #include "GestureHandler.h"
 
+class QCursor;
 class QMenu;
-
-class Fl_RGB_Image;
 
 namespace rfb {
   class PixelFormat;
@@ -43,16 +41,15 @@ class BaseTouchHandler;
 class CConn;
 class Keyboard;
 class PlatformPixelBuffer;
-class Surface;
 
-class Viewport : public QObject, public Fl_Widget, protected EmulateMB,
+class Viewport : public QWidget, protected EmulateMB,
+                 protected QAbstractNativeEventFilter,
                  protected KeyboardHandler,
                  protected GestureCallback {
   Q_OBJECT
 
 public:
-
-  Viewport(int w, int h, CConn* cc_);
+  Viewport(int w, int h, CConn* cc, QWidget* parent=nullptr);
   ~Viewport();
 
   // Most efficient format (from Viewport's point of view)
@@ -68,27 +65,23 @@ public:
   // Change client LED state
   void setLEDState(unsigned int state);
 
-  void draw(Surface* dst);
-
   // Clipboard events
   void handleClipboardRequest();
   void handleClipboardAnnounce(bool available);
   void handleClipboardData(const char* data);
 
 protected:
-  // Fl_Widget callback methods
-
-  void draw() override;
-
-  void resize(int x, int y, int w, int h) override;
-
-  int enterEvent();
-  int leaveEvent();
-  int mouseEvent();
-  int wheelEvent();
-  int focusInEvent();
-  int focusOutEvent();
-  int handle(int event) override;
+  // Qt event handlers
+  void paintEvent(QPaintEvent* event) override;
+  void resizeEvent(QResizeEvent* e) override;
+  void leaveEvent(QEvent* event) override;
+  void mouseEvent(QMouseEvent* event);
+  void mouseMoveEvent(QMouseEvent* event) override;
+  void mousePressEvent(QMouseEvent* event) override;
+  void mouseReleaseEvent(QMouseEvent* event) override;
+  void wheelEvent(QWheelEvent* event) override;
+  void focusInEvent(QFocusEvent* event) override;
+  void focusOutEvent(QFocusEvent* event) override;
 
   void handleGestureEvent(const GestureEvent& event) override;
   void handleTapGesture(const GestureEvent& ev);
@@ -99,8 +92,6 @@ protected:
   void sendPointerEvent(const rfb::Point& pos, uint8_t buttonMask) override;
 
 private:
-  bool hasFocus();
-
   void handleClipboardChange(QClipboard::Mode mode);
 
   void flushPendingClipboard();
@@ -117,7 +108,11 @@ private:
   void handleKeyRelease(int systemKeyCode) override;
   void sendKeyRelease(int systemKeyCode);
 
-  static int handleSystemEvent(void *event, void *data);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  bool nativeEventFilter(QByteArray const& eventType, void* message, long*) override;
+#else
+  bool nativeEventFilter(QByteArray const& eventType, void* message, qintptr*) override;
+#endif
 
   void pushLEDState();
 
@@ -159,8 +154,7 @@ private:
   bool menuCtrlKey;
   bool menuAltKey;
 
-  Fl_RGB_Image *cursor;
-  rfb::Point cursorHotspot;
+  QCursor* cursor;
 };
 
 #endif

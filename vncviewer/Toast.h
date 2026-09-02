@@ -20,38 +20,25 @@
 #ifndef __TOAST_H__
 #define __TOAST_H__
 
-#include <sys/time.h>
+#include <string>
 
-class Fl_Widget;
+#include <QWidget>
 
-class Surface;
+class Toast : public QWidget {
+  Q_OBJECT
 
-class Toast {
 public:
-  Toast(Fl_Widget* parent);
-  virtual ~Toast();
+  Toast(QWidget* parent=nullptr);
+  ~Toast();
 
-  void setText(const char* text);
-  bool shown();
-
-  int width();
-  int height();
-
-  void draw(int src_x, int src_y, int dst_x, int dst_y,
-            int dst_w, int dst_h);
-  void draw(Surface* dst, int src_x, int src_y, int dst_x, int dst_y,
-            int dst_w, int dst_h);
+  void setText(const char* textbuf);
 
 protected:
-  static void updateOverlay(void *data);
+  void paintEvent(QPaintEvent* event) override;
 
 private:
-  Fl_Widget* parent;
-
-  Surface* overlay;
-  unsigned char overlayAlpha;
-
-  struct timeval overlayStart;
+  QTimer* hideTimer;
+  std::string text;
 };
 
 #endif

@@ -175,11 +175,15 @@ KeyboardWin32::~KeyboardWin32()
   reset();
 }
 
-bool KeyboardWin32::handleEvent(const void* event)
+bool KeyboardWin32::handleEvent(const char* eventType, void* message)
 {
-  MSG *msg = (MSG*)event;
+  MSG *msg = (MSG*)message;
 
-  assert(event);
+  assert(eventType);
+  assert(message);
+
+  if (strcmp(eventType, "windows_generic_MSG") != 0)
+    return false;
 
   if ((msg->message == WM_MOUSEMOVE) ||
       (msg->message == WM_LBUTTONDOWN) ||

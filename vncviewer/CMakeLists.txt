@@ -147,6 +147,7 @@ else()
   target_link_libraries(vncviewer PRIVATE ${X11_X11_LIB})
   target_link_libraries(vncviewer PRIVATE ${X11_Xext_LIB})
   target_link_libraries(vncviewer PRIVATE ${X11_Xi_LIB})
+  target_link_libraries(vncviewer PRIVATE ${X11_Xinerama_LIB})
   target_link_libraries(vncviewer PRIVATE ${X11_Xrender_LIB})
 endif()
 

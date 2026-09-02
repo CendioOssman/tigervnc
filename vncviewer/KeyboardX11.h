@@ -27,7 +27,7 @@ public:
   KeyboardX11(KeyboardHandler* handler);
   virtual ~KeyboardX11();
 
-  bool handleEvent(const void* event) override;
+  bool handleEvent(const char* eventType, void* message) override;
 
   unsigned getLEDState() override;
   void setLEDState(unsigned state) override;

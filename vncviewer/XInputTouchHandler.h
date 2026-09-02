@@ -1,5 +1,5 @@
 /* Copyright 2019 Aaron Sowry for Cendio AB
- * Copyright 2019-2020 Pierre Ossman for Cendio AB
+ * Copyright 2019-2026 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,22 +20,22 @@
 #ifndef __XINPUTTOUCHHANDLER_H__
 #define __XINPUTTOUCHHANDLER_H__
 
-#include <X11/extensions/XInput2.h>
+#include <xcb/xcb.h>
 
 #include "BaseTouchHandler.h"
 #include "GestureHandler.h"
 
 class XInputTouchHandler: public BaseTouchHandler {
   public:
-    XInputTouchHandler(Window wnd, GestureCallback* gestureCallback);
+    XInputTouchHandler(xcb_window_t wnd, GestureCallback* gestureCallback);
 
-    bool handleEvent(const void* event) override;
+    bool handleEvent(const char* eventType, void* message) override;
 
   protected:
-    void processEvent(const XIDeviceEvent* devev);
+    void processEvent(const xcb_ge_generic_event_t* devev);
 
   private:
-    Window wnd;
+    xcb_window_t wnd;
 
     GestureHandler gestureHandler;
 };

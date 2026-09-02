@@ -1,5 +1,5 @@
 /* Copyright 2019 Aaron Sowry for Cendio AB
- * Copyright 2019-2020 Pierre Ossman for Cendio AB
+ * Copyright 2019-2026 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,11 +24,19 @@
 #include <assert.h>
 #include <string.h>
 
+#include <QtGlobal>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QX11Info>
+#else
+#include <QGuiApplication>
+#endif
+
+#include <xcb/xcb.h>
+#include <xcb/xinput.h>
+
 #include <X11/extensions/XInput2.h>
 #include <X11/extensions/XI2.h>
 #include <X11/XKBlib.h>
-
-#include <FL/x.H>
 
 #ifndef XK_MISCELLANY
 #define XK_MISCELLANY
@@ -42,14 +50,21 @@
 
 static rfb::LogWriter vlog("XInputTouchHandler");
 
-XInputTouchHandler::XInputTouchHandler(Window wnd_,
+XInputTouchHandler::XInputTouchHandler(xcb_window_t wnd_,
                                        GestureCallback* gestureCallback)
   : wnd(wnd_), gestureHandler(gestureCallback)
 {
+  Display* display;
   XIEventMask *curmasks;
   int num_masks;
 
-  curmasks = XIGetSelectedEvents(fl_display, wnd, &num_masks);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  display = QX11Info::display();
+#else
+  display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+
+  curmasks = XIGetSelectedEvents(display, wnd, &num_masks);
   if (curmasks == nullptr)
     return;
 
@@ -81,45 +96,48 @@ XInputTouchHandler::XInputTouchHandler(Window wnd_,
   //
   XISetMask(curmasks[0].mask, XI_TouchOwnership);
 
-  XISelectEvents(fl_display, wnd, curmasks, 1);
+  XISelectEvents(display, wnd, curmasks, 1);
 
   XFree(curmasks);
 }
 
-bool XInputTouchHandler::handleEvent(const void* event)
+bool XInputTouchHandler::handleEvent(const char* eventType,
+                                     void* message)
 {
-  XEvent *xevent = (XEvent*)event;
+  const xcb_generic_event_t* xcbevent;
 
-  if (xevent->type == GenericEvent) {
-    if (xevent->xgeneric.extension == x11_xinput_major()) {
-      XIDeviceEvent *devev;
+  assert(eventType);
+  assert(message);
 
-      if (!XGetEventData(fl_display, &xevent->xcookie)) {
-        vlog.error(_("Failed to get event data for X Input event"));
-        return true;
-      }
+  if (strcmp(eventType, "xcb_generic_event_t") != 0)
+    return false;
 
-      devev = (XIDeviceEvent*)xevent->xcookie.data;
+  xcbevent = (xcb_generic_event_t*)message;
 
-      if (devev->event != wnd) {
-        XFreeEventData(fl_display, &xevent->xcookie);
+  if (xcbevent->response_type == XCB_GE_GENERIC) {
+    const xcb_ge_generic_event_t* xcbgeneric;
+
+    xcbgeneric = (xcb_ge_generic_event_t*)xcbevent;
+
+    if (xcbgeneric->extension == x11_xinput_major()) {
+      xcb_input_touch_begin_event_t* devev;
+
+      devev = (xcb_input_touch_begin_event_t*)xcbgeneric;
+
+      if (devev->event != wnd)
         return false;
-      }
 
-      switch (devev->evtype) {
+      switch (devev->event_type) {
       case XI_TouchBegin:
       case XI_TouchUpdate:
       case XI_TouchEnd:
       case XI_TouchOwnership:
         break;
       default:
-        XFreeEventData(fl_display, &xevent->xcookie);
-        return 0;
+        return false;
       }
 
-      processEvent(devev);
-
-      XFreeEventData(fl_display, &xevent->xcookie);
+      processEvent(xcbgeneric);
 
       return true;
     }
@@ -128,8 +146,13 @@ bool XInputTouchHandler::handleEvent(const void* event)
   return false;
 }
 
-void XInputTouchHandler::processEvent(const XIDeviceEvent* devev)
+void XInputTouchHandler::processEvent(const xcb_ge_generic_event_t* xcbgeneric)
 {
+  Display* display;
+  xcb_input_touch_begin_event_t* devev;
+
+  devev = (xcb_input_touch_begin_event_t*)xcbgeneric;
+
   bool isMaster = devev->deviceid != devev->sourceid;
 
   // We're only interested in events from master devices
@@ -137,21 +160,27 @@ void XInputTouchHandler::processEvent(const XIDeviceEvent* devev)
     // However we need to accept TouchEnd from slave devices as they
     // might not get delivered if there is a pointer grab, see:
     // https://gitlab.freedesktop.org/xorg/xserver/-/issues/1016
-    if (devev->evtype != XI_TouchEnd)
+    if (devev->event_type != XI_TouchEnd)
       return;
   }
 
   // Avoid duplicate TouchEnd events, see above
   // FIXME: Doesn't handle floating slave devices
-  if (isMaster && devev->evtype == XI_TouchEnd)
+  if (isMaster && devev->event_type == XI_TouchEnd)
     return;
 
-  switch (devev->evtype) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  display = QX11Info::display();
+#else
+  display = qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+
+  switch (devev->event_type) {
   case XI_TouchBegin:
     // XInput2 wants us to explicitly accept touch sequences
     // for grabbed devices before it will pass events
     // FIXME: Should we call this when not grabbing? Qt doesn't
-    XIAllowTouchEvents(fl_display,
+    XIAllowTouchEvents(display,
                        devev->deviceid,
                        devev->detail,
                        devev->event,
