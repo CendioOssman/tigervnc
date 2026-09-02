@@ -20,6 +20,8 @@
 #ifndef __VIEWPORT_H__
 #define __VIEWPORT_H__
 
+#include <QObject>
+
 #include <rfb/Rect.h>
 
 #include <FL/Fl_Widget.H>
@@ -32,15 +34,21 @@ class QMenu;
 
 class Fl_RGB_Image;
 
+namespace rfb {
+  class PixelFormat;
+}
+
 class BaseTouchHandler;
 class CConn;
 class Keyboard;
 class PlatformPixelBuffer;
 class Surface;
 
-class Viewport : public Fl_Widget, protected EmulateMB,
+class Viewport : public QObject, public Fl_Widget, protected EmulateMB,
                  protected KeyboardHandler,
                  protected GestureCallback {
+  Q_OBJECT
+
 public:
 
   Viewport(int w, int h, CConn* cc_);
