@@ -5,6 +5,7 @@ endif()
 add_executable(vncviewer
   qt/QMonitorArrangement.cxx
   qt/QNavigation.cxx
+  qt/QStyles.cxx
   menukey.cxx
   AuthDialog.cxx
   CConn.cxx
