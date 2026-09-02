@@ -100,7 +100,7 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
 
   toast = new Toast(this);
 
-  callback([](Fl_Widget*, void*) { disconnect(); });
+  callback([](Fl_Widget*, void*) { ::disconnect(); });
 
   updateCaption();
 
@@ -115,14 +115,16 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
   // not be resized to cover the new screen. A timer makes sense
   // also on other systems, to make sure that whatever desktop
   // environment has a chance to deal with things before we do.
-  QObject::connect(qApp, &QGuiApplication::screenAdded, [this]() {
-    Fl::remove_timeout(reconfigureFullscreen);
-    Fl::add_timeout(0.5, reconfigureFullscreen, this);
-  });
-  QObject::connect(qApp, &QGuiApplication::screenRemoved, [this]() {
-    Fl::remove_timeout(reconfigureFullscreen);
-    Fl::add_timeout(0.5, reconfigureFullscreen, this);
-  });
+  connect(qApp, &QGuiApplication::screenAdded, this,
+          [this]() {
+            Fl::remove_timeout(reconfigureFullscreen);
+            Fl::add_timeout(0.5, reconfigureFullscreen, this);
+          });
+  connect(qApp, &QGuiApplication::screenRemoved, this,
+          [this]() {
+            Fl::remove_timeout(reconfigureFullscreen);
+            Fl::add_timeout(0.5, reconfigureFullscreen, this);
+          });
 
   // Support for -geometry option. Note that although we do support
   // negative coordinates, we do not support -XOFF-YOFF (ie
