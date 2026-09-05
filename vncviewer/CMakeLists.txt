@@ -20,7 +20,14 @@ add_executable(vncviewer
   ServerDialog.cxx
   ShortcutHandler.cxx
   Surface.cxx
+  OptionsCompression.cxx
   OptionsDialog.cxx
+  OptionsDisplay.cxx
+  OptionsInput.cxx
+  OptionsMisc.cxx
+  OptionsPage.cxx
+  OptionsSecurity.cxx
+  OptionsShortcuts.cxx
   PlatformPixelBuffer.cxx
   Viewport.cxx
   i18n.cxx

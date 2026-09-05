@@ -1,4 +1,4 @@
-/* Copyright 2011-2021 Pierre Ossman <ossman@cendio.se> for Cendio AB
+/* Copyright 2011-2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,20 +19,12 @@
 #ifndef __OPTIONSDIALOG_H__
 #define __OPTIONSDIALOG_H__
 
+#include <list>
 #include <map>
 
 #include <FL/Fl_Window.H>
 
-class Fl_Widget;
-class Fl_Box;
-class Fl_Group;
-class Fl_Check_Button;
-class Fl_Round_Button;
-class Fl_Toggle_Button;
-class Fl_Input;
-class Fl_Int_Input;
-class Fl_Choice;
-class Fl_Monitor_Arrangement;
+class OptionsPage;
 
 typedef void (OptionsCallback)(void*);
 
@@ -53,126 +45,13 @@ protected:
   void loadOptions(void);
   void storeOptions(void);
 
-  void createCompressionPage(int tx, int ty, int tw, int th);
-  void createSecurityPage(int tx, int ty, int tw, int th);
-  void createInputPage(int tx, int ty, int tw, int th);
-  void createShortcutsPage(int tx, int ty, int tw, int th);
-  void createDisplayPage(int tx, int ty, int tw, int th);
-  void createMiscPage(int tx, int ty, int tw, int th);
-
-  void handleAutoselect();
-  void handleCompression();
-  void handleAlwaysCursor();
-
-  void handleX509();
-  void handleRSAAES();
-
-  void handleSystemKeys();
-
-  void handleClipboard();
-
-  void handleModifier();
-
-  void handleFullScreenMode();
-
   void handleCancel();
   void handleOK();
 
 protected:
   static std::map<OptionsCallback*, void*> callbacks;
 
-  /* Compression */
-  Fl_Check_Button *autoselectCheckbox;
-  Fl_Check_Button *jpegCheckbox;
-
-  Fl_Group *encodingGroup;
-  Fl_Round_Button *tightButton;
-  Fl_Round_Button *jpegButton;
-  Fl_Round_Button *zrleButton;
-  Fl_Round_Button *hextileButton;
-#ifdef HAVE_H264
-  Fl_Round_Button *h264Button;
-#endif
-  Fl_Round_Button *rawButton;
-
-  Fl_Group *colorlevelGroup;
-  Fl_Round_Button *fullcolorCheckbox;
-  Fl_Round_Button *mediumcolorCheckbox;
-  Fl_Round_Button *lowcolorCheckbox;
-  Fl_Round_Button *verylowcolorCheckbox;
-
-  Fl_Group *compressionGroup;
-  Fl_Check_Button *compressionCheckbox;
-  Fl_Int_Input *compressionInput;
-  Fl_Group *qualityGroup;
-  Fl_Int_Input *jpegInput;
-
-  /* Security */
-#if defined(HAVE_GNUTLS) || defined(HAVE_NETTLE)
-  Fl_Group *encryptionGroup;
-  Fl_Check_Button *encNoneCheckbox;
-#ifdef HAVE_GNUTLS
-  Fl_Check_Button *encTLSCheckbox;
-  Fl_Check_Button *encX509Checkbox;
-#endif
-#ifdef HAVE_NETTLE
-  Fl_Check_Button *encRSAAESCheckbox;
-#endif
-#ifdef HAVE_GNUTLS
-  Fl_Input *caInput;
-  Fl_Input *crlInput;
-#endif
-
-  Fl_Group *authenticationGroup;
-  Fl_Check_Button *authNoneCheckbox;
-  Fl_Check_Button *authVncCheckbox;
-  Fl_Check_Button *authPlainCheckbox;
-#endif
-
-  /* Input */
-  Fl_Check_Button *viewOnlyCheckbox;
-  Fl_Group *mouseGroup;
-  Fl_Check_Button *emulateMBCheckbox;
-  Fl_Check_Button *alwaysCursorCheckbox;
-  Fl_Choice *cursorTypeChoice;
-  Fl_Group *keyboardGroup;
-  Fl_Check_Button *systemKeysCheckbox;
-  Fl_Group *clipboardGroup;
-  Fl_Check_Button *acceptClipboardCheckbox;
-#if !defined(WIN32) && !defined(__APPLE__)
-  Fl_Check_Button *setPrimaryCheckbox;
-#endif
-  Fl_Check_Button *sendClipboardCheckbox;
-#if !defined(WIN32) && !defined(__APPLE__)
-  Fl_Check_Button *sendPrimaryCheckbox;
-#endif
-
-  /* Keyboard shortcuts */
-  Fl_Toggle_Button *ctrlButton;
-  Fl_Toggle_Button *altButton;
-  Fl_Toggle_Button *shiftButton;
-  Fl_Toggle_Button *superButton;
-
-  Fl_Box *shortcutsText;
-
-  /* Display */
-  Fl_Group *displayModeGroup;
-  Fl_Round_Button *windowedButton;
-  Fl_Round_Button *currentMonitorButton;
-  Fl_Round_Button *allMonitorsButton;
-  Fl_Round_Button *selectedMonitorsButton;
-  Fl_Monitor_Arrangement *monitorArrangement;
-
-  /* Misc. */
-  Fl_Check_Button *sharedCheckbox;
-  Fl_Check_Button *reconnectCheckbox;
-#ifdef HAVE_AUDIO
-  Fl_Check_Button *audioCheckbox;
-#endif
-
-private:
-  static int fltk_event_handler(int event);
-  static void handleScreenConfigTimeout(void *data);
+  std::list<OptionsPage*> pages;
 };
 
 #endif
