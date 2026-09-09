@@ -20,10 +20,6 @@
 #ifndef __DESKTOPWINDOW_H__
 #define __DESKTOPWINDOW_H__
 
-#include <list>
-#include <map>
-#include <string>
-
 #include <sys/time.h>
 
 #include <FL/Fl_Window.H>
@@ -34,6 +30,7 @@ namespace rfb { class ModifiablePixelBuffer; }
 
 class CConn;
 class Surface;
+class Toast;
 class Viewport;
 
 class Fl_Scrollbar;
@@ -87,13 +84,6 @@ public:
   void ungrabKeyboard();
 
 private:
-  void addOverlayTip(const char *text, ...)
-    __attribute__((__format__ (__printf__, 2, 3)));
-  void addOverlayError(const char *text, ...)
-    __attribute__((__format__ (__printf__, 2, 3)));
-  void addOverlay(const char *text);
-  static void updateOverlay(void *data);
-
   static int fltkDispatch(int event, Fl_Window *win, void *);
   static int fltkHandle(int event);
 
@@ -123,14 +113,7 @@ private:
   Viewport *viewport;
   Surface *offscreen;
 
-  struct Overlay {
-    Surface *surface;
-    unsigned char alpha;
-    struct timeval start;
-  };
-
-  std::list<Overlay> overlays;
-  std::map<std::string, time_t> overlayTimes;
+  Toast* toast;
 
   bool firstUpdate;
   bool delayedFullscreen;

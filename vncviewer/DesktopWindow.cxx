@@ -26,7 +26,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <sys/time.h>
 
 #include <core/LogWriter.h>
@@ -42,6 +41,7 @@
 #include "parameters.h"
 #include "CConn.h"
 #include "Surface.h"
+#include "Toast.h"
 #include "Viewport.h"
 #include "touch.h"
 #include "fltk/event_dispatch_handler.h"
@@ -60,9 +60,6 @@
 #else
 #include "x11.h"
 #endif
-
-// Time before we show an overlay tip again
-const time_t OVERLAY_REPEAT_TIMEOUT = 600;
 
 static core::LogWriter vlog("DesktopWindow");
 
@@ -98,6 +95,8 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
   vscroll->callback(handleScroll, this);
 
   group->end();
+
+  toast = new Toast(this);
 
   callback([](Fl_Widget*, void*) { disconnect(); });
 
@@ -222,8 +221,8 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
     modifierMask |= ShortcutHandler::parseModifier(key.getValueStr().c_str());
 
   if (modifierMask)
-    addOverlayTip(_("Press %sM to open the context menu"),
-                  ShortcutHandler::modifierPrefix(modifierMask));
+    toast->addRegular(_("Press %sM to open the context menu"),
+                      ShortcutHandler::modifierPrefix(modifierMask));
 
   // By default we get a slight delay when we warp the pointer, something
   // we don't want or we'll get jerky movement
@@ -246,15 +245,11 @@ DesktopWindow::~DesktopWindow()
   // again later when this object is already gone.
   Fl::remove_timeout(handleResizeTimeout, this);
   Fl::remove_timeout(handleFullscreenTimeout, this);
-  Fl::remove_timeout(updateOverlay, this);
   Fl::remove_idle(checkFocus, this);
 
   OptionsDialog::removeCallback(handleOptions);
 
-  while (!overlays.empty()) {
-    delete overlays.front().surface;
-    overlays.pop_front();
-  }
+  delete toast;
   delete offscreen;
 
   instances.erase(this);
@@ -475,13 +470,10 @@ void DesktopWindow::draw()
       update_child(*viewport);
   }
 
-  // Overlay (if active)
-  if (!overlays.empty()) {
+  // Toast (if active)
+  if (toast->shown()) {
     int ox, oy, ow, oh;
     int sx, sy, sw, sh;
-    struct Overlay overlay;
-
-    overlay = overlays.front();
 
     // Make sure it's properly seen by adjusting it relative to the
     // primary screen rather than the entire window
@@ -496,7 +488,7 @@ void DesktopWindow::draw()
         Fl::screen_xywh(sx, sy, sw, sh, idx);
 
         // The screen with the smallest index that are enclosed by
-        // the viewport will be used for showing the overlay.
+        // the viewport will be used for showing the toast.
         screenRect.setXYWH(sx, sy, sw, sh);
         if (screenRect.enclosed_by(windowRect)) {
           foundEnclosedScreen = true;
@@ -519,20 +511,18 @@ void DesktopWindow::draw()
       sw = w();
     }
 
-    ox = X = sx + (sw - overlay.surface->width()) / 2;
+    ox = X = sx + (sw - toast->width()) / 2;
     oy = Y = sy + 50;
-    ow = overlay.surface->width();
-    oh = overlay.surface->height();
+    ow = toast->width();
+    oh = toast->height();
 
     fl_clip_box(ox, oy, ow, oh, ox, oy, ow, oh);
 
     if ((ow != 0) && (oh != 0)) {
       if (offscreen)
-        overlay.surface->blend(offscreen, ox - X, oy - Y,
-                               ox, oy, ow, oh, overlay.alpha);
+        toast->draw(offscreen, ox - X, oy - Y, ox, oy, ow, oh);
       else
-        overlay.surface->blend(ox - X, oy - Y,
-                               ox, oy, ow, oh, overlay.alpha);
+        toast->draw(ox - X, oy - Y, ox, oy, ow, oh);
     }
   }
 
@@ -643,175 +633,6 @@ void DesktopWindow::resize(int x, int y, int w, int h)
   }
 }
 
-void DesktopWindow::addOverlayTip(const char* text, ...)
-{
-  va_list ap;
-  char textbuf[1024];
-
-  std::map<std::string, time_t>::iterator iter;
-
-  va_start(ap, text);
-  vsnprintf(textbuf, sizeof(textbuf), text, ap);
-  textbuf[sizeof(textbuf)-1] = '\0';
-  va_end(ap);
-
-  // Purge all old entries
-  for (iter = overlayTimes.begin(); iter != overlayTimes.end(); ) {
-    if ((time(nullptr) - iter->second) >= OVERLAY_REPEAT_TIMEOUT)
-      overlayTimes.erase(iter++);
-    else
-      iter++;
-  }
-
-  // Recently shown?
-  if (overlayTimes.count(textbuf) > 0)
-    return;
-
-  overlayTimes[textbuf] = time(nullptr);
-
-  addOverlay(textbuf);
-}
-
-void DesktopWindow::addOverlayError(const char* text, ...)
-{
-  va_list ap;
-  char textbuf[1024];
-
-  va_start(ap, text);
-  vsnprintf(textbuf, sizeof(textbuf), text, ap);
-  textbuf[sizeof(textbuf)-1] = '\0';
-  va_end(ap);
-
-  addOverlay(textbuf);
-}
-
-void DesktopWindow::addOverlay(const char *text)
-{
-  const Fl_Fontsize fontsize = 16;
-  const int margin = 10;
-
-  Fl_Image_Surface *surface;
-
-  Fl_RGB_Image* imageText;
-  Fl_RGB_Image* image;
-
-  unsigned char* buffer;
-
-  int x, y;
-  int w, h;
-
-  unsigned char* a;
-  const unsigned char* b;
-
-  struct Overlay overlay;
-
-#if !defined(WIN32) && !defined(__APPLE__)
-  // FLTK < 1.3.5 crashes if fl_gc is unset
-  if (!fl_gc)
-    fl_gc = XDefaultGC(fl_display, 0);
-#endif
-
-  fl_font(FL_HELVETICA, fontsize);
-  w = 0;
-  fl_measure(text, w, h);
-
-  // Margins
-  w += margin * 2 * 2;
-  h += margin * 2;
-
-  surface = new Fl_Image_Surface(w, h);
-  surface->set_current();
-
-  fl_rectf(0, 0, w, h, 0, 0, 0);
-
-  fl_font(FL_HELVETICA, fontsize);
-  fl_color(FL_WHITE);
-  fl_draw(text, 0, 0, w, h, FL_ALIGN_CENTER);
-
-  imageText = surface->image();
-  delete surface;
-
-  Fl_Display_Device::display_device()->set_current();
-
-  buffer = new unsigned char[w * h * 4];
-  image = new Fl_RGB_Image(buffer, w, h, 4);
-
-  a = buffer;
-  for (x = 0;x < image->w() * image->h();x++) {
-    a[0] = a[1] = a[2] = 0x40;
-    a[3] = 0xcc;
-    a += 4;
-  }
-
-  a = buffer;
-  b = (const unsigned char*)imageText->data()[0];
-  for (y = 0;y < h;y++) {
-    for (x = 0;x < w;x++) {
-      unsigned char alpha;
-      alpha = *b;
-      a[0] = (unsigned)a[0] * (255 - alpha) / 255 + alpha;
-      a[1] = (unsigned)a[1] * (255 - alpha) / 255 + alpha;
-      a[2] = (unsigned)a[2] * (255 - alpha) / 255 + alpha;
-      a[3] = 255 - (255 - a[3]) * (255 - alpha) / 255;
-      a += 4;
-      b += imageText->d();
-    }
-    if (imageText->ld() != 0)
-      b += imageText->ld() - w * imageText->d();
-  }
-
-  delete imageText;
-
-  overlay.surface = new Surface(image);
-  overlay.alpha = 0;
-  memset(&overlay.start, 0, sizeof(overlay.start));
-  overlays.push_back(overlay);
-
-  delete image;
-  delete [] buffer;
-
-  if (overlays.size() == 1)
-    Fl::add_timeout(0.5, updateOverlay, this);
-}
-
-void DesktopWindow::updateOverlay(void *data)
-{
-  DesktopWindow *self;
-  struct Overlay* overlay;
-  unsigned elapsed;
-
-  self = (DesktopWindow*)data;
-
-  if (self->overlays.empty())
-    return;
-
-  overlay = &self->overlays.front();
-
-  if (overlay->start.tv_sec == 0)
-    gettimeofday(&overlay->start, nullptr);
-
-  elapsed = core::msSince(&overlay->start);
-
-  if (elapsed < 500) {
-    overlay->alpha = (unsigned)255 * elapsed / 500;
-    Fl::add_timeout(1.0/60, updateOverlay, self);
-  } else if (elapsed < 3500) {
-    overlay->alpha = 255;
-    Fl::add_timeout(3.0, updateOverlay, self);
-  } else if (elapsed < 4000) {
-    overlay->alpha = (unsigned)255 * (4000 - elapsed) / 500;
-    Fl::add_timeout(1.0/60, updateOverlay, self);
-  } else {
-    delete overlay->surface;
-    self->overlays.pop_front();
-    if (!self->overlays.empty())
-      Fl::add_timeout(0.5, updateOverlay, self);
-  }
-
-  // FIXME: Only damage relevant area
-  self->damage(FL_DAMAGE_USER1);
-}
-
 
 int DesktopWindow::handle(int event)
 {
@@ -831,8 +652,8 @@ int DesktopWindow::handle(int event)
         modifierMask |= ShortcutHandler::parseModifier(key.getValueStr().c_str());
 
       if (modifierMask)
-        addOverlayTip(_("Press %sEnter to leave full-screen mode"),
-                      ShortcutHandler::modifierPrefix(modifierMask));
+        toast->addRegular(_("Press %sEnter to leave full-screen mode"),
+                          ShortcutHandler::modifierPrefix(modifierMask));
     }
 
 #ifdef __APPLE__
@@ -1093,7 +914,7 @@ void DesktopWindow::grabKeyboard()
   ret = win32_enable_lowlevel_keyboard(fl_xid(this));
   if (ret != 0) {
     vlog.error(_("Failure grabbing control of the keyboard"));
-    addOverlayError(_("Failure grabbing control of the keyboard"));
+    toast->addPriority(_("Failure grabbing control of the keyboard"));
     return;
   }
 #elif defined(__APPLE__)
@@ -1102,7 +923,7 @@ void DesktopWindow::grabKeyboard()
   ret = cocoa_tap_keyboard();
   if (!ret) {
     vlog.error(_("Failure grabbing control of the keyboard"));
-    addOverlayError(_("Failure grabbing control of the keyboard"));
+    toast->addPriority(_("Failure grabbing control of the keyboard"));
     return;
   }
 #else
@@ -1111,7 +932,7 @@ void DesktopWindow::grabKeyboard()
   ret = x11_grab_keyboard(this);
   if (!ret) {
     vlog.error(_("Failure grabbing control of the keyboard"));
-    addOverlayError(_("Failure grabbing control of the keyboard"));
+    toast->addPriority(_("Failure grabbing control of the keyboard"));
     return;
   }
 #endif
@@ -1128,8 +949,8 @@ void DesktopWindow::grabKeyboard()
     modifierMask |= ShortcutHandler::parseModifier(key.getValueStr().c_str());
 
   if (modifierMask)
-    addOverlayTip(_("Press %s to release keyboard control from the session"),
-                  ShortcutHandler::modifierPrefix(modifierMask, true));
+    toast->addRegular(_("Press %s to release keyboard control from the session"),
+                      ShortcutHandler::modifierPrefix(modifierMask, true));
 }
 
 
