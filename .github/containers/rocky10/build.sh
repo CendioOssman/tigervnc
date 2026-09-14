@@ -31,7 +31,7 @@ mkdir -p ${CURDIR}/rpmbuild/SOURCES
 
 ## Download the xorg-server source code
 
-XORGVERSION=26.0.99.901
+XORGVERSION=26.0.99.902
 curl -L https://xorg.freedesktop.org/releases/individual/xserver/xorg-server-${XORGVERSION}.tar.xz > ${CURDIR}/rpmbuild/SOURCES/xorg-server-${XORGVERSION}.tar.xz
 
 ## Start the build
