@@ -17,7 +17,7 @@ jobs:
             libfltk1.3-dev fluid gettext appstream \
             libpixman-1-dev libjpeg-turbo8-dev \
             libgnutls28-dev nettle-dev libgmp-dev \
-            qt6-base-dev \
+            qt6-base-dev qt6-base-private-dev \
             libxtst-dev libxdamage-dev libxfixes-dev libxrandr-dev \
             libpam-dev libsystemd-dev libpwquality-dev \
             libavcodec-dev libavutil-dev libswscale-dev \
@@ -89,7 +89,7 @@ jobs:
           sudo apt-get install -y \
             libfltk1.3-dev fluid \
             libpixman-1-dev libjpeg-turbo8-dev \
-            qt6-base-dev \
+            qt6-base-dev qt6-base-private-dev \
             libxtst-dev libxdamage-dev libxfixes-dev libxrandr-dev \
             uuid-dev libglib2.0-dev libpipewire-0.3-dev \
             libwayland-dev libxkbcommon-dev \

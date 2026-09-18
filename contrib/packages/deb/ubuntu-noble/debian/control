@@ -28,6 +28,7 @@ Build-Depends:
  libxdamage-dev,
  libfltk1.3-dev,
  qt6-base-dev,
+ qt6-base-private-dev,
  xorg-server-source,
  xserver-xorg-dev,
  openjdk-8-jdk,

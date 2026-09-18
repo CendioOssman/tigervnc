@@ -42,7 +42,7 @@ BuildRequires:  systemd-devel
 # TigerVNC 1.4.x requires fltk 1.3.3 for keyboard handling support
 # See https://github.com/TigerVNC/tigervnc/issues/8, also bug #1208814
 BuildRequires:  fltk-devel >= 1.3.3
-BuildRequires:  qt5-qtbase-devel, qt5-qtx11extras-devel
+BuildRequires:  qt5-qtbase-devel, qt5-qtx11extras-devel, qt5-qtbase-private-devel, qt5-qtbase-static
 BuildRequires:  xorg-x11-server-devel
 
 Requires:       tigervnc-common

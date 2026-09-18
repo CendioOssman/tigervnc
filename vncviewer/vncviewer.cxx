@@ -51,6 +51,7 @@
 
 #include "fltk/Fl_Message_Box.h"
 #include "fltk/theme.h"
+#include "qt/QFLTKEventDispatcher.h"
 #include "mainloop.h"
 #include "parameters.h"
 #include "i18n.h"
@@ -473,11 +474,13 @@ int main(int argc, char** argv)
   }
 #endif
 
+  QCoreApplication::setEventDispatcher(new QFLTKEventDispatcher);
   QApplication app(qtargc, (char**)qtargv);
 
   init_gui();
 
   create_base_dirs();
 
+  // Warning: mainloop() never returns on macOS
   return mainloop(configServerName.c_str(), cmdlineServerName.c_str());
 }

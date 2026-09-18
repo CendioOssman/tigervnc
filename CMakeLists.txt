@@ -349,6 +349,14 @@ if(BUILD_VIEWER)
   endif()
 
   if(Qt${QT_VERSION_MAJOR}_FOUND)
+    if(QT_VERSION_MAJOR LESS_EQUAL 5)
+      find_package(Qt${QT_VERSION_MAJOR}Gui COMPONENTS Private REQUIRED)
+    else()
+      # FIXME: This component is not exported on older Qt versions, but
+      #        the target is still available
+      find_package(Qt${QT_VERSION_MAJOR} COMPONENTS GuiPrivate REQUIRED)
+    endif()
+
     if(UNIX AND NOT APPLE)
       if(QT_VERSION_MAJOR LESS_EQUAL 5)
         if(BUILD_VIEWER STREQUAL "AUTO")
@@ -356,6 +364,14 @@ if(BUILD_VIEWER)
         else()
           find_package(Qt${QT_VERSION_MAJOR} COMPONENTS X11Extras REQUIRED)
         endif()
+
+        find_package(Qt${QT_VERSION_MAJOR} COMPONENTS XcbQpa REQUIRED)
+        find_package(Qt${QT_VERSION_MAJOR}EdidSupport COMPONENTS Private REQUIRED)
+      else()
+        # FIXME: This component is only exported on Red Hat platforms,
+        #        and not available at all in standard Qt
+        # https://qt-project.atlassian.net/browse/QTBUG-147853
+        find_package(Qt${QT_VERSION_MAJOR}XcbQpaPrivate REQUIRED)
       endif()
     endif()
   endif()
