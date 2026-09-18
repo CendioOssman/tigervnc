@@ -24,25 +24,16 @@
 #include <errno.h>
 #include <algorithm>
 
-// FIXME: Workaround for FLTK including windows.h
-#ifdef WIN32
-#include <winsock2.h>
-#endif
-
+#include <QBoxLayout>
+#include <QCompleter>
 #include <QFileDialog>
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QStringListModel>
 #include <QMessageBox>
 
-// Conflicts with Qt
-#define QPoint _FLTK_QPoint
 #include <FL/Fl.H>
-#include <FL/Fl_Input.H>
-#include <FL/Fl_Input_Choice.H>
-#include <FL/Fl_Button.H>
-#include <FL/Fl_Return_Button.H>
-#include <FL/fl_draw.H>
-#include <FL/Fl_Box.H>
-#include <FL/Fl_File_Chooser.H>
-#undef QPoint
 
 #include <core/Exception.h>
 #include <core/LogWriter.h>
@@ -52,9 +43,6 @@
 
 #include <network/TcpSocket.h>
 
-#include "fltk/layout.h"
-#include "fltk/util.h"
-#include "fltk/Fl_Suggestion_Input.h"
 #include "ServerDialog.h"
 #include "OptionsDialog.h"
 #include "vncviewer.h"
@@ -64,160 +52,114 @@ static core::LogWriter vlog("ServerDialog");
 
 const char* SERVER_HISTORY="tigervnc.history";
 
-ServerDialog::ServerDialog()
-  : Fl_Window(450, 0, "TigerVNC"),
-  serverName(nullptr), fileChooser(nullptr),
-  saveConflictDialog(nullptr),
-  finishedCallback(nullptr), finishedUserData(nullptr)
+ServerDialog::ServerDialog(QWidget* parent)
+  : QDialog(parent)
 {
-  int x, y, x2;
-  Fl_Button *button;
-  Fl_Box *divider;
+  QFormLayout* form;
+  QBoxLayout* box;
+  QPushButton* button;
 
-  result_ = 0;
+  setWindowTitle("TigerVNC");
 
-  x = OUTER_MARGIN;
-  y = OUTER_MARGIN;
+  QBoxLayout* layout = new QVBoxLayout;
 
-  serverName = new Fl_Suggestion_Input(
-    LBLLEFT(x, y, w() - OUTER_MARGIN*2, INPUT_HEIGHT, _("VNC server:")), {}
-  );
-  serverName->call_on_remove(
-    [](Fl_Widget*, std::string s, void* data) {
-      ((ServerDialog*)data)->onServerHistoryRemove(s);
-    },
-    this);
-  serverName->call_to_normalize(serverHistoryNormalize);
+  form = new QFormLayout;
+  layout->addLayout(form);
 
-  y += INPUT_HEIGHT + INNER_MARGIN;
+  serverName = new QLineEdit;
+  form->addRow(_("VNC server:"), serverName);
 
-  x2 = x;
+  box = new QHBoxLayout;
+  layout->addLayout(box);
 
-  button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Options..."));
-  button->callback(
-    [](Fl_Widget*, void*) {
-      OptionsDialog* dlg;
+  button = new QPushButton(_("Options..."));
+  connect(button, &QPushButton::clicked, this, []() {
+    OptionsDialog* dlg;
 
-      dlg = new OptionsDialog();
-      dlg->set_modal();
-      dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
-      dlg->show();
-    }, this);
-  x2 += BUTTON_WIDTH + INNER_MARGIN;
+    dlg = new OptionsDialog();
+    dlg->set_modal();
+    dlg->finished([](Fl_Widget* d, void*) { Fl::delete_widget(d); });
+    dlg->show();
+  });
+  box->addWidget(button);
 
-  button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Load..."));
-  button->callback(
-    [](Fl_Widget*, void* data) {
-      ((ServerDialog*)data)->handleLoad();
-    },
-    this);
-  x2 += BUTTON_WIDTH + INNER_MARGIN;
+  button = new QPushButton(_("Load..."));
+  connect(button, &QPushButton::clicked, this,
+          &ServerDialog::handleLoad);
+  box->addWidget(button);
 
-  button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Save as..."));
-  button->callback(
-    [](Fl_Widget*, void* data) {
-      ((ServerDialog*)data)->handleSaveAs();
-    },
-    this);
-  x2 += BUTTON_WIDTH + INNER_MARGIN;
+  button = new QPushButton(_("Save As..."));
+  connect(button, &QPushButton::clicked, this,
+          &ServerDialog::handleSaveAs);
+  box->addWidget(button);
 
-  y += BUTTON_HEIGHT + INNER_MARGIN;
+  box->addStretch(1);
 
-  divider = new Fl_Box(0, y, w(), 2);
-  divider->box(FL_THIN_DOWN_FRAME);
+  layout->addStretch(1);
 
-  y += divider->h() + INNER_MARGIN;
+  QFrame* divider = new QFrame;
+  divider->setFrameShape(QFrame::StyledPanel);
+  divider->setFixedHeight(1);
+  layout->addWidget(divider);
 
-  // Symmetric margin around bottom button bar
-  y += OUTER_MARGIN - INNER_MARGIN;
+  box = new QHBoxLayout;
+  layout->addLayout(box);
 
-  button = new Fl_Button(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("About..."));
-  button->callback([](Fl_Widget*, void*) { about_vncviewer(); }, this);
+  button = new QPushButton(_("About..."));
+  connect(button, &QPushButton::clicked, this,
+          [this]() { about_vncviewer(this); });
+  box->addWidget(button);
 
-  x2 = w() - OUTER_MARGIN - BUTTON_WIDTH*2 - INNER_MARGIN*1;
+  box->addStretch(1);
 
-  button = new Fl_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Cancel"));
-  button->callback(
-    [](Fl_Widget*, void* data) {
-      ((ServerDialog*)data)->handleCancel();
-    },
-    this);
-  x2 += BUTTON_WIDTH + INNER_MARGIN;
+  button = new QPushButton(_("Cancel"));
+  connect(button, &QPushButton::clicked, this,
+          &ServerDialog::reject);
+  box->addWidget(button);
 
-  button = new Fl_Return_Button(x2, y, BUTTON_WIDTH, BUTTON_HEIGHT, _("Connect"));
-  button->callback(
-    [](Fl_Widget*, void* data) {
-      ((ServerDialog*)data)->handleConnect();
-    },
-    this);
-  x2 += BUTTON_WIDTH + INNER_MARGIN;
+  button = new QPushButton(_("Connect"));
+  button->setDefault(true);
+  connect(button, &QPushButton::clicked, this,
+          &ServerDialog::handleConnect);
+  box->addWidget(button);
 
-  y += BUTTON_HEIGHT + INNER_MARGIN;
+  setLayout(layout);
+  adjustSize();
 
-  /* Needed for resize to work sanely */
-  resizable(nullptr);
-  h(y-INNER_MARGIN+OUTER_MARGIN);
-
-  callback(
-    [](Fl_Widget*, void* data) {
-      ((ServerDialog*)data)->handleCancel();
-    }, this);
+  QStringList strlist;
 
   try {
     loadServerHistory();
-    serverName->set_suggestions(serverHistory);
+    for (const std::string& entry : serverHistory)
+      strlist.append(entry.c_str());
   } catch (std::exception& e) {
     vlog.error(_("Unable to load the server history: %s"), e.what());
   }
-}
 
-
-ServerDialog::~ServerDialog()
-{
-  delete fileChooser;
-  delete saveConflictDialog;
-}
-
-
-void ServerDialog::finished(Fl_Callback* cb, void* p)
-{
-  finishedCallback = cb;
-  finishedUserData = p;
-}
-
-
-void ServerDialog::hide()
-{
-  Fl_Window::hide();
-
-  if (finishedCallback != nullptr)
-    finishedCallback(this, finishedUserData);
-}
-
-
-int ServerDialog::result()
-{
-  return result_;
+  QCompleter* completer = new QCompleter(strlist, this);
+  completer->setCaseSensitivity(Qt::CaseInsensitive);
+  completer->setFilterMode(Qt::MatchContains);
+  serverName->setCompleter(completer);
 }
 
 
 std::string ServerDialog::getServerName()
 {
-  return serverName->value();
+  return serverName->text().toStdString();
 }
 
 
 void ServerDialog::setServerName(const char* servername)
 {
-  serverName->value(servername);
+  serverName->setText(servername);
 }
 
 
 void ServerDialog::handleLoad()
 {
-  delete fileChooser;
+  QFileDialog *fileChooser;
 
-  fileChooser = new QFileDialog;
+  fileChooser = new QFileDialog(this);
   fileChooser->setWindowTitle(_("Select a TigerVNC configuration file"));
   fileChooser->setDirectory(core::getuserhomedir());
   fileChooser->setFileMode(QFileDialog::ExistingFile);
@@ -238,14 +180,14 @@ void ServerDialog::handleLoadSelected(const QString& filename)
   try {
     std::string servername;
     servername = loadViewerParameters(filename.toStdString().c_str());
-    serverName->value(servername.c_str());
+    serverName->setText(servername.c_str());
   } catch (std::exception& e) {
     QMessageBox* dlg;
     std::string msg;
 
     vlog.error("%s", e.what());
 
-    dlg = new QMessageBox;
+    dlg = new QMessageBox(this);
     dlg->setIcon(QMessageBox::Critical);
     dlg->setWindowTitle(_("Error"));
     msg = core::format(_("Unable to load the specified configuration "
@@ -260,9 +202,9 @@ void ServerDialog::handleLoadSelected(const QString& filename)
 
 void ServerDialog::handleSaveAs()
 {
-  delete fileChooser;
+  QFileDialog *fileChooser;
 
-  fileChooser = new QFileDialog;
+  fileChooser = new QFileDialog(this);
   fileChooser->setWindowTitle(_("Save the TigerVNC configuration to file"));
   fileChooser->setDirectory(core::getuserhomedir());
   fileChooser->setAcceptMode(QFileDialog::AcceptSave);
@@ -286,10 +228,10 @@ void ServerDialog::handleSaveAsSelected(const QString& filename)
   if (f) {
     // The file already exists.
     fclose(f);
+    QMessageBox* saveConflictDialog;
     std::string msg;
 
-    delete saveConflictDialog;
-    saveConflictDialog = new QMessageBox;
+    saveConflictDialog = new QMessageBox(this);
     saveConflictDialog->setIcon(QMessageBox::Warning);
     saveConflictDialog->setWindowTitle(_("File already exists"));
     msg = core::format(_("%s already exists. Do you want to "
@@ -313,17 +255,18 @@ void ServerDialog::handleSaveAsSelected(const QString& filename)
 
 void ServerDialog::finishSaveAs(const QString& filename)
 {
-  const char* servername = serverName->value();
+  std::string servername = serverName->text().toStdString();
 
   try {
-    saveViewerParameters(filename.toStdString().c_str(), servername);
+    saveViewerParameters(filename.toStdString().c_str(),
+                         servername.c_str());
   } catch (std::exception& e) {
     QMessageBox* dlg;
     std::string msg;
 
     vlog.error("%s", e.what());
 
-    dlg = new QMessageBox;
+    dlg = new QMessageBox(this);
     dlg->setIcon(QMessageBox::Critical);
     dlg->setWindowTitle(_("Error"));
     msg = core::format(_("Unable to save the specified configuration "
@@ -336,29 +279,20 @@ void ServerDialog::finishSaveAs(const QString& filename)
 }
 
 
-void ServerDialog::handleCancel()
-{
-  result_ = 0;
-  hide();
-}
-
-
 void ServerDialog::handleConnect()
 {
-  const char* servername = serverName->value();
-
-  result_ = 1;
+  std::string servername = serverName->text().toStdString();
 
   try {
-    saveViewerParameters(nullptr, servername);
+    saveViewerParameters(nullptr, servername.c_str());
   } catch (std::exception& e) {
     vlog.error(_("Unable to save the default configuration: %s"),
                e.what());
   }
 
   // avoid duplicates in the history
-  serverHistory.remove(servername);
-  serverHistory.insert(serverHistory.begin(), servername);
+  serverHistory.remove(servername.c_str());
+  serverHistory.insert(serverHistory.begin(), servername.c_str());
 
   try {
     saveServerHistory();
@@ -366,7 +300,7 @@ void ServerDialog::handleConnect()
     vlog.error(_("Unable to save the server history: %s"), e.what());
   }
 
-  hide();
+  accept();
 }
 
 
