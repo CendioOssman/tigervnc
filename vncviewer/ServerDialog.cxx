@@ -25,6 +25,7 @@
 #include <algorithm>
 
 #include <QBoxLayout>
+#include <QComboBox>
 #include <QCompleter>
 #include <QFileDialog>
 #include <QFormLayout>
@@ -66,7 +67,8 @@ ServerDialog::ServerDialog(QWidget* parent)
   form = new QFormLayout;
   layout->addLayout(form);
 
-  serverName = new QLineEdit;
+  serverName = new QComboBox;
+  serverName->setEditable(true);
   form->addRow(_("VNC server:"), serverName);
 
   box = new QHBoxLayout;
@@ -139,19 +141,20 @@ ServerDialog::ServerDialog(QWidget* parent)
   QCompleter* completer = new QCompleter(strlist, this);
   completer->setCaseSensitivity(Qt::CaseInsensitive);
   completer->setFilterMode(Qt::MatchContains);
+  serverName->addItems(strlist);
   serverName->setCompleter(completer);
 }
 
 
 std::string ServerDialog::getServerName()
 {
-  return serverName->text().toStdString();
+  return serverName->currentText().toStdString();
 }
 
 
 void ServerDialog::setServerName(const char* servername)
 {
-  serverName->setText(servername);
+  serverName->setCurrentText(servername);
 }
 
 
@@ -180,7 +183,7 @@ void ServerDialog::handleLoadSelected(const QString& filename)
   try {
     std::string servername;
     servername = loadViewerParameters(filename.toStdString().c_str());
-    serverName->setText(servername.c_str());
+    serverName->setCurrentText(servername.c_str());
   } catch (std::exception& e) {
     QMessageBox* dlg;
     std::string msg;
@@ -255,7 +258,7 @@ void ServerDialog::handleSaveAsSelected(const QString& filename)
 
 void ServerDialog::finishSaveAs(const QString& filename)
 {
-  std::string servername = serverName->text().toStdString();
+  std::string servername = serverName->currentText().toStdString();
 
   try {
     saveViewerParameters(filename.toStdString().c_str(),
@@ -281,7 +284,7 @@ void ServerDialog::finishSaveAs(const QString& filename)
 
 void ServerDialog::handleConnect()
 {
-  std::string servername = serverName->text().toStdString();
+  std::string servername = serverName->currentText().toStdString();
 
   try {
     saveViewerParameters(nullptr, servername.c_str());

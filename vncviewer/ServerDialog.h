@@ -24,7 +24,7 @@
 
 #include <QDialog>
 
-class QLineEdit;
+class QComboBox;
 class QString;
 
 class ServerDialog : public QDialog {
@@ -52,7 +52,7 @@ private:
   static std::string serverHistoryNormalize(const std::string s);
 
 protected:
-  QLineEdit* serverName;
+  QComboBox* serverName;
   std::list<std::string> serverHistory;
 };
 
