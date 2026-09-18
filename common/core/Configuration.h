@@ -196,6 +196,7 @@ namespace core {
     StringParameter(const char* name_, const char* desc_, const char* v);
     using VoidParameter::setParam;
     bool setParam(const char* value) override;
+    virtual bool setParam(const std::string& value);
     std::string getDefaultStr() const override;
     std::string getValueStr() const override;
     operator const char*() const;
