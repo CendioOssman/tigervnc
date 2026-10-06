@@ -111,15 +111,15 @@ private:
 
   void maximizeWindow();
 
-  static void handleResizeTimeout(void *data);
-  static void reconfigureFullscreen(void *data);
+  void handleResizeTimeout();
+  void reconfigureFullscreen();
   void remoteResize();
 
   void repositionWidgets();
 
   static void handleOptions(void *data);
 
-  static void handleFullscreenTimeout(void *data);
+  void handleFullscreenTimeout();
 
   void scrollTo(int x, int y);
 
@@ -134,11 +134,13 @@ private:
   bool firstUpdate;
   bool delayedFullscreen;
   bool sentDesktopSize;
+  QTimer* fullscreenTimer;
 
   bool pendingRemoteResize;
   struct timeval lastResize;
   int lastResizeWidth, lastResizeHeight;
   rfb::ScreenSet lastResizeLayout;
+  QTimer* resizeTimer;
 
   bool keyboardGrabbed;
   bool mouseGrabbed;

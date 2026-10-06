@@ -110,7 +110,7 @@ private:
   void flushPendingClipboard();
 
   void handlePointerEvent(const core::Point& pos, uint16_t buttonMask);
-  static void handlePointerTimeout(void *data);
+  void handlePointerTimeout();
 
   void resetKeyboard();
 
@@ -137,6 +137,7 @@ private:
 
   core::Point lastPointerPos;
   uint16_t lastButtonMask;
+  QTimer* mousePointerTimer;
 
   double lastMagnitudeX;
   double lastMagnitudeY;

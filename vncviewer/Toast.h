@@ -56,7 +56,7 @@ public:
 
 protected:
   void addOverlay(const char* text);
-  static void updateOverlay(void *data);
+  void updateOverlay();
 
 private:
   Fl_Widget* parent;
@@ -69,6 +69,8 @@ private:
 
   std::list<Overlay> overlays;
   std::map<std::string, time_t> overlayTimes;
+
+  QTimer* updateTimer;
 };
 
 #endif

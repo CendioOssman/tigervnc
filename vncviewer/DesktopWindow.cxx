@@ -30,6 +30,7 @@
 
 #include <QApplication>
 #include <QScreen>
+#include <QTimer>
 
 #include <core/Configuration.h>
 #include <core/LogWriter.h>
@@ -109,22 +110,26 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
   // Hack. See below...
   fl_add_event_dispatch(fltkDispatch, this);
 
+  resizeTimer = new QTimer(this);
+  resizeTimer->setSingleShot(true);
+  connect(resizeTimer, &QTimer::timeout, this,
+          &DesktopWindow::handleResizeTimeout);
+
   // Screens removed or added. Recreate fullscreen window if
   // necessary. On Windows, adding a second screen only works
   // reliable if we are using a timer. Otherwise, the window will
   // not be resized to cover the new screen. A timer makes sense
   // also on other systems, to make sure that whatever desktop
   // environment has a chance to deal with things before we do.
-  connect(qApp, &QGuiApplication::screenAdded, this,
-          [this]() {
-            Fl::remove_timeout(reconfigureFullscreen);
-            Fl::add_timeout(0.5, reconfigureFullscreen, this);
-          });
-  connect(qApp, &QGuiApplication::screenRemoved, this,
-          [this]() {
-            Fl::remove_timeout(reconfigureFullscreen);
-            Fl::add_timeout(0.5, reconfigureFullscreen, this);
-          });
+  QTimer* screensTimer = new QTimer(this);
+  screensTimer->setInterval(500);
+  screensTimer->setSingleShot(true);
+  connect(screensTimer, &QTimer::timeout, this,
+          &DesktopWindow::reconfigureFullscreen);
+  connect(qApp, &QGuiApplication::screenAdded, screensTimer,
+          [screensTimer]() { screensTimer->start(); });
+  connect(qApp, &QGuiApplication::screenRemoved, screensTimer,
+          [screensTimer]() { screensTimer->start(); });
 
   // Support for -geometry option. Note that although we do support
   // negative coordinates, we do not support -XOFF-YOFF (ie
@@ -192,6 +197,11 @@ DesktopWindow::DesktopWindow(int w, int h, CConn* cc_)
     size(w, h);
   }
 
+  fullscreenTimer = new QTimer(this);
+  fullscreenTimer->setSingleShot(true);
+  connect(fullscreenTimer, &QTimer::timeout, this,
+          &DesktopWindow::handleFullscreenTimeout);
+
   if (fullScreen) {
     // Hack: Window managers seem to be rather crappy at respecting
     // fullscreen hints on initial windows. So on X11 we'll have to
@@ -252,13 +262,6 @@ DesktopWindow::~DesktopWindow()
   // cleaned up on all platforms
   ungrabPointer();
   ungrabKeyboard();
-
-  // Unregister all timeouts in case they get a change tro trigger
-  // again later when this object is already gone.
-  Fl::remove_timeout(handleResizeTimeout, this);
-  Fl::remove_timeout(reconfigureFullscreen, this);
-  Fl::remove_timeout(handleFullscreenTimeout, this);
-  Fl::remove_idle(checkFocus, this);
 
   OptionsDialog::removeCallback(handleOptions);
 
@@ -367,7 +370,7 @@ void DesktopWindow::resizeFramebuffer(int new_w, int new_h)
   // keep things that way for the new size, otherwise just keep things
   // like they are.
   if (!fullscreen_active() && !maximized && !pendingRemoteResize &&
-      !Fl::has_timeout(handleResizeTimeout, this)) {
+      !resizeTimer->isActive()) {
     if ((w() == viewport->w()) && (h() == viewport->h()))
       size(new_w, new_h);
   }
@@ -670,7 +673,7 @@ void DesktopWindow::fullScreenEvent()
     // FIXME: There is some race during initial full screen where we
     //        fail to give focus to the popup, but we can work around
     //        it using a timer
-    Fl::add_timeout(0, [](void*) { cocoa_is_trusted(true); }, nullptr);
+    QTimer::singleShot(0, this, []() { cocoa_is_trusted(false); });
   }
 #endif
 
@@ -684,10 +687,8 @@ void DesktopWindow::fullScreenEvent()
 
   // The window manager respected our full screen request, but we
   // still need to wait a bit long for it to finish resizing us
-  if (delayedFullscreen && fullscreen_active()) {
-    Fl::remove_timeout(handleFullscreenTimeout, this);
-    Fl::add_timeout(0.1, handleFullscreenTimeout, this);
-  }
+  if (delayedFullscreen && fullscreen_active())
+    fullscreenTimer->start(100);
 }
 
 void DesktopWindow::enterEvent()
@@ -742,7 +743,7 @@ void DesktopWindow::showEvent()
     // Hack: Fullscreen requests may be ignored, so we need a
     // timeout for when we should stop waiting. We also need to wait
     // for the resize, which can come after the fullscreen event.
-    Fl::add_timeout(0.5, handleFullscreenTimeout, this);
+    fullscreenTimer->start(500);
     fullscreen_on();
   }
 }
@@ -1080,24 +1081,16 @@ void DesktopWindow::maximizeWindow()
 }
 
 
-void DesktopWindow::handleResizeTimeout(void *data)
+void DesktopWindow::handleResizeTimeout()
 {
-  DesktopWindow *self = (DesktopWindow *)data;
-
-  assert(self);
-
-  self->remoteResize();
+  remoteResize();
 }
 
 
-void DesktopWindow::reconfigureFullscreen(void *data)
+void DesktopWindow::reconfigureFullscreen()
 {
-  DesktopWindow *self = (DesktopWindow *)data;
-
-  assert(self);
-
-  if (self->fullscreen_active())
-    self->fullscreen_on();
+  if (fullscreen_active())
+    fullscreen_on();
 }
 
 
@@ -1128,9 +1121,7 @@ void DesktopWindow::remoteResize()
 
   // And no more than once every 100ms
   if (core::msSince(&lastResize) < 100) {
-    Fl::remove_timeout(handleResizeTimeout, this);
-    Fl::add_timeout((100.0 - core::msSince(&lastResize)) / 1000.0,
-                    handleResizeTimeout, this);
+    resizeTimer->start((100.0 - core::msSince(&lastResize)) / 1000);
     return;
   }
 
@@ -1405,18 +1396,14 @@ void DesktopWindow::handleOptions(void *data)
     self->fullscreen_off();
 }
 
-void DesktopWindow::handleFullscreenTimeout(void *data)
+void DesktopWindow::handleFullscreenTimeout()
 {
-  DesktopWindow *self = (DesktopWindow *)data;
-
-  assert(self);
-
   // We are here because we got tired of waiting for the window manager
   // to finish switching to fullscreen mode, or because we are waiting
   // for all resize events so we get our final position
 
-  self->delayedFullscreen = false;
-  self->remoteResize();
+  delayedFullscreen = false;
+  remoteResize();
 }
 
 void DesktopWindow::scrollTo(int x, int y)

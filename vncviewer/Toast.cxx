@@ -23,10 +23,8 @@
 
 #include <time.h>
 
-// FIXME: workaround to avoid X11 headers before Qt
-#include <QObject>
+#include <QTimer>
 
-#include <FL/Fl.H>
 #include <FL/Fl_Image_Surface.H>
 #include <FL/Fl_RGB_Image.H>
 #include <FL/fl_draw.H>
@@ -42,12 +40,13 @@ const time_t TOAST_REPEAT_TIMEOUT = 600;
 Toast::Toast(Fl_Widget* parent_)
   : parent(parent_)
 {
+  updateTimer = new QTimer(this);
+  updateTimer->setSingleShot(true);
+  connect(updateTimer, &QTimer::timeout, this, &Toast::updateOverlay);
 }
 
 Toast::~Toast()
 {
-  Fl::remove_timeout(updateOverlay, this);
-
   while (!overlays.empty()) {
     delete overlays.front().surface;
     overlays.pop_front();
@@ -227,21 +226,18 @@ void Toast::addOverlay(const char* text)
   delete [] buffer;
 
   if (overlays.size() == 1)
-    Fl::add_timeout(0.5, updateOverlay, this);
+    updateTimer->start(500);
 }
 
-void Toast::updateOverlay(void *data)
+void Toast::updateOverlay()
 {
-  Toast *self;
   struct Overlay* overlay;
   unsigned elapsed;
 
-  self = (Toast*)data;
-
-  if (self->overlays.empty())
+  if (overlays.empty())
     return;
 
-  overlay = &self->overlays.front();
+  overlay = &overlays.front();
 
   if (overlay->start.tv_sec == 0)
     gettimeofday(&overlay->start, nullptr);
@@ -250,20 +246,20 @@ void Toast::updateOverlay(void *data)
 
   if (elapsed < 500) {
     overlay->alpha = (unsigned)255 * elapsed / 500;
-    Fl::add_timeout(1.0/60, updateOverlay, self);
+    updateTimer->start(1000/60);
   } else if (elapsed < 3500) {
     overlay->alpha = 255;
-    Fl::add_timeout(3.0, updateOverlay, self);
+    updateTimer->start(3000);
   } else if (elapsed < 4000) {
     overlay->alpha = (unsigned)255 * (4000 - elapsed) / 500;
-    Fl::add_timeout(1.0/60, updateOverlay, self);
+    updateTimer->start(1000/60);
   } else {
     delete overlay->surface;
-    self->overlays.pop_front();
-    if (!self->overlays.empty())
-      Fl::add_timeout(0.5, updateOverlay, self);
+    overlays.pop_front();
+    if (!overlays.empty())
+      updateTimer->start(500);
   }
 
   // FIXME: Only damage relevant area
-  self->parent->damage(FL_DAMAGE_USER1);
+  parent->damage(FL_DAMAGE_USER1);
 }
