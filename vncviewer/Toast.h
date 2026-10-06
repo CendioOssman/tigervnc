@@ -26,11 +26,15 @@
 #include <map>
 #include <string>
 
+#include <QObject>
+
 class Fl_Widget;
 
 class Surface;
 
-class Toast {
+class Toast : public QObject {
+  Q_OBJECT
+
 public:
   Toast(Fl_Widget* parent);
   virtual ~Toast();

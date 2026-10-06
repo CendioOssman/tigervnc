@@ -23,6 +23,9 @@
 
 #include <time.h>
 
+// FIXME: workaround to avoid X11 headers before Qt
+#include <QObject>
+
 #include <FL/Fl.H>
 #include <FL/Fl_Image_Surface.H>
 #include <FL/Fl_RGB_Image.H>
