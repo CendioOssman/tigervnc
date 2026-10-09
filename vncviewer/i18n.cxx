@@ -29,10 +29,6 @@
 #include <QString>
 #include <QTranslator>
 
-#include <FL/Fl_File_Chooser.H>
-
-#include <FL/fl_ask.H>
-
 #include "i18n.h"
 
 static bool load_catalog(const char* catalog, const QString& location)
@@ -70,35 +66,6 @@ static void load_catalogs(const QString& location)
   };
   for (const char* catalog : catalogs)
     load_catalog(catalog, location);
-}
-
-void i18n_init()
-{
-  // FLTK exposes these so that we can translate them.
-  fl_no     = _("No");
-  fl_yes    = _("Yes");
-  fl_ok     = _("OK");
-  fl_cancel = _("Cancel");
-  fl_close  = _("Close");
-
-  Fl_File_Chooser::add_favorites_label = _("Add to Favorites");
-  Fl_File_Chooser::all_files_label = _("All Files (*)");
-  Fl_File_Chooser::custom_filter_label = _("Custom Filter");
-  Fl_File_Chooser::existing_file_label = _("Please choose an existing file!");
-  Fl_File_Chooser::favorites_label = _("Favorites");
-  Fl_File_Chooser::filename_label = _("Filename:");
-#ifdef WIN32
-  Fl_File_Chooser::filesystems_label = _("My Computer");
-#else
-  Fl_File_Chooser::filesystems_label = _("File Systems");
-#endif // WIN32
-  Fl_File_Chooser::manage_favorites_label = _("Manage Favorites");
-  Fl_File_Chooser::new_directory_label = _("New Directory?");
-  Fl_File_Chooser::new_directory_tooltip = _("Create a new directory.");
-  Fl_File_Chooser::preview_label = _("Preview");
-  Fl_File_Chooser::save_label = _("Save");
-  Fl_File_Chooser::show_label = _("Show:");
-  Fl_File_Chooser::hidden_label = _("Show hidden files");
 }
 
 void i18n_qt_init()

@@ -18,7 +18,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force vcpkg-cache
           vcpkg install --triplet x64-windows `
-            zlib libjpeg-turbo pixman fltk nettle qtbase gtest "gettext[tools]"
+            zlib libjpeg-turbo pixman nettle qtbase gtest "gettext[tools]"
       - name: Configure
         run: |
           $vcpkg = $env:VCPKG_INSTALLATION_ROOT

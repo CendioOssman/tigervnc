@@ -20,7 +20,6 @@
 #ifndef __I18N_H__
 #define __I18N_H__
 
-void i18n_init();
 void i18n_qt_init();
 
 #endif

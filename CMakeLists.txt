@@ -279,61 +279,6 @@ endif()
 
 trioption(BUILD_VIEWER "Build TigerVNC viewer")
 if(BUILD_VIEWER)
-  # Check for FLTK
-  set(FLTK_SKIP_FLUID TRUE)
-  set(FLTK_SKIP_OPENGL TRUE)
-  set(FLTK_SKIP_FORMS TRUE)
-  if(BUILD_VIEWER STREQUAL "AUTO")
-    find_package(FLTK)
-  else()
-    find_package(FLTK REQUIRED)
-  endif()
-
-  if(NOT FLTK_FOUND)
-    message(WARNING "FLTK NOT found. TigerVNC viewer disabled.")
-    set(BUILD_VIEWER 0)
-  endif()
-
-  if(UNIX AND NOT APPLE)
-    # No proper handling for extra X11 libs that FLTK might need...
-    if(X11_Xft_FOUND)
-      # Xft headers include references to fontconfig, so we need
-      # to link to that as well
-      find_library(FONTCONFIG_LIB fontconfig)
-      set(FLTK_LIBRARIES ${FLTK_LIBRARIES} ${X11_Xft_LIB} ${FONTCONFIG_LIB})
-    endif()
-    if(X11_Xinerama_FOUND)
-      set(FLTK_LIBRARIES ${FLTK_LIBRARIES} ${X11_Xinerama_LIB})
-    endif()
-    if(X11_Xfixes_FOUND)
-      set(FLTK_LIBRARIES ${FLTK_LIBRARIES} ${X11_Xfixes_LIB})
-    endif()
-    if(X11_Xcursor_FOUND)
-      set(FLTK_LIBRARIES ${FLTK_LIBRARIES} ${X11_Xcursor_LIB})
-    endif()
-    if(X11_Xrender_FOUND)
-      set(FLTK_LIBRARIES ${FLTK_LIBRARIES} ${X11_Xrender_LIB})
-    endif()
-  endif()
-
-  if(FLTK_FOUND)
-    if(NOT MSVC)
-      set(CMAKE_REQUIRED_FLAGS "-Wno-error")
-    endif()
-    set(CMAKE_REQUIRED_INCLUDES ${FLTK_INCLUDE_DIR})
-    set(CMAKE_REQUIRED_LIBRARIES ${FLTK_LIBRARIES})
-
-    check_cxx_source_compiles("#include <FL/Fl.H>\n#if FL_MAJOR_VERSION != 1 || FL_MINOR_VERSION != 3\n#error Wrong FLTK version\n#endif\nint main(int, char**) { return 0; }" OK_FLTK_VERSION)
-    if(NOT OK_FLTK_VERSION)
-      message(FATAL_ERROR "Incompatible version of FLTK")
-    endif()
-
-    set(CMAKE_REQUIRED_FLAGS)
-    set(CMAKE_REQUIRED_INCLUDES)
-    set(CMAKE_REQUIRED_LIBRARIES)
-  endif()
-endif()
-if(BUILD_VIEWER)
   # We maintain Qt 5.15 compatibility for RHEL 8
   if(DEFINED QT_SELECT)
     set(QT_VERSION_MAJOR ${QT_SELECT})
@@ -354,14 +299,6 @@ if(BUILD_VIEWER)
   endif()
 
   if(Qt${QT_VERSION_MAJOR}_FOUND)
-    if(QT_VERSION_MAJOR LESS_EQUAL 5)
-      find_package(Qt${QT_VERSION_MAJOR}Gui COMPONENTS Private REQUIRED)
-    else()
-      # FIXME: This component is not exported on older Qt versions, but
-      #        the target is still available
-      find_package(Qt${QT_VERSION_MAJOR} COMPONENTS GuiPrivate REQUIRED)
-    endif()
-
     if(UNIX AND NOT APPLE)
       if(QT_VERSION_MAJOR LESS_EQUAL 5)
         if(BUILD_VIEWER STREQUAL "AUTO")
@@ -369,14 +306,6 @@ if(BUILD_VIEWER)
         else()
           find_package(Qt${QT_VERSION_MAJOR} COMPONENTS X11Extras REQUIRED)
         endif()
-
-        find_package(Qt${QT_VERSION_MAJOR} COMPONENTS XcbQpa REQUIRED)
-        find_package(Qt${QT_VERSION_MAJOR}EdidSupport COMPONENTS Private REQUIRED)
-      else()
-        # FIXME: This component is only exported on Red Hat platforms,
-        #        and not available at all in standard Qt
-        # https://qt-project.atlassian.net/browse/QTBUG-147853
-        find_package(Qt${QT_VERSION_MAJOR}XcbQpaPrivate REQUIRED)
       endif()
     endif()
   endif()

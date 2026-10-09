@@ -50,7 +50,7 @@ All Platforms
 
 All versions of TigerVNC contain the following programs:
 
-* vncviewer - the cross-platform TigerVNC Viewer, written using FLTK.
+* vncviewer - the cross-platform TigerVNC Viewer.
               vncviewer connects to a VNC server and allows you to interact
               with the remote desktop being displayed by the VNC server.  The
               VNC server can be running on a Windows or a Unix/Linux machine.
