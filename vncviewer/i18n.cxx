@@ -33,8 +33,6 @@
 
 #include <FL/fl_ask.H>
 
-#include "fltk/Fl_Password_Input.h"
-
 #include "i18n.h"
 
 static bool load_catalog(const char* catalog, const QString& location)
@@ -82,8 +80,6 @@ void i18n_init()
   fl_ok     = _("OK");
   fl_cancel = _("Cancel");
   fl_close  = _("Close");
-
-  Fl_Password_Input::caps_warning_tooltip = _("Caps lock is active");
 
   Fl_File_Chooser::add_favorites_label = _("Add to Favorites");
   Fl_File_Chooser::all_files_label = _("All Files (*)");

@@ -104,7 +104,8 @@ private:
 
   void handleUpdateTimeout(core::Timer*);
 
-  void handleAuthFinished();
+  void handleAuthOK();
+  void handleAuthCancel();
 
   void handleCertificateOK();
   void handleCertificateCancel();

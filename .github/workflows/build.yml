@@ -19,6 +19,7 @@ jobs:
             libgnutls28-dev nettle-dev libgmp-dev \
             qt6-base-dev qt6-base-private-dev \
             libxtst-dev libxdamage-dev libxfixes-dev libxrandr-dev \
+            libxcb-xkb-dev \
             libpam-dev libsystemd-dev libpwquality-dev \
             libavcodec-dev libavutil-dev libswscale-dev \
             libpulse-dev \
@@ -91,6 +92,7 @@ jobs:
             libpixman-1-dev libjpeg-turbo8-dev \
             qt6-base-dev qt6-base-private-dev \
             libxtst-dev libxdamage-dev libxfixes-dev libxrandr-dev \
+            libxcb-xkb-dev \
             uuid-dev libglib2.0-dev libpipewire-0.3-dev \
             libwayland-dev libxkbcommon-dev \
             libgtest-dev

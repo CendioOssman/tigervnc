@@ -26,6 +26,7 @@ Build-Depends:
  libpng-dev,
  libxrandr-dev,
  libxdamage-dev,
+ libxcb-xkb-dev,
  libfltk1.3-dev,
  qt6-base-dev,
  qt6-base-private-dev,

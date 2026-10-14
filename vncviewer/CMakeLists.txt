@@ -8,10 +8,10 @@ add_executable(vncviewer
   fltk/Fl_Suggestion_Window_.cxx
   fltk/Fl_Suggestion_Input.cxx
   fltk/Fl_Navigation.cxx
-  fltk/Fl_Password_Input.cxx
   fltk/event_dispatch_handler.cxx
   fltk/theme.cxx
   qt/QFLTKEventDispatcher.cxx
+  qt/QPasswordEdit.cxx
   AuthDialog.cxx
   BaseTouchHandler.cxx
   CConn.cxx
@@ -36,6 +36,8 @@ add_executable(vncviewer
   parameters.cxx
   MonitorIndicesParameter.cxx
   vncviewer.cxx)
+
+target_sources(vncviewer PRIVATE vncviewer.qrc)
 
 if(WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
   set_target_properties(vncviewer PROPERTIES WIN32_EXECUTABLE TRUE)
@@ -82,6 +84,7 @@ target_link_libraries(vncviewer PRIVATE rfbclient rfb network rdr core)
 target_link_libraries(vncviewer PRIVATE ${FLTK_LIBRARIES})
 
 set_target_properties(vncviewer PROPERTIES AUTOMOC ON)
+set_target_properties(vncviewer PROPERTIES AUTORCC ON)
 target_link_libraries(vncviewer PRIVATE
   Qt${QT_VERSION_MAJOR}::Core
   Qt${QT_VERSION_MAJOR}::Widgets)
@@ -172,6 +175,8 @@ else()
   if(X11_Xrandr_LIB)
     target_link_libraries(vncviewer PRIVATE ${X11_Xrandr_LIB})
   endif()
+
+  target_link_libraries(vncviewer PRIVATE XCB::XKB)
 endif()
 
 if(QT_VERSION_MAJOR EQUAL 6)

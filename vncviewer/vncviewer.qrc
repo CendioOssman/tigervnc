@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+    <file alias="secure.xpm">../media/secure.xpm</file>
+    <file alias="insecure.xpm">../media/insecure.xpm</file>
+    <file alias="open_eye.xpm">qt/open_eye.xpm</file>
+    <file alias="closed_eye.xpm">qt/closed_eye.xpm</file>
+    <file alias="shift_lock.xpm">qt/shift_lock.xpm</file>
+    </qresource>
+</RCC>

@@ -416,11 +416,11 @@ void CConn::credentialsRequested(bool secure, bool needsUser,
 
   assert(authDialog == nullptr);
   authDialog = new AuthDialog(secure, needsUser, needsPassword);
-  authDialog->finished(
-    [](Fl_Widget*, void* data) {
-      ((CConn*)data)->handleAuthFinished();
-    },
-    this);
+  QObject::connect(authDialog, &QDialog::accepted,
+                   [this]() { this->handleAuthOK(); });
+  QObject::connect(authDialog, &QDialog::rejected,
+                   [this]() { this->handleAuthCancel(); });
+
   authDialog->show();
 }
 
@@ -900,20 +900,13 @@ void CConn::handleUpdateTimeout(core::Timer*)
   updateTimer.repeat();
 }
 
-void CConn::handleAuthFinished()
+void CConn::handleAuthOK()
 {
   bool keepPasswd;
   std::string user;
   std::string password;
 
-  if (authDialog->result() != 1) {
-    Fl::delete_widget(authDialog);
-    authDialog = nullptr;
-
-    vlog.info(_("Authentication cancelled"));
-    disconnect();
-    return;
-  }
+  assert(authDialog);
 
   if (reconnectOnError)
     keepPasswd = authDialog->getKeepPassword();
@@ -929,11 +922,22 @@ void CConn::handleAuthFinished()
   if (keepPasswd)
     savedPassword = authDialog->getPassword();
 
-  Fl::delete_widget(authDialog);
+  authDialog->deleteLater();
   authDialog = nullptr;
 
   setCredentials(user, password);
   resumeProcessing();
+}
+
+void CConn::handleAuthCancel()
+{
+  assert(authDialog);
+
+  authDialog->deleteLater();
+  authDialog = nullptr;
+
+  vlog.info(_("Authentication cancelled"));
+  disconnect();
 }
 
 #ifdef HAVE_GNUTLS
