@@ -37,9 +37,10 @@ public:
   Keyboard(KeyboardHandler* handler_) : handler(handler_) {};
   virtual ~Keyboard() {};
 
-  virtual bool isKeyboardReset(const void* event) { (void)event; return false; }
+  virtual bool isKeyboardReset(const char* eventType, void* message)
+    { (void)eventType; (void)message; return false; }
 
-  virtual bool handleEvent(const void* event) = 0;
+  virtual bool handleEvent(const char* eventType, void* message) = 0;
   virtual std::list<uint32_t> translateToKeySyms(int systemKeyCode) = 0;
 
   virtual void reset() {};

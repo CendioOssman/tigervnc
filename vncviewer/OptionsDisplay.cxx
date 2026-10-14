@@ -87,7 +87,7 @@ OptionsDisplay::OptionsDisplay(QWidget* parent)
 #elif defined(__APPLE__)
     supportsMultihead = !cocoa_screens_have_separate_spaces();
 #else
-    // FLTK will emulate multihead support without a WM
+    // We will emulate multihead support without a WM
     if (!x11_has_wm())
       supportsMultihead = true;
     else

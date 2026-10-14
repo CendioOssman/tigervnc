@@ -25,8 +25,17 @@
 #include <algorithm>
 #include <stdexcept>
 
+#include <QtGlobal>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QX11Info>
+#else
+#include <QGuiApplication>
+#include <xcb/xcb.h>
+#endif
+
 #include <X11/XKBlib.h>
-#include <FL/x.H>
+#define XK_MISCELLANY
+#include <X11/keysymdef.h>
 
 #include <core/LogWriter.h>
 #include <core/i18n.h>
@@ -43,19 +52,31 @@ extern const unsigned int code_map_xkb_to_qnum_len;
 
 static core::LogWriter vlog("KeyboardX11");
 
+static Display* qt_display()
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  return QX11Info::display();
+#else
+  return qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+}
+
 KeyboardX11::KeyboardX11(KeyboardHandler* handler_)
   : Keyboard(handler_)
 {
+  Display* display;
   XkbDescPtr xkb;
   Status status;
 
-  XkbSetDetectableAutoRepeat(fl_display, True, nullptr);
+  display = qt_display();
 
-  xkb = XkbGetMap(fl_display, 0, XkbUseCoreKbd);
+  XkbSetDetectableAutoRepeat(display, True, nullptr);
+
+  xkb = XkbGetMap(display, 0, XkbUseCoreKbd);
   if (!xkb)
     throw std::runtime_error("XkbGetMap");
 
-  status = XkbGetNames(fl_display, XkbKeyNamesMask, xkb);
+  status = XkbGetNames(display, XkbKeyNamesMask, xkb);
   if (status != Success)
     throw std::runtime_error("XkbGetNames");
 
@@ -95,88 +116,46 @@ struct GrabInfo {
   bool found;
 };
 
-static Bool is_same_window(Display*, XEvent* event, XPointer arg)
+bool KeyboardX11::handleEvent(const char* eventType, void* message)
 {
-  GrabInfo* info = (GrabInfo*)arg;
+  Display* display;
+  const xcb_generic_event_t* xcbevent;
 
-  assert(info);
+  assert(eventType);
+  assert(message);
 
-  // Focus is returned to our window
-  if ((event->type == FocusIn) &&
-      (event->xfocus.window == info->window)) {
-    info->found = true;
-  }
+  if (strcmp(eventType, "xcb_generic_event_t") != 0)
+    return false;
 
-  // Focus got stolen yet again
-  if ((event->type == FocusOut) &&
-      (event->xfocus.window == info->window)) {
-    info->found = false;
-  }
+  display = qt_display();
 
-  return False;
-}
+  xcbevent = (xcb_generic_event_t*)message;
 
-bool KeyboardX11::isKeyboardReset(const void* event)
-{
-  const XEvent* xevent = (const XEvent*)event;
+  if (xcbevent->response_type == XCB_KEY_PRESS) {
+    const xcb_key_press_event_t* xcbkey;
 
-  assert(event);
-
-  if (xevent->type == FocusOut) {
-    if (xevent->xfocus.mode == NotifyGrab) {
-      GrabInfo info;
-      XEvent dummy;
-
-      // Something grabbed the keyboard, but we don't know if it was to
-      // ourselves or someone else
-
-      // Make sure we have all the queued events from the X server
-      XSync(fl_display, False);
-
-      // Check if we'll get the focus back right away
-      info.window = xevent->xfocus.window;
-      info.found = false;
-      XCheckIfEvent(fl_display, &dummy, is_same_window, (XPointer)&info);
-      if (info.found)
-        return false;
-
-      return true;
-    }
-  }
-
-  return false;
-}
-
-bool KeyboardX11::handleEvent(const void* event)
-{
-  const XEvent *xevent = (const XEvent*)event;
-
-  assert(event);
-
-  if (xevent->type == KeyPress) {
     int keycode;
     Bool ret;
     unsigned mods;
     KeySym keysym;
 
-    // FLTK likes to use this instead of CurrentTime, so we need to keep
-    // it updated now that we steal this event
-    fl_event_time = xevent->xkey.time;
+    xcbkey = (xcb_key_press_event_t*)xcbevent;
 
-    keycode = code_map_keycode_to_qnum[xevent->xkey.keycode];
+    keycode = code_map_keycode_to_qnum[xcbkey->detail];
 
-    ret = XkbLookupKeySym(fl_display, xevent->xkey.keycode,
-                          xevent->xkey.state, &mods, &keysym);
+    ret = XkbLookupKeySym(display, xcbkey->detail, xcbkey->state,
+                          &mods, &keysym);
     if (!ret || (keysym == NoSymbol)) {
       vlog.error(_("No symbol for key code %d (in the current state)"),
-                 (int)xevent->xkey.keycode);
+                 (int)xcbkey->detail);
     }
 
-    handler->handleKeyPress(xevent->xkey.keycode, keycode, keysym);
+    handler->handleKeyPress(xcbkey->detail, keycode, keysym);
     return true;
-  } else if (xevent->type == KeyRelease) {
-    fl_event_time = xevent->xkey.time;
-    handler->handleKeyRelease(xevent->xkey.keycode);
+  } else if (xcbevent->response_type == XCB_KEY_RELEASE) {
+    const xcb_key_release_event_t* xcbkey;
+    xcbkey = (xcb_key_release_event_t*)xcbevent;
+    handler->handleKeyRelease(xcbkey->detail);
     return true;
   }
 
@@ -190,7 +169,7 @@ std::list<uint32_t> KeyboardX11::translateToKeySyms(int systemKeyCode)
   std::list<uint32_t> keySyms;
   unsigned char group;
 
-  status = XkbGetState(fl_display, XkbUseCoreKbd, &state);
+  status = XkbGetState(qt_display(), XkbUseCoreKbd, &state);
   if (status != Success)
     return keySyms;
 
@@ -214,10 +193,13 @@ unsigned KeyboardX11::getLEDState()
 
   unsigned int mask;
 
+  Display* display;
   Status status;
   XkbStateRec xkbState;
 
-  status = XkbGetState(fl_display, XkbUseCoreKbd, &xkbState);
+  display = qt_display();
+
+  status = XkbGetState(display, XkbUseCoreKbd, &xkbState);
   if (status != Success) {
     vlog.error(_("Failed to get keyboard LED state: %d"), status);
     return rfb::ledUnknown;
@@ -244,7 +226,10 @@ void KeyboardX11::setLEDState(unsigned state)
   unsigned int affect, values;
   unsigned int mask;
 
+  Display* display;
   Bool ret;
+
+  display = qt_display();
 
   affect = values = 0;
 
@@ -262,20 +247,23 @@ void KeyboardX11::setLEDState(unsigned state)
   if (state & rfb::ledScrollLock)
     values |= mask;
 
-  ret = XkbLockModifiers(fl_display, XkbUseCoreKbd, affect, values);
+  ret = XkbLockModifiers(display, XkbUseCoreKbd, affect, values);
   if (!ret)
     vlog.error(_("Failed to update keyboard LED state: %d"), ret);
 }
 
 unsigned KeyboardX11::getModifierMask(uint32_t keysym)
 {
+  Display* display;
   XkbDescPtr xkb;
   unsigned int mask, keycode;
   XkbAction *act;
 
+  display = qt_display();
+
   mask = 0;
 
-  xkb = XkbGetMap(fl_display, XkbAllComponentsMask, XkbUseCoreKbd);
+  xkb = XkbGetMap(display, XkbAllComponentsMask, XkbUseCoreKbd);
   if (xkb == nullptr)
     return 0;
 
@@ -338,7 +326,7 @@ void KeyboardX11::translateToKeySyms(int systemKeyCode,
   KeySym ks;
   std::list<uint32_t>::const_iterator iter;
 
-  ks = XkbKeycodeToKeysym(fl_display, systemKeyCode, group, mods);
+  ks = XkbKeycodeToKeysym(qt_display(), systemKeyCode, group, mods);
   if (ks == NoSymbol)
     return;
 

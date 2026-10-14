@@ -29,7 +29,7 @@ public:
   KeyboardWin32(KeyboardHandler* handler);
   virtual ~KeyboardWin32();
 
-  bool handleEvent(const void* event) override;
+  bool handleEvent(const char* eventType, void* message) override;
   std::list<uint32_t> translateToKeySyms(int systemKeyCode) override;
 
   void reset() override;

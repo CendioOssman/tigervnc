@@ -24,25 +24,45 @@
 #include <limits.h>
 #include <unistd.h>
 
+#include <QtGlobal>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QX11Info>
+#else
+#include <QGuiApplication>
+#endif
+#include <QScreen>
+#include <QWidget>
+
+#include <X11/Xatom.h>
+#include <X11/extensions/Xinerama.h>
 #include <X11/extensions/XInput2.h>
 #include <X11/extensions/XI2.h>
-
-#include <FL/x.H>
 
 #include "x11.h"
 
 #define _NET_WM_STATE_ADD           1  /* add/set property */
 
+static Display* qt_display()
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+  return QX11Info::display();
+#else
+  return qApp->nativeInterface<QNativeInterface::QX11Application>()->display();
+#endif
+}
+
 bool x11_has_wm()
 {
+  Display* display = qt_display();
+
   Window* wmWindow;
 
   Atom actual_type;
   int actual_format;
   unsigned long nitems, bytes_after;
 
-  XGetWindowProperty(fl_display, XRootWindow(fl_display, fl_screen),
-                     XInternAtom(fl_display, "_NET_SUPPORTING_WM_CHECK", False),
+  XGetWindowProperty(display, XRootWindow(display, DefaultScreen(display)),
+                     XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", False),
                      0, 1, False, XA_WINDOW,
                      &actual_type, &actual_format, &nitems,
                      &bytes_after, (unsigned char**)&wmWindow);
@@ -51,8 +71,8 @@ bool x11_has_wm()
     return false;
 
   // Confirm WM is alive
-  XGetWindowProperty(fl_display, *wmWindow,
-                     XInternAtom(fl_display, "_NET_SUPPORTING_WM_CHECK", False),
+  XGetWindowProperty(display, *wmWindow,
+                     XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", False),
                      0, 1, False, XA_WINDOW,
                      &actual_type, &actual_format, &nitems,
                      &bytes_after, (unsigned char**)&wmWindow);
@@ -65,6 +85,8 @@ bool x11_has_wm()
 
 bool x11_wm_supports(const char* atom)
 {
+  Display* display = qt_display();
+
   Atom* supported;
   Atom desired;
 
@@ -75,15 +97,15 @@ bool x11_wm_supports(const char* atom)
   if (!x11_has_wm())
     return false;
 
-  XGetWindowProperty(fl_display, XRootWindow(fl_display, fl_screen),
-                     XInternAtom(fl_display, "_NET_SUPPORTED", False),
+  XGetWindowProperty(display, XRootWindow(display, DefaultScreen(display)),
+                     XInternAtom(display, "_NET_SUPPORTED", False),
                      0, LONG_MAX, False, XA_ATOM,
                      &actual_type, &actual_format, &nitems,
                      &bytes_after, (unsigned char**)&supported);
   if ((actual_type != XA_ATOM) || (actual_format != 32))
     return false;
 
-  desired = XInternAtom(fl_display, atom, False);
+  desired = XInternAtom(display, atom, False);
   for (unsigned long n = 0; n < nitems; n++) {
     if (supported[n] == desired)
       return true;
@@ -92,15 +114,17 @@ bool x11_wm_supports(const char* atom)
   return false;
 }
 
-void x11_win_maximize(Fl_Window* win)
+void x11_win_maximize(QWidget* win)
 {
-  Atom net_wm_state = XInternAtom (fl_display, "_NET_WM_STATE", 0);
-  Atom net_wm_state_maximized_vert = XInternAtom (fl_display, "_NET_WM_STATE_MAXIMIZED_VERT", 0);
-  Atom net_wm_state_maximized_horz = XInternAtom (fl_display, "_NET_WM_STATE_MAXIMIZED_HORZ", 0);
+  Display* display = qt_display();
+
+  Atom net_wm_state = XInternAtom (display, "_NET_WM_STATE", 0);
+  Atom net_wm_state_maximized_vert = XInternAtom (display, "_NET_WM_STATE_MAXIMIZED_VERT", 0);
+  Atom net_wm_state_maximized_horz = XInternAtom (display, "_NET_WM_STATE_MAXIMIZED_HORZ", 0);
 
   XEvent e;
   e.xany.type = ClientMessage;
-  e.xany.window = fl_xid(win);
+  e.xany.window = win->winId();
   e.xclient.message_type = net_wm_state;
   e.xclient.format = 32;
   e.xclient.data.l[0] = _NET_WM_STATE_ADD;
@@ -108,23 +132,25 @@ void x11_win_maximize(Fl_Window* win)
   e.xclient.data.l[2] = net_wm_state_maximized_horz;
   e.xclient.data.l[3] = 0;
   e.xclient.data.l[4] = 0;
-  XSendEvent(fl_display, RootWindow(fl_display, fl_screen), 0, SubstructureNotifyMask | SubstructureRedirectMask, &e);
+  XSendEvent(display, XRootWindow(display, DefaultScreen(display)), 0, SubstructureNotifyMask | SubstructureRedirectMask, &e);
 }
 
-bool x11_win_is_maximized(Fl_Window* win)
+bool x11_win_is_maximized(QWidget* win)
 {
+  Display* display = qt_display();
+
   bool maximized;
 
-  Atom net_wm_state = XInternAtom (fl_display, "_NET_WM_STATE", 0);
-  Atom net_wm_state_maximized_vert = XInternAtom (fl_display, "_NET_WM_STATE_MAXIMIZED_VERT", 0);
-  Atom net_wm_state_maximized_horz = XInternAtom (fl_display, "_NET_WM_STATE_MAXIMIZED_HORZ", 0);
+  Atom net_wm_state = XInternAtom (display, "_NET_WM_STATE", 0);
+  Atom net_wm_state_maximized_vert = XInternAtom (display, "_NET_WM_STATE_MAXIMIZED_VERT", 0);
+  Atom net_wm_state_maximized_horz = XInternAtom (display, "_NET_WM_STATE_MAXIMIZED_HORZ", 0);
 
   Atom type;
   int format;
   unsigned long nitems, remain;
   Atom *atoms;
 
-  XGetWindowProperty(fl_display, fl_xid(win), net_wm_state, 0, 1024,
+  XGetWindowProperty(display, win->winId(), net_wm_state, 0, 1024,
                      False, XA_ATOM, &type, &format, &nitems, &remain,
                      (unsigned char**)&atoms);
 
@@ -142,46 +168,89 @@ bool x11_win_is_maximized(Fl_Window* win)
   return maximized;
 }
 
-void x11_win_get_coords(Fl_Window* win, int* x, int* y, int* w, int* h)
+static bool x11_is_qscreen(QScreen* qscreen,
+                           XineramaScreenInfo* xscreen)
 {
-  XWindowAttributes actual;
-  Window cr;
-
-  assert(x);
-  assert(y);
-  assert(w);
-  assert(h);
-
-  XGetWindowAttributes(fl_display, fl_xid(win), &actual);
-
-  *x = actual.x;
-  *y = actual.y;
-
-  XTranslateCoordinates(fl_display, fl_xid(win), actual.root,
-                        0, 0, w, h, &cr);
+  return (qscreen->geometry().x() == xscreen->x_org &&
+          qscreen->geometry().y() == xscreen->y_org &&
+          qscreen->geometry().width() == xscreen->width &&
+          qscreen->geometry().height() == xscreen->height);
 }
 
-void x11_win_may_grab(Fl_Window* win)
+bool x11_fullscreen_screens(QWidget* window,
+                            QScreen* top, QScreen* bottom,
+                            QScreen* left, QScreen* right)
 {
+  Display* display = qt_display();
+  int screen = DefaultScreen(display);
+
+  XineramaScreenInfo* screens;
+  int i, number;
+
+  XEvent event;
+  int xtop, xbottom, xleft, xright;
+
+  screens = XineramaQueryScreens(display, &number);
+  if (number == 0)
+    return false;
+
+  xtop = xbottom = xleft = xright = -1;
+  for (i = 0; i < number; i++) {
+    if (x11_is_qscreen(top, &screens[i]))
+      xtop = i;
+    if (x11_is_qscreen(bottom, &screens[i]))
+      xbottom = i;
+    if (x11_is_qscreen(left, &screens[i]))
+      xleft = i;
+    if (x11_is_qscreen(right, &screens[i]))
+      xright = i;
+  }
+
+  if ((xtop == -1) || (xbottom == -1) ||
+      (xleft == -1) || (xright == -1))
+    return false;
+
+  event.xany.type = ClientMessage;
+  event.xany.window = window->winId();
+  event.xclient.message_type = XInternAtom(display, "_NET_WM_FULLSCREEN_MONITORS", 0);
+  event.xclient.format = 32;
+  event.xclient.data.l[0] = xtop;
+  event.xclient.data.l[1] = xbottom;
+  event.xclient.data.l[2] = xleft;
+  event.xclient.data.l[3] = xright;
+  event.xclient.data.l[4] = 0;
+  XSendEvent(display, RootWindow(display, screen),
+             0, SubstructureNotifyMask | SubstructureRedirectMask,
+             &event);
+
+  return true;
+}
+
+void x11_win_may_grab(QWidget* win)
+{
+  Display* display = qt_display();
+
   XEvent e;
 
   e.xany.type = ClientMessage;
-  e.xany.window = fl_xid(win);
-  e.xclient.message_type = XInternAtom (fl_display, "_XWAYLAND_MAY_GRAB_KEYBOARD", 0);
+  e.xany.window = win->winId();
+  e.xclient.message_type = XInternAtom (display, "_XWAYLAND_MAY_GRAB_KEYBOARD", 0);
   e.xclient.format = 32;
   e.xclient.data.l[0] = 1;
   e.xclient.data.l[1] = 0;
   e.xclient.data.l[2] = 0;
   e.xclient.data.l[3] = 0;
   e.xclient.data.l[4] = 0;
-  XSendEvent(fl_display, RootWindow(fl_display, fl_screen), 0, SubstructureNotifyMask | SubstructureRedirectMask, &e);
+  XSendEvent(display, XRootWindow(display, DefaultScreen(display)), 0, SubstructureNotifyMask | SubstructureRedirectMask, &e);
 }
 
-bool x11_grab_keyboard(Fl_Window* win)
+bool x11_grab_keyboard(QWidget* win)
 {
+  Display* display = qt_display();
+
   int ret;
 
-  ret = XGrabKeyboard(fl_display, fl_xid(win), True,
+  ret = XGrabKeyboard(display, win->winId(), True,
                       GrabModeAsync, GrabModeAsync, CurrentTime);
   if (ret) {
     if (ret == AlreadyGrabbed) {
@@ -191,8 +260,8 @@ bool x11_grab_keyboard(Fl_Window* win)
       for (int attempt = 0; attempt < 5; attempt++) {
         usleep(100000);
         // Also throttle based on how busy the X server is
-        XSync(fl_display, False);
-        ret = XGrabKeyboard(fl_display, fl_xid(win), True,
+        XSync(display, False);
+        ret = XGrabKeyboard(display, win->winId(), True,
                             GrabModeAsync, GrabModeAsync, CurrentTime);
         if (ret != AlreadyGrabbed)
           break;
@@ -205,7 +274,7 @@ bool x11_grab_keyboard(Fl_Window* win)
 
 void x11_ungrab_keyboard()
 {
-  XUngrabKeyboard(fl_display, CurrentTime);
+  XUngrabKeyboard(qt_display(), CurrentTime);
 }
 
 static int xi_major;
@@ -215,6 +284,8 @@ bool x11_has_xinput22()
   static bool checked = false;
   static bool has_xinput22 = false;
 
+  Display* display = qt_display();
+
   int ev, err;
   int major_ver, minor_ver;
 
@@ -223,14 +294,12 @@ bool x11_has_xinput22()
 
   checked = true;
 
-  fl_open_display();
-
-  if (!XQueryExtension(fl_display, "XInputExtension", &xi_major, &ev, &err))
+  if (!XQueryExtension(display, "XInputExtension", &xi_major, &ev, &err))
     return false;
 
   major_ver = 2;
   minor_ver = 2;
-  if (XIQueryVersion(fl_display, &major_ver, &minor_ver) != Success)
+  if (XIQueryVersion(display, &major_ver, &minor_ver) != Success)
     return false;
 
   if ((major_ver == 2) && (minor_ver < 2))
@@ -249,8 +318,10 @@ int x11_xinput_major()
   return xi_major;
 }
 
-bool x11_grab_pointer(Fl_Window* win)
+bool x11_grab_pointer(QWidget* win)
 {
+  Display* display = qt_display();
+
   Window window;
 
   XIEventMask *curmasks;
@@ -261,12 +332,12 @@ bool x11_grab_pointer(Fl_Window* win)
   XIDeviceInfo *devices, *device;
   bool gotGrab;
 
-  window = fl_xid(win);
+  window = win->winId();
 
   if (!x11_has_xinput22()) {
     int status;
 
-    status = XGrabPointer(fl_display, window, True,
+    status = XGrabPointer(display, window, True,
                           ButtonPressMask | ButtonReleaseMask |
                           ButtonMotionMask | PointerMotionMask,
                           GrabModeAsync, GrabModeAsync,
@@ -275,7 +346,7 @@ bool x11_grab_pointer(Fl_Window* win)
   }
 
   // We grab for the same events as the window is currently interested in
-  curmasks = XIGetSelectedEvents(fl_display, window, &num_masks);
+  curmasks = XIGetSelectedEvents(display, window, &num_masks);
   if (curmasks == nullptr)
     return false;
 
@@ -292,9 +363,9 @@ bool x11_grab_pointer(Fl_Window* win)
   // apart. See XInputTouchHandler constructor for why we use this
   // event.
   XIClearMask(curmasks[0].mask, XI_TouchOwnership);
-  XISelectEvents(fl_display, window, curmasks, 1);
+  XISelectEvents(display, window, curmasks, 1);
 
-  devices = XIQueryDevice(fl_display, XIAllMasterDevices, &ndevices);
+  devices = XIQueryDevice(display, XIAllMasterDevices, &ndevices);
 
   // Iterate through available devices to find those which
   // provide pointer input, and attempt to grab all such devices.
@@ -307,7 +378,7 @@ bool x11_grab_pointer(Fl_Window* win)
 
     curmasks[0].deviceid = device->deviceid;
 
-    ret = XIGrabDevice(fl_display,
+    ret = XIGrabDevice(display,
                        device->deviceid,
                        window,
                        CurrentTime,
@@ -328,7 +399,7 @@ bool x11_grab_pointer(Fl_Window* win)
   // Did we not even grab a single device?
   if (!gotGrab) {
     XISetMask(curmasks[0].mask, XI_TouchOwnership);
-    XISelectEvents(fl_display, window, curmasks, 1);
+    XISelectEvents(display, window, curmasks, 1);
     XFree(curmasks);
     return false;
   }
@@ -338,8 +409,10 @@ bool x11_grab_pointer(Fl_Window* win)
   return true;
 }
 
-void x11_ungrab_pointer(Fl_Window* win)
+void x11_ungrab_pointer(QWidget* win)
 {
+  Display* display = qt_display();
+
   Window window;
 
   int ndevices;
@@ -348,14 +421,14 @@ void x11_ungrab_pointer(Fl_Window* win)
   XIEventMask *curmasks;
   int num_masks;
 
-  window = fl_xid(win);
+  window = win->winId();
 
   if (!x11_has_xinput22()) {
-    XUngrabPointer(fl_display, CurrentTime);
+    XUngrabPointer(display, CurrentTime);
     return;
   }
 
-  devices = XIQueryDevice(fl_display, XIAllMasterDevices, &ndevices);
+  devices = XIQueryDevice(display, XIAllMasterDevices, &ndevices);
 
   // Release all devices, hoping they are the same as when we
   // grabbed things
@@ -365,13 +438,13 @@ void x11_ungrab_pointer(Fl_Window* win)
     if (device->use != XIMasterPointer)
       continue;
 
-    XIUngrabDevice(fl_display, device->deviceid, CurrentTime);
+    XIUngrabDevice(display, device->deviceid, CurrentTime);
   }
 
   XIFreeDeviceInfo(devices);
 
   // Restore XI_TouchOwnership now that the grab is gone
-  curmasks = XIGetSelectedEvents(fl_display, window, &num_masks);
+  curmasks = XIGetSelectedEvents(display, window, &num_masks);
   if (curmasks == nullptr)
     return;
 
@@ -383,26 +456,29 @@ void x11_ungrab_pointer(Fl_Window* win)
   }
 
   XISetMask(curmasks[0].mask, XI_TouchOwnership);
-  XISelectEvents(fl_display, window, curmasks, 1);
+  XISelectEvents(display, window, curmasks, 1);
 
   XFree(curmasks);
 }
 
 void x11_warp_pointer(unsigned x, unsigned y)
 {
-  Window rootwindow = DefaultRootWindow(fl_display);
-  XWarpPointer(fl_display, rootwindow, rootwindow, 0, 0, 0, 0, x, y);
+  Display* display = qt_display();
+  Window rootwindow = DefaultRootWindow(display);
+  XWarpPointer(display, rootwindow, rootwindow, 0, 0, 0, 0, x, y);
 }
 
-bool x11_is_pointer_on_same_screen(Fl_Window* win)
+bool x11_is_pointer_on_same_screen(QWidget* win)
 {
+  Display* display = qt_display();
+
   Window root, child;
   int x, y, wx, wy;
   unsigned int mask;
 
-  if (XQueryPointer(fl_display, fl_xid(win), &root, &child,
+  if (XQueryPointer(display, win->winId(), &root, &child,
                     &x, &y, &wx, &wy, &mask) &&
-      (root != XRootWindow(fl_display, fl_screen)))
+      (root != XRootWindow(display, DefaultScreen(display))))
     return false;
 
   return true;

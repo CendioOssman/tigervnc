@@ -33,9 +33,9 @@ public:
   KeyboardMacOS(KeyboardHandler* handler);
   virtual ~KeyboardMacOS();
 
-  bool isKeyboardReset(const void* event) override;
+  bool isKeyboardReset(const char* eventType, void* message) override;
 
-  bool handleEvent(const void* event) override;
+  bool handleEvent(const char* eventType, void* message) override;
   std::list<uint32_t> translateToKeySyms(int systemKeyCode) override;
 
   unsigned getLEDState() override;

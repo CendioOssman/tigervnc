@@ -23,23 +23,22 @@
 
 #include <time.h>
 
+#include <QPainter>
 #include <QTimer>
-
-#include <FL/Fl_Image_Surface.H>
-#include <FL/Fl_RGB_Image.H>
-#include <FL/fl_draw.H>
 
 #include <core/time.h>
 
-#include "Surface.h"
 #include "Toast.h"
 
 // Time before we show a toast again
 const time_t TOAST_REPEAT_TIMEOUT = 600;
 
-Toast::Toast(Fl_Widget* parent_)
-  : parent(parent_)
+Toast::Toast(QWidget* parent)
+  : QWidget(parent)
 {
+  setAttribute(Qt::WA_TransparentForMouseEvents);
+  setAttribute(Qt::WA_TranslucentBackground);
+
   updateTimer = new QTimer(this);
   updateTimer->setSingleShot(true);
   connect(updateTimer, &QTimer::timeout, this, &Toast::updateOverlay);
@@ -47,10 +46,6 @@ Toast::Toast(Fl_Widget* parent_)
 
 Toast::~Toast()
 {
-  while (!overlays.empty()) {
-    delete overlays.front().surface;
-    overlays.pop_front();
-  }
 }
 
 void Toast::addRegular(const char* text, ...)
@@ -95,138 +90,15 @@ void Toast::addPriority(const char* text, ...)
   addOverlay(textbuf);
 }
 
-bool Toast::shown()
-{
-  return !overlays.empty();
-}
-
-int Toast::width()
-{
-  if (overlays.empty())
-    return 0;
-  return overlays.front().surface->width();
-}
-
-int Toast::height()
-{
-  if (overlays.empty())
-    return 0;
-  return overlays.front().surface->height();
-}
-
-void Toast::draw(int src_x, int src_y, int dst_x, int dst_y,
-                 int dst_w, int dst_h)
-{
-  Overlay* overlay;
-
-  if (overlays.empty())
-    return;
-
-  overlay = &overlays.front();
-  overlay->surface->blend(src_x, src_y, dst_x, dst_y, dst_w, dst_h,
-                          overlay->alpha);
-}
-
-void Toast::draw(Surface* dst, int src_x, int src_y,
-                 int dst_x, int dst_y, int dst_w, int dst_h)
-{
-  Overlay* overlay;
-
-  if (overlays.empty())
-    return;
-
-  overlay = &overlays.front();
-  overlay->surface->blend(dst, src_x, src_y, dst_x, dst_y, dst_w, dst_h,
-                          overlay->alpha);
-}
-
 void Toast::addOverlay(const char* text)
 {
-  const Fl_Fontsize fontsize = 16;
-  const int margin = 10;
+  overlays.push_back({text, 0, {0, 0}});
 
-  Fl_Image_Surface *surface;
-
-  Fl_RGB_Image* imageText;
-  Fl_RGB_Image* image;
-
-  unsigned char* buffer;
-
-  int x, y;
-  int w, h;
-
-  unsigned char* a;
-  const unsigned char* b;
-
-  struct Overlay overlay;
-
-#if !defined(WIN32) && !defined(__APPLE__)
-  // FLTK < 1.3.5 crashes if fl_gc is unset
-  if (!fl_gc)
-    fl_gc = XDefaultGC(fl_display, 0);
-#endif
-
-  fl_font(FL_HELVETICA, fontsize);
-  w = 0;
-  fl_measure(text, w, h);
-
-  // Margins
-  w += margin * 2 * 2;
-  h += margin * 2;
-
-  surface = new Fl_Image_Surface(w, h);
-  surface->set_current();
-
-  fl_rectf(0, 0, w, h, 0, 0, 0);
-
-  fl_font(FL_HELVETICA, fontsize);
-  fl_color(FL_WHITE);
-  fl_draw(text, 0, 0, w, h, FL_ALIGN_CENTER);
-
-  imageText = surface->image();
-  delete surface;
-
-  Fl_Display_Device::display_device()->set_current();
-
-  buffer = new unsigned char[w * h * 4];
-  image = new Fl_RGB_Image(buffer, w, h, 4);
-
-  a = buffer;
-  for (x = 0;x < image->w() * image->h();x++) {
-    a[0] = a[1] = a[2] = 0x40;
-    a[3] = 0xcc;
-    a += 4;
-  }
-
-  a = buffer;
-  b = (const unsigned char*)imageText->data()[0];
-  for (y = 0;y < h;y++) {
-    for (x = 0;x < w;x++) {
-      unsigned char alpha;
-      alpha = *b;
-      a[0] = (unsigned)a[0] * (255 - alpha) / 255 + alpha;
-      a[1] = (unsigned)a[1] * (255 - alpha) / 255 + alpha;
-      a[2] = (unsigned)a[2] * (255 - alpha) / 255 + alpha;
-      a[3] = 255 - (255 - a[3]) * (255 - alpha) / 255;
-      a += 4;
-      b += imageText->d();
-    }
-    if (imageText->ld() != 0)
-      b += imageText->ld() - w * imageText->d();
-  }
-
-  delete imageText;
-
-  overlay.surface = new Surface(image);
-  overlay.alpha = 0;
-  memset(&overlay.start, 0, sizeof(overlay.start));
-  overlays.push_back(overlay);
-
-  delete image;
-  delete [] buffer;
-
-  if (overlays.size() == 1)
+  if (overlays.size() == 1) {
     updateTimer->start(500);
+    show();
+    raise();
+  }
 }
 
 void Toast::updateOverlay()
@@ -254,12 +126,48 @@ void Toast::updateOverlay()
     overlay->alpha = (unsigned)255 * (4000 - elapsed) / 500;
     updateTimer->start(1000/60);
   } else {
-    delete overlay->surface;
     overlays.pop_front();
     if (!overlays.empty())
       updateTimer->start(500);
   }
 
-  // FIXME: Only damage relevant area
-  parent->damage(FL_DAMAGE_USER1);
+  repaint();
+}
+
+void Toast::paintEvent(QPaintEvent* /*event*/)
+{
+  Overlay* overlay;
+
+  QPainter painter(this);
+  QFont f;
+  QPen p;
+
+  QRect r;
+
+  if (overlays.empty())
+    return;
+
+  overlay = &overlays.front();
+
+  // FIXME: Should compose things before alpha
+  painter.setOpacity(overlay->alpha / 255.0);
+
+  f.setBold(true);
+  f.setPixelSize(14);
+  painter.setFont(f);
+
+  QFontMetrics fm(f);
+  r = fm.boundingRect(overlay->text.c_str()).adjusted(-16, -16, 16, 16);
+
+  r.moveLeft((width() - r.width()) / 2);
+  r.moveTop(50);
+
+  painter.setPen(Qt::NoPen);
+  painter.setRenderHint(QPainter::Antialiasing);
+  painter.setBrush(QColor("#cc404040"));
+  painter.drawRoundedRect(r, 15, 15, Qt::AbsoluteSize);
+
+  p.setColor("#ffffffff");
+  painter.setPen(p);
+  painter.drawText(r, overlay->text.c_str(), QTextOption(Qt::AlignCenter));
 }

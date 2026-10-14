@@ -1,5 +1,5 @@
 /* Copyright (C) 2002-2005 RealVNC Ltd.  All Rights Reserved.
- * Copyright 2011-2025 Pierre Ossman for Cendio AB
+ * Copyright 2011-2026 Pierre Ossman for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,13 +28,17 @@
 
 #include <stdexcept>
 
+#include <QAbstractEventDispatcher>
 #include <QAction>
 #include <QApplication>
 #include <QClipboard>
+#include <QEvent>
 #include <QMenu>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QPainter>
 #include <QTimer>
+#include <QWheelEvent>
 
 #include <core/LogWriter.h>
 #include <core/i18n.h>
@@ -46,19 +50,14 @@
 #include <rfb/KeysymStr.h>
 #include <rfb/ledStates.h>
 
-// FLTK can pull in the X11 headers on some systems
-#ifndef XK_VoidSymbol
 #define XK_LATIN1
 #define XK_MISCELLANY
 #include <rfb/keysymdef.h>
-#endif
 
 #ifndef NoSymbol
 #define NoSymbol 0
 #endif
 
-#include "fltk/layout.h"
-#include "fltk/util.h"
 #include "Viewport.h"
 #include "CConn.h"
 #include "OptionsDialog.h"
@@ -68,11 +67,6 @@
 #include "vncviewer.h"
 
 #include "PlatformPixelBuffer.h"
-
-#include <FL/fl_draw.H>
-
-#include <FL/Fl.H>
-#include <FL/x.H>
 
 #if defined(WIN32)
 #include "KeyboardWin32.h"
@@ -109,14 +103,21 @@ static const int SCRLSENS = 50;
 static const unsigned DOUBLE_TAP_TIMEOUT   = 1000;
 static const unsigned DOUBLE_TAP_THRESHOLD = 50;
 
-Viewport::Viewport(int w, int h, CConn* cc_)
-  : Fl_Widget(0, 0, w, h), cc(cc_), frameBuffer(nullptr),
+Viewport::Viewport(int w, int h, CConn* cc_, QWidget* parent)
+  : QWidget(parent), cc(cc_), frameBuffer(nullptr),
     lastPointerPos(0, 0), lastButtonMask(0),
     keyboard(nullptr), shortcutBypass(false), shortcutActive(false),
     firstLEDState(true), pendingClientClipboard(false),
     menuCtrlKey(false), menuAltKey(false), cursor(nullptr),
     cursorIsBlank(false)
 {
+  setAttribute(Qt::WA_OpaquePaintEvent, true);
+  setFocusPolicy(Qt::StrongFocus);
+  setMouseTracking(true);
+
+  setContentsMargins(0, 0, 0, 0);
+  resize(w, h);
+
 #if defined(WIN32)
   keyboard = new KeyboardWin32(this);
 #elif defined(__APPLE__)
@@ -134,33 +135,21 @@ Viewport::Viewport(int w, int h, CConn* cc_)
           &Viewport::handleClipboardChange);
 
   // We need to intercept keyboard events early
-  Fl::add_system_handler(handleSystemEvent, this);
-
-  // FIXME: We should only disable this whilst we have keyboard focus,
-  //        but we also need to keep it disabled when we lose focus to
-  //        any layout selector so it can properly filter out the
-  //        layouts we don't support
-  Fl::disable_im();
+  QAbstractEventDispatcher::instance()->installNativeEventFilter(this);
 
   frameBuffer = new PlatformPixelBuffer(w, h);
   assert(frameBuffer);
   cc->setFramebuffer(frameBuffer);
 
-  contextMenu = new QMenu();
+  contextMenu = new QMenu(this);
 
   // Set the default mouse pointer whilst the context menu is open, as
   // it is annoying if the pointer disappears when you move it outside
   // the menu
   connect(contextMenu, &QMenu::aboutToShow, this,
-          [this]() {
-            if (Fl::belowmouse() == this)
-              window()->cursor(FL_CURSOR_DEFAULT);
-          });
+          [this]() { QWidget::setCursor(Qt::ArrowCursor); });
   connect(contextMenu, &QMenu::aboutToHide, this,
-          [this]() {
-            if (Fl::belowmouse())
-              showCursor();
-          });
+          [this]() { showCursor(); });
 
   unsigned modifierMask = 0;
   for (core::EnumListEntry key : shortcutModifiers)
@@ -180,27 +169,16 @@ Viewport::Viewport(int w, int h, CConn* cc_)
           &Viewport::handlePointerTimeout);
 }
 
-
 Viewport::~Viewport()
 {
-  Fl::remove_system_handler(handleSystemEvent);
+  QAbstractEventDispatcher::instance()->removeNativeEventFilter(this);
 
   OptionsDialog::removeCallback(handleOptions);
 
-  if (cursor) {
-    if (!cursor->alloc_array)
-      delete [] cursor->array;
-    delete cursor;
-  }
+  delete cursor;
 
   delete keyboard;
   delete touch;
-  Fl::enable_im();
-
-  delete contextMenu;
-
-  // FLTK automatically deletes all child widgets, so we shouldn't touch
-  // them ourselves here
 }
 
 
@@ -218,7 +196,7 @@ void Viewport::updateWindow()
   core::Rect r;
 
   r = frameBuffer->getDamage();
-  damage(FL_DAMAGE_USER1, r.tl.x + x(), r.tl.y + y(), r.width(), r.height());
+  update(r.tl.x, r.tl.y, r.width(), r.height());
 }
 
 static const char * dotcursor_xpm[] = {
@@ -235,25 +213,19 @@ void Viewport::setCursor()
 {
   int width, height;
   core::Point hotspot;
-  const uint8_t* data;
+  const uint8_t* pixels;
 
   int i;
 
-  if (cursor) {
-    if (!cursor->alloc_array)
-      delete [] cursor->array;
-    delete cursor;
-  }
+  delete cursor;
 
   width = cc->server.cursor().width();
   height = cc->server.cursor().height();
   hotspot = cc->server.cursor().hotspot();
-  data = cc->server.cursor().getBuffer();
+  pixels = cc->server.cursor().getBuffer();
 
   for (i = 0; i < width*height; i++)
-    if (data[i*4 + 3] != 0) break;
-
-  cursorIsBlank = i == width*height;
+    if (pixels[i*4 + 3] != 0) break;
 
   if (cursorIsBlank && alwaysCursor) {
     // This is the default in case the local cursor should be displayed yet cursorType is invalid.
@@ -261,38 +233,31 @@ void Viewport::setCursor()
     // type which helps handle changing the type while the viewer is running.
     vlog.debug("Cursor is empty, using dot");
 
-    Fl_Pixmap pxm(dotcursor_xpm);
-    cursor = new Fl_RGB_Image(&pxm);
-    cursorHotspot.x = cursorHotspot.y = 2;
+    cursor = new QCursor(QPixmap(dotcursor_xpm), 2, 2);
   } else {
     if ((width == 0) || (height == 0)) {
-      uint8_t *buffer = new uint8_t[4];
-      memset(buffer, 0, 4);
-      cursor = new Fl_RGB_Image(buffer, 1, 1, 4);
-      cursorHotspot.x = cursorHotspot.y = 0;
+      cursor = new QCursor(Qt::BlankCursor);
     } else {
-      uint8_t *buffer = new uint8_t[width * height * 4];
-      memcpy(buffer, data, width * height * 4);
-      cursor = new Fl_RGB_Image(buffer, width, height, 4);
-      cursorHotspot = hotspot;
+      QImage image(pixels, width, height, QImage::Format_ARGB32);
+      cursor = new QCursor(QPixmap::fromImage(image),
+                          hotspot.x, hotspot.y);
     }
   }
 
-  if (Fl::belowmouse() == this)
-    showCursor();
+  showCursor();
 }
 
 void Viewport::showCursor()
 {
   if (viewOnly) {
-    window()->cursor(FL_CURSOR_DEFAULT);
+    QWidget::setCursor(Qt::ArrowCursor);
     return;
   }
 
   if (cursorIsBlank && alwaysCursor && (cursorType == "system")) {
-    window()->cursor(FL_CURSOR_DEFAULT);
+    QWidget::setCursor(Qt::ArrowCursor);
   } else {
-    window()->cursor(cursor, cursorHotspot.x, cursorHotspot.y);
+    QWidget::setCursor(*cursor);
   }
 }
 
@@ -440,131 +405,128 @@ void Viewport::pushLEDState()
   }
 }
 
-
-void Viewport::draw(Surface* dst)
+void Viewport::paintEvent(QPaintEvent* event)
 {
-  int X, Y, W, H;
+  QPainter painter(this);
+
+  QRect rect;
+  int x, y, w, h;
+  core::Rect fbrect;
+
+  const uint8_t* fbdata;
+  int stride;
 
   // Check what actually needs updating
-  fl_clip_box(x(), y(), w(), h(), X, Y, W, H);
-  if ((W == 0) || (H == 0))
-    return;
+  rect = event->rect();
+  x = rect.x();
+  y = rect.y();
+  w = rect.width();
+  h = rect.height();
+  fbrect.setXYWH(x, y, w, h);
 
-  frameBuffer->draw(dst, X - x(), Y - y(), X, Y, W, H);
+  fbdata = frameBuffer->getBuffer(fbrect, &stride);
+  QImage image(fbdata, w, h, stride * 4, QImage::Format_RGB32);
+
+  painter.drawImage(rect, image);
 }
 
-
-void Viewport::draw()
+void Viewport::resizeEvent(QResizeEvent* e)
 {
-  int X, Y, W, H;
-
-  // Check what actually needs updating
-  fl_clip_box(x(), y(), w(), h(), X, Y, W, H);
-  if ((W == 0) || (H == 0))
-    return;
-
-  frameBuffer->draw(X - x(), Y - y(), X, Y, W, H);
-}
-
-
-void Viewport::resize(int x, int y, int w, int h)
-{
-  if ((w != frameBuffer->width()) || (h != frameBuffer->height())) {
+  if ((width() != frameBuffer->width()) ||
+      (height() != frameBuffer->height())) {
     vlog.debug("Resizing framebuffer from %dx%d to %dx%d",
-               frameBuffer->width(), frameBuffer->height(), w, h);
+               frameBuffer->width(), frameBuffer->height(),
+               width(), height());
 
-    frameBuffer = new PlatformPixelBuffer(w, h);
+    frameBuffer = new PlatformPixelBuffer(width(), height());
     assert(frameBuffer);
     cc->setFramebuffer(frameBuffer);
   }
 
-  Fl_Widget::resize(x, y, w, h);
+  QWidget::resizeEvent(e);
 }
 
-
-int Viewport::enterEvent()
+void Viewport::leaveEvent(QEvent*)
 {
-  showCursor();
-  // Yes, we would like some pointer events please!
-  return 1;
-}
-
-int Viewport::leaveEvent()
-{
-  window()->cursor(FL_CURSOR_DEFAULT);
+  QPoint pos = mapFromGlobal(QCursor::pos());
   // We want a last move event to help trigger edge stuff
-  handlePointerEvent({Fl::event_x() - x(), Fl::event_y() - y()}, 0);
-  return 1;
+  handlePointerEvent({pos.x(), pos.y()}, 0);
 }
 
-int Viewport::mouseEvent()
+void Viewport::mouseEvent(QMouseEvent* event)
 {
   int buttonMask;
 
+  event->accept();
+
   buttonMask = 0;
-  if (Fl::event_button1())
+  if (event->buttons() & Qt::LeftButton)
     buttonMask |= 1 << 0;
-  if (Fl::event_button2())
+  if (event->buttons() & Qt::MiddleButton)
     buttonMask |= 1 << 1;
-  if (Fl::event_button3())
+  if (event->buttons() & Qt::RightButton)
     buttonMask |= 1 << 2;
-
-  // The back/forward buttons are not supported by FTLK 1.3 and require
-  // a patch which adds these buttons to the FLTK API. These buttons
-  // will be part of the upcoming 1.4 API:
-  //   * https://github.com/fltk/fltk/pull/1081
-  //
-  // A backport for branch-1.3 is available here:
-  //   * https://github.com/fltk/fltk/pull/1083
-#if defined(FL_BUTTON4) && defined(FL_BUTTON5)
-  if (Fl::event_button4())
+  if (event->buttons() & Qt::BackButton)
     buttonMask |= 1 << 7;
-  if (Fl::event_button5())
+  if (event->buttons() & Qt::ForwardButton)
     buttonMask |= 1 << 8;
-#endif
 
-  handlePointerEvent({Fl::event_x() - x(), Fl::event_y() - y()}, buttonMask);
-  return 1;
+  handlePointerEvent({event->x(), event->y()}, buttonMask);
 }
 
-int Viewport::wheelEvent()
+void Viewport::mouseMoveEvent(QMouseEvent* event)
+{
+  mouseEvent(event);
+}
+
+void Viewport::mousePressEvent(QMouseEvent* event)
+{
+  mouseEvent(event);
+}
+
+void Viewport::mouseReleaseEvent(QMouseEvent* event)
+{
+  mouseEvent(event);
+}
+
+void Viewport::wheelEvent(QWheelEvent* event)
 {
   int buttonMask, wheelMask;
 
+  event->accept();
+
   buttonMask = 0;
-  if (Fl::event_button1())
+  if (event->buttons() & Qt::LeftButton)
     buttonMask |= 1 << 0;
-  if (Fl::event_button2())
+  if (event->buttons() & Qt::MiddleButton)
     buttonMask |= 1 << 1;
-  if (Fl::event_button3())
+  if (event->buttons() & Qt::RightButton)
     buttonMask |= 1 << 2;
-#if defined(FL_BUTTON4) && defined(FL_BUTTON5)
-  if (Fl::event_button4())
+  if (event->buttons() & Qt::BackButton)
     buttonMask |= 1 << 7;
-  if (Fl::event_button5())
+  if (event->buttons() & Qt::ForwardButton)
     buttonMask |= 1 << 8;
-#endif
 
   wheelMask = 0;
-  if (Fl::event_dy() < 0)
+  if (event->angleDelta().y() > 0)
     wheelMask |= 1 << 3;
-  if (Fl::event_dy() > 0)
+  if (event->angleDelta().y() < 0)
     wheelMask |= 1 << 4;
-  if (Fl::event_dx() < 0)
+  if (event->angleDelta().x() > 0)
     wheelMask |= 1 << 5;
-  if (Fl::event_dx() > 0)
+  if (event->angleDelta().x() < 0)
     wheelMask |= 1 << 6;
 
   // A quick press of the wheel "button", followed by a immediate
   // release below
-  handlePointerEvent({Fl::event_x() - x(), Fl::event_y() - y()},
+  handlePointerEvent({(int)event->position().x(), (int)event->position().y()},
                      buttonMask | wheelMask);
 
-  handlePointerEvent({Fl::event_x() - x(), Fl::event_y() - y()}, buttonMask);
-  return 1;
+  handlePointerEvent({(int)event->position().x(), (int)event->position().y()},
+                     buttonMask);
 }
 
-int Viewport::focusInEvent()
+void Viewport::focusInEvent(QFocusEvent* event)
 {
   flushPendingClipboard();
 
@@ -578,42 +540,15 @@ int Viewport::focusInEvent()
   if (menuAltKey)
     sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
 
-  // Yes, we would like some focus please!
-  return 1;
+  QWidget::focusInEvent(event);
 }
 
-int Viewport::focusOutEvent()
+void Viewport::focusOutEvent(QFocusEvent* event)
 {
   // We won't get more key events, so reset our knowledge about keys
   resetKeyboard();
-  return 1;
-}
 
-int Viewport::handle(int event)
-{
-  switch (event) {
-  case FL_ENTER:
-    return enterEvent();
-  case FL_LEAVE:
-    return leaveEvent();
-  case FL_PUSH:
-  case FL_RELEASE:
-  case FL_DRAG:
-  case FL_MOVE:
-    return mouseEvent();
-  case FL_MOUSEWHEEL:
-    return wheelEvent();
-  case FL_FOCUS:
-    return focusInEvent();
-  case FL_UNFOCUS:
-    return focusOutEvent();
-  case FL_KEYDOWN:
-  case FL_KEYUP:
-    // Just ignore these as keys were handled in the event handler
-    return 1;
-  }
-
-  return Fl_Widget::handle(event);
+  QWidget::focusOutEvent(event);
 }
 
 void Viewport::handleGestureEvent(const GestureEvent& ev)
@@ -804,17 +739,6 @@ void Viewport::sendPointerEvent(const core::Point& pos,
   }
   lastPointerPos = pos;
   lastButtonMask = buttonMask;
-}
-
-bool Viewport::hasFocus()
-{
-  Fl_Widget* focus;
-
-  focus = Fl::grab();
-  if (!focus)
-    focus = Fl::focus();
-
-  return focus == this;
 }
 
 void Viewport::handleClipboardChange(QClipboard::Mode mode)
@@ -1042,12 +966,12 @@ void Viewport::handleKeyPress(int systemKeyCode,
         break;
       case XK_KP_Enter:
       case XK_Return:
-        if (window()->fullscreen_active()) {
+        if (((DesktopWindow*)window())->isFullScreen()) {
           fullScreen.setParam(false);
-          window()->fullscreen_off();
+          ((DesktopWindow*)window())->setFullScreen(false);
         } else {
           fullScreen.setParam(true);
-          ((DesktopWindow*)window())->fullscreen_on();
+          ((DesktopWindow*)window())->setFullScreen(true);
         }
         break;
       default:
@@ -1146,42 +1070,43 @@ void Viewport::sendKeyRelease(int systemKeyCode)
 }
 
 
-int Viewport::handleSystemEvent(void *event, void *data)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, long*)
+#else
+bool Viewport::nativeEventFilter(const QByteArray& eventType, void* message, qintptr*)
+#endif
 {
-  Viewport *self = (Viewport *)data;
   bool consumed;
-
-  assert(self);
 
 #ifndef __APPLE__
   // We need a window handle before we can create these
-  if (self->touch == nullptr) {
+  if (touch == nullptr) {
 #if defined(WIN32)
-    self->touch = new Win32TouchHandler(fl_xid(self->window()), self);
+    touch = new Win32TouchHandler((HWND)window()->winId(), this);
 #else
-    self->touch = new XInputTouchHandler(fl_xid(self->window()), self);
+    touch = new XInputTouchHandler(window()->winId(), this);
 #endif
   }
 
-  consumed = self->touch->handleEvent(event);
+  consumed = touch->handleEvent(eventType, message);
   if (consumed)
     return 1;
 #endif
 
-  if (!self->hasFocus())
-    return 0;
+  if (!hasFocus())
+    return false;
 
   // Special event that means we temporarily lost some input
-  if (self->keyboard->isKeyboardReset(event)) {
-    self->resetKeyboard();
-    return 1;
+  if (keyboard->isKeyboardReset(eventType, message)) {
+    resetKeyboard();
+    return true;
   }
 
-  consumed = self->keyboard->handleEvent(event);
+  consumed = keyboard->handleEvent(eventType, message);
   if (consumed)
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
 void Viewport::initContextMenu()
@@ -1201,36 +1126,27 @@ void Viewport::initContextMenu()
 
   action = new QAction(C_("ContextMenu|", "&Full screen"), contextMenu);
   connect(action, &QAction::triggered, this,
-          [self=this]() {
-            if (self->window()->fullscreen_active())
-              self->window()->fullscreen_off();
-            else
-              ((DesktopWindow*)self->window())->fullscreen_on();
+          [this](bool checked) {
+            ((DesktopWindow*)window())->setFullScreen(checked);
           });
   action->setCheckable(true);
-  action->setChecked(window()->fullscreen_active());
+  action->setChecked(((DesktopWindow*)window())->isFullScreen());
   contextMenu->addAction(action);
 
   action = new QAction(C_("ContextMenu|", "Minimi&ze"), contextMenu);
   connect(action, &QAction::triggered, this,
-          [self=this]() {
-#ifdef __APPLE__
-            // FIXME: Workaround for not being able to minimize in fullscreen
-            // https://github.com/TigerVNC/tigervnc/pull/1813
-            if (self->window()->fullscreen_active())
-              cocoa_enable_minimize(self->window());
-#endif
-            self->window()->iconize();
+          [this]() {
+            window()->showMinimized();
           });
   contextMenu->addAction(action);
 
   action = new QAction(C_("ContextMenu|", "Resize &window to session"),
                        contextMenu);
   connect(action, &QAction::triggered, this,
-          [self=this]() {
-            if (self->window()->fullscreen_active())
+          [this]() {
+            if (((DesktopWindow*)window())->isFullScreen())
               return;
-            self->window()->size(self->w(), self->h());
+            window()->resize(width(), height());
           });
   contextMenu->addAction(action);
 
@@ -1238,13 +1154,12 @@ void Viewport::initContextMenu()
 
   action = new QAction(C_("ContextMenu|", "&Ctrl"), contextMenu);
   connect(action, &QAction::triggered, this,
-          [self=this](bool checked) {
+          [this](bool checked) {
             if (checked)
-              self->sendKeyPress(FAKE_CTRL_KEY_CODE,
-                                 0x1d, XK_Control_L);
+              sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
             else
-              self->sendKeyRelease(FAKE_CTRL_KEY_CODE);
-            self->menuCtrlKey = !(self->menuCtrlKey);
+              sendKeyRelease(FAKE_CTRL_KEY_CODE);
+            menuCtrlKey = checked;
           });
   action->setCheckable(true);
   action->setChecked(menuCtrlKey);
@@ -1252,13 +1167,12 @@ void Viewport::initContextMenu()
 
   action = new QAction(C_("ContextMenu|", "&Alt"), contextMenu);
   connect(action, &QAction::triggered, this,
-          [self=this](bool checked) {
+          [this](bool checked) {
             if (checked)
-              self->sendKeyPress(FAKE_ALT_KEY_CODE,
-                                 0x38, XK_Alt_L);
+              sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
             else
-              self->sendKeyRelease(FAKE_ALT_KEY_CODE);
-            self->menuAltKey = !(self->menuAltKey);
+              sendKeyRelease(FAKE_ALT_KEY_CODE);
+            menuAltKey = checked;
           });
   action->setCheckable(true);
   action->setChecked(menuAltKey);
@@ -1267,16 +1181,13 @@ void Viewport::initContextMenu()
   action = new QAction(C_("ContextMenu|", "Send Ctrl-Alt-&Del"),
                        contextMenu);
   connect(action, &QAction::triggered, this,
-          [self=this]() {
-            self->sendKeyPress(FAKE_CTRL_KEY_CODE,
-                               0x1d, XK_Control_L);
-            self->sendKeyPress(FAKE_ALT_KEY_CODE,
-                               0x38, XK_Alt_L);
-            self->sendKeyPress(FAKE_DEL_KEY_CODE,
-                               0xd3, XK_Delete);
-            self->sendKeyRelease(FAKE_DEL_KEY_CODE);
-            self->sendKeyRelease(FAKE_ALT_KEY_CODE);
-            self->sendKeyRelease(FAKE_CTRL_KEY_CODE);
+          [this]() {
+            sendKeyPress(FAKE_CTRL_KEY_CODE, 0x1d, XK_Control_L);
+            sendKeyPress(FAKE_ALT_KEY_CODE, 0x38, XK_Alt_L);
+            sendKeyPress(FAKE_DEL_KEY_CODE, 0xd3, XK_Delete);
+            sendKeyRelease(FAKE_DEL_KEY_CODE);
+            sendKeyRelease(FAKE_ALT_KEY_CODE);
+            sendKeyRelease(FAKE_CTRL_KEY_CODE);
           });
   contextMenu->addAction(action);
 
@@ -1285,8 +1196,8 @@ void Viewport::initContextMenu()
   action = new QAction(C_("ContextMenu|", "&Refresh screen"),
                        contextMenu);
   connect(action, &QAction::triggered, this,
-          [self=this]() {
-            self->cc->refreshFramebuffer();
+          [this]() {
+            cc->refreshFramebuffer();
           });
   contextMenu->addAction(action);
 
@@ -1294,10 +1205,10 @@ void Viewport::initContextMenu()
 
   action = new QAction(C_("ContextMenu|", "&Options..."), contextMenu);
   connect(action, &QAction::triggered, this,
-          []() {
+          [this]() {
             OptionsDialog* dlg;
 
-            dlg = new OptionsDialog();
+            dlg = new OptionsDialog(window());
             dlg->setAttribute(Qt::WA_DeleteOnClose);
             dlg->open();
           });
@@ -1306,12 +1217,12 @@ void Viewport::initContextMenu()
   action = new QAction(C_("ContextMenu|", "Connection &info..."),
                        contextMenu);
   connect(action, &QAction::triggered, this,
-          [self=this]() {
+          [this]() {
             QMessageBox* dlg;
-            dlg = new QMessageBox;
+            dlg = new QMessageBox(window());
             dlg->setIcon(QMessageBox::Information);
             dlg->setWindowTitle(_("VNC connection info"));
-            dlg->setText(self->cc->connectionInfo().c_str());
+            dlg->setText(cc->connectionInfo().c_str());
             dlg->addButton(QMessageBox::Close);
             dlg->setAttribute(Qt::WA_DeleteOnClose);
             dlg->open();
@@ -1321,8 +1232,8 @@ void Viewport::initContextMenu()
   action = new QAction(C_("ContextMenu|", "About &TigerVNC..."),
                        contextMenu);
   connect(action, &QAction::triggered, this,
-          []() {
-            about_vncviewer();
+          [this]() {
+            about_vncviewer(window());
           });
   contextMenu->addAction(action);
 }
@@ -1351,6 +1262,5 @@ void Viewport::handleOptions(void *data)
 
   self->shortcutHandler.setModifiers(modifierMask);
 
-  if (Fl::belowmouse() == self)
-    self->showCursor();
+  self->showCursor();
 }

@@ -1,4 +1,4 @@
-/* Copyright 2011-2025 Pierre Ossman <ossman@cendio.se> for Cendio AB
+/* Copyright 2011-2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +23,9 @@
 #include <assert.h>
 #include <dlfcn.h>
 
-#include <FL/Fl_Window.H>
-#include <FL/x.H>
+#include <QApplication>
+#include <QScreen>
+#include <QWidget>
 
 #import <Cocoa/Cocoa.h>
 #import <ApplicationServices/ApplicationServices.h>
@@ -34,11 +35,12 @@
 static CFMachPortRef event_tap;
 static CFRunLoopSourceRef tap_source;
 
-void cocoa_prevent_native_fullscreen(Fl_Window *win)
+void cocoa_prevent_native_fullscreen(QWidget *win)
 {
+  NSView *view;
   NSWindow *nsw;
-  nsw = (NSWindow*)fl_xid(win);
-  assert(nsw);
+  view = (NSView*)win->winId();
+  nsw = [view window];
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= 100700
   nsw.collectionBehavior |= NSWindowCollectionBehaviorFullScreenNone;
 #endif
@@ -232,28 +234,34 @@ bool cocoa_screens_have_separate_spaces()
   return [NSScreen screensHaveSeparateSpaces];
 }
 
-bool cocoa_win_is_zoomed(Fl_Window *win)
+void cocoa_set_presentation_default()
 {
+  [NSApp setPresentationOptions: NSApplicationPresentationDefault];
+}
+
+void cocoa_set_presentation_full_screen()
+{
+  [NSApp setPresentationOptions:
+         NSApplicationPresentationAutoHideMenuBar |
+         NSApplicationPresentationAutoHideDock];
+}
+
+bool cocoa_win_is_zoomed(QWidget *win)
+{
+  NSView *view;
   NSWindow *nsw;
-  nsw = (NSWindow*)fl_xid(win);
-  assert(nsw);
+  view = (NSView*)win->winId();
+  nsw = [view window];
   return [nsw isZoomed];
 }
 
-void cocoa_win_zoom(Fl_Window *win)
+void cocoa_win_zoom(QWidget *win)
 {
+  NSView *view;
   NSWindow *nsw;
-  nsw = (NSWindow*)fl_xid(win);
-  assert(nsw);
+  view = (NSView*)win->winId();
+  nsw = [view window];
   [nsw zoom:nsw];
-}
-
-void cocoa_enable_minimize(Fl_Window *win)
-{
-  NSWindow *nsw;
-  nsw = (NSWindow*)fl_xid(win);
-  assert(nsw);
-  nsw.styleMask |= NSWindowStyleMaskMiniaturizable;
 }
 
 void cocoa_event_delay(double seconds)

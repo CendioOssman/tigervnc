@@ -142,11 +142,16 @@ KeyboardMacOS::~KeyboardMacOS()
 {
 }
 
-bool KeyboardMacOS::isKeyboardReset(const void* event)
+bool KeyboardMacOS::isKeyboardReset(const char* eventType,
+                                    void* message)
 {
-  const NSEvent* nsevent = (const NSEvent*)event;
+  const NSEvent* nsevent = (const NSEvent*)message;
 
-  assert(event);
+  assert(eventType);
+  assert(message);
+
+  if (strcmp(eventType, "mac_generic_NSEvent") != 0)
+    return false;
 
   // If we get a NSFlagsChanged event with key code 0 then this isn't
   // an actual keyboard event but rather the system trying to sync up
@@ -161,12 +166,16 @@ bool KeyboardMacOS::isKeyboardReset(const void* event)
   return true;
 }
 
-bool KeyboardMacOS::handleEvent(const void* event)
+bool KeyboardMacOS::handleEvent(const char* eventType, void* message)
 {
-  const NSEvent* nsevent = (NSEvent*)event;
+  const NSEvent* nsevent = (NSEvent*)message;
   unsigned systemKeyCode;
 
-  assert(event);
+  assert(eventType);
+  assert(message);
+
+  if (strcmp(eventType, "mac_generic_NSEvent") != 0)
+    return false;
 
   if (!isKeyboardEvent(nsevent))
     return false;
@@ -313,7 +322,7 @@ bool KeyboardMacOS::isKeyboardEvent(const NSEvent* nsevent)
   case NSKeyUp:
     return true;
   case NSFlagsChanged:
-    if (isKeyboardReset(nsevent))
+    if (isKeyboardReset("mac_generic_NSEvent", (void*)nsevent))
       return false;
     return true;
   default:

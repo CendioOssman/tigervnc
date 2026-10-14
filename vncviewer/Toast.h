@@ -26,43 +26,29 @@
 #include <map>
 #include <string>
 
-#include <QObject>
+#include <QWidget>
 
-class Fl_Widget;
-
-class Surface;
-
-class Toast : public QObject {
+class Toast : public QWidget {
   Q_OBJECT
 
 public:
-  Toast(Fl_Widget* parent);
-  virtual ~Toast();
+  Toast(QWidget* parent=nullptr);
+  ~Toast();
 
   void addRegular(const char* text, ...)
     __attribute__((__format__ (__printf__, 2, 3)));
   void addPriority(const char* text, ...)
     __attribute__((__format__ (__printf__, 2, 3)));
 
-  bool shown();
-
-  int width();
-  int height();
-
-  void draw(int src_x, int src_y, int dst_x, int dst_y,
-            int dst_w, int dst_h);
-  void draw(Surface* dst, int src_x, int src_y, int dst_x, int dst_y,
-            int dst_w, int dst_h);
-
 protected:
   void addOverlay(const char* text);
   void updateOverlay();
 
-private:
-  Fl_Widget* parent;
+  void paintEvent(QPaintEvent* event) override;
 
+private:
   struct Overlay {
-    Surface *surface;
+    std::string text;
     unsigned char alpha;
     struct timeval start;
   };

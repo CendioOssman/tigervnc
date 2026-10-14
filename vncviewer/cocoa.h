@@ -1,4 +1,4 @@
-/* Copyright 2011-2025 Pierre Ossman <ossman@cendio.se> for Cendio AB
+/* Copyright 2011-2026 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * 
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,9 +19,9 @@
 #ifndef __VNCVIEWER_COCOA_H__
 #define __VNCVIEWER_COCOA_H__
 
-class Fl_Window;
+class QWidget;
 
-void cocoa_prevent_native_fullscreen(Fl_Window *win);
+void cocoa_prevent_native_fullscreen(QWidget *win);
 
 bool cocoa_is_trusted(bool prompt=false);
 
@@ -30,12 +30,13 @@ void cocoa_untap_keyboard();
 
 bool cocoa_screens_have_separate_spaces();
 
+void cocoa_set_presentation_default();
+void cocoa_set_presentation_full_screen();
+
 typedef struct CGColorSpace *CGColorSpaceRef;
 
-bool cocoa_win_is_zoomed(Fl_Window *win);
-void cocoa_win_zoom(Fl_Window *win);
-
-void cocoa_enable_minimize(Fl_Window *win);
+bool cocoa_win_is_zoomed(QWidget *win);
+void cocoa_win_zoom(QWidget *win);
 
 void cocoa_event_delay(double seconds);
 

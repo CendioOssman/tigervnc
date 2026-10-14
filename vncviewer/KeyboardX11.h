@@ -27,9 +27,7 @@ public:
   KeyboardX11(KeyboardHandler* handler);
   virtual ~KeyboardX11();
 
-  bool isKeyboardReset(const void* event) override;
-
-  bool handleEvent(const void* event) override;
+  bool handleEvent(const char* eventType, void* message) override;
   std::list<uint32_t> translateToKeySyms(int systemKeyCode) override;
 
   unsigned getLEDState() override;

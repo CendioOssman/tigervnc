@@ -68,7 +68,8 @@ Win32TouchHandler::Win32TouchHandler(HWND hWnd_,
   }
 }
 
-bool Win32TouchHandler::handleEvent(const void* /*event*/)
+bool Win32TouchHandler::handleEvent(const char* /*eventType*/,
+                                    void* /*message*/)
 {
   return false;
 }

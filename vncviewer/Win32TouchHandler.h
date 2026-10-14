@@ -29,7 +29,7 @@ class Win32TouchHandler: public BaseTouchHandler {
   public:
     Win32TouchHandler(HWND hWnd, GestureCallback* gestureCallback);
 
-    bool handleEvent(const void* event) override;
+    bool handleEvent(const char* eventType, void* message) override;
 
   protected:
     static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
