@@ -58,13 +58,13 @@ QPasswordEdit::QPasswordEdit(QWidget *parent)
   connect(this, &QLineEdit::textChanged, this,
           &QPasswordEdit::updateVisibility);
 
-  toggle = addAction(QIcon(":/open_eye.xpm"),
+  toggle = addAction(QIcon(QPixmap(":/open_eye.svg")),
                      QLineEdit::TrailingPosition);
   connect(toggle, &QAction::triggered, this,
           &QPasswordEdit::toggleVisible);
   toggle->setVisible(false); // No eye image is shown by default
 
-  capsWarning = addAction(QIcon(":/shift_lock.xpm"),
+  capsWarning = addAction(QIcon(QPixmap(":/shift_lock.svg")),
                           QLineEdit::TrailingPosition);
   // FIXME: Should probably use tr() to not be TigerVNC specific
   capsWarning->setToolTip(_("Caps lock is active"));
@@ -90,7 +90,7 @@ void QPasswordEdit::changeEvent(QEvent*)
 {
   if (!isEnabled()) {
     setEchoMode(QLineEdit::Password);
-    toggle->setIcon(QIcon(":/open_eye.xpm"));
+    toggle->setIcon(QIcon(QPixmap(":/open_eye.svg")));
   }
 }
 
@@ -104,10 +104,10 @@ void QPasswordEdit::toggleVisible()
 {
   if (echoMode() == QLineEdit::Password) {
     setEchoMode(QLineEdit::Normal);
-    toggle->setIcon(QIcon(":/closed_eye.xpm"));
+    toggle->setIcon(QIcon(QPixmap(":/closed_eye.svg")));
   } else {
     setEchoMode(QLineEdit::Password);
-    toggle->setIcon(QIcon(":/open_eye.xpm"));
+    toggle->setIcon(QIcon(QPixmap(":/open_eye.svg")));
   }
 }
 
