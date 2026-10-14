@@ -33,8 +33,6 @@ bool cocoa_screens_have_separate_spaces();
 void cocoa_set_presentation_default();
 void cocoa_set_presentation_full_screen();
 
-typedef struct CGColorSpace *CGColorSpaceRef;
-
 bool cocoa_win_is_zoomed(QWidget *win);
 void cocoa_win_zoom(QWidget *win);
 
